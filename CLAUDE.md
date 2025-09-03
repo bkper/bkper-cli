@@ -48,7 +48,7 @@ This is the Bkper Node.js command line client - a CLI tool for creating and upda
 
 #### Authentication (`src/auth/local-auth-service.ts`)
 - Uses Google OAuth2 with local auth flow
-- Stores credentials in `~/.bkper-credentials.json`
+- Stores credentials in `~/.config/bkper/.bkper-credentials.json`
 - Requires `keys.json` file for OAuth client configuration
 - Main export: `getOAuthToken()` function for bkper-js integration
 
@@ -109,7 +109,7 @@ const updatedApp = await app.update();
 #### Authentication Flow
 The `getOAuthToken()` function from `local-auth-service.ts` handles:
 1. Google OAuth2 flow with local authentication
-2. Credential storage in `~/.bkper-credentials.json`
+2. Credential storage in `~/.config/bkper/.bkper-credentials.json`
 3. Token refresh and management
 4. Returns valid access tokens for Bkper API calls
 

@@ -14,7 +14,24 @@ const keys = require(`${__dirname}/keys.json`);
 
 let storedCredentials: Credentials;
 
-const storedCredentialsPath = `${os.homedir}/.bkper-credentials.json`;
+const oldCredentialsPath = `${os.homedir()}/.bkper-credentials.json`;
+const configDir = `${os.homedir()}/.config/bkper`;
+const storedCredentialsPath = `${configDir}/.bkper-credentials.json`;
+
+// Migrate from old location if exists
+if (!fs.existsSync(storedCredentialsPath) && fs.existsSync(oldCredentialsPath)) {
+  try {
+    // Ensure config directory exists
+    fs.mkdirSync(configDir, { recursive: true });
+    // Move credentials to new location
+    const oldCredentials = fs.readFileSync(oldCredentialsPath, 'utf8');
+    fs.writeFileSync(storedCredentialsPath, oldCredentials, 'utf8');
+    fs.rmSync(oldCredentialsPath);
+    console.log('Migrated credentials to new location: ~/.config/bkper/');
+  } catch (err) {
+    console.error('Failed to migrate credentials:', err);
+  }
+}
 
 try {
   let credentialsJson = fs.readFileSync(storedCredentialsPath, 'utf8');
@@ -78,5 +95,7 @@ export async function getOAuthToken(): Promise<string> {
 
   function storeCredentials(credentials: Credentials) {
     storedCredentials = credentials;
+    // Ensure config directory exists before writing
+    fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(storedCredentialsPath, JSON.stringify(credentials, null, 4), 'utf8');
   }

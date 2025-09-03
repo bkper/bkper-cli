@@ -34,7 +34,7 @@ yarn global add bkper
 
 ## Commands
 
-- ```login```   - Logs the user in. Saves the client credentials to a ```~/.bkper-credentials.json``` file.
+- ```login```   - Logs the user in. Saves the client credentials to a ```~/.config/bkper/.bkper-credentials.json``` file.
 - ```logout```  - Logs out the user by deleting client credentials.
 - ```mcp start``` - Start the Bkper MCP (Model Context Protocol) server.
 - ```app -c```  - Create a new App based on ```./bkperapp.yaml``` file.
@@ -72,7 +72,7 @@ Before using the MCP server:
 2. Enable the [Bkper REST API]
 3. Ensure the `BKPER_API_KEY` environment variable is set.
 
-The MCP server uses the same authentication as the CLI, reading credentials from `~/.bkper-credentials.json`.
+The MCP server uses the same authentication as the CLI, reading credentials from `~/.config/bkper/.bkper-credentials.json`.
 
 #### Integration Examples
 
