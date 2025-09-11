@@ -53,7 +53,20 @@ export async function handleListTransactions(params: ListTransactionsParams): Pr
     
     // Get transactions from list
     const transactionItems = transactionList.getItems();
-    const transactions = transactionItems.map((transaction: any) => transaction.json());
+    const transactions = transactionItems.map((transaction: any) => {
+      const {
+        agentId,
+        agentName,
+        agentLogo,
+        agentLogoDark,
+        createdAt,
+        createdBy,
+        updatedAt,
+        dateValue,
+        ...cleanTransaction
+      } = transaction.json();
+      return cleanTransaction;
+    });
     
     // Get pagination info from list
     const hasMore = transactionItems.length > 0;

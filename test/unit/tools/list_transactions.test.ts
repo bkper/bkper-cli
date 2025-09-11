@@ -89,6 +89,76 @@ describe('MCP Server - list_transactions Tool Registration', function() {
       expect(transaction).to.have.property('properties');
     }
   });
+
+  it('should remove internal/irrelevant fields from transactions', async function() {
+    const response = await server.testCallTool('list_transactions', { 
+      bookId: 'book-1',
+      query: "account:'Cash'",
+      limit: 25
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    
+    if (jsonResponse.transactions.length > 0) {
+      const transaction = jsonResponse.transactions[0];
+      
+      // Verify internal fields are removed
+      expect(transaction).to.not.have.property('agentId');
+      expect(transaction).to.not.have.property('agentName');
+      expect(transaction).to.not.have.property('agentLogo');
+      expect(transaction).to.not.have.property('agentLogoDark');
+      expect(transaction).to.not.have.property('createdAt');
+      expect(transaction).to.not.have.property('createdBy');
+      expect(transaction).to.not.have.property('updatedAt');
+      expect(transaction).to.not.have.property('dateValue');
+      
+      // Verify essential fields are preserved
+      expect(transaction).to.have.property('id');
+      expect(transaction).to.have.property('date');
+      expect(transaction).to.have.property('amount');
+      expect(transaction).to.have.property('description');
+    }
+  });
+
+  it('should handle transactions with missing optional fields', async function() {
+    // Mock a transaction with only essential fields
+    const minimalTransaction = {
+      id: 'tx-minimal',
+      date: '2024-01-01',
+      amount: '100.00',
+      description: 'Minimal transaction',
+      creditAccount: { id: 'acc-1', name: 'Account 1' },
+      debitAccount: { id: 'acc-2', name: 'Account 2' },
+      posted: true,
+      checked: false
+    };
+    
+    // Update mock to return minimal transaction
+    currentMockTransactions = [minimalTransaction as TransactionData];
+    const mockBkper = createMockBkperForBook(mockBooks, undefined, currentMockTransactions);
+    setMockBkper(mockBkper);
+    
+    const response = await server.testCallTool('list_transactions', { 
+      bookId: 'book-1',
+      query: "any",
+      limit: 25
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    
+    if (jsonResponse.transactions.length > 0) {
+      const transaction = jsonResponse.transactions[0];
+      
+      // Should not have internal fields even if they weren't in original
+      expect(transaction).to.not.have.property('agentId');
+      expect(transaction).to.not.have.property('createdAt');
+      expect(transaction).to.not.have.property('dateValue');
+      
+      // Should have essential fields
+      expect(transaction).to.have.property('id', 'tx-minimal');
+      expect(transaction).to.have.property('amount', '100.00');
+    }
+  });
 });
 
 // Additional MCP-focused tests can be added here following the same pattern
