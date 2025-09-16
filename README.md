@@ -1,6 +1,6 @@
 [Bkper REST API]: https://bkper.com/docs/#rest-api-enabling
 
-A **command line** utility for managing [Bkper Apps and Bots](https://bkper.com/docs/) and running the [Model Context Protocol (MCP) server](https://modelcontextprotocol.io). 
+A **command line** utility for managing [Bkper Apps and Bots](https://bkper.com/docs/) and running the [Model Context Protocol (MCP) server](https://modelcontextprotocol.io).
 
 The MCP server enables AI assistants and agents to interact with your Bkper books through a standardized protocol.
 
@@ -13,37 +13,45 @@ The MCP server enables AI assistants and agents to interact with your Bkper book
 ```
 npm i bkper
 ```
+
 or
+
 ```
 yarn add bkper
 ```
+
 or
+
 ```
 bun add bkper
 ```
 
-Optionally, you can install it globally to be able to use the ```bkper``` command line utility:
+Optionally, you can install it globally to be able to use the `bkper` command line utility:
 
 ```
 npm i -g bkper
 ```
+
 or
+
 ```
 yarn global add bkper
 ```
 
 ## Commands
 
-- ```login```   - Logs the user in. Saves the client credentials to a ```~/.config/bkper/.bkper-credentials.json``` file.
-- ```logout```  - Logs out the user by deleting client credentials.
-- ```mcp start``` - Start the Bkper MCP (Model Context Protocol) server.
-- ```app -c```  - Create a new App based on ```./bkperapp.yaml``` file.
-- ```app -u```  - Update an existing App based on ```./bkperapp.yaml``` file.
+- `login` - Logs the user in. Saves the client credentials to a `~/.config/bkper/.bkper-credentials.json` file.
+- `logout` - Logs out the user by deleting client credentials.
+- `mcp start` - Start the Bkper MCP (Model Context Protocol) server.
+- `app -c` - Create a new App based on `./bkperapp.yaml` file.
+- `app -u` - Update an existing App based on `./bkperapp.yaml` file.
 
 ### Examples
+
 ```
 npm bkper login
 ```
+
 ```
 yarn bkper login
 ```
@@ -68,6 +76,7 @@ The server runs on stdio and provides the following tools:
 #### Prerequisites
 
 Before using the MCP server:
+
 1. Login using `bkper login` to set up authentication
 2. Enable the [Bkper REST API]
 3. Ensure the `BKPER_API_KEY` environment variable is set.
@@ -79,6 +88,7 @@ The MCP server uses the same authentication as the CLI, reading credentials from
 ##### Claude Desktop
 
 Add to your configuration file:
+
 - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -99,6 +109,7 @@ Add to your configuration file:
 ##### Other MCP Clients
 
 For other MCP-compatible clients, configure them to run:
+
 ```bash
 BKPER_API_KEY=your-api-key npx bkper mcp start
 ```
@@ -108,6 +119,7 @@ The server communicates via stdio, so any MCP client that supports stdio transpo
 #### Available MCP Tools
 
 Once connected, the MCP client can:
+
 - List your Bkper books
 - Get account balances for any date or period
 - Search and filter transactions
@@ -115,18 +127,17 @@ Once connected, the MCP client can:
 
 For more information about the Model Context Protocol, visit [modelcontextprotocol.io](https://modelcontextprotocol.io).
 
-
-
 ## Apps and Bots
 
 ### Environment Variables
+
 The following environment variable is necessary in order to communicate with the [Bkper REST API]:
 
 ```
 BKPER_API_KEY=XXXX
 ```
 
-The ```app``` command also uses the following variables in order to perform App create/update operations:
+The `app` command also uses the following variables in order to perform App create/update operations:
 
 ```
 BKPER_CLIENT_SECRET=YYYY
@@ -134,16 +145,14 @@ BKPER_USER_EMAILS="someone@gmail.com anotherone@altrostat.com"
 BKPER_DEVELOPER_EMAIL=somedeveloer@mycompany.com
 ```
 
-You can add a ```.env``` file at the root of your project with those variables and bkper will automatically load from it. 
+You can add a `.env` file at the root of your project with those variables and bkper will automatically load from it.
 Follow [these](https://bkper.com/docs/#rest-api-enabling) steps in order to configure a valid Bkper API key.
 
 > WARNING: Never upload variables to the source code repository.
 
-
-### ```./bkperapp.yaml``` Reference
+### `./bkperapp.yaml` Reference
 
 ```yaml
-
 # BASIC APP CONFIGURATION
 
 # The agent id of the App or Bot. It can NOT be changed after the App or Bot is created.
@@ -157,8 +166,6 @@ logoUrl: https://static.thenounproject.com/png/2318500-200.png
 
 # The logo url to be used when in dark mode
 logoUrlDark: https://static.thenounproject.com/png/2318500-200.png
-
-
 
 # CONTEXT MENU CONFIGURATION
 
@@ -174,20 +181,12 @@ menuText: Open My Custom App
 menuPopupWidth: 500 # width in pixels. Default to 80% of screen width.
 menuPopupHeight: 300 # height in pixels. Default to 90% of screen height.
 
-
-#ASSISTANT CONFIGURATION
-
-# The conversation url to be called by Bkper when a new conversation message is added
-conversationUrl: https://us-central1-bkper-tax-trigger.cloudfunctions.net/chat
-
-
-
 # BOT EVENTS CONFIGURATION
 
 # The webhook url to be called by Bkper when an event occurs.
 webhookUrl: https://us-central1-bkper-tax-trigger.cloudfunctions.net/events
 
-# The events the Bot is capable of processing by the webhook. 
+# The events the Bot is capable of processing by the webhook.
 # This is optional and, if not specified, no events will be processed.
 events:
   - "TRANSACTION_POSTED"
@@ -210,7 +209,6 @@ filePatterns:
   - "radiusbank*.ofx"
   - "-*.qif"
   - "*.csv"
-
 
 # Schema to provide autocompletion on properties editor.
 propertiesSchema:
@@ -242,19 +240,18 @@ propertiesSchema:
     values:
       - "value2"
       - "value2"
-
 ```
 
 #### Accepted expressions in menuUrl property:
 
-  - ```${book.id}``` - the current book id
-  - ```${book.properties.xxxxx}``` - any property value from the current book
-  - ```${transactions.query}``` - the current query being executed on transactions list
-  - ```${transactions.ids}``` - the ids of selected transactions, splitted by comma
-  - ```${account.id}``` - the current account being filterd
-  - ```${account.properties.xxxxx}``` - any property value from the current account being filtered
-  - ```${group.id}``` - the current group being filterd
-  - ```${group.properties.xxxxx}``` - any property value from the current group being filtered
+- `${book.id}` - the current book id
+- `${book.properties.xxxxx}` - any property value from the current book
+- `${transactions.query}` - the current query being executed on transactions list
+- `${transactions.ids}` - the ids of selected transactions, splitted by comma
+- `${account.id}` - the current account being filterd
+- `${account.properties.xxxxx}` - any property value from the current account being filtered
+- `${group.id}` - the current group being filterd
+- `${group.properties.xxxxx}` - any property value from the current group being filtered
 
 #### Example:
 
@@ -264,20 +261,19 @@ propertiesSchema:
 
 #### Library
 
-The ```getOAuthToken``` returns a Promise that resolves to a valid OAuth token, to be used by the [```bkper-js```](https://github.com/bkper/bkper-js) library
+The `getOAuthToken` returns a Promise that resolves to a valid OAuth token, to be used by the [`bkper-js`](https://github.com/bkper/bkper-js) library
 
 Example:
 
 ```javascript
-import { Bkper } from 'bkper-js';
-import { getOAuthToken } from 'bkper';
+import { Bkper } from "bkper-js";
+import { getOAuthToken } from "bkper";
 
 Bkper.setConfig({
   oauthTokenProvider: async () => getOAuthToken(),
-})
+});
 ```
 
 ## Documentation
 
 - [Developer Docs](https://bkper.com/docs)
-
