@@ -127,6 +127,7 @@ export interface MockBook {
   getBalancesReport?(query?: string): Promise<MockBalanceReport>;
   listTransactions?(query?: string, limit?: number, cursor?: string): Promise<MockTransactionIterator>;
   getGroups?(): Promise<MockGroup[]>;
+  batchCreateTransactions?(transactions: MockTransaction[]): Promise<MockTransaction[]>;
 }
 
 

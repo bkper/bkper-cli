@@ -281,6 +281,24 @@ export function createMockBkperForBook(
           };
         } : undefined,
         
+        // Transaction creation support
+        batchCreateTransactions: transactions ? async (txArray: MockTransaction[]): Promise<MockTransaction[]> => {
+          return txArray.map((tx, index) => {
+            const txData = tx.json();
+            return {
+              json: (): TransactionData => ({
+                ...txData,
+                id: txData.id || `tx-created-${Date.now()}-${index}`,
+                posted: true,
+                checked: false,
+                trashed: false,
+                createdAt: Date.now().toString(),
+                createdBy: 'test@example.com'
+              })
+            };
+          });
+        } : undefined,
+        
         // Groups support
         getGroups: groups ? async (): Promise<MockGroup[]> => {
           // Create a map for quick parent lookup

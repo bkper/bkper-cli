@@ -50,7 +50,7 @@ export async function handleListTransactions(params: ListTransactionsParams): Pr
 
     // Get transactions using native API pagination
     const transactionList = await book.listTransactions(params.query, limit, params.cursor);
-    
+
     // Get transactions from list
     const transactionItems = transactionList.getItems();
     const transactions = transactionItems.map((transaction: any) => {
@@ -67,7 +67,7 @@ export async function handleListTransactions(params: ListTransactionsParams): Pr
       } = transaction.json();
       return cleanTransaction;
     });
-    
+
     // Get pagination info from list
     const hasMore = transactionItems.length > 0;
     const nextCursor = transactionList.getCursor() || null;
@@ -96,7 +96,7 @@ export async function handleListTransactions(params: ListTransactionsParams): Pr
     if (error instanceof McpError) {
       throw error;
     }
-    
+
     // Handle other errors
     throw new McpError(
       ErrorCode.InternalError,

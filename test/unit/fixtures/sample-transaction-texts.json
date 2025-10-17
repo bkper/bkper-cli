@@ -1,0 +1,78 @@
+{
+  "validTexts": [
+    "Jan 15 $500 from Cash to Rent for monthly payment",
+    "2025-01-20 1200 Consulting revenue from Service Revenue to Cash",
+    "Yesterday 300 EUR fuel expense from Cash to Transport"
+  ],
+  "createdTransactions": [
+    {
+      "id": "txn-recorded-1",
+      "date": "2025-01-15",
+      "amount": "500.00",
+      "description": "monthly payment",
+      "creditAccount": {
+        "id": "acc-cash",
+        "name": "Cash",
+        "type": "ASSET"
+      },
+      "debitAccount": {
+        "id": "acc-rent",
+        "name": "Rent",
+        "type": "OUTGOING"
+      },
+      "posted": true,
+      "checked": false,
+      "trashed": false,
+      "properties": {},
+      "tags": [],
+      "urls": [],
+      "remoteIds": []
+    },
+    {
+      "id": "txn-recorded-2",
+      "date": "2025-01-20",
+      "amount": "1200.00",
+      "description": "Consulting revenue",
+      "creditAccount": {
+        "id": "acc-service-revenue",
+        "name": "Service Revenue",
+        "type": "INCOMING"
+      },
+      "debitAccount": {
+        "id": "acc-cash",
+        "name": "Cash",
+        "type": "ASSET"
+      },
+      "posted": true,
+      "checked": false,
+      "trashed": false,
+      "properties": {},
+      "tags": [],
+      "urls": [],
+      "remoteIds": []
+    },
+    {
+      "id": "txn-recorded-3",
+      "date": "2025-01-14",
+      "amount": "300.00",
+      "description": "fuel expense",
+      "creditAccount": {
+        "id": "acc-cash",
+        "name": "Cash",
+        "type": "ASSET"
+      },
+      "debitAccount": {
+        "id": "acc-transport",
+        "name": "Transport",
+        "type": "OUTGOING"
+      },
+      "posted": true,
+      "checked": false,
+      "trashed": false,
+      "properties": {},
+      "tags": [],
+      "urls": [],
+      "remoteIds": []
+    }
+  ]
+}

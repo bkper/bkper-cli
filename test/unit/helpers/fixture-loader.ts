@@ -26,6 +26,18 @@ export function loadFixture<T>(testDir: string, fixtureName: string): T[] {
   return JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
 }
 
+export function loadFixtureObject<T>(testDir: string, fixtureName: string): T {
+  let fixturePath: string;
+  if (testDir.includes('/unit/tools')) {
+    fixturePath = path.join(testDir, '..', 'fixtures', fixtureName);
+  } else if (testDir.includes('/unit')) {
+    fixturePath = path.join(testDir, 'fixtures', fixtureName);
+  } else {
+    fixturePath = path.join(testDir, 'fixtures', fixtureName);
+  }
+  return JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+}
+
 // Load specific fixture types
 export function loadBooks(testDir: string): BookData[] {
   return loadFixture<BookData>(testDir, 'sample-books.json');
@@ -49,6 +61,10 @@ export function loadBalances(testDir: string): BalanceData[] {
 
 export function loadAccountBalances(testDir: string): AccountBalanceData[] {
   return loadFixture<AccountBalanceData>(testDir, 'sample-account-balances.json');
+}
+
+export function loadTransactionTexts(testDir: string): { validTexts: string[]; createdTransactions: TransactionData[] } {
+  return loadFixtureObject<{ validTexts: string[]; createdTransactions: TransactionData[] }>(testDir, 'sample-transaction-texts.json');
 }
 
 export function loadBalanceMatrixTotal(testDir: string): any[][] {
