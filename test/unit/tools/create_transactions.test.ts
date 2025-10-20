@@ -66,7 +66,7 @@ describe('MCP Server - create_transactions Tool Registration', function() {
     expect(createTransactionsTool.inputSchema.required).to.include('transactions');
   });
 
-  it('should have transaction schema with required fields', async function() {
+  it('should have transaction schema with required and optional fields', async function() {
     const response = await server.testListTools();
     const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions') as any;
     
@@ -77,6 +77,14 @@ describe('MCP Server - create_transactions Tool Registration', function() {
     expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property('from_account');
     expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property('to_account');
     expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property('description');
+    
+    // Verify only date, amount, and description are required
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.be.an('array');
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('date');
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('amount');
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('description');
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.not.include('from_account');
+    expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.not.include('to_account');
   });
 });
 
@@ -302,40 +310,36 @@ describe('MCP Server - create_transactions Parameter Validation', function() {
     }
   });
 
-  it('should throw McpError for missing from_account field', async function() {
-    try {
-      await server.testCallTool('create_transactions', {
-        bookId: 'book-1',
-        transactions: [{
-          date: '2025-01-15',
-          amount: 500,
-          to_account: 'Rent',
-          description: 'test'
-        }]
-      });
-      expect.fail('Should have thrown an error for missing from_account');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect((error as Error).message).to.include('from_account');
-    }
+  it('should accept transaction with missing from_account field', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        to_account: 'Rent',
+        description: 'test'
+      }]
+    });
+    
+    expect(response).to.have.property('content');
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
   });
 
-  it('should throw McpError for missing to_account field', async function() {
-    try {
-      await server.testCallTool('create_transactions', {
-        bookId: 'book-1',
-        transactions: [{
-          date: '2025-01-15',
-          amount: 500,
-          from_account: 'Cash',
-          description: 'test'
-        }]
-      });
-      expect.fail('Should have thrown an error for missing to_account');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect((error as Error).message).to.include('to_account');
-    }
+  it('should accept transaction with missing to_account field', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        from_account: 'Cash',
+        description: 'test'
+      }]
+    });
+    
+    expect(response).to.have.property('content');
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
   });
 
   it('should throw McpError for missing description field', async function() {
@@ -356,42 +360,38 @@ describe('MCP Server - create_transactions Parameter Validation', function() {
     }
   });
 
-  it('should throw McpError for empty string from_account', async function() {
-    try {
-      await server.testCallTool('create_transactions', {
-        bookId: 'book-1',
-        transactions: [{
-          date: '2025-01-15',
-          amount: 500,
-          from_account: '',
-          to_account: 'Rent',
-          description: 'test'
-        }]
-      });
-      expect.fail('Should have thrown an error for empty from_account');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect((error as Error).message).to.include('from_account');
-    }
+  it('should accept empty string from_account when provided', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        from_account: '',
+        to_account: 'Rent',
+        description: 'test'
+      }]
+    });
+    
+    expect(response).to.have.property('content');
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
   });
 
-  it('should throw McpError for empty string to_account', async function() {
-    try {
-      await server.testCallTool('create_transactions', {
-        bookId: 'book-1',
-        transactions: [{
-          date: '2025-01-15',
-          amount: 500,
-          from_account: 'Cash',
-          to_account: '',
-          description: 'test'
-        }]
-      });
-      expect.fail('Should have thrown an error for empty to_account');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect((error as Error).message).to.include('to_account');
-    }
+  it('should accept empty string to_account when provided', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        from_account: 'Cash',
+        to_account: '',
+        description: 'test'
+      }]
+    });
+    
+    expect(response).to.have.property('content');
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
   });
 
   it('should throw McpError for empty string description', async function() {
@@ -411,6 +411,81 @@ describe('MCP Server - create_transactions Parameter Validation', function() {
       expect(error).to.be.an('error');
       expect((error as Error).message).to.include('description');
     }
+  });
+});
+
+describe('MCP Server - create_transactions Optional Account Fields', function() {
+  let server: BkperMcpServerType;
+
+  beforeEach(function() {
+    setupTestEnvironment();
+    const mockBkper = createMockBkperForBook(mockBooks, undefined, createdTransactions);
+    setMockBkper(mockBkper);
+    server = new BkperMcpServer();
+  });
+
+  it('should create transaction with only description (no accounts)', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        description: 'Payment received'
+      }]
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
+    expect(jsonResponse.transactions[0]).to.have.property('description', 'Payment received');
+  });
+
+  it('should create transaction with only from_account', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        from_account: 'Cash',
+        description: 'Withdrawal'
+      }]
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
+    expect(jsonResponse.transactions[0]).to.have.property('description', 'Cash Withdrawal');
+  });
+
+  it('should create transaction with only to_account', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        to_account: 'Revenue',
+        description: 'Sale'
+      }]
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
+    expect(jsonResponse.transactions[0]).to.have.property('description', 'Revenue Sale');
+  });
+
+  it('should create transaction with both accounts', async function() {
+    const response = await server.testCallTool('create_transactions', {
+      bookId: 'book-1',
+      transactions: [{
+        date: '2025-01-15',
+        amount: 500,
+        from_account: 'Cash',
+        to_account: 'Rent',
+        description: 'Monthly rent'
+      }]
+    });
+    
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+    expect(jsonResponse.transactions).to.have.length(1);
+    expect(jsonResponse.transactions[0]).to.have.property('description', 'Cash Rent Monthly rent');
   });
 });
 
