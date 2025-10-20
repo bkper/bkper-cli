@@ -285,6 +285,13 @@ export function createMockBkperForBook(
         batchCreateTransactions: transactions ? async (txArray: MockTransaction[]): Promise<MockTransaction[]> => {
           return txArray.map((tx, index) => {
             const txData = tx.json();
+            // Return pre-configured fixture data if available, otherwise create from input
+            const fixtureTransaction = transactions[index];
+            if (fixtureTransaction) {
+              return {
+                json: (): TransactionData => fixtureTransaction
+              };
+            }
             return {
               json: (): TransactionData => ({
                 ...txData,

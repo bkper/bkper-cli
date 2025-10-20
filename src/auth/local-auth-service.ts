@@ -27,9 +27,9 @@ if (!fs.existsSync(storedCredentialsPath) && fs.existsSync(oldCredentialsPath)) 
     const oldCredentials = fs.readFileSync(oldCredentialsPath, 'utf8');
     fs.writeFileSync(storedCredentialsPath, oldCredentials, 'utf8');
     fs.rmSync(oldCredentialsPath);
-    console.log('Migrated credentials to new location: ~/.config/bkper/');
+    // Credentials migrated successfully
   } catch (err) {
-    console.error('Failed to migrate credentials:', err);
+    // Migration failed - will fall back to old behavior
   }
 }
 
@@ -37,7 +37,7 @@ try {
   let credentialsJson = fs.readFileSync(storedCredentialsPath, 'utf8');
   storedCredentials = JSON.parse(credentialsJson);
 } catch (err) {
-  console.log('No local credentials found.');
+  // Credentials will be null if not found - no need to log during module loading
 }
 
 export async function login() {

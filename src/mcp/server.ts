@@ -17,6 +17,7 @@ import { handleGetBook, getBookToolDefinition } from './tools/get_book.js';
 import { handleGetBalances, getBalancesToolDefinition } from './tools/get_balances.js';
 import { handleListTransactions, listTransactionsToolDefinition } from './tools/list_transactions.js';
 import { handleListBooks, listBooksToolDefinition } from './tools/list_books.js';
+import { handleCreateTransactions, createTransactionsToolDefinition } from './tools/create_transactions.js';
 
 
 class BkperMcpServer {
@@ -47,25 +48,53 @@ class BkperMcpServer {
           getBookToolDefinition,
           getBalancesToolDefinition,
           listTransactionsToolDefinition,
+          createTransactionsToolDefinition,
         ],
       };
     });
 
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      switch (request.params.name) {
-        case 'list_books':
-          return await handleListBooks(request.params.arguments as any);
-        case 'get_book':
-          return await handleGetBook(request.params.arguments as any);
-        case 'get_balances':
-          return await handleGetBalances(request.params.arguments as any);
-        case 'list_transactions':
-          return await handleListTransactions(request.params.arguments as any);
-        default:
+      const toolName = request.params.name;
+      const toolArgs = request.params.arguments;
+
+      let result: CallToolResult;
+
+      try {
+        switch (toolName) {
+          case 'list_books':
+            result = await handleListBooks(toolArgs as any);
+            break;
+          case 'get_book':
+            result = await handleGetBook(toolArgs as any);
+            break;
+          case 'get_balances':
+            result = await handleGetBalances(toolArgs as any);
+            break;
+          case 'list_transactions':
+            result = await handleListTransactions(toolArgs as any);
+            break;
+          case 'create_transactions':
+            result = await handleCreateTransactions(toolArgs as any);
+            break;
+          default:
+            throw new McpError(
+              ErrorCode.MethodNotFound,
+              `Unknown tool: ${toolName}`
+            );
+        }
+
+        return result;
+
+      } catch (error) {
+        // Only log actual errors, not debug info
+        if (!(error instanceof McpError)) {
+          // Convert unexpected errors to MCP errors
           throw new McpError(
-            ErrorCode.MethodNotFound,
-            `Unknown tool: ${request.params.name}`
+            ErrorCode.InternalError,
+            `Tool ${toolName} failed: ${error instanceof Error ? error.message : String(error)}`
           );
+        }
+        throw error;
       }
     });
   }
@@ -73,7 +102,8 @@ class BkperMcpServer {
 
   private setupErrorHandling() {
     this.server.onerror = (error) => {
-      console.error('[MCP Error]', error);
+      // Do not log errors during MCP stdio mode as it contaminates the stream
+      // Server errors will be handled by the MCP protocol layer
     };
 
     process.on('SIGINT', async () => {
@@ -83,9 +113,14 @@ class BkperMcpServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error('Bkper MCP server running on stdio');
+    try {
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      // Server is now ready and listening on stdio
+    } catch (error) {
+      // Do not log startup errors as they contaminate stdio stream
+      throw error;
+    }
   }
 
   // Test helper methods for accessing MCP handlers directly
@@ -125,5 +160,8 @@ export { BkperMcpServer };
 // Only run the server if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const server = new BkperMcpServer();
-  server.run().catch(console.error);
+  server.run().catch(() => {
+    // Exit silently on error to avoid contaminating stdio stream
+    process.exit(1);
+  });
 }

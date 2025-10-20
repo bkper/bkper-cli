@@ -63,8 +63,16 @@ export function loadAccountBalances(testDir: string): AccountBalanceData[] {
   return loadFixture<AccountBalanceData>(testDir, 'sample-account-balances.json');
 }
 
-export function loadTransactionTexts(testDir: string): { validTexts: string[]; createdTransactions: TransactionData[] } {
-  return loadFixtureObject<{ validTexts: string[]; createdTransactions: TransactionData[] }>(testDir, 'sample-transaction-texts.json');
+export interface TransactionInput {
+  date: string;
+  amount: number;
+  from_account: string;
+  to_account: string;
+  description: string;
+}
+
+export function loadTransactionTexts(testDir: string): { validTransactions: TransactionInput[]; createdTransactions: TransactionData[] } {
+  return loadFixtureObject<{ validTransactions: TransactionInput[]; createdTransactions: TransactionData[] }>(testDir, 'sample-transaction-texts.json');
 }
 
 export function loadBalanceMatrixTotal(testDir: string): any[][] {

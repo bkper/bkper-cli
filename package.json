@@ -1,79 +1,79 @@
 {
-  "name": "bkper",
-  "version": "3.5.6",
-  "description": "Node.js command line client for Bkper",
-  "bin": {
-    "bkper": "./lib/cli.js"
-  },
-  "repository": "https://github.com/bkper/bkper-node.git",
-  "homepage": "https://bkper.com/docs",
-  "author": "mael <mael@bkper.com>",
-  "license": "Apache-2.0",
-  "private": false,
-  "main": "./lib/index.js",
-  "module": "./lib/index.js",
-  "types": "./lib/index.d.ts",
-  "type": "module",
-  "files": [
-    "lib/**/*"
-  ],
-  "mcp": {
-    "server": {
-      "command": "node",
-      "args": [
-        "lib/cli.js",
-        "mcp",
-        "start"
-      ],
-      "env": {}
+    "name": "bkper",
+    "version": "3.5.6",
+    "description": "Node.js command line client for Bkper",
+    "bin": {
+        "bkper": "./lib/cli.js"
+    },
+    "repository": "https://github.com/bkper/bkper-node.git",
+    "homepage": "https://bkper.com/docs",
+    "author": "mael <mael@bkper.com>",
+    "license": "Apache-2.0",
+    "private": false,
+    "main": "./lib/index.js",
+    "module": "./lib/index.js",
+    "types": "./lib/index.d.ts",
+    "type": "module",
+    "files": [
+        "lib/**/*"
+    ],
+    "mcp": {
+        "server": {
+            "command": "node",
+            "args": [
+                "lib/cli.js",
+                "mcp",
+                "start"
+            ],
+            "env": {}
+        }
+    },
+    "scripts": {
+        "clean": "rm -rf ./lib & rm -rf ./node_modules & wait",
+        "prebuild": "bun install",
+        "build": "run-s build:*",
+        "build:clean": "gts clean && rimraf temp",
+        "build:compile": "tsc",
+        "build:copy-docs": "mkdir -p lib/docs && cp -f docs/*.md lib/docs/ 2>/dev/null || true",
+        "build:copy-mcp-assets": "mkdir -p lib/mcp && cp -f src/mcp/*.md lib/mcp/ 2>/dev/null || true",
+        "predev": "bun run build",
+        "dev": "bun run build && npx concurrently \"tsc -w\" \"./scripts/dev-mcp.sh\"",
+        "mcp": "bun run build && node lib/cli.js mcp start",
+        "ports": "devpod ssh ../ -L 6274",
+        "test": "TS_NODE_PROJECT=tsconfig.test.json mocha",
+        "test:unit": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.json",
+        "test:integration": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.integration.json",
+        "test:all": "bun run test:unit && bun run test:integration",
+        "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest",
+        "patch": "yarn version --patch",
+        "minor": "yarn version --minor",
+        "major": "yarn version --major",
+        "preversion": "bun run build",
+        "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
+    },
+    "dependencies": {
+        "@google-cloud/local-auth": "^3.0.1",
+        "@modelcontextprotocol/sdk": "^1.13.1",
+        "bkper-js": "^2.4.0",
+        "commander": "^6.2.1",
+        "dotenv": "^8.2.0",
+        "google-auth-library": "^9.14.0",
+        "yaml": "^2.5.1"
+    },
+    "devDependencies": {
+        "@bkper/bkper-api-types": "^5.23.0",
+        "@types/chai": "^4.3.0",
+        "@types/mocha": "^10.0.0",
+        "@types/node": "^22.5.1",
+        "chai": "^4.3.0",
+        "concurrently": "^8.2.2",
+        "gts": "^3.0.3",
+        "mocha": "^10.0.0",
+        "nodemon": "^3.0.1",
+        "npm-run-all": "^4.1.5",
+        "rimraf": "^3.0.2",
+        "ts-node": "^10.9.2",
+        "tsconfig-paths": "^4.2.0",
+        "typescript": "^5.5.4"
     }
-  },
-  "scripts": {
-    "clean": "rm -rf ./lib & rm -rf ./node_modules & wait",
-    "prebuild": "bun install",
-    "build": "run-s build:*",
-    "build:clean": "gts clean && rimraf temp",
-    "build:compile": "tsc",
-    "build:copy-docs": "mkdir -p lib/docs && cp -f docs/*.md lib/docs/ 2>/dev/null || true",
-    "build:copy-mcp-assets": "mkdir -p lib/mcp && cp -f src/mcp/*.md lib/mcp/ 2>/dev/null || true",
-    "predev": "bun run build",
-    "dev": "bun run build && npx concurrently \"tsc -w\" \"./scripts/dev-mcp.sh\"",
-    "mcp": "bun run build && node lib/cli.js mcp start",
-    "test": "TS_NODE_PROJECT=tsconfig.test.json mocha",
-    "test:unit": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.json",
-    "test:integration": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.integration.json",
-    "test:all": "bun run test:unit && bun run test:integration",
-    "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest",
-    "patch": "yarn version --patch",
-    "minor": "yarn version --minor",
-    "major": "yarn version --major",
-    "preversion": "bun run build",
-    "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
-  },
-  "dependencies": {
-    "@google-cloud/local-auth": "^3.0.1",
-    "@modelcontextprotocol/sdk": "^1.13.1",
-    "bkper-js": "^2.4.0",
-    "commander": "^6.2.1",
-    "dotenv": "^8.2.0",
-    "google-auth-library": "^9.14.0",
-    "yaml": "^2.5.1"
-  },
-  "devDependencies": {
-    "@bkper/bkper-api-types": "^5.23.0",
-    "@types/chai": "^4.3.0",
-    "@types/commander": "^2.12.2",
-    "@types/mocha": "^10.0.0",
-    "@types/node": "^22.5.1",
-    "chai": "^4.3.0",
-    "concurrently": "^8.2.2",
-    "gts": "^3.0.3",
-    "mocha": "^10.0.0",
-    "nodemon": "^3.0.1",
-    "npm-run-all": "^4.1.5",
-    "rimraf": "^3.0.2",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.5.4"
-  }
 }
