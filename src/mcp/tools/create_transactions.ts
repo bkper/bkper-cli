@@ -16,7 +16,7 @@ interface CreateTransactionsParams {
 }
 
 interface TransactionsResponse {
-    transactions: Array<any>;
+    transactions: Array<Record<string, any>>;
 }
 
 export async function handleCreateTransactions(params: CreateTransactionsParams): Promise<CallToolResult> {
@@ -121,7 +121,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
         const createdTransactions = await book.batchCreateTransactions(bkperTransactions);
 
         // Clean response by removing internal fields and ensure JSON serializable
-        const transactions = createdTransactions.map((transaction: any) => {
+        const transactions = createdTransactions.map((transaction: Transaction) => {
             const transactionJson = transaction.json();
 
             const {

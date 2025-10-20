@@ -102,8 +102,17 @@ class BkperMcpServer {
 
   private setupErrorHandling() {
     this.server.onerror = (error) => {
-      // Do not log errors during MCP stdio mode as it contaminates the stream
-      // Server errors will be handled by the MCP protocol layer
+      // Log critical server errors to a file or syslog in production
+      // Avoid console output during MCP stdio mode as it contaminates the stream
+      if (process.env.NODE_ENV !== 'production') {
+        // In development, log to stderr only if not in MCP mode
+        const isStdioMode = process.argv.includes('mcp') && process.argv.includes('start');
+        if (!isStdioMode) {
+          console.error('[MCP Server Error]:', error instanceof Error ? error.message : String(error));
+        }
+      }
+      // TODO: In production, implement proper logging to file/syslog
+      // Example: logger.error('MCP Server Error', { error: error.message, stack: error.stack });
     };
 
     process.on('SIGINT', async () => {
