@@ -5,8 +5,8 @@ import { Transaction } from 'bkper-js';
 interface TransactionInput {
     date: string;
     amount: number;
-    from_account: string;
-    to_account: string;
+    from_account?: string;
+    to_account?: string;
     description: string;
 }
 
@@ -71,18 +71,6 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
                     `Transaction at index ${index}: Missing or invalid required field 'amount'`
                 );
             }
-            if (!tx.from_account || typeof tx.from_account !== 'string' || tx.from_account.trim() === '') {
-                throw new McpError(
-                    ErrorCode.InvalidParams,
-                    `Transaction at index ${index}: Missing or empty required field 'from_account'`
-                );
-            }
-            if (!tx.to_account || typeof tx.to_account !== 'string' || tx.to_account.trim() === '') {
-                throw new McpError(
-                    ErrorCode.InvalidParams,
-                    `Transaction at index ${index}: Missing or empty required field 'to_account'`
-                );
-            }
             if (!tx.description || typeof tx.description !== 'string' || tx.description.trim() === '') {
                 throw new McpError(
                     ErrorCode.InvalidParams,
@@ -107,8 +95,17 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
         const bkperTransactions = params.transactions.map((tx) => {
             const transaction = new Transaction(book);
 
-            // Build description: from_account to_account description
-            const fullDescription = `${tx.from_account} ${tx.to_account} ${tx.description}`;
+            // Build description with optional accounts
+            const parts: string[] = [];
+            if (tx.from_account && tx.from_account.trim()) {
+                parts.push(tx.from_account.trim());
+            }
+            if (tx.to_account && tx.to_account.trim()) {
+                parts.push(tx.to_account.trim());
+            }
+            parts.push(tx.description);
+            
+            const fullDescription = parts.join(' ');
 
             transaction.setDate(tx.date);
             transaction.setAmount(tx.amount);
@@ -205,7 +202,7 @@ export const createTransactionsToolDefinition = {
                             description: 'Transaction description (can include #hashtags and ! for checked status)'
                         }
                     },
-                    required: ['date', 'amount', 'from_account', 'to_account', 'description']
+                    required: ['date', 'amount', 'description']
                 },
                 description: 'Array of transactions to create'
             }

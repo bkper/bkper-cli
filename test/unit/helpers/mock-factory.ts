@@ -285,22 +285,19 @@ export function createMockBkperForBook(
         batchCreateTransactions: transactions ? async (txArray: MockTransaction[]): Promise<MockTransaction[]> => {
           return txArray.map((tx, index) => {
             const txData = tx.json();
-            // Return pre-configured fixture data if available, otherwise create from input
             const fixtureTransaction = transactions[index];
-            if (fixtureTransaction) {
-              return {
-                json: (): TransactionData => fixtureTransaction
-              };
-            }
+            
             return {
               json: (): TransactionData => ({
                 ...txData,
-                id: txData.id || `tx-created-${Date.now()}-${index}`,
-                posted: true,
-                checked: false,
-                trashed: false,
-                createdAt: Date.now().toString(),
-                createdBy: 'test@example.com'
+                id: txData.id || fixtureTransaction?.id || `tx-created-${Date.now()}-${index}`,
+                posted: fixtureTransaction?.posted ?? true,
+                checked: fixtureTransaction?.checked ?? false,
+                trashed: fixtureTransaction?.trashed ?? false,
+                createdAt: fixtureTransaction?.createdAt || Date.now().toString(),
+                createdBy: fixtureTransaction?.createdBy || 'test@example.com',
+                creditAccount: fixtureTransaction?.creditAccount,
+                debitAccount: fixtureTransaction?.debitAccount
               })
             };
           });
