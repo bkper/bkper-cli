@@ -2,6 +2,19 @@
 
 ## 2025
 
+### **October 2025**
+
+**MCP Server**
+- Added smart transaction merging - combine multiple transactions intelligently based on date and account matching
+- Simplified transaction creation - accounts are now optional, making it easier to record simple income and expenses
+- Improved transaction data responses for better AI assistant integration
+
+### **September 2025**
+
+**MCP Server**
+- Streamlined transaction data for cleaner AI assistant responses
+- Fixed credential storage to follow standard configuration directories
+
 ### **July 2025**
 
 **MCP Server**
