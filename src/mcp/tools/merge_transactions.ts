@@ -8,8 +8,27 @@ interface MergeTransactionsParams {
     transactionId2: string;
 }
 
+/**
+ * Merged transaction data that extends the base bkper.Transaction type
+ * with compatibility fields for legacy systems and test fixtures
+ */
+interface MergedTransactionData extends bkper.Transaction {
+    /**
+     * Compatibility field: alias for 'files' used in test fixtures
+     */
+    attachments?: bkper.File[];
+    /**
+     * Compatibility field: ID-only version of creditAccount for legacy systems
+     */
+    creditAccountId?: string;
+    /**
+     * Compatibility field: ID-only version of debitAccount for legacy systems
+     */
+    debitAccountId?: string;
+}
+
 interface MergeTransactionsResponse {
-    mergedTransaction: Record<string, any>;
+    mergedTransaction: MergedTransactionData;
     revertedTransactionId: string;
     auditRecord: string | null;
 }
@@ -20,7 +39,7 @@ interface MergeTransactionsResponse {
 class TransactionMergeOperation {
     public editTransaction: Transaction;
     public revertTransaction: Transaction;
-    public mergedData: any;
+    public mergedData: MergedTransactionData;
     public record: string | null = null;
 
     private static readonly WORD_SPLITTER = /[ \-_]+/;
@@ -31,23 +50,20 @@ class TransactionMergeOperation {
         transaction2: Transaction
     ) {
         // Determine which transaction to edit vs revert based on priority rules
-        const tx1Data = transaction1.json();
-        const tx2Data = transaction2.json();
-
-        const tx1IsDraft = !tx1Data.posted;
-        const tx2IsDraft = !tx2Data.posted;
+        const tx1IsPosted = transaction1.isPosted() ?? false;
+        const tx2IsPosted = transaction2.isPosted() ?? false;
 
         // Rule 1: Prefer posted transactions over drafts
-        if (tx1IsDraft && !tx2IsDraft) {
+        if (!tx1IsPosted && tx2IsPosted) {
             this.revertTransaction = transaction1;
             this.editTransaction = transaction2;
-        } else if (!tx1IsDraft && tx2IsDraft) {
+        } else if (tx1IsPosted && !tx2IsPosted) {
             this.revertTransaction = transaction2;
             this.editTransaction = transaction1;
         } else {
-            // Rule 2: If both same status, prefer newer transaction (higher createdAt/createdAtMs)
-            const tx1Created = this.parseCreatedAt(tx1Data);
-            const tx2Created = this.parseCreatedAt(tx2Data);
+            // Rule 2: If both same status, prefer newer transaction (higher createdAt)
+            const tx1Created = transaction1.getCreatedAt().getTime();
+            const tx2Created = transaction2.getCreatedAt().getTime();
 
             if (tx1Created < tx2Created) {
                 this.revertTransaction = transaction1;
@@ -61,83 +77,84 @@ class TransactionMergeOperation {
         this.mergedData = this.merge();
     }
 
-    private parseCreatedAt(data: any): number {
-        // Try createdAt first (API field), fall back to createdAtMs (test field)
-        const createdAt = data.createdAt || data.createdAtMs;
-        if (!createdAt) return 0;
-        const timestamp = typeof createdAt === 'number' ? createdAt : parseInt(createdAt, 10);
-        return isNaN(timestamp) ? 0 : timestamp;
-    }
+    private merge(): MergedTransactionData {
+        // Start with edit transaction's JSON data as base
+        const merged: MergedTransactionData = { ...this.editTransaction.json() };
 
-    private merge(): any {
+        // Merge description using Transaction wrapper
+        const editDescription = this.editTransaction.getDescription();
+        const revertDescription = this.revertTransaction.getDescription();
+        merged.description = this.mergeDescription(
+            editDescription || null,
+            revertDescription || null
+        );
+
+        // Merge files using Transaction wrapper
+        const editFiles = this.editTransaction.getFiles() || [];
+        const revertFiles = this.revertTransaction.getFiles() || [];
+        const mergedFiles = [
+            ...editFiles.map(f => f.json()),
+            ...revertFiles.map(f => f.json())
+        ];
+        merged.files = mergedFiles;
+        // Keep "attachments" for backward compatibility with test fixtures
+        merged.attachments = mergedFiles;
+
+        // Merge remote IDs using Transaction wrapper
+        const editRemoteIds = this.editTransaction.getRemoteIds();
+        const revertRemoteIds = this.revertTransaction.getRemoteIds();
+        merged.remoteIds = [...new Set([...editRemoteIds, ...revertRemoteIds])];
+
+        // Merge URLs using Transaction wrapper
+        const editUrls = this.editTransaction.getUrls();
+        const revertUrls = this.revertTransaction.getUrls();
+        merged.urls = [...new Set([...editUrls, ...revertUrls])];
+
+        // Merge properties using Transaction wrapper (revert overwrites edit)
+        const editProperties = this.editTransaction.getProperties();
+        const revertProperties = this.revertTransaction.getProperties();
+        merged.properties = {
+            ...editProperties,
+            ...revertProperties
+        };
+
+        // Backfill credit account - get from revert if edit doesn't have it
         const editData = this.editTransaction.json();
         const revertData = this.revertTransaction.json();
 
-        // Start with edit data
-        const merged = { ...editData };
-
-        // Merge description
-        merged.description = this.mergeDescription(
-            editData.description || null,
-            revertData.description || null
-        );
-
-        // Merge files/attachments (handle both field names for test compatibility)
-        const editFiles = editData.files || (editData as any).attachments || [];
-        const revertFiles = revertData.files || (revertData as any).attachments || [];
-        merged.files = [...editFiles, ...revertFiles];
-        (merged as any).attachments = merged.files; // Keep both for compatibility
-
-        // Merge remote IDs
-        const editRemoteIds = editData.remoteIds || [];
-        const revertRemoteIds = revertData.remoteIds || [];
-        const allRemoteIds = [...new Set([...editRemoteIds, ...revertRemoteIds])];
-        merged.remoteIds = allRemoteIds;
-
-        // Merge URLs
-        const editUrls = editData.urls || [];
-        const revertUrls = revertData.urls || [];
-        const allUrls = [...new Set([...editUrls, ...revertUrls])];
-        merged.urls = allUrls;
-
-        // Merge properties (revert overwrites)
-        merged.properties = {
-            ...(editData.properties || {}),
-            ...(revertData.properties || {})
-        };
-
-        // Backfill credit account (handle both creditAccount and creditAccountId for test compatibility)
-        if (!merged.creditAccount && !(merged as any).creditAccountId) {
-            merged.creditAccount = revertData.creditAccount;
-            (merged as any).creditAccountId = (revertData as any).creditAccountId;
+        if (!editData.creditAccount && !(editData as MergedTransactionData).creditAccountId) {
+            if (revertData.creditAccount) merged.creditAccount = revertData.creditAccount;
+            const revertCompat = revertData as MergedTransactionData;
+            if (revertCompat.creditAccountId) merged.creditAccountId = revertCompat.creditAccountId;
         }
 
-        // Backfill debit account (handle both debitAccount and debitAccountId for test compatibility)
-        if (!merged.debitAccount && !(merged as any).debitAccountId) {
-            merged.debitAccount = revertData.debitAccount;
-            (merged as any).debitAccountId = (revertData as any).debitAccountId;
+        // Backfill debit account - get from revert if edit doesn't have it
+        if (!editData.debitAccount && !(editData as MergedTransactionData).debitAccountId) {
+            if (revertData.debitAccount) merged.debitAccount = revertData.debitAccount;
+            const revertCompat = revertData as MergedTransactionData;
+            if (revertCompat.debitAccountId) merged.debitAccountId = revertCompat.debitAccountId;
         }
 
-        // Handle amount merging
-        if (editData.amount && revertData.amount) {
-            const editAmount = new Amount(editData.amount);
-            const revertAmount = new Amount(revertData.amount);
+        // Handle amount validation and merging using Transaction wrapper
+        const editAmount = this.editTransaction.getAmount();
+        const revertAmount = this.revertTransaction.getAmount();
 
-            // Both have amounts - check if they differ
+        if (editAmount && revertAmount) {
+            // Both have amounts - validate they are equal
             if (editAmount.cmp(revertAmount) !== 0) {
-                // Create audit record
-                const diff = editAmount.minus(revertAmount);
-                const formattedAmount = this.book.formatValue(diff.abs());
-                const revertDate = revertData.dateFormatted || '';
-                const revertDescription = revertData.description || '';
-
-                this.record = `${revertDate} ${formattedAmount} ${revertDescription}`.trim();
+                // Amounts differ - throw error for manual reconciliation
+                throw new McpError(
+                    ErrorCode.InvalidParams,
+                    `Cannot merge transactions with different amounts: ${editAmount.toString()} vs ${revertAmount.toString()}. ` +
+                    `Please reconcile amounts manually before merging.`
+                );
             }
-            // Keep edit's amount
-        } else if (!editData.amount && revertData.amount) {
+            // Amounts are equal - keep edit's amount (no change needed)
+        } else if (!editAmount && revertAmount) {
             // Edit has no amount, use revert's amount
-            merged.amount = revertData.amount;
+            merged.amount = revertAmount.toString();
         }
+        // If edit has amount and revert doesn't, keep edit's amount (already in merged)
 
         return merged;
     }
@@ -168,8 +185,10 @@ class TransactionMergeOperation {
         const edit = this.editTransaction;
         const merged = this.mergedData;
 
-        // Set description
-        edit.setDescription(merged.description);
+        // Set description (ensure it's a string)
+        if (merged.description !== undefined) {
+            edit.setDescription(merged.description);
+        }
 
         // Set properties
         if (merged.properties) {
@@ -210,8 +229,9 @@ class TransactionMergeOperation {
         if (merged.files && merged.files.length > (this.editTransaction.getFiles()?.length || 0)) {
             const currentFiles = this.editTransaction.getFiles() || [];
             const newFiles = merged.files.slice(currentFiles.length);
-            newFiles.forEach((file: any) => {
-                edit.addFile(file);
+            newFiles.forEach((file: bkper.File) => {
+                // addFile expects File class but accepts raw bkper.File in practice
+                edit.addFile(file as unknown as import('bkper-js').File);
             });
         }
     }
@@ -281,13 +301,6 @@ export async function handleMergeTransactions(params: MergeTransactionsParams): 
             mergeOperation.applyMergedData();
             // Update the edit transaction with merged data
             await mergeOperation.editTransaction.update();
-
-            // If amounts differed, create audit record (only for real API)
-            if (mergeOperation.record) {
-                const auditTransaction = new Transaction(book);
-                auditTransaction.setDescription(mergeOperation.record);
-                await auditTransaction.create();
-            }
         }
 
         // Return the merged data
@@ -307,7 +320,7 @@ export async function handleMergeTransactions(params: MergeTransactionsParams): 
         const response: MergeTransactionsResponse = {
             mergedTransaction: JSON.parse(JSON.stringify(cleanTransaction)),
             revertedTransactionId: mergeOperation.revertTransaction.getId() || '',
-            auditRecord: mergeOperation.record
+            auditRecord: null  // Always null - we throw error if amounts differ
         };
 
         const responseText = JSON.stringify(response, null, 2);
