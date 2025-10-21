@@ -104,7 +104,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
                 parts.push(tx.to_account.trim());
             }
             parts.push(tx.description);
-            
+
             const fullDescription = parts.join(' ');
 
             transaction.setDate(tx.date);
@@ -187,19 +187,19 @@ export const createTransactionsToolDefinition = {
                         },
                         amount: {
                             type: 'number',
-                            description: 'Transaction amount (positive or negative number)'
+                            description: 'Transaction amount'
                         },
                         from_account: {
                             type: 'string',
-                            description: 'Credit account name (source of funds)'
+                            description: 'Origin/Credit account name'
                         },
                         to_account: {
                             type: 'string',
-                            description: 'Debit account name (destination of funds)'
+                            description: 'Destination/Debit account name'
                         },
                         description: {
                             type: 'string',
-                            description: 'Transaction description (can include #hashtags and ! for checked status)'
+                            description: 'Transaction description (can include #hashtags)'
                         }
                     },
                     required: ['date', 'amount', 'description']
