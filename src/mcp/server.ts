@@ -18,6 +18,7 @@ import { handleGetBalances, getBalancesToolDefinition } from './tools/get_balanc
 import { handleListTransactions, listTransactionsToolDefinition } from './tools/list_transactions.js';
 import { handleListBooks, listBooksToolDefinition } from './tools/list_books.js';
 import { handleCreateTransactions, createTransactionsToolDefinition } from './tools/create_transactions.js';
+import { handleMergeTransactions, mergeTransactionsToolDefinition } from './tools/merge_transactions.js';
 
 
 class BkperMcpServer {
@@ -49,6 +50,7 @@ class BkperMcpServer {
           getBalancesToolDefinition,
           listTransactionsToolDefinition,
           createTransactionsToolDefinition,
+          mergeTransactionsToolDefinition,
         ],
       };
     });
@@ -75,6 +77,9 @@ class BkperMcpServer {
             break;
           case 'create_transactions':
             result = await handleCreateTransactions(toolArgs as any);
+            break;
+          case 'merge_transactions':
+            result = await handleMergeTransactions(toolArgs as any);
             break;
           default:
             throw new McpError(

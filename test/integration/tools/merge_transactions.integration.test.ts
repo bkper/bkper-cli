@@ -9,36 +9,18 @@ import {
   withRetry,
   ExpectedStructures
 } from '../setup/test-helpers.js';
-import { testDataManager } from '../setup/test-data-manager.js';
 import type { IntegrationTestContext } from '../setup/test-helpers.js';
+
+// Fixed test book ID for integration tests
+const TEST_BOOK_ID = 'agtzfmJrcGVyLWhyZHITCxIGTGVkZ2VyGICA4IyGifUJDA';
 
 describe('Integration: merge_transactions Tool', function() {
   let context: IntegrationTestContext;
-  let testBookId: string;
 
   before(async function() {
     this.timeout(60000); // Allow more time for initial setup
     context = createTestContext();
-
-    // Verify we can access the API and get test book
-    const stats = await testDataManager.getTestDataStats();
-    console.log(`\nIntegration test environment:`);
-    console.log(`- Total books available: ${stats.totalBooks}`);
-    console.log(`- Test books: ${stats.testBooks}`);
-    console.log(`- Permissions:`, stats.permissions);
-
-    if (!stats.testBooks || stats.testBooks.length === 0) {
-      throw new Error('No test books available for integration testing');
-    }
-
-    // Use the TEST_BOOK_ID from environment
-    testBookId = process.env.TEST_BOOK_ID || stats.testBooks[0];
-    console.log(`- Using test book: ${testBookId}`);
-  });
-
-  after(function() {
-    // Clear any cached data
-    testDataManager.clearCache();
+    console.log(`\nIntegration test using fixed book: ${TEST_BOOK_ID}`);
   });
 
   describe('Tool Registration', function() {
@@ -68,12 +50,12 @@ describe('Integration: merge_transactions Tool', function() {
       this.timeout(60000);
 
       // Create two test transactions to merge
-      console.log(`\nCreating test transactions in book ${testBookId}...`);
+      console.log(`\nCreating test transactions in book ${TEST_BOOK_ID}...`);
 
       // Create first transaction
       const tx1Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-15',
             amount: 100.00,
@@ -91,7 +73,7 @@ describe('Integration: merge_transactions Tool', function() {
       // Create second transaction
       const tx2Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-15',
             amount: 100.00,
@@ -110,11 +92,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should merge two transactions successfully', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction1Id,
           transactionId2: transaction2Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const response = parseToolResponse(result);
@@ -148,11 +130,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should have merged description without duplicate words', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction1Id,
           transactionId2: transaction2Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const response = parseToolResponse(result);
@@ -184,7 +166,7 @@ describe('Integration: merge_transactions Tool', function() {
       // Create first transaction with amount 150
       const tx3Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-16',
             amount: 150.00,
@@ -201,7 +183,7 @@ describe('Integration: merge_transactions Tool', function() {
       // Create second transaction with amount 120
       const tx4Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-16',
             amount: 120.00,
@@ -219,11 +201,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should create audit record when amounts differ', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction3Id,
           transactionId2: transaction4Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const response = parseToolResponse(result);
@@ -244,11 +226,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should keep the newer transaction amount', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction3Id,
           transactionId2: transaction4Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const response = parseToolResponse(result);
@@ -281,7 +263,7 @@ describe('Integration: merge_transactions Tool', function() {
     it('should fail gracefully with invalid transaction ID', integrationTest(async () => {
       try {
         await context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: 'invalid-tx-id-12345',
           transactionId2: 'invalid-tx-id-67890'
         });
@@ -297,7 +279,7 @@ describe('Integration: merge_transactions Tool', function() {
     it('should fail with missing required parameters', integrationTest(async () => {
       try {
         await context.server.testCallTool('merge_transactions', {
-          bookId: testBookId
+          bookId: TEST_BOOK_ID
           // Missing transactionId1 and transactionId2
         });
         expect.fail('Should have thrown an error for missing parameters');
@@ -320,7 +302,7 @@ describe('Integration: merge_transactions Tool', function() {
       // Create two more test transactions
       const tx5Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-17',
             amount: 75.00,
@@ -335,7 +317,7 @@ describe('Integration: merge_transactions Tool', function() {
 
       const tx6Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-17',
             amount: 75.00,
@@ -352,11 +334,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should return properly formatted merged transaction', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction5Id,
           transactionId2: transaction6Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const response = parseToolResponse(result);
@@ -382,11 +364,11 @@ describe('Integration: merge_transactions Tool', function() {
     it('should return valid JSON response', integrationTest(async () => {
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction5Id,
           transactionId2: transaction6Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       // Parse should not throw
@@ -407,7 +389,7 @@ describe('Integration: merge_transactions Tool', function() {
       // Create transactions for performance test
       const tx7Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-18',
             amount: 50.00,
@@ -422,7 +404,7 @@ describe('Integration: merge_transactions Tool', function() {
 
       const tx8Result = await withRetry(() =>
         context.server.testCallTool('create_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactions: [{
             date: '2025-01-18',
             amount: 50.00,
@@ -441,11 +423,11 @@ describe('Integration: merge_transactions Tool', function() {
 
       const result = await withRetry(() =>
         context.server.testCallTool('merge_transactions', {
-          bookId: testBookId,
+          bookId: TEST_BOOK_ID,
           transactionId1: transaction7Id,
           transactionId2: transaction8Id
         }),
-        { maxRetries: 3, retryDelay: 2000 }
+        3, 2000
       );
 
       const endTime = Date.now();

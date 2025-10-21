@@ -19,6 +19,66 @@ setupMocks();
 
 const { BkperMcpServer } = await import('../../../src/mcp/server.js');
 
+// Helper function to create mock Transaction with all necessary methods
+function createMockTransaction(data: any) {
+  return {
+    json: () => data,
+    getId: () => data.id,
+    trash: async () => ({ json: () => data }),
+    update: async () => ({ json: () => data }),
+    getRemoteIds: () => data.remoteIds || [],
+    getUrls: () => data.urls || [],
+    getFiles: () => data.files || [],
+    getAmount: () => data.amount ? { cmp: () => 0, minus: () => ({ abs: () => ({ toString: () => '0' }) }) } : null,
+    getProperties: () => data.properties || {}
+  };
+}
+
+// Helper function to create mock Book with Transaction factory
+function createMockBookForMerge(book: any, tx1Data: any, tx2Data: any, onTrash?: Function, onUpdate?: Function) {
+  const mockBook = {
+    json: () => book,
+    getId: () => book.id,
+    getDecimalSeparator: () => book.decimalSeparator || '.',
+    getFractionDigits: () => book.fractionDigits || book.precision || 2,
+    getConfig: () => ({}), // Mock config
+    getTransaction: async (txId: string) => {
+      const data = txId === tx1Data.id ? tx1Data : tx2Data;
+      const mockTx = createMockTransaction(data);
+
+      // Override trash and update to call callbacks if provided
+      if (onTrash) {
+        const originalTrash = mockTx.trash;
+        mockTx.trash = async () => {
+          onTrash(txId);
+          return originalTrash();
+        };
+      }
+
+      if (onUpdate) {
+        const originalUpdate = mockTx.update;
+        mockTx.update = async () => {
+          onUpdate(txId, data);
+          return originalUpdate();
+        };
+      }
+
+      return mockTx;
+    },
+    formatValue: (amount: any) => amount.toString()
+  };
+
+  // Return a Proxy that blocks Transaction constructor calls in tests
+  return new Proxy(mockBook, {
+    get(target: any, prop: string) {
+      if (prop === 'constructor') {
+        return Object; // Return a safe constructor
+      }
+      return target[prop];
+    }
+  });
+}
+
 describe('MCP Server - merge_transactions Tool Registration', function() {
   let server: BkperMcpServerType;
 
@@ -45,7 +105,7 @@ describe('MCP Server - merge_transactions Tool Registration', function() {
     const mergeTransactionsTool = response.tools.find((tool: any) => tool.name === 'merge_transactions');
 
     expect(mergeTransactionsTool).to.exist;
-    if (mergeTransactionsTool) {
+    if (mergeTransactionsTool && mergeTransactionsTool.description) {
       const desc = mergeTransactionsTool.description.toLowerCase();
       expect(desc).to.satisfy((d: string) => d.includes('merge') || d.includes('duplicate'));
     }
@@ -200,18 +260,7 @@ describe('MCP Server - merge_transactions Algorithm: Priority Rules', function()
     const scenario = scenarios.draftVsPosted;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -231,21 +280,10 @@ describe('MCP Server - merge_transactions Algorithm: Priority Rules', function()
 
   it('should prefer posted transaction over draft (transaction1 posted, transaction2 draft)', async function() {
     const scenario = scenarios.draftVsPosted;
-    // Swap the transactions
+    // Swap the transactions - pass them in reverse order
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction2.id ? scenario.transaction2 : scenario.transaction1
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction2, scenario.transaction1)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -267,21 +305,7 @@ describe('MCP Server - merge_transactions Algorithm: Priority Rules', function()
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        }),
-        recordTransaction: async (text: string) => ({
-          json: () => ({ description: text })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -311,21 +335,7 @@ describe('MCP Server - merge_transactions Algorithm: Description Merging', funct
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, description: data.description })
-        }),
-        recordTransaction: async (text: string) => ({
-          json: () => ({ description: text })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -357,18 +367,7 @@ describe('MCP Server - merge_transactions Algorithm: Description Merging', funct
 
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...tx2, description: data.description })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, tx1, tx2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -391,18 +390,7 @@ describe('MCP Server - merge_transactions Algorithm: Description Merging', funct
 
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...tx2, description: data.description })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, tx1, tx2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -431,21 +419,7 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        }),
-        recordTransaction: async (text: string) => ({
-          json: () => ({ id: 'audit-record', description: text })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -467,18 +441,7 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -500,18 +463,7 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
 
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === tx1.id ? tx1 : tx2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...tx2, amount: data.amount || tx1.amount })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, tx1, tx2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -540,21 +492,7 @@ describe('MCP Server - merge_transactions Algorithm: Account Backfilling', funct
     const scenario = scenarios.backfillAccounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            creditAccountId: data.creditAccountId || scenario.expectedEdit.creditAccountId
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -574,21 +512,7 @@ describe('MCP Server - merge_transactions Algorithm: Account Backfilling', funct
     const scenario = scenarios.backfillAccounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            debitAccountId: data.debitAccountId || scenario.expectedEdit.debitAccountId
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -616,21 +540,7 @@ describe('MCP Server - merge_transactions Algorithm: Metadata Merging', function
     const scenario = scenarios.withAttachmentsAndUrls;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            attachments: data.attachments
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -652,21 +562,7 @@ describe('MCP Server - merge_transactions Algorithm: Metadata Merging', function
     const scenario = scenarios.withAttachmentsAndUrls;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            urls: data.urls
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -688,21 +584,7 @@ describe('MCP Server - merge_transactions Algorithm: Metadata Merging', function
     const scenario = scenarios.withAttachmentsAndUrls;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            remoteIds: data.remoteIds
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -724,21 +606,7 @@ describe('MCP Server - merge_transactions Algorithm: Metadata Merging', function
     const scenario = scenarios.withAttachmentsAndUrls;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({
-            ...scenario.expectedEdit,
-            properties: data.properties
-          })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -767,18 +635,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -803,18 +660,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -836,18 +682,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -868,21 +703,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        }),
-        recordTransaction: async (text: string) => ({
-          json: () => ({ id: 'audit-record', description: text })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -903,18 +724,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
@@ -935,18 +745,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     const scenario = scenarios.sameAmounts;
     const mockBkper = {
       setConfig: () => {},
-      getBook: async (id: string) => ({
-        json: () => fixtureBook,
-        getTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        revertTransaction: async (txId: string) => ({
-          json: () => txId === scenario.transaction1.id ? scenario.transaction1 : scenario.transaction2
-        }),
-        updateTransaction: async (txId: string, data: any) => ({
-          json: () => ({ ...scenario.expectedEdit, ...data })
-        })
-      })
+      getBook: async (id: string) => createMockBookForMerge(fixtureBook, scenario.transaction1, scenario.transaction2)
     };
     setMockBkper(mockBkper);
     server = new BkperMcpServer();

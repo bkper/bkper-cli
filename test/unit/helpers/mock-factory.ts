@@ -129,7 +129,68 @@ export async function setupMocks() {
     if (filename === 'mocked-bkper-js') {
       const mockBkper = (globalThis as any).__mockBkper;
       if (mockBkper) {
-        (this as any).exports = { Bkper: mockBkper };
+        // Mock Transaction class
+        class MockTransaction {
+          private data: any = {};
+          constructor(private book?: any) {
+            // console.log('MockTransaction constructor called');
+          }
+
+          setDescription(description: string) {
+            this.data.description = description;
+            return this;
+          }
+
+          setAmount(amount: any) {
+            this.data.amount = amount;
+            return this;
+          }
+
+          async create() {
+            // console.log('MockTransaction.create() called');
+            return this;
+          }
+
+          json() {
+            return this.data;
+          }
+        }
+
+        // Mock Amount class
+        class MockAmount {
+          constructor(private value: any) {}
+
+          cmp(other: MockAmount): number {
+            const thisVal = parseFloat(this.value);
+            const otherVal = parseFloat(other.value);
+            if (thisVal > otherVal) return 1;
+            if (thisVal < otherVal) return -1;
+            return 0;
+          }
+
+          minus(other: MockAmount) {
+            const result = parseFloat(this.value) - parseFloat(other.value);
+            return new MockAmount(result.toString());
+          }
+
+          abs() {
+            return new MockAmount(Math.abs(parseFloat(this.value)).toString());
+          }
+
+          toString() {
+            return this.value;
+          }
+        }
+
+        // Mock Book class (just a placeholder if needed)
+        class MockBook {}
+
+        (this as any).exports = {
+          Bkper: mockBkper,
+          Transaction: MockTransaction,
+          Amount: MockAmount,
+          Book: MockBook
+        };
       }
       return;
     }
