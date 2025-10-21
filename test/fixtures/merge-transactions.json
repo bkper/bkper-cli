@@ -1,0 +1,359 @@
+{
+  "book": {
+    "id": "test-book-123",
+    "name": "Test Book",
+    "decimalSeparator": ".",
+    "precision": 2,
+    "datePattern": "dd/MM/yyyy"
+  },
+  "scenarios": {
+    "differentAmounts": {
+      "transaction1": {
+        "id": "txn1",
+        "amount": "100.00",
+        "description": "DAS #impostos Simples Nacional Mensal",
+        "dateValue": 20180125,
+        "dateFormatted": "25/01/2018",
+        "creditAccountId": "acc-credit-1",
+        "debitAccountId": "acc-debit-1",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1516838400000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": ["someid"],
+        "properties": {
+          "source": "manual"
+        }
+      },
+      "transaction2": {
+        "id": "txn2",
+        "amount": "80.00",
+        "description": "INT DAS-SIMPLES NACIONA",
+        "dateValue": 20180126,
+        "dateFormatted": "26/01/2018",
+        "creditAccountId": "acc-credit-1",
+        "debitAccountId": "acc-debit-1",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1516924800000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {
+          "imported": "true"
+        }
+      },
+      "expectedEdit": {
+        "id": "txn2",
+        "amount": "80.00",
+        "description": "INT DAS-SIMPLES NACIONA #impostos Nacional Mensal",
+        "remoteIds": ["someid"],
+        "properties": {
+          "source": "manual",
+          "imported": "true"
+        }
+      },
+      "expectedRevert": {
+        "id": "txn1"
+      },
+      "expectedRecord": "25/01/2018 20.00 DAS #impostos Simples Nacional Mensal"
+    },
+    "sameAmounts": {
+      "transaction1": {
+        "id": "txn3",
+        "amount": "100.00",
+        "description": "Salary payment",
+        "dateValue": 20180201,
+        "dateFormatted": "01/02/2018",
+        "creditAccountId": "acc-credit-2",
+        "debitAccountId": "acc-debit-2",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1517443200000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "transaction2": {
+        "id": "txn4",
+        "amount": "100.00",
+        "description": "Monthly income",
+        "dateValue": 20180201,
+        "dateFormatted": "01/02/2018",
+        "creditAccountId": "acc-credit-2",
+        "debitAccountId": "acc-debit-2",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1517529600000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "expectedEdit": {
+        "id": "txn4",
+        "amount": "100.00",
+        "description": "Monthly income Salary payment"
+      },
+      "expectedRevert": {
+        "id": "txn3"
+      },
+      "expectedRecord": null
+    },
+    "draftVsPosted": {
+      "transaction1": {
+        "id": "txn5",
+        "amount": "50.00",
+        "description": "Draft transaction",
+        "dateValue": 20180215,
+        "dateFormatted": "15/02/2018",
+        "creditAccountId": "acc-credit-3",
+        "debitAccountId": "acc-debit-3",
+        "status": "DRAFT",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1518652800000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "transaction2": {
+        "id": "txn6",
+        "amount": "50.00",
+        "description": "Posted transaction",
+        "dateValue": 20180215,
+        "dateFormatted": "15/02/2018",
+        "creditAccountId": "acc-credit-3",
+        "debitAccountId": "acc-debit-3",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1518739200000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "expectedEdit": {
+        "id": "txn6",
+        "description": "Posted transaction Draft"
+      },
+      "expectedRevert": {
+        "id": "txn5"
+      }
+    },
+    "backfillAccounts": {
+      "transaction1": {
+        "id": "txn7",
+        "amount": "75.00",
+        "description": "Transaction with accounts",
+        "dateValue": 20180301,
+        "dateFormatted": "01/03/2018",
+        "creditAccountId": "acc-credit-4",
+        "debitAccountId": "acc-debit-4",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1519862400000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "transaction2": {
+        "id": "txn8",
+        "amount": "75.00",
+        "description": "Transaction missing accounts",
+        "dateValue": 20180301,
+        "dateFormatted": "01/03/2018",
+        "creditAccountId": null,
+        "debitAccountId": null,
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1519948800000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "expectedEdit": {
+        "id": "txn8",
+        "creditAccountId": "acc-credit-4",
+        "debitAccountId": "acc-debit-4"
+      },
+      "expectedRevert": {
+        "id": "txn7"
+      }
+    },
+    "withAttachmentsAndUrls": {
+      "transaction1": {
+        "id": "txn9",
+        "amount": "200.00",
+        "description": "Receipt #expense",
+        "dateValue": 20180315,
+        "dateFormatted": "15/03/2018",
+        "creditAccountId": "acc-credit-5",
+        "debitAccountId": "acc-debit-5",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1521072000000,
+        "updatedAtMs": null,
+        "attachments": [
+          {
+            "artifactId": "attach1",
+            "servingUrl": "https://example.com/receipt1.pdf",
+            "filename": "receipt1.pdf",
+            "fileSize": "1024",
+            "contentType": "application/pdf",
+            "content": "",
+            "properties": {}
+          }
+        ],
+        "urls": ["https://vendor.com/invoice/123"],
+        "remoteIds": ["bank-import-001"],
+        "properties": {
+          "category": "office"
+        }
+      },
+      "transaction2": {
+        "id": "txn10",
+        "amount": "200.00",
+        "description": "Office supplies",
+        "dateValue": 20180315,
+        "dateFormatted": "15/03/2018",
+        "creditAccountId": "acc-credit-5",
+        "debitAccountId": "acc-debit-5",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1521158400000,
+        "updatedAtMs": null,
+        "attachments": [
+          {
+            "artifactId": "attach2",
+            "servingUrl": "https://example.com/receipt2.pdf",
+            "filename": "receipt2.pdf",
+            "fileSize": "2048",
+            "contentType": "application/pdf",
+            "content": "",
+            "properties": {}
+          }
+        ],
+        "urls": ["https://vendor.com/order/456"],
+        "remoteIds": ["manual-entry-002"],
+        "properties": {
+          "department": "admin"
+        }
+      },
+      "expectedEdit": {
+        "id": "txn10",
+        "description": "Office supplies Receipt #expense",
+        "attachments": [
+          {
+            "artifactId": "attach2",
+            "servingUrl": "https://example.com/receipt2.pdf",
+            "filename": "receipt2.pdf"
+          },
+          {
+            "artifactId": "attach1",
+            "servingUrl": "https://example.com/receipt1.pdf",
+            "filename": "receipt1.pdf"
+          }
+        ],
+        "urls": ["https://vendor.com/order/456", "https://vendor.com/invoice/123"],
+        "remoteIds": ["manual-entry-002", "bank-import-001"],
+        "properties": {
+          "category": "office",
+          "department": "admin"
+        }
+      },
+      "expectedRevert": {
+        "id": "txn9"
+      }
+    },
+    "cascadingMerge": {
+      "transaction1": {
+        "id": "txn11",
+        "amount": "100.00",
+        "description": "DAS #impostos Simples Nacional Mensal",
+        "dateValue": 20180125,
+        "dateFormatted": "25/01/2018",
+        "creditAccountId": "acc-credit-6",
+        "debitAccountId": "acc-debit-6",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1516838400000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": ["someid"],
+        "properties": {}
+      },
+      "transaction2": {
+        "id": "txn12",
+        "amount": "80.00",
+        "description": "INT DAS-SIMPLES NACIONA",
+        "dateValue": 20180126,
+        "dateFormatted": "26/01/2018",
+        "creditAccountId": "acc-credit-6",
+        "debitAccountId": "acc-debit-6",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1516924800000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "transaction3": {
+        "id": "txn13",
+        "description": "transaction 3",
+        "dateValue": 20180127,
+        "dateFormatted": "27/01/2018",
+        "creditAccountId": "acc-credit-6",
+        "debitAccountId": "acc-debit-6",
+        "status": "POSTED",
+        "trashed": false,
+        "checked": false,
+        "createdAtMs": 1517011200000,
+        "updatedAtMs": null,
+        "attachments": [],
+        "urls": [],
+        "remoteIds": [],
+        "properties": {}
+      },
+      "firstMergeExpectedEdit": {
+        "id": "txn12",
+        "amount": "80.00",
+        "description": "INT DAS-SIMPLES NACIONA #impostos Nacional Mensal",
+        "remoteIds": ["someid"]
+      },
+      "secondMergeExpectedEdit": {
+        "id": "txn13",
+        "amount": "80.00",
+        "description": "transaction 3 INT DAS SIMPLES NACIONA #impostos Nacional Mensal",
+        "remoteIds": ["someid"]
+      }
+    }
+  }
+}
