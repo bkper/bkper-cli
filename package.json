@@ -54,14 +54,14 @@
     "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@modelcontextprotocol/sdk": "^1.13.1",
-        "bkper-js": "^2.4.0",
+        "bkper-js": "^2.18.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
         "google-auth-library": "^9.14.0",
         "yaml": "^2.5.1"
     },
     "devDependencies": {
-        "@bkper/bkper-api-types": "^5.23.0",
+        "@bkper/bkper-api-types": "^5.32.3",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^10.0.0",
         "@types/node": "^22.5.1",

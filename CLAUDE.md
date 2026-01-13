@@ -54,12 +54,22 @@ This is the Bkper Node.js command line client - a CLI tool for creating and upda
 
 #### Configuration
 - Apps are configured via `bkperapp.yaml` or `bkperapp.json` files
-- Environment variables required:
-  - `BKPER_API_KEY` - API access
+- Environment variables:
+  - `BKPER_API_KEY` - (Optional) API key for direct API access. If not set, uses the API proxy.
   - `BKPER_CLIENT_SECRET` - App operations
   - `BKPER_DEVELOPER_EMAIL` - Developer identification
   - `BKPER_USER_EMAILS` - User permissions
   - `TEST_BOOK_ID` - Fixed book ID for consistent integration testing
+
+#### API Access Modes
+The CLI supports two modes of API access:
+
+1. **Proxy Mode (Default)**: When `BKPER_API_KEY` is not set, requests go through
+   `https://api.bkper.app` which injects a managed API key. This is the simplest
+   setup - users only need to run `bkper login`.
+
+2. **Direct Mode**: When `BKPER_API_KEY` is set, requests go directly to the Bkper
+   API. This is for power users who want their own API dashboard, quotas, and attribution.
 
 ### Dependencies
 - `bkper-js` - Core Bkper API client library
@@ -76,10 +86,12 @@ This is the Bkper Node.js command line client - a CLI tool for creating and upda
 import { App, Bkper } from 'bkper-js';
 import { getOAuthToken } from './auth/local-auth-service.js';
 
-// Configure Bkper with API key and OAuth token providers
+// Configure Bkper - uses proxy when no API key is set
+const apiKey = process.env.BKPER_API_KEY;
 Bkper.setConfig({
-  apiKeyProvider: async () => process.env.BKPER_API_KEY || '',
-  oauthTokenProvider: () => getOAuthToken()
+  apiKeyProvider: apiKey ? async () => apiKey : undefined,
+  oauthTokenProvider: () => getOAuthToken(),
+  apiBaseUrl: apiKey ? undefined : 'https://api.bkper.app'
 });
 ```
 

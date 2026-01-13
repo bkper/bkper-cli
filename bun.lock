@@ -1,19 +1,20 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "bkper",
       "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@modelcontextprotocol/sdk": "^1.13.1",
-        "bkper-js": "^2.4.0",
+        "bkper-js": "^2.18.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
         "google-auth-library": "^9.14.0",
         "yaml": "^2.5.1",
       },
       "devDependencies": {
-        "@bkper/bkper-api-types": "^5.23.0",
+        "@bkper/bkper-api-types": "^5.32.3",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^10.0.0",
         "@types/node": "^22.5.1",
@@ -39,7 +40,7 @@
 
     "@babel/runtime": ["@babel/runtime@7.28.4", "", {}, "sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ=="],
 
-    "@bkper/bkper-api-types": ["@bkper/bkper-api-types@5.30.0", "", {}, "sha512-BgFDWg4PnJKqV2QgIehaTtkVCzz2NQG1p+vPnAxq7xCVjBvfl993om5piq0rC370hy43YiOkEF8edPDwSfsyVw=="],
+    "@bkper/bkper-api-types": ["@bkper/bkper-api-types@5.32.3", "", {}, "sha512-YbbawZMHsTxt2yuTNP/VAhBwoQzgY+5uBasK9a9KmkZr/H0G5wvaESYFd6vsQrvtSaF9Jx6Ih7TFU7SzjxjHEw=="],
 
     "@cspotcode/source-map-support": ["@cspotcode/source-map-support@0.8.1", "", { "dependencies": { "@jridgewell/trace-mapping": "0.3.9" } }, "sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw=="],
 
@@ -151,7 +152,7 @@
 
     "binary-extensions": ["binary-extensions@2.3.0", "", {}, "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="],
 
-    "bkper-js": ["bkper-js@2.15.1", "", { "dependencies": { "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" }, "peerDependencies": { "@bkper/bkper-api-types": "^5.30.0" } }, "sha512-qZjjctuxF4+q0jy7wV1v7dB5hviTjpEoVIt4gJCIQ23kAOzi5fIj8wVdI4sblx9poKcIpgs0rVOdnKjmN5Bklg=="],
+    "bkper-js": ["bkper-js@2.18.0", "", { "dependencies": { "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" }, "peerDependencies": { "@bkper/bkper-api-types": "^5.32.0" } }, "sha512-9Z805hxccr5YTKVEvrNLssHuGb9ST11XOqrWez/eAPHHCb5iqUqCri4EtaptEML35n2NpXnjsDYzYFD9aXJmcg=="],
 
     "body-parser": ["body-parser@2.2.0", "", { "dependencies": { "bytes": "^3.1.2", "content-type": "^1.0.5", "debug": "^4.4.0", "http-errors": "^2.0.0", "iconv-lite": "^0.6.3", "on-finished": "^2.4.1", "qs": "^6.14.0", "raw-body": "^3.0.0", "type-is": "^2.0.0" } }, "sha512-02qvAaxv8tp7fBa/mw1ga98OGm+eCbqzJOKoRt70sLmfEEi+jyBYVTDGfCL/k06/4EMk/z01gCe7HoCH/f2LTg=="],
 
