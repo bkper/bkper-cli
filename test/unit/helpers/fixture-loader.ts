@@ -6,16 +6,17 @@ import {
   TransactionData,
   BalanceData,
   AccountBalanceData,
+  AppData,
   Group
 } from './mock-interfaces.js';
 
 // Centralized fixture loading
 export function loadFixture<T>(testDir: string, fixtureName: string): T[] {
   // testDir is the directory containing the test file
-  // For files in test/unit/tools/, go up to test/unit/fixtures/
+  // For files in test/unit/tools/ or test/unit/commands/, go up to test/unit/fixtures/
   // For files in test/unit/, go to fixtures/
   let fixturePath: string;
-  if (testDir.includes('/unit/tools')) {
+  if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
     fixturePath = path.join(testDir, '..', 'fixtures', fixtureName);
   } else if (testDir.includes('/unit')) {
     fixturePath = path.join(testDir, 'fixtures', fixtureName);
@@ -28,7 +29,7 @@ export function loadFixture<T>(testDir: string, fixtureName: string): T[] {
 
 export function loadFixtureObject<T>(testDir: string, fixtureName: string): T {
   let fixturePath: string;
-  if (testDir.includes('/unit/tools')) {
+  if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
     fixturePath = path.join(testDir, '..', 'fixtures', fixtureName);
   } else if (testDir.includes('/unit')) {
     fixturePath = path.join(testDir, 'fixtures', fixtureName);
@@ -81,6 +82,10 @@ export function loadBalanceMatrixTotal(testDir: string): any[][] {
 
 export function loadBalanceMatrixPeriod(testDir: string): any[][] {
   return loadFixture<any[]>(testDir, 'sample-balance-matrix-period.json');
+}
+
+export function loadApps(testDir: string): AppData[] {
+  return loadFixture<AppData>(testDir, 'sample-apps.json');
 }
 
 // Large dataset generators for pagination testing

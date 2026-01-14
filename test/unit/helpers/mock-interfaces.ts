@@ -113,6 +113,25 @@ export interface GroupData {
   properties?: { [name: string]: string };
 }
 
+// App data interface for apps list command
+export interface AppData {
+  id?: string;
+  name?: string;
+  description?: string;
+  published?: boolean;
+  installable?: boolean;
+  connectable?: boolean;
+  deprecated?: boolean;
+  ownerName?: string;
+  ownerEmail?: string;
+  developerEmail?: string;
+  website?: string | null;
+  logoUrl?: string | null;
+  events?: string[];
+  webhookUrl?: string;
+  webhookUrlDev?: string;
+}
+
 // Account Balance data (for account-specific balance queries)
 export interface AccountBalanceData {
   account: AccountData;
@@ -191,10 +210,18 @@ export interface MockTransactionIterator {
   getCursor(): string | undefined;
 }
 
+export interface MockApp {
+  json(): AppData;
+  getId(): string | undefined;
+  getName(): string | undefined;
+  isPublished(): boolean;
+}
+
 export interface MockBkper {
   setConfig: (config: any) => void;
   getBooks?(): Promise<MockBook[]>;
   getBook?(id: string): Promise<MockBook>;
+  getApps?(): Promise<MockApp[]>;
 }
 
 // BkperMcpServer type helper

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "app-tax-bot",
+    "name": "Tax Bot",
+    "description": "Automatically calculates and posts tax transactions",
+    "published": true,
+    "installable": true,
+    "connectable": true,
+    "deprecated": false,
+    "ownerName": "Bkper",
+    "ownerEmail": "dev@bkper.com",
+    "developerEmail": "dev@bkper.com",
+    "website": "https://bkper.com/apps/tax-bot",
+    "logoUrl": "https://bkper.com/apps/tax-bot/logo.png",
+    "events": ["TRANSACTION_POSTED", "TRANSACTION_CHECKED"],
+    "webhookUrl": "https://tax-bot.bkper.com/webhook"
+  },
+  {
+    "id": "app-exchange-bot",
+    "name": "Exchange Bot",
+    "description": "Handles multi-currency exchange rate calculations",
+    "published": true,
+    "installable": true,
+    "connectable": false,
+    "deprecated": false,
+    "ownerName": "Bkper",
+    "ownerEmail": "dev@bkper.com",
+    "developerEmail": "dev@bkper.com",
+    "website": "https://bkper.com/apps/exchange-bot",
+    "logoUrl": "https://bkper.com/apps/exchange-bot/logo.png",
+    "events": ["TRANSACTION_CREATED", "TRANSACTION_UPDATED"],
+    "webhookUrl": "https://exchange-bot.bkper.com/webhook"
+  },
+  {
+    "id": "app-dev-unpublished",
+    "name": "My Dev App",
+    "description": "An app in development, not yet published",
+    "published": false,
+    "installable": false,
+    "connectable": false,
+    "deprecated": false,
+    "ownerName": "Developer Inc",
+    "ownerEmail": "developer@example.com",
+    "developerEmail": "developer@example.com",
+    "website": null,
+    "logoUrl": null,
+    "events": ["BOOK_UPDATED"],
+    "webhookUrlDev": "http://localhost:3000/webhook"
+  }
+]

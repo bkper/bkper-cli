@@ -6,13 +6,15 @@ import {
   MockBalance,
   MockAccountBalance,
   MockGroup,
+  MockApp,
   MockDataTableBuilder,
   BookData,
   AccountData,
   TransactionData,
   BalanceData,
   AccountBalanceData,
-  GroupData
+  GroupData,
+  AppData
 } from './mock-interfaces.js';
 import { loadBalanceMatrixTotal, loadBalanceMatrixPeriod } from './fixture-loader.js';
 import { dirname } from 'path';
@@ -412,6 +414,21 @@ export function createMockBkperForBook(
           return mockGroups;
         } : undefined
       };
+    }
+  };
+}
+
+// Factory for creating MockBkper instances for apps listing
+export function createMockBkperForApps(apps: AppData[]): MockBkper {
+  return {
+    setConfig: () => {},
+    getApps: async (): Promise<MockApp[]> => {
+      return apps.map((appData: AppData) => ({
+        json: (): AppData => appData,
+        getId: (): string | undefined => appData.id,
+        getName: (): string | undefined => appData.name,
+        isPublished: (): boolean => appData.published || false
+      }));
     }
   };
 }

@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 
-import { App } from "bkper-js";
 import program from "commander";
-import fs from "fs";
-import * as YAML from "yaml";
 import { login, logout } from "./auth/local-auth-service.js";
+import { setupBkper } from "./mcp/bkper-factory.js";
+import { listApps, createApp, updateApp } from "./commands/apps.js";
 
 import dotenv from "dotenv";
-import { setupBkper } from "./mcp/bkper-factory.js";
 dotenv.config();
 
 program
@@ -20,43 +18,101 @@ program
 program
     .command("logout")
     .description("Logout Bkper")
-    .action((todo) => {
+    .action(() => {
         logout();
     });
 
+// New 'apps' command group (plural, standard)
+const appsCommand = program.command("apps").description("Manage Bkper Apps");
+
+appsCommand
+    .command("list")
+    .description("List all apps you have access to")
+    .action(async () => {
+        try {
+            setupBkper();
+            const apps = await listApps();
+            
+            if (apps.length === 0) {
+                console.log("No apps found.");
+                return;
+            }
+            
+            // Table-style output
+            console.log("\nApps:\n");
+            console.log("ID".padEnd(25) + "Name".padEnd(30) + "Published");
+            console.log("-".repeat(65));
+            
+            for (const app of apps) {
+                const id = (app.id || "").padEnd(25);
+                const name = (app.name || "").padEnd(30);
+                const published = app.published ? "Yes" : "No";
+                console.log(`${id}${name}${published}`);
+            }
+            
+            console.log(`\nTotal: ${apps.length} app(s)`);
+        } catch (err) {
+            console.error("Error listing apps:", err);
+            process.exit(1);
+        }
+    });
+
+appsCommand
+    .command("create")
+    .description("Create a new App from bkperapp.json or bkperapp.yaml")
+    .action(async () => {
+        try {
+            setupBkper();
+            const app = await createApp();
+            console.log(`Created ${app.getId()} successfully.`);
+        } catch (err) {
+            console.error("Error creating app:", err);
+            process.exit(1);
+        }
+    });
+
+appsCommand
+    .command("update")
+    .description("Update an existing App from bkperapp.json or bkperapp.yaml")
+    .action(async () => {
+        try {
+            setupBkper();
+            const app = await updateApp();
+            console.log(`Updated ${app.getId()} successfully.`);
+        } catch (err) {
+            console.error("Error updating app:", err);
+            process.exit(1);
+        }
+    });
+
+// Legacy 'app' command (singular, deprecated but backward compatible)
 program
     .command("app")
-    .description("Create/Update an App")
+    .description("[Deprecated] Use 'apps create' or 'apps update' instead")
     .option("-u, --update", "Update the App")
     .option("-c, --create", "Create a new App")
     .action(async (options) => {
         try {
             setupBkper();
-
-            let json: bkper.App;
-
-            if (fs.existsSync("./bkperapp.json")) {
-                json = JSON.parse(fs.readFileSync("./bkperapp.json", "utf8"));
-            } else if (fs.existsSync("./bkperapp.yaml")) {
-                json = YAML.parse(fs.readFileSync("./bkperapp.yaml", "utf8"));
-            } else {
-                throw new Error("bkperapp.json or bkperapp.yaml not found");
-            }
-
-            let app = new App(json)
-                .setReadme(fs.readFileSync("./README.md", "utf8"))
-                .setClientSecret(process.env.BKPER_CLIENT_SECRET)
-                .setDeveloperEmail(process.env.BKPER_DEVELOPER_EMAIL)
-                .setUserEmails(process.env.BKPER_USER_EMAILS);
+            
             if (options.update) {
-                app = await app.update();
-                console.log(`Updated ${app.getId()} sucessfully.`);
+                console.warn("Warning: 'bkper app -u' is deprecated. Use 'bkper apps update' instead.\n");
+                const app = await updateApp();
+                console.log(`Updated ${app.getId()} successfully.`);
             } else if (options.create) {
-                app = await app.create();
-                console.log(`Created ${app.getId()} sucessfully.`);
+                console.warn("Warning: 'bkper app -c' is deprecated. Use 'bkper apps create' instead.\n");
+                const app = await createApp();
+                console.log(`Created ${app.getId()} successfully.`);
+            } else {
+                console.log("Usage: bkper app -c (create) or bkper app -u (update)");
+                console.log("\nNote: This command is deprecated. Use 'bkper apps <command>' instead:");
+                console.log("  bkper apps list    - List all apps");
+                console.log("  bkper apps create  - Create a new app");
+                console.log("  bkper apps update  - Update an existing app");
             }
         } catch (err) {
-            console.log(err);
+            console.error("Error:", err);
+            process.exit(1);
         }
     });
 

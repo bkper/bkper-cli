@@ -37,7 +37,8 @@
         "build:copy-docs": "mkdir -p lib/docs && cp -f docs/*.md lib/docs/ 2>/dev/null || true",
         "build:copy-mcp-assets": "mkdir -p lib/mcp && cp -f src/mcp/*.md lib/mcp/ 2>/dev/null || true",
         "predev": "bun run build",
-        "dev": "bun run build && npx concurrently \"tsc -w\" \"./scripts/dev-mcp.sh\"",
+        "dev": "tsc -w",
+        "dev:mcp": "concurrently -k -n cli,mcp -c blue,green \"bun run dev\" \"bun run dev:mcp\"",
         "mcp": "bun run build && node lib/cli.js mcp start",
         "ports": "devpod ssh ../ -L 6274",
         "test": "TS_NODE_PROJECT=tsconfig.test.json mocha",
@@ -54,7 +55,7 @@
     "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@modelcontextprotocol/sdk": "^1.13.1",
-        "bkper-js": "^2.18.0",
+        "bkper-js": "^2.19.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
         "google-auth-library": "^9.14.0",
