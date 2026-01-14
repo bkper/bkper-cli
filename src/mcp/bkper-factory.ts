@@ -29,26 +29,17 @@ export function getBkperInstance(): Bkper {
 }
 
 /**
- * Default API proxy URL for clients without their own API key.
- * The proxy injects a managed API key server-side.
- */
-const API_PROXY_BASE_URL = 'https://api.bkper.app';
-
-/**
  * Configure Bkper with authentication.
  * 
  * If BKPER_API_KEY is set, uses direct API access (for power users with own quotas).
- * Otherwise, uses the API proxy which injects a managed key server-side.
+ * Otherwise, bkper-js automatically uses the API proxy which injects a managed key server-side.
  */
 export function setupBkper() {
   const apiKey = process.env.BKPER_API_KEY;
 
   Bkper.setConfig({
-    // Only provide API key if user has one configured
     apiKeyProvider: apiKey ? async () => apiKey : undefined,
-    oauthTokenProvider: () => getOAuthToken(),
-    // Use proxy when no API key is configured
-    apiBaseUrl: apiKey ? undefined : API_PROXY_BASE_URL
+    oauthTokenProvider: () => getOAuthToken()
   });
 }
 
