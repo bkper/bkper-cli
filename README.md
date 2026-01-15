@@ -8,52 +8,37 @@ The MCP server enables AI assistants and agents to interact with your Bkper book
 
 ## Installation
 
-### Add the package:
-
-```
-npm i bkper
-```
-
-or
-
-```
-yarn add bkper
-```
-
-or
-
-```
-bun add bkper
-```
-
-Optionally, you can install it globally to be able to use the `bkper` command line utility:
+### npm
 
 ```
 npm i -g bkper
 ```
 
-or
+### yarn
 
 ```
 yarn global add bkper
 ```
 
+### bun
+
+```
+bun add -g bkper
+```
+
 ## Commands
 
-- `login` - Logs the user in. Saves the client credentials to a `~/.config/bkper/.bkper-credentials.json` file.
-- `logout` - Logs out the user by deleting client credentials.
-- `mcp start` - Start the Bkper MCP (Model Context Protocol) server.
-- `app -c` - Create a new App based on `./bkperapp.yaml` file.
-- `app -u` - Update an existing App based on `./bkperapp.yaml` file.
+-   `login` - Logs the user in, storing local credentials.
+-   `logout` - Logs out the user by deleting client credentials.
+-   `mcp start` - Start the Bkper MCP (Model Context Protocol) server.
+-   `apps list` - List all apps you have access to.
+-   `apps create` - Create a new App based on `./bkperapp.yaml` file.
+-   `apps update` - Update an existing App based on `./bkperapp.yaml` file.
 
 ### Examples
 
-```
-npm bkper login
-```
-
-```
-yarn bkper login
+```bash
+bkper login
 ```
 
 ### MCP (Model Context Protocol) Server
@@ -68,18 +53,18 @@ bkper mcp start
 
 The server runs on stdio and provides the following tools:
 
-- **list_books** - List all books accessible by the authenticated user
-- **get_book** - Get details of a specific book by ID
-- **get_balances** - Get account balances for a specific date or period
-- **list_transactions** - List transactions with filtering options
+-   **list_books** - List all books accessible by the authenticated user
+-   **get_book** - Get detailed information about a specific book
+-   **get_balances** - Get account balances with query filtering
+-   **list_transactions** - List transactions with filtering and pagination
+-   **create_transactions** - Create transactions in batch
+-   **merge_transactions** - Merge duplicate transactions into one
 
 #### Prerequisites
 
 Before using the MCP server:
 
 1. Login using `bkper login` to set up authentication
-2. Enable the [Bkper REST API]
-3. Ensure the `BKPER_API_KEY` environment variable is set.
 
 The MCP server uses the same authentication as the CLI, reading credentials from `~/.config/bkper/.bkper-credentials.json`.
 
@@ -89,20 +74,17 @@ The MCP server uses the same authentication as the CLI, reading credentials from
 
 Add to your configuration file:
 
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+-   **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+-   **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
-  "mcpServers": {
-    "bkper": {
-      "command": "npx",
-      "args": ["bkper", "mcp", "start"],
-      "env": {
-        "BKPER_API_KEY": "your-api-key-here"
-      }
+    "mcpServers": {
+        "bkper": {
+            "command": "bkper",
+            "args": ["mcp", "start"]
+        }
     }
-  }
 }
 ```
 
@@ -111,7 +93,7 @@ Add to your configuration file:
 For other MCP-compatible clients, configure them to run:
 
 ```bash
-BKPER_API_KEY=your-api-key npx bkper mcp start
+bkper mcp start
 ```
 
 The server communicates via stdio, so any MCP client that supports stdio transport can connect to it.
@@ -120,10 +102,12 @@ The server communicates via stdio, so any MCP client that supports stdio transpo
 
 Once connected, the MCP client can:
 
-- List your Bkper books
-- Get account balances for any date or period
-- Search and filter transactions
-- Analyze your financial data
+-   List your Bkper books
+-   Get detailed book information including group hierarchy
+-   Get account balances with flexible query filtering
+-   Search and filter transactions with pagination
+-   Create transactions in batch
+-   Merge duplicate transactions
 
 For more information about the Model Context Protocol, visit [modelcontextprotocol.io](https://modelcontextprotocol.io).
 
@@ -131,24 +115,9 @@ For more information about the Model Context Protocol, visit [modelcontextprotoc
 
 ### Environment Variables
 
-The following environment variable is necessary in order to communicate with the [Bkper REST API]:
+`BKPER_API_KEY` is optional. If not set, uses the Bkper API proxy with a managed API key.
 
-```
-BKPER_API_KEY=XXXX
-```
-
-The `app` command also uses the following variables in order to perform App create/update operations:
-
-```
-BKPER_CLIENT_SECRET=YYYY
-BKPER_USER_EMAILS="someone@gmail.com anotherone@altrostat.com"
-BKPER_DEVELOPER_EMAIL=somedeveloer@mycompany.com
-```
-
-You can add a `.env` file at the root of your project with those variables and bkper will automatically load from it.
-Follow [these](https://bkper.com/docs/#rest-api-enabling) steps in order to configure a valid Bkper API key.
-
-> WARNING: Never upload variables to the source code repository.
+Set it for direct API access with your own quotas and attribution. Follow [these](https://bkper.com/docs/#rest-api-enabling) steps.
 
 ### `./bkperapp.yaml` Reference
 
@@ -166,6 +135,16 @@ logoUrl: https://static.thenounproject.com/png/2318500-200.png
 
 # The logo url to be used when in dark mode
 logoUrlDark: https://static.thenounproject.com/png/2318500-200.png
+
+# ACCESS CONTROL (safe to version - uses usernames, not emails)
+
+# Developers who can update the App. Comma or space separated usernames.
+# Supports domain wildcards for registered custom domains (e.g., *@bkper.com)
+developers: victor, aldo, *@bkper.com
+
+# Users who can use the App while not yet published. Comma or space separated usernames.
+# Supports domain wildcards for registered custom domains (e.g., *@acme.com)
+users: maria, *@acme.com
 
 # CONTEXT MENU CONFIGURATION
 
@@ -189,69 +168,69 @@ webhookUrl: https://us-central1-bkper-tax-trigger.cloudfunctions.net/events
 # The events the Bot is capable of processing by the webhook.
 # This is optional and, if not specified, no events will be processed.
 events:
-  - "TRANSACTION_POSTED"
-  - "TRANSACTION_CHECKED"
-  - "TRANSACTION_UNCHECKED"
-  - "TRANSACTION_UPDATED"
-  - "TRANSACTION_DELETED"
-  - "TRANSACTION_RESTORED"
-  - "ACCOUNT_CREATED"
-  - "ACCOUNT_UPDATED"
-  - "ACCOUNT_DELETED"
-  - "GROUP_CREATED"
-  - "GROUP_UPDATED"
-  - "GROUP_DELETED"
-  - "FILE_CREATED"
-  - "BOOK_UPDATED"
+    - "TRANSACTION_POSTED"
+    - "TRANSACTION_CHECKED"
+    - "TRANSACTION_UNCHECKED"
+    - "TRANSACTION_UPDATED"
+    - "TRANSACTION_DELETED"
+    - "TRANSACTION_RESTORED"
+    - "ACCOUNT_CREATED"
+    - "ACCOUNT_UPDATED"
+    - "ACCOUNT_DELETED"
+    - "GROUP_CREATED"
+    - "GROUP_UPDATED"
+    - "GROUP_DELETED"
+    - "FILE_CREATED"
+    - "BOOK_UPDATED"
 
 # The file patterns the Bot is capable of processing. It accepts wildcards. E.g.
 filePatterns:
-  - "radiusbank*.ofx"
-  - "-*.qif"
-  - "*.csv"
+    - "radiusbank*.ofx"
+    - "-*.qif"
+    - "*.csv"
 
 # Schema to provide autocompletion on properties editor.
 propertiesSchema:
-  book:
-    keys:
-      - "key1"
-      - "key2"
-    values:
-      - "value2"
-      - "value2"
-  group:
-    keys:
-      - "key1"
-      - "key2"
-    values:
-      - "value2"
-      - "value2"
-  account:
-    keys:
-      - "key1"
-      - "key2"
-    values:
-      - "value2"
-      - "value2"
-  transaction:
-    keys:
-      - "key1"
-      - "key2"
-    values:
-      - "value2"
-      - "value2"
+    book:
+        keys:
+            - "key1"
+            - "key2"
+        values:
+            - "value2"
+            - "value2"
+    group:
+        keys:
+            - "key1"
+            - "key2"
+        values:
+            - "value2"
+            - "value2"
+    account:
+        keys:
+            - "key1"
+            - "key2"
+        values:
+            - "value2"
+            - "value2"
+    transaction:
+        keys:
+            - "key1"
+            - "key2"
+        values:
+            - "value2"
+            - "value2"
 ```
 
 #### Accepted expressions in menuUrl property:
 
-- `${book.id}` - the current book id
-- `${book.properties.xxxxx}` - any property value from the current book
-- `${transactions.query}` - the current query being executed on transactions list
-- `${transactions.ids}` - the ids of selected transactions, splitted by comma
-- `${account.id}` - the current account being filterd
-- `${account.properties.xxxxx}` - any property value from the current account being filtered
-- `${group.id}` - the current group being filterd
-- `${group.properties.xxxxx}` - any property value from the current group being filtered
+-   `${book.id}` - the current book id
+-   `${book.properties.xxxxx}` - any property value from the current book
+-   `${transactions.query}` - the current query being executed on transactions list
+-   `${transactions.ids}` - the ids of selected transactions, splitted by comma
+-   `${account.id}` - the current account being filterd
+-   `${account.properties.xxxxx}` - any property value from the current account being filtered
+-   `${group.id}` - the current group being filterd
+-   `${group.properties.xxxxx}` - any property value from the current group being filtered
 
 #### Example:
 
@@ -270,10 +249,10 @@ import { Bkper } from "bkper-js";
 import { getOAuthToken } from "bkper";
 
 Bkper.setConfig({
-  oauthTokenProvider: async () => getOAuthToken(),
+    oauthTokenProvider: async () => getOAuthToken(),
 });
 ```
 
 ## Documentation
 
-- [Developer Docs](https://bkper.com/docs)
+-   [Developer Docs](https://bkper.com/docs)

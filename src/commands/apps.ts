@@ -43,8 +43,9 @@ function loadReadme(): string | undefined {
 }
 
 /**
- * Creates an App instance configured with environment variables.
+ * Creates an App instance configured from bkperapp.yaml and environment variables.
  * 
+
  * @returns Configured App instance
  */
 function createConfiguredApp(): App {
@@ -54,16 +55,6 @@ function createConfiguredApp(): App {
   const readme = loadReadme();
   if (readme) {
     app.setReadme(readme);
-  }
-  
-  if (process.env.BKPER_CLIENT_SECRET) {
-    app.setClientSecret(process.env.BKPER_CLIENT_SECRET);
-  }
-  if (process.env.BKPER_DEVELOPER_EMAIL) {
-    app.setDeveloperEmail(process.env.BKPER_DEVELOPER_EMAIL);
-  }
-  if (process.env.BKPER_USER_EMAILS) {
-    app.setUserEmails(process.env.BKPER_USER_EMAILS);
   }
   
   return app;
