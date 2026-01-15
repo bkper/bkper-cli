@@ -85,37 +85,6 @@ appsCommand
         }
     });
 
-// Legacy 'app' command (singular, deprecated but backward compatible)
-program
-    .command("app")
-    .description("[Deprecated] Use 'apps create' or 'apps update' instead")
-    .option("-u, --update", "Update the App")
-    .option("-c, --create", "Create a new App")
-    .action(async (options) => {
-        try {
-            setupBkper();
-            
-            if (options.update) {
-                console.warn("Warning: 'bkper app -u' is deprecated. Use 'bkper apps update' instead.\n");
-                const app = await updateApp();
-                console.log(`Updated ${app.getId()} successfully.`);
-            } else if (options.create) {
-                console.warn("Warning: 'bkper app -c' is deprecated. Use 'bkper apps create' instead.\n");
-                const app = await createApp();
-                console.log(`Created ${app.getId()} successfully.`);
-            } else {
-                console.log("Usage: bkper app -c (create) or bkper app -u (update)");
-                console.log("\nNote: This command is deprecated. Use 'bkper apps <command>' instead:");
-                console.log("  bkper apps list    - List all apps");
-                console.log("  bkper apps create  - Create a new app");
-                console.log("  bkper apps update  - Update an existing app");
-            }
-        } catch (err) {
-            console.error("Error:", err);
-            process.exit(1);
-        }
-    });
-
 const mcpCommand = program.command("mcp").description("Bkper MCP server commands");
 
 mcpCommand

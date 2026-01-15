@@ -7,6 +7,7 @@
       "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@modelcontextprotocol/sdk": "^1.13.1",
+        "bkper": "^3.8.0",
         "bkper-js": "^2.19.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
@@ -151,6 +152,8 @@
     "bignumber.js": ["bignumber.js@9.3.1", "", {}, "sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ=="],
 
     "binary-extensions": ["binary-extensions@2.3.0", "", {}, "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="],
+
+    "bkper": ["bkper@3.8.0", "", { "dependencies": { "@google-cloud/local-auth": "^3.0.1", "@modelcontextprotocol/sdk": "^1.13.1", "bkper-js": "^2.19.0", "commander": "^6.2.1", "dotenv": "^8.2.0", "google-auth-library": "^9.14.0", "yaml": "^2.5.1" }, "bin": { "bkper": "lib/cli.js" } }, "sha512-zB/8o0lVG50xt2nwVW0TR72f+7ogtFBcSsZrDUjdCj0aQQTA+UJgmatZtAKmEflA804Aaiee6fvRgeBsd58WkQ=="],
 
     "bkper-js": ["bkper-js@2.19.0", "", { "dependencies": { "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" }, "peerDependencies": { "@bkper/bkper-api-types": "^5.32.0" } }, "sha512-W4dGreDXhg0o20Qy9UYa8B7S0WPIruBq+jBnUH90cr9NnwiEH/VCNMtRk647LTXY4H3ynY8vKOZ+/k9Ur6Y4+w=="],
 

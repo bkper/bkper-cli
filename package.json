@@ -55,6 +55,7 @@
     "dependencies": {
         "@google-cloud/local-auth": "^3.0.1",
         "@modelcontextprotocol/sdk": "^1.13.1",
+        "bkper": "^3.8.0",
         "bkper-js": "^2.19.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
