@@ -59,6 +59,7 @@
         "bkper-js": "^2.19.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
+        "esbuild": "^0.27.2",
         "google-auth-library": "^9.14.0",
         "yaml": "^2.5.1"
     },

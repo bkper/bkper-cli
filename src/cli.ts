@@ -3,7 +3,7 @@
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./mcp/bkper-factory.js";
-import { listApps, createApp, updateApp } from "./commands/apps.js";
+import { listApps, createApp, updateApp, deployApp, undeployApp, statusApp } from "./commands/apps.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -85,6 +85,46 @@ appsCommand
         }
     });
 
+appsCommand
+    .command("deploy")
+    .description("Deploy app to Bkper Platform")
+    .option("--dev", "Deploy to development environment")
+    .option("--events", "Deploy events handler instead of web handler")
+    .action(async (options) => {
+        try {
+            await deployApp(options);
+        } catch (err) {
+            console.error("Error deploying app:", err);
+            process.exit(1);
+        }
+    });
+
+appsCommand
+    .command("undeploy")
+    .description("Remove app from Bkper Platform")
+    .option("--dev", "Remove from development environment")
+    .option("--events", "Remove events handler instead of web handler")
+    .action(async (options) => {
+        try {
+            await undeployApp(options);
+        } catch (err) {
+            console.error("Error undeploying app:", err);
+            process.exit(1);
+        }
+    });
+
+appsCommand
+    .command("status")
+    .description("Show deployment status for all handlers")
+    .action(async () => {
+        try {
+            await statusApp();
+        } catch (err) {
+            console.error("Error getting app status:", err);
+            process.exit(1);
+        }
+    });
+
 const mcpCommand = program.command("mcp").description("Bkper MCP server commands");
 
 mcpCommand
@@ -103,4 +143,3 @@ mcpCommand
     });
 
 program.parse(process.argv);
-
