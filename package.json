@@ -62,6 +62,7 @@
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",
+        "tar": "^7.0.0",
         "google-auth-library": "^9.14.0",
         "openapi-fetch": "^0.15.0",
         "yaml": "^2.5.1"

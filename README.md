@@ -221,6 +221,22 @@ propertiesSchema:
             - "value2"
 ```
 
+### Developer Tooling (skills - WORK IN PROGRESS)
+
+The `skills` section configures AI agent skills for development assistance. Skills provide procedural knowledge to AI coding assistants (Claude Code, OpenCode, etc.) when working on your Bkper app.
+
+```yaml
+skills:
+  autoUpdate: true      # Automatically update skills (default: true)
+  installed:            # List of installed skills
+    - bkper-app-dev
+    - bkper-web-dev
+```
+
+When `autoUpdate: true`, the CLI will check for skill updates from the [skills](https://github.com/bkper/skills) repository when running `bkper dev`.
+
+See the [skills repository](https://github.com/bkper/skills) for available skills and documentation.
+
 #### Accepted expressions in menuUrl property:
 
 -   `${book.id}` - the current book id

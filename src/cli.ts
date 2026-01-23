@@ -3,7 +3,7 @@
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./mcp/bkper-factory.js";
-import { listApps, createApp, updateApp, deployApp, undeployApp, statusApp } from "./commands/apps.js";
+import { listApps, createApp, updateApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -24,6 +24,18 @@ program
 
 // New 'apps' command group (plural, standard)
 const appsCommand = program.command("apps").description("Manage Bkper Apps");
+
+appsCommand
+    .command("init <name>")
+    .description("Create a new Bkper app from template")
+    .action(async (name: string) => {
+        try {
+            await initApp(name);
+        } catch (err) {
+            console.error("Error initializing app:", err);
+            process.exit(1);
+        }
+    });
 
 appsCommand
     .command("list")
