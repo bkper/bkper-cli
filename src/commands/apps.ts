@@ -622,8 +622,8 @@ export async function initApp(name: string): Promise<void> {
     const result = await updateSkills();
     if (result.updated.length > 0) {
       console.log(`  Synced skills (${result.updated.join(', ')})`);
-    } else if (result.skipped && result.version) {
-      console.log(`  Skills up to date (v${result.version})`);
+    } else if (result.skipped && result.commit) {
+      console.log(`  Skills up to date (${result.commit.substring(0, 7)})`);
     }
   } catch (err) {
     // Skills sync is non-fatal, just warn

@@ -14,8 +14,12 @@ interface GitHubFile {
   download_url: string | null;
 }
 
+interface GitHubCommit {
+  sha: string;
+}
+
 interface SkillsState {
-  version: number;
+  commit: string;
 }
 
 // =============================================================================
@@ -37,48 +41,53 @@ const SKILLS_STATE_FILE = path.join(CONFIG_DIR, 'skills.yaml');
 // =============================================================================
 
 /**
- * Gets the current local skills version from ~/.config/bkper/skills.yaml
+ * Gets the current local commit SHA from ~/.config/bkper/skills.yaml
  */
-function getLocalVersion(): number {
+function getLocalCommit(): string | null {
   try {
     if (fs.existsSync(SKILLS_STATE_FILE)) {
       const content = fs.readFileSync(SKILLS_STATE_FILE, 'utf8');
       const state: SkillsState = YAML.parse(content);
-      return state.version || 0;
+      return state.commit || null;
     }
   } catch {
-    // Ignore errors, treat as version 0
+    // Ignore errors, treat as no commit
   }
-  return 0;
+  return null;
 }
 
 /**
- * Saves the current skills version to ~/.config/bkper/skills.yaml
+ * Saves the current commit SHA to ~/.config/bkper/skills.yaml
  */
-function saveLocalVersion(version: number): void {
+function saveLocalCommit(commit: string): void {
   fs.mkdirSync(CONFIG_DIR, { recursive: true });
-  const state: SkillsState = { version };
+  const state: SkillsState = { commit };
   fs.writeFileSync(SKILLS_STATE_FILE, YAML.stringify(state), 'utf8');
 }
 
 /**
- * Fetches the remote version from GitHub.
+ * Fetches the latest commit SHA that touched the skills/ folder.
  */
-async function fetchRemoteVersion(): Promise<number> {
-  const url = `${GITHUB_RAW_BASE}/${SKILLS_REPO}/main/version.txt`;
+async function fetchLatestCommit(): Promise<string> {
+  const url = `${GITHUB_API_BASE}/repos/${SKILLS_REPO}/commits?path=${SKILLS_BASE_PATH}&per_page=1`;
 
   const response = await fetch(url, {
     headers: {
+      Accept: 'application/vnd.github.v3+json',
       'User-Agent': 'bkper-cli',
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch version: ${response.statusText}`);
+    throw new Error(`Failed to fetch commit: ${response.statusText}`);
   }
 
-  const text = await response.text();
-  return parseInt(text.trim(), 10);
+  const commits = (await response.json()) as GitHubCommit[];
+  if (!commits.length) {
+    throw new Error('No commits found for skills path');
+  }
+
+  return commits[0].sha;
 }
 
 /**
@@ -196,6 +205,13 @@ function getInstalledBkperSkills(): string[] {
     .map(entry => entry.name);
 }
 
+/**
+ * Returns a short version of the commit SHA for display.
+ */
+function shortSha(sha: string): string {
+  return sha.substring(0, 7);
+}
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -204,34 +220,34 @@ export interface UpdateSkillsResult {
   updated: string[];
   skipped: boolean;
   reason?: string;
-  version?: number;
+  commit?: string;
 }
 
 /**
  * Updates global Bkper skills in ~/.claude/skills/
  *
- * Checks version.txt in github.com/bkper/skills and compares with
- * ~/.config/bkper/skills.yaml. If versions differ, downloads all
+ * Fetches the latest commit SHA that touched the skills/ folder and compares
+ * with ~/.config/bkper/skills.yaml. If commits differ, downloads all
  * bkper-* skills.
  *
  * @returns Result indicating what was updated
  */
 export async function updateSkills(): Promise<UpdateSkillsResult> {
   try {
-    // 1. Fetch remote version
-    const remoteVersion = await fetchRemoteVersion();
-    const localVersion = getLocalVersion();
+    // 1. Fetch latest commit that touched skills/
+    const remoteCommit = await fetchLatestCommit();
+    const localCommit = getLocalCommit();
 
-    // 2. Check if update is needed (version differs OR skills are missing)
+    // 2. Check if update is needed (commit differs OR skills are missing)
     const installedSkills = getInstalledBkperSkills();
     const skillsExist = installedSkills.length > 0;
 
-    if (remoteVersion === localVersion && skillsExist) {
+    if (remoteCommit === localCommit && skillsExist) {
       return {
         updated: [],
         skipped: true,
-        reason: `Skills are up to date (v${localVersion})`,
-        version: localVersion,
+        reason: `Skills are up to date (${shortSha(localCommit)})`,
+        commit: localCommit,
       };
     }
 
@@ -270,13 +286,13 @@ export async function updateSkills(): Promise<UpdateSkillsResult> {
       }
     }
 
-    // 7. Save new version
-    saveLocalVersion(remoteVersion);
+    // 7. Save new commit
+    saveLocalCommit(remoteCommit);
 
     return {
       updated,
       skipped: false,
-      version: remoteVersion,
+      commit: remoteCommit,
     };
   } catch (err) {
     // Network error or other failure - silently continue
