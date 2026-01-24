@@ -4,6 +4,7 @@ import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./mcp/bkper-factory.js";
 import { listApps, createApp, updateApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
+import { updateSkills } from "./commands/skills.js";
 
 import dotenv from "dotenv";
 dotenv.config();
@@ -144,6 +145,9 @@ mcpCommand
     .description("Start Bkper MCP server")
     .action(async () => {
         try {
+            // Sync global skills before starting
+            await updateSkills();
+
             // Import and start the MCP server directly
             const { BkperMcpServer } = await import("./mcp/server.js");
             const server = new BkperMcpServer();

@@ -617,13 +617,13 @@ export async function initApp(name: string): Promise<void> {
     process.exit(1);
   }
 
-  // 7. Sync skills
+  // 7. Sync global skills
   try {
-    const result = await updateSkills({ projectDir: targetDir });
+    const result = await updateSkills();
     if (result.updated.length > 0) {
       console.log(`  Synced skills (${result.updated.join(', ')})`);
-    } else if (result.skipped) {
-      console.log(`  Skipped skills sync: ${result.reason}`);
+    } else if (result.skipped && result.version) {
+      console.log(`  Skills up to date (v${result.version})`);
     }
   } catch (err) {
     // Skills sync is non-fatal, just warn

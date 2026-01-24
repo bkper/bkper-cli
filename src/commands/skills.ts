@@ -1,4 +1,5 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import * as YAML from 'yaml';
 
@@ -6,20 +7,15 @@ import * as YAML from 'yaml';
 // Types
 // =============================================================================
 
-interface SkillsConfig {
-  autoUpdate?: boolean;
-  installed?: string[];
-}
-
-interface AppConfig {
-  skills?: SkillsConfig;
-}
-
 interface GitHubFile {
   name: string;
   path: string;
   type: 'file' | 'dir';
   download_url: string | null;
+}
+
+interface SkillsState {
+  version: number;
 }
 
 // =============================================================================
@@ -30,26 +26,59 @@ const SKILLS_REPO = 'bkper/skills';
 const SKILLS_BASE_PATH = 'skills';
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com';
-const LOCAL_SKILLS_DIR = '.claude/skills';
+
+// Global paths
+const SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'bkper');
+const SKILLS_STATE_FILE = path.join(CONFIG_DIR, 'skills.yaml');
 
 // =============================================================================
 // Helper Functions
 // =============================================================================
 
 /**
- * Loads app configuration from bkperapp.yaml in the given directory.
+ * Gets the current local skills version from ~/.config/bkper/skills.yaml
  */
-function loadAppConfigFromDir(projectDir: string): AppConfig {
-  const yamlPath = path.join(projectDir, 'bkperapp.yaml');
-  const jsonPath = path.join(projectDir, 'bkperapp.json');
+function getLocalVersion(): number {
+  try {
+    if (fs.existsSync(SKILLS_STATE_FILE)) {
+      const content = fs.readFileSync(SKILLS_STATE_FILE, 'utf8');
+      const state: SkillsState = YAML.parse(content);
+      return state.version || 0;
+    }
+  } catch {
+    // Ignore errors, treat as version 0
+  }
+  return 0;
+}
 
-  if (fs.existsSync(yamlPath)) {
-    return YAML.parse(fs.readFileSync(yamlPath, 'utf8'));
-  } else if (fs.existsSync(jsonPath)) {
-    return JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+/**
+ * Saves the current skills version to ~/.config/bkper/skills.yaml
+ */
+function saveLocalVersion(version: number): void {
+  fs.mkdirSync(CONFIG_DIR, { recursive: true });
+  const state: SkillsState = { version };
+  fs.writeFileSync(SKILLS_STATE_FILE, YAML.stringify(state), 'utf8');
+}
+
+/**
+ * Fetches the remote version from GitHub.
+ */
+async function fetchRemoteVersion(): Promise<number> {
+  const url = `${GITHUB_RAW_BASE}/${SKILLS_REPO}/main/version.txt`;
+
+  const response = await fetch(url, {
+    headers: {
+      'User-Agent': 'bkper-cli',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch version: ${response.statusText}`);
   }
 
-  throw new Error('bkperapp.yaml or bkperapp.json not found');
+  const text = await response.text();
+  return parseInt(text.trim(), 10);
 }
 
 /**
@@ -127,113 +156,134 @@ async function downloadSkillDirectory(
   }
 }
 
+/**
+ * Removes all bkper-* skill directories from the global skills folder.
+ */
+function clearBkperSkills(): void {
+  if (!fs.existsSync(SKILLS_DIR)) {
+    return;
+  }
+
+  const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name.startsWith('bkper-')) {
+      fs.rmSync(path.join(SKILLS_DIR, entry.name), { recursive: true });
+    }
+  }
+}
+
+/**
+ * Gets the list of available skills from GitHub.
+ */
+async function fetchAvailableSkills(): Promise<string[]> {
+  const files = await fetchGitHubDirectory(SKILLS_REPO, SKILLS_BASE_PATH);
+  return files
+    .filter(f => f.type === 'dir' && f.name.startsWith('bkper-'))
+    .map(f => f.name);
+}
+
+/**
+ * Gets the list of installed bkper-* skills from ~/.claude/skills/
+ */
+function getInstalledBkperSkills(): string[] {
+  if (!fs.existsSync(SKILLS_DIR)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
+  return entries
+    .filter(entry => entry.isDirectory() && entry.name.startsWith('bkper-'))
+    .map(entry => entry.name);
+}
+
 // =============================================================================
 // Public API
 // =============================================================================
-
-export interface UpdateSkillsOptions {
-  /** Project directory (defaults to current directory) */
-  projectDir?: string;
-  /** Print progress messages */
-  verbose?: boolean;
-}
 
 export interface UpdateSkillsResult {
   updated: string[];
   skipped: boolean;
   reason?: string;
+  version?: number;
 }
 
 /**
- * Updates skills in the project based on bkperapp.yaml configuration.
+ * Updates global Bkper skills in ~/.claude/skills/
  *
- * Reads the skills.installed array from bkperapp.yaml and downloads
- * each skill from github.com/bkper/skills to .claude/skills/
+ * Checks version.txt in github.com/bkper/skills and compares with
+ * ~/.config/bkper/skills.yaml. If versions differ, downloads all
+ * bkper-* skills.
  *
- * @param options - Update options
  * @returns Result indicating what was updated
  */
-export async function updateSkills(
-  options: UpdateSkillsOptions = {}
-): Promise<UpdateSkillsResult> {
-  const { projectDir = process.cwd(), verbose = false } = options;
-
-  // 1. Load app config
-  let config: AppConfig;
+export async function updateSkills(): Promise<UpdateSkillsResult> {
   try {
-    config = loadAppConfigFromDir(projectDir);
-  } catch {
-    return {
-      updated: [],
-      skipped: true,
-      reason: 'No bkperapp.yaml found',
-    };
-  }
+    // 1. Fetch remote version
+    const remoteVersion = await fetchRemoteVersion();
+    const localVersion = getLocalVersion();
 
-  // 2. Check if skills are configured
-  const skillsConfig = config.skills;
-  if (!skillsConfig) {
-    return {
-      updated: [],
-      skipped: true,
-      reason: 'No skills section in bkperapp.yaml',
-    };
-  }
+    // 2. Check if update is needed (version differs OR skills are missing)
+    const installedSkills = getInstalledBkperSkills();
+    const skillsExist = installedSkills.length > 0;
 
-  // 3. Check if auto-update is enabled
-  if (skillsConfig.autoUpdate === false) {
-    return {
-      updated: [],
-      skipped: true,
-      reason: 'Skills auto-update is disabled',
-    };
-  }
-
-  // 4. Get list of skills to install
-  const skillsToInstall = skillsConfig.installed || [];
-  if (skillsToInstall.length === 0) {
-    return {
-      updated: [],
-      skipped: true,
-      reason: 'No skills listed in skills.installed',
-    };
-  }
-
-  // 5. Create skills directory
-  const skillsDir = path.join(projectDir, LOCAL_SKILLS_DIR);
-  fs.mkdirSync(skillsDir, { recursive: true });
-
-  // 6. Download each skill
-  const updated: string[] = [];
-  for (const skillName of skillsToInstall) {
-    if (verbose) {
-      console.log(`  Syncing skill: ${skillName}`);
+    if (remoteVersion === localVersion && skillsExist) {
+      return {
+        updated: [],
+        skipped: true,
+        reason: `Skills are up to date (v${localVersion})`,
+        version: localVersion,
+      };
     }
 
-    const skillTargetDir = path.join(skillsDir, skillName);
+    // 3. Get list of available skills
+    const availableSkills = await fetchAvailableSkills();
 
-    // Remove existing skill directory
-    if (fs.existsSync(skillTargetDir)) {
-      fs.rmSync(skillTargetDir, { recursive: true });
+    if (availableSkills.length === 0) {
+      return {
+        updated: [],
+        skipped: true,
+        reason: 'No bkper-* skills found in repository',
+      };
     }
 
-    fs.mkdirSync(skillTargetDir, { recursive: true });
+    // 4. Clear existing bkper-* skills
+    clearBkperSkills();
 
-    try {
-      await downloadSkillDirectory(skillName, skillTargetDir);
-      updated.push(skillName);
-    } catch (err) {
-      if (verbose) {
+    // 5. Create skills directory
+    fs.mkdirSync(SKILLS_DIR, { recursive: true });
+
+    // 6. Download all skills
+    const updated: string[] = [];
+    for (const skillName of availableSkills) {
+      const skillTargetDir = path.join(SKILLS_DIR, skillName);
+      fs.mkdirSync(skillTargetDir, { recursive: true });
+
+      try {
+        await downloadSkillDirectory(skillName, skillTargetDir);
+        updated.push(skillName);
+      } catch (err) {
+        // Log but continue with other skills
         console.error(
-          `  Warning: Failed to sync skill '${skillName}':`,
+          `  Warning: Failed to download skill '${skillName}':`,
           err instanceof Error ? err.message : err
         );
       }
     }
-  }
 
-  return {
-    updated,
-    skipped: false,
-  };
+    // 7. Save new version
+    saveLocalVersion(remoteVersion);
+
+    return {
+      updated,
+      skipped: false,
+      version: remoteVersion,
+    };
+  } catch (err) {
+    // Network error or other failure - silently continue
+    return {
+      updated: [],
+      skipped: true,
+      reason: `Could not check for updates: ${err instanceof Error ? err.message : err}`,
+    };
+  }
 }
