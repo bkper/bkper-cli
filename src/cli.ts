@@ -2,7 +2,7 @@
 
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
-import { setupBkper } from "./mcp/bkper-factory.js";
+import { setupBkper } from "./bkper-factory.js";
 import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
 import { updateSkills } from "./commands/skills.js";
 
@@ -45,24 +45,24 @@ appsCommand
         try {
             setupBkper();
             const apps = await listApps();
-            
+
             if (apps.length === 0) {
                 console.log("No apps found.");
                 return;
             }
-            
+
             // Table-style output
             console.log("\nApps:\n");
             console.log("ID".padEnd(25) + "Name".padEnd(30) + "Published");
             console.log("-".repeat(65));
-            
+
             for (const app of apps) {
                 const id = (app.id || "").padEnd(25);
                 const name = (app.name || "").padEnd(30);
                 const published = app.published ? "Yes" : "No";
                 console.log(`${id}${name}${published}`);
             }
-            
+
             console.log(`\nTotal: ${apps.length} app(s)`);
         } catch (err) {
             console.error("Error listing apps:", err);

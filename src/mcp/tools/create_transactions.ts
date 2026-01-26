@@ -1,6 +1,6 @@
-import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
-import { getBkperInstance } from '../bkper-factory.js';
-import { Transaction } from 'bkper-js';
+import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { getBkperInstance } from "../../bkper-factory.js";
+import { Transaction } from "bkper-js";
 
 interface TransactionInput {
     date: string;
@@ -19,30 +19,23 @@ interface TransactionsResponse {
     transactions: Array<Record<string, any>>;
 }
 
-export async function handleCreateTransactions(params: CreateTransactionsParams): Promise<CallToolResult> {
+export async function handleCreateTransactions(
+    params: CreateTransactionsParams
+): Promise<CallToolResult> {
     try {
         // Debug logging removed to prevent stdio contamination
 
         // Validate required parameters
         if (!params.bookId) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'Missing required parameter: bookId'
-            );
+            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: bookId");
         }
 
         if (!params.transactions) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'Missing required parameter: transactions'
-            );
+            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: transactions");
         }
 
         if (!Array.isArray(params.transactions)) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                'Parameter transactions must be an array'
-            );
+            throw new McpError(ErrorCode.InvalidParams, "Parameter transactions must be an array");
         }
 
         // Handle empty array case
@@ -50,7 +43,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
             return {
                 content: [
                     {
-                        type: 'text',
+                        type: "text",
                         text: JSON.stringify({ transactions: [] }, null, 2),
                     },
                 ],
@@ -59,19 +52,23 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
 
         // Validate each transaction
         params.transactions.forEach((tx, index) => {
-            if (!tx.date || typeof tx.date !== 'string' || tx.date.trim() === '') {
+            if (!tx.date || typeof tx.date !== "string" || tx.date.trim() === "") {
                 throw new McpError(
                     ErrorCode.InvalidParams,
                     `Transaction at index ${index}: Missing or empty required field 'date'`
                 );
             }
-            if (tx.amount === undefined || tx.amount === null || typeof tx.amount !== 'number') {
+            if (tx.amount === undefined || tx.amount === null || typeof tx.amount !== "number") {
                 throw new McpError(
                     ErrorCode.InvalidParams,
                     `Transaction at index ${index}: Missing or invalid required field 'amount'`
                 );
             }
-            if (!tx.description || typeof tx.description !== 'string' || tx.description.trim() === '') {
+            if (
+                !tx.description ||
+                typeof tx.description !== "string" ||
+                tx.description.trim() === ""
+            ) {
                 throw new McpError(
                     ErrorCode.InvalidParams,
                     `Transaction at index ${index}: Missing or empty required field 'description'`
@@ -85,10 +82,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
         // Get the book
         const book = await bkperInstance.getBook(params.bookId);
         if (!book) {
-            throw new McpError(
-                ErrorCode.InvalidParams,
-                `Book not found: ${params.bookId}`
-            );
+            throw new McpError(ErrorCode.InvalidParams, `Book not found: ${params.bookId}`);
         }
 
         // Create Transaction objects with description built from structured data
@@ -105,7 +99,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
             }
             parts.push(tx.description);
 
-            const fullDescription = parts.join(' ');
+            const fullDescription = parts.join(" ");
 
             transaction.setDate(tx.date);
             transaction.setAmount(tx.amount);
@@ -139,7 +133,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
 
         // Build response
         const response: TransactionsResponse = {
-            transactions
+            transactions,
         };
 
         const responseText = JSON.stringify(response, null, 2);
@@ -147,7 +141,7 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
         return {
             content: [
                 {
-                    type: 'text' as const,
+                    type: "text" as const,
                     text: responseText,
                 },
             ],
@@ -161,52 +155,56 @@ export async function handleCreateTransactions(params: CreateTransactionsParams)
         // Handle other errors
         throw new McpError(
             ErrorCode.InternalError,
-            `Failed to create transactions: ${error instanceof Error ? error.message : String(error)}`
+            `Failed to create transactions: ${
+                error instanceof Error ? error.message : String(error)
+            }`
         );
     }
 }
 
 export const createTransactionsToolDefinition = {
-    name: 'create_transactions',
-    description: 'Create transactions in batch from structured data. Accounts are specified by name and resolved by Bkper.',
+    name: "create_transactions",
+    description:
+        "Create transactions in batch from structured data. Accounts are specified by name and resolved by Bkper.",
     inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {
             bookId: {
-                type: 'string',
-                description: 'The unique identifier of the book'
+                type: "string",
+                description: "The unique identifier of the book",
             },
             transactions: {
-                type: 'array',
+                type: "array",
                 items: {
-                    type: 'object',
+                    type: "object",
                     properties: {
                         date: {
-                            type: 'string',
-                            description: 'Transaction date in ISO format (YYYY-MM-DD) or book date format'
+                            type: "string",
+                            description:
+                                "Transaction date in ISO format (YYYY-MM-DD) or book date format",
                         },
                         amount: {
-                            type: 'number',
-                            description: 'Transaction amount'
+                            type: "number",
+                            description: "Transaction amount",
                         },
                         from_account: {
-                            type: 'string',
-                            description: 'Origin/Credit account name'
+                            type: "string",
+                            description: "Origin/Credit account name",
                         },
                         to_account: {
-                            type: 'string',
-                            description: 'Destination/Debit account name'
+                            type: "string",
+                            description: "Destination/Debit account name",
                         },
                         description: {
-                            type: 'string',
-                            description: 'Transaction description (can include #hashtags)'
-                        }
+                            type: "string",
+                            description: "Transaction description (can include #hashtags)",
+                        },
                     },
-                    required: ['date', 'amount', 'description']
+                    required: ["date", "amount", "description"],
                 },
-                description: 'Array of transactions to create'
-            }
+                description: "Array of transactions to create",
+            },
         },
-        required: ['bookId', 'transactions']
-    }
+        required: ["bookId", "transactions"],
+    },
 };
