@@ -7,7 +7,7 @@ import { Readable } from 'stream';
 import * as tar from 'tar';
 import * as YAML from 'yaml';
 import { getOAuthToken, isLoggedIn } from '../auth/local-auth-service.js';
-import { getBkperInstance } from '../mcp/bkper-factory.js';
+import { getBkperInstance, setupBkper } from '../mcp/bkper-factory.js';
 import { createPlatformClient } from '../platform/client.js';
 import type { components } from '../platform/types.js';
 import { updateSkills } from './skills.js';
@@ -24,6 +24,12 @@ type ErrorResponse = components['schemas']['ErrorResponse'];
 interface DeployOptions {
   dev?: boolean;
   events?: boolean;
+  sync?: boolean;
+}
+
+interface SyncResult {
+  id: string;
+  action: 'created' | 'updated';
 }
 
 // =============================================================================
@@ -108,6 +114,39 @@ export async function updateApp(): Promise<App> {
   return updatedApp;
 }
 
+/**
+ * Syncs app configuration to Bkper (creates if new, updates if exists).
+ *
+ * @returns Sync result with app id and action taken
+ */
+export async function syncApp(): Promise<SyncResult> {
+  const bkper = getBkperInstance();
+  const app = createConfiguredApp();
+  const appId = app.getId();
+
+  if (!appId) {
+    throw new Error('App config is missing "id" field');
+  }
+
+  // Check if app exists
+  let exists = false;
+  try {
+    await bkper.getApp(appId);
+    exists = true;
+  } catch {
+    // App doesn't exist, will create
+    exists = false;
+  }
+
+  if (exists) {
+    await app.update();
+    return { id: appId, action: 'updated' };
+  } else {
+    await app.create();
+    return { id: appId, action: 'created' };
+  }
+}
+
 // =============================================================================
 // Deploy Functions
 // =============================================================================
@@ -184,7 +223,7 @@ function handleError(error: ErrorResponse): never {
 /**
  * Deploys the app to the Bkper Platform.
  *
- * @param options Deploy options (dev, events)
+ * @param options Deploy options (dev, events, sync)
  */
 export async function deployApp(options: DeployOptions = {}): Promise<void> {
   // 1. Check if logged in
@@ -193,7 +232,15 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  // 2. Load bkperapp.yaml/json to get app ID
+  // 2. Sync app config if requested
+  if (options.sync) {
+    console.log('Syncing app config...');
+    setupBkper();
+    const syncResult = await syncApp();
+    console.log(`Synced ${syncResult.id} (${syncResult.action})`);
+  }
+
+  // 3. Load bkperapp.yaml/json to get app ID
   let config: bkper.App;
   try {
     config = loadAppConfig();

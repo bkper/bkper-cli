@@ -3,7 +3,7 @@
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./mcp/bkper-factory.js";
-import { listApps, createApp, updateApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
+import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
 import { updateSkills } from "./commands/skills.js";
 
 import dotenv from "dotenv";
@@ -71,29 +71,15 @@ appsCommand
     });
 
 appsCommand
-    .command("create")
-    .description("Create a new App from bkperapp.json or bkperapp.yaml")
+    .command("sync")
+    .description("Sync app config to Bkper (creates if new, updates if exists)")
     .action(async () => {
         try {
             setupBkper();
-            const app = await createApp();
-            console.log(`Created ${app.getId()} successfully.`);
+            const result = await syncApp();
+            console.log(`Synced ${result.id} (${result.action})`);
         } catch (err) {
-            console.error("Error creating app:", err);
-            process.exit(1);
-        }
-    });
-
-appsCommand
-    .command("update")
-    .description("Update an existing App from bkperapp.json or bkperapp.yaml")
-    .action(async () => {
-        try {
-            setupBkper();
-            const app = await updateApp();
-            console.log(`Updated ${app.getId()} successfully.`);
-        } catch (err) {
-            console.error("Error updating app:", err);
+            console.error("Error syncing app:", err);
             process.exit(1);
         }
     });
@@ -103,6 +89,7 @@ appsCommand
     .description("Deploy app to Bkper Platform")
     .option("--dev", "Deploy to development environment")
     .option("--events", "Deploy events handler instead of web handler")
+    .option("--sync", "Sync app config before deploying")
     .action(async (options) => {
         try {
             await deployApp(options);
