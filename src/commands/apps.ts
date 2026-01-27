@@ -1,4 +1,4 @@
-import { App } from "bkper-js";
+import { App, BkperError } from "bkper-js";
 import { spawn } from "child_process";
 import * as esbuild from "esbuild";
 import fs from "fs";
@@ -129,14 +129,19 @@ export async function syncApp(): Promise<SyncResult> {
     }
 
     // Check if app exists
-    let exists = false;
-    try {
-        await bkper.getApp(appId);
-        exists = true;
-    } catch {
-        // App doesn't exist, will create
-        exists = false;
-    }
+     let exists = false;
+     try {
+         await bkper.getApp(appId);
+         exists = true;
+     } catch (err) {
+         if (err instanceof BkperError && err.code === 404) {
+             // App doesn't exist, will create
+             console.log("App does not exist, will create");
+             exists = false;
+         } else {
+             throw err;
+         }
+     }
 
     if (exists) {
         await app.update();
