@@ -3,7 +3,7 @@
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./bkper-factory.js";
-import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete } from "./commands/apps.js";
+import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete } from "./commands/apps/index.js";
 import { updateSkills } from "./commands/skills.js";
 
 import dotenv from "dotenv";

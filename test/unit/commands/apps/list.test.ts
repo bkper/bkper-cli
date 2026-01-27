@@ -1,7 +1,7 @@
-import { expect, setupTestEnvironment, getTestPaths } from '../helpers/test-setup.js';
-import { AppData } from '../helpers/mock-interfaces.js';
-import { setupMocks, createMockBkperForApps, setMockBkper } from '../helpers/mock-factory.js';
-import { loadApps } from '../helpers/fixture-loader.js';
+import { expect, setupTestEnvironment, getTestPaths } from '../../helpers/test-setup.js';
+import { AppData } from '../../helpers/mock-interfaces.js';
+import { setupMocks, createMockBkperForApps, setMockBkper } from '../../helpers/mock-factory.js';
+import { loadApps } from '../../helpers/fixture-loader.js';
 
 const { __dirname } = getTestPaths(import.meta.url);
 
@@ -11,9 +11,8 @@ const mockApps: AppData[] = loadApps(__dirname);
 // Setup mocks before importing CLI module
 setupMocks();
 
-// Import the listApps function that will be implemented
-// This will be the core logic extracted from cli.ts
-const { listApps } = await import('../../../src/commands/apps.js');
+// Import the listApps function
+const { listApps } = await import('../../../../src/commands/apps/index.js');
 
 describe('CLI - apps list Command', function() {
 

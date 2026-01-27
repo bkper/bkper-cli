@@ -1,11 +1,11 @@
-import { expect, setupTestEnvironment, getTestPaths } from '../helpers/test-setup.js';
+import { expect, setupTestEnvironment, getTestPaths } from '../../helpers/test-setup.js';
 import fs from 'fs';
 import path from 'path';
 
 const { __dirname } = getTestPaths(import.meta.url);
 
 // Temp directory for test app config
-const testDir = path.join(__dirname, '../fixtures/temp-undeploy-test');
+const testDir = path.join(__dirname, '../../fixtures/temp-undeploy-test');
 
 /**
  * These tests verify the error handling paths for the undeploy command.
@@ -21,11 +21,11 @@ describe('CLI - apps undeploy Command', function() {
     const originalConsoleError = console.error;
 
     // Store reference to the function we'll test
-    let undeployApp: any;
+    let undeployApp: typeof import('../../../../src/commands/apps/index.js').undeployApp;
 
     before(async function() {
         // Import the function
-        const apps = await import('../../../src/commands/apps.js');
+        const apps = await import('../../../../src/commands/apps/index.js');
         undeployApp = apps.undeployApp;
     });
 
@@ -36,8 +36,8 @@ describe('CLI - apps undeploy Command', function() {
         consoleErrors = [];
 
         // Mock console
-        console.log = (...args: any[]) => consoleOutput.push(args.join(' '));
-        console.error = (...args: any[]) => consoleErrors.push(args.join(' '));
+        console.log = (...args: unknown[]) => consoleOutput.push(args.join(' '));
+        console.error = (...args: unknown[]) => consoleErrors.push(args.join(' '));
 
         // Mock process.exit
         process.exit = ((code?: number) => {
@@ -72,8 +72,8 @@ describe('CLI - apps undeploy Command', function() {
 
             try {
                 await undeployApp({});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -88,8 +88,8 @@ describe('CLI - apps undeploy Command', function() {
 
             try {
                 await undeployApp({});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);

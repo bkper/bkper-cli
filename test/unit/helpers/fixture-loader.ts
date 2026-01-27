@@ -13,10 +13,12 @@ import {
 // Centralized fixture loading
 export function loadFixture<T>(testDir: string, fixtureName: string): T[] {
   // testDir is the directory containing the test file
-  // For files in test/unit/tools/ or test/unit/commands/, go up to test/unit/fixtures/
-  // For files in test/unit/, go to fixtures/
+  // Navigate to test/unit/fixtures/ from any test directory
   let fixturePath: string;
-  if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
+  if (testDir.includes('/unit/commands/apps') || testDir.includes('/unit/tools/')) {
+    // Nested directories like test/unit/commands/apps/ or test/unit/tools/subdir/
+    fixturePath = path.join(testDir, '..', '..', 'fixtures', fixtureName);
+  } else if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
     fixturePath = path.join(testDir, '..', 'fixtures', fixtureName);
   } else if (testDir.includes('/unit')) {
     fixturePath = path.join(testDir, 'fixtures', fixtureName);
@@ -29,7 +31,10 @@ export function loadFixture<T>(testDir: string, fixtureName: string): T[] {
 
 export function loadFixtureObject<T>(testDir: string, fixtureName: string): T {
   let fixturePath: string;
-  if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
+  if (testDir.includes('/unit/commands/apps') || testDir.includes('/unit/tools/')) {
+    // Nested directories like test/unit/commands/apps/ or test/unit/tools/subdir/
+    fixturePath = path.join(testDir, '..', '..', 'fixtures', fixtureName);
+  } else if (testDir.includes('/unit/tools') || testDir.includes('/unit/commands')) {
     fixturePath = path.join(testDir, '..', 'fixtures', fixtureName);
   } else if (testDir.includes('/unit')) {
     fixturePath = path.join(testDir, 'fixtures', fixtureName);

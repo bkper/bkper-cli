@@ -1,11 +1,11 @@
-import { expect, setupTestEnvironment, getTestPaths } from '../helpers/test-setup.js';
+import { expect, setupTestEnvironment, getTestPaths } from '../../helpers/test-setup.js';
 import fs from 'fs';
 import path from 'path';
 
 const { __dirname } = getTestPaths(import.meta.url);
 
 // Temp directory for test app config
-const testDir = path.join(__dirname, '../fixtures/temp-secrets-test');
+const testDir = path.join(__dirname, '../../fixtures/temp-secrets-test');
 
 /**
  * These tests verify the error handling paths for the secrets commands.
@@ -21,13 +21,13 @@ describe('CLI - apps secrets Commands', function() {
     const originalConsoleError = console.error;
 
     // Store references to the functions we'll test
-    let secretsPut: any;
-    let secretsList: any;
-    let secretsDelete: any;
+    let secretsPut: typeof import('../../../../src/commands/apps/index.js').secretsPut;
+    let secretsList: typeof import('../../../../src/commands/apps/index.js').secretsList;
+    let secretsDelete: typeof import('../../../../src/commands/apps/index.js').secretsDelete;
 
     before(async function() {
         // Import the functions
-        const apps = await import('../../../src/commands/apps.js');
+        const apps = await import('../../../../src/commands/apps/index.js');
         secretsPut = apps.secretsPut;
         secretsList = apps.secretsList;
         secretsDelete = apps.secretsDelete;
@@ -40,8 +40,8 @@ describe('CLI - apps secrets Commands', function() {
         consoleErrors = [];
 
         // Mock console
-        console.log = (...args: any[]) => consoleOutput.push(args.join(' '));
-        console.error = (...args: any[]) => consoleErrors.push(args.join(' '));
+        console.log = (...args: unknown[]) => consoleOutput.push(args.join(' '));
+        console.error = (...args: unknown[]) => consoleErrors.push(args.join(' '));
 
         // Mock process.exit
         process.exit = ((code?: number) => {
@@ -76,8 +76,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsPut('SECRET', {});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -92,8 +92,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsPut('SECRET', {});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -107,8 +107,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsList({});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -123,8 +123,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsList({});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -138,8 +138,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsDelete('SECRET', {});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
@@ -154,8 +154,8 @@ describe('CLI - apps secrets Commands', function() {
 
             try {
                 await secretsDelete('SECRET', {});
-            } catch (e: any) {
-                expect(e.message).to.include('process.exit');
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
             }
 
             expect(exitCode).to.equal(1);
