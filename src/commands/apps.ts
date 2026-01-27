@@ -157,11 +157,36 @@ export async function syncApp(): Promise<SyncResult> {
 // =============================================================================
 
 /**
- * Finds the entry point for bundling.
- * Checks for common entry point patterns.
+ * Finds the entry point for bundling based on deploy type.
+ * Supports both monorepo (bkper-app-template) and simple project structures.
  */
-function findEntryPoint(): string | null {
-    const candidates = ["./src/index.ts", "./src/index.js", "./index.ts", "./index.js"];
+function findEntryPoint(type: 'web' | 'events'): string | null {
+    // Monorepo candidates (for bkper-app-template structure)
+    const monorepoWebCandidates = [
+        "./packages/web/server/src/index.ts",
+        "./packages/web/server/src/index.js",
+        "./packages/web/src/index.ts",
+        "./packages/web/src/index.js",
+    ];
+
+    const monorepoEventsCandidates = [
+        "./packages/events/src/index.ts",
+        "./packages/events/src/index.js",
+    ];
+
+    // Simple project candidates (for single worker projects)
+    const simpleCandidates = [
+        "./src/index.ts",
+        "./src/index.js",
+        "./index.ts",
+        "./index.js",
+    ];
+
+    // Check monorepo first based on type, then fall back to simple
+    const candidates =
+        type === 'events'
+            ? [...monorepoEventsCandidates, ...simpleCandidates]
+            : [...monorepoWebCandidates, ...simpleCandidates];
 
     for (const candidate of candidates) {
         if (fs.existsSync(candidate)) {
@@ -175,15 +200,21 @@ function findEntryPoint(): string | null {
 /**
  * Bundles the project using esbuild.
  *
+ * @param type - The deploy type ('web' or 'events')
  * @returns Bundled JavaScript code as a Buffer
  */
-async function bundleProject(): Promise<Buffer> {
-    const entryPoint = findEntryPoint();
+async function bundleProject(type: 'web' | 'events'): Promise<Buffer> {
+    const entryPoint = findEntryPoint(type);
     if (!entryPoint) {
+        const expectedPaths = type === 'events'
+            ? 'packages/events/src/index.ts or src/index.ts'
+            : 'packages/web/server/src/index.ts or src/index.ts';
         throw new Error(
-            "No entry point found. Expected src/index.ts, src/index.js, index.ts, or index.js"
+            `No entry point found for ${type} handler. Expected: ${expectedPaths}`
         );
     }
+
+    console.log(`  Entry point: ${entryPoint}`);
 
     const result = await esbuild.build({
         entryPoints: [entryPoint],
@@ -195,6 +226,7 @@ async function bundleProject(): Promise<Buffer> {
         write: false,
         external: [],
         conditions: ["workerd", "worker", "browser"],
+        mainFields: ["browser", "module", "main"],
     });
 
     if (result.errors.length > 0) {
@@ -254,11 +286,14 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
+    // Determine deploy type early for bundling
+    const type = options.events ? "events" : "web";
+
     // 3. Bundle the project
-    console.log("Bundling project...");
+    console.log(`Bundling ${type} handler...`);
     let bundle: Buffer;
     try {
-        bundle = await bundleProject();
+        bundle = await bundleProject(type);
     } catch (err) {
         console.error("Error bundling project:", err instanceof Error ? err.message : err);
         process.exit(1);
@@ -273,7 +308,6 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
 
     // 5. Call Platform API
     const env = options.dev ? "dev" : "prod";
-    const type = options.events ? "events" : "web";
     console.log(`Deploying ${type} handler to ${env}...`);
 
     const { data, error } = await client.POST("/api/apps/{appId}/deploy", {
