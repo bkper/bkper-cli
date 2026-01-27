@@ -3,6 +3,7 @@ import { spawn } from "child_process";
 import * as esbuild from "esbuild";
 import fs from "fs";
 import path from "path";
+import * as readline from "readline";
 import { Readable } from "stream";
 import * as tar from "tar";
 import * as YAML from "yaml";
@@ -10,6 +11,7 @@ import { getOAuthToken, isLoggedIn } from "../auth/local-auth-service.js";
 import { getBkperInstance, setupBkper } from "../bkper-factory.js";
 import { createPlatformClient } from "../platform/client.js";
 import type { components } from "../platform/types.js";
+import { extractBindingsForApi, findWranglerConfig, parseWranglerConfig } from "../utils/wrangler.js";
 import { updateSkills } from "./skills.js";
 
 // =============================================================================
@@ -25,6 +27,7 @@ interface DeployOptions {
     dev?: boolean;
     events?: boolean;
     sync?: boolean;
+    deleteData?: boolean;
 }
 
 interface SyncResult {
@@ -302,18 +305,43 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const bundleSizeKB = (bundle.length / 1024).toFixed(2);
     console.log(`Bundle size: ${bundleSizeKB} KB`);
 
-    // 4. Get OAuth token and create client
+    // 4. Parse wrangler.jsonc for bindings (optional)
+    let bindings: { kv?: string[]; r2?: string[]; d1?: string[] } | undefined;
+    const wranglerConfigPath = findWranglerConfig(type);
+    if (wranglerConfigPath) {
+        try {
+            const wranglerConfig = parseWranglerConfig(wranglerConfigPath);
+            bindings = extractBindingsForApi(wranglerConfig);
+            if (bindings) {
+                const bindingsList: string[] = [];
+                if (bindings.kv) bindingsList.push(`KV: ${bindings.kv.join(", ")}`);
+                if (bindings.r2) bindingsList.push(`R2: ${bindings.r2.join(", ")}`);
+                if (bindings.d1) bindingsList.push(`D1: ${bindings.d1.join(", ")}`);
+                console.log(`  Bindings: ${bindingsList.join("; ")}`);
+            }
+        } catch (err) {
+            console.log(`  Warning: Could not parse wrangler config: ${err instanceof Error ? err.message : err}`);
+        }
+    }
+
+    // 5. Get OAuth token and create client
     const token = await getOAuthToken();
     const client = createPlatformClient(token);
 
-    // 5. Call Platform API
+    // 6. Call Platform API
     const env = options.dev ? "dev" : "prod";
     console.log(`Deploying ${type} handler to ${env}...`);
+
+    // Build query params, including bindings if present
+    const queryParams: { env: "dev" | "prod"; type: "web" | "events"; bindings?: string } = { env, type };
+    if (bindings) {
+        queryParams.bindings = JSON.stringify(bindings);
+    }
 
     const { data, error } = await client.POST("/api/apps/{appId}/deploy", {
         params: {
             path: { appId: config.id },
-            query: { env, type },
+            query: queryParams,
         },
         body: bundle as unknown as string,
         bodySerializer: (body) => body as unknown as globalThis.ReadableStream,
@@ -338,9 +366,32 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
 }
 
 /**
+ * Prompts user to confirm data deletion by typing the app ID.
+ *
+ * @param appId - The app ID that must be typed to confirm
+ * @returns true if confirmed, false otherwise
+ */
+async function confirmDeletion(appId: string): Promise<boolean> {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    return new Promise((resolve) => {
+        rl.question(
+            `\nWARNING: This will permanently delete all data for '${appId}'.\nType the app name to confirm: `,
+            (answer) => {
+                rl.close();
+                resolve(answer === appId);
+            }
+        );
+    });
+}
+
+/**
  * Removes the app from the Bkper Platform.
  *
- * @param options Undeploy options (dev, events)
+ * @param options Undeploy options (dev, events, deleteData)
  */
 export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     // 1. Check if logged in
@@ -363,19 +414,34 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 3. Get OAuth token and create client
+    // 3. Handle --delete-data confirmation
+    if (options.deleteData) {
+        const confirmed = await confirmDeletion(config.id);
+        if (!confirmed) {
+            console.log("Data deletion cancelled.");
+            return;
+        }
+    }
+
+    // 4. Get OAuth token and create client
     const token = await getOAuthToken();
     const client = createPlatformClient(token);
 
-    // 4. Call Platform API
+    // 5. Call Platform API
     const env = options.dev ? "dev" : "prod";
     const type = options.events ? "events" : "web";
     console.log(`Removing ${type} handler from ${env}...`);
 
+    // Build query params
+    const queryParams: { env: "dev" | "prod"; type: "web" | "events"; deleteData?: boolean } = { env, type };
+    if (options.deleteData) {
+        queryParams.deleteData = true;
+    }
+
     const { data, error } = await client.DELETE("/api/apps/{appId}", {
         params: {
             path: { appId: config.id },
-            query: { env, type },
+            query: queryParams,
         },
     });
 
@@ -389,6 +455,9 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     }
 
     console.log(`\nRemoved ${type} handler from ${env}`);
+    if (options.deleteData) {
+        console.log("All associated data has been permanently deleted.");
+    }
 }
 
 /**
@@ -724,4 +793,222 @@ Done! To get started:
   cd ${name}
   bun run dev
 `);
+}
+
+// =============================================================================
+// Secrets Functions
+// =============================================================================
+
+interface SecretsOptions {
+    dev?: boolean;
+}
+
+/**
+ * Prompts for secret value from stdin.
+ * Reads from piped input if available, otherwise prompts interactively.
+ *
+ * @returns The secret value
+ */
+async function promptSecretValue(): Promise<string> {
+    // Check if stdin is a TTY (interactive) or piped
+    if (!process.stdin.isTTY) {
+        // Read from piped input
+        return new Promise((resolve, reject) => {
+            let data = "";
+            process.stdin.setEncoding("utf8");
+            process.stdin.on("data", (chunk) => {
+                data += chunk;
+            });
+            process.stdin.on("end", () => {
+                resolve(data.trim());
+            });
+            process.stdin.on("error", reject);
+        });
+    }
+
+    // Interactive prompt
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+    });
+
+    return new Promise((resolve) => {
+        rl.question("Enter secret value: ", (answer) => {
+            rl.close();
+            resolve(answer);
+        });
+    });
+}
+
+/**
+ * Sets a secret value for the app.
+ *
+ * @param name - Secret name
+ * @param options - Options (dev environment)
+ */
+export async function secretsPut(name: string, options: SecretsOptions = {}): Promise<void> {
+    // 1. Check if logged in
+    if (!isLoggedIn()) {
+        console.error("Error: You must be logged in. Run: bkper login");
+        process.exit(1);
+    }
+
+    // 2. Load app config
+    let config: bkper.App;
+    try {
+        config = loadAppConfig();
+    } catch {
+        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        process.exit(1);
+    }
+
+    if (!config?.id) {
+        console.error('Error: App config is missing "id" field');
+        process.exit(1);
+    }
+
+    // 3. Prompt for secret value
+    const value = await promptSecretValue();
+    if (!value) {
+        console.error("Error: Secret value cannot be empty");
+        process.exit(1);
+    }
+
+    // 4. Get OAuth token and create client
+    const token = await getOAuthToken();
+    const client = createPlatformClient(token);
+
+    // 5. Call Platform API
+    const env = options.dev ? "dev" : "prod";
+    
+    const { data, error } = await client.PUT("/api/apps/{appId}/secrets/{name}", {
+        params: {
+            path: { appId: config.id, name },
+            query: { env },
+        },
+        body: { value },
+    });
+
+    if (error) {
+        handleError(error);
+    }
+
+    if (!data) {
+        console.error("Error: Unexpected empty response");
+        process.exit(1);
+    }
+
+    console.log(`Secret '${name}' set in ${env}`);
+}
+
+/**
+ * Lists all secrets for the app.
+ *
+ * @param options - Options (dev environment)
+ */
+export async function secretsList(options: SecretsOptions = {}): Promise<void> {
+    // 1. Check if logged in
+    if (!isLoggedIn()) {
+        console.error("Error: You must be logged in. Run: bkper login");
+        process.exit(1);
+    }
+
+    // 2. Load app config
+    let config: bkper.App;
+    try {
+        config = loadAppConfig();
+    } catch {
+        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        process.exit(1);
+    }
+
+    if (!config?.id) {
+        console.error('Error: App config is missing "id" field');
+        process.exit(1);
+    }
+
+    // 3. Get OAuth token and create client
+    const token = await getOAuthToken();
+    const client = createPlatformClient(token);
+
+    // 4. Call Platform API
+    const env = options.dev ? "dev" : "prod";
+    
+    const { data, error } = await client.GET("/api/apps/{appId}/secrets", {
+        params: {
+            path: { appId: config.id },
+            query: { env },
+        },
+    });
+
+    if (error) {
+        handleError(error);
+    }
+
+    if (!data) {
+        console.error("Error: Unexpected empty response");
+        process.exit(1);
+    }
+
+    // 5. Display secrets
+    if (data.secrets.length === 0) {
+        console.log(`No secrets found in ${env}`);
+        return;
+    }
+
+    console.log(`Secrets in ${env}:`);
+    console.log(data.secrets.join(", "));
+}
+
+/**
+ * Deletes a secret from the app.
+ *
+ * @param name - Secret name
+ * @param options - Options (dev environment)
+ */
+export async function secretsDelete(name: string, options: SecretsOptions = {}): Promise<void> {
+    // 1. Check if logged in
+    if (!isLoggedIn()) {
+        console.error("Error: You must be logged in. Run: bkper login");
+        process.exit(1);
+    }
+
+    // 2. Load app config
+    let config: bkper.App;
+    try {
+        config = loadAppConfig();
+    } catch {
+        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        process.exit(1);
+    }
+
+    if (!config?.id) {
+        console.error('Error: App config is missing "id" field');
+        process.exit(1);
+    }
+
+    // 3. Get OAuth token and create client
+    const token = await getOAuthToken();
+    const client = createPlatformClient(token);
+
+    // 4. Call Platform API
+    const env = options.dev ? "dev" : "prod";
+    
+    const { data, error } = await client.DELETE("/api/apps/{appId}/secrets/{name}", {
+        params: {
+            path: { appId: config.id, name },
+            query: { env },
+        },
+    });
+
+    if (error) {
+        handleError(error);
+    }
+
+    if (!data) {
+        console.error("Error: Unexpected empty response");
+        process.exit(1);
+    }
+
+    console.log(`Secret '${name}' deleted from ${env}`);
 }

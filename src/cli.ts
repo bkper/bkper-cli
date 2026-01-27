@@ -3,7 +3,7 @@
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./bkper-factory.js";
-import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp } from "./commands/apps.js";
+import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete } from "./commands/apps.js";
 import { updateSkills } from "./commands/skills.js";
 
 import dotenv from "dotenv";
@@ -104,6 +104,7 @@ appsCommand
     .description("Remove app from Bkper Platform")
     .option("--dev", "Remove from development environment")
     .option("--events", "Remove events handler instead of web handler")
+    .option("--delete-data", "Permanently delete all associated data (requires confirmation)")
     .action(async (options) => {
         try {
             await undeployApp(options);
@@ -121,6 +122,48 @@ appsCommand
             await statusApp();
         } catch (err) {
             console.error("Error getting app status:", err);
+            process.exit(1);
+        }
+    });
+
+// Secrets subcommand
+const secretsCommand = appsCommand.command("secrets").description("Manage app secrets");
+
+secretsCommand
+    .command("put <name>")
+    .description("Set a secret value")
+    .option("--dev", "Set in development environment")
+    .action(async (name: string, options) => {
+        try {
+            await secretsPut(name, options);
+        } catch (err) {
+            console.error("Error setting secret:", err);
+            process.exit(1);
+        }
+    });
+
+secretsCommand
+    .command("list")
+    .description("List all secrets")
+    .option("--dev", "List from development environment")
+    .action(async (options) => {
+        try {
+            await secretsList(options);
+        } catch (err) {
+            console.error("Error listing secrets:", err);
+            process.exit(1);
+        }
+    });
+
+secretsCommand
+    .command("delete <name>")
+    .description("Delete a secret")
+    .option("--dev", "Delete from development environment")
+    .action(async (name: string, options) => {
+        try {
+            await secretsDelete(name, options);
+        } catch (err) {
+            console.error("Error deleting secret:", err);
             process.exit(1);
         }
     });

@@ -204,6 +204,8 @@ export interface paths {
                     env?: "prod" | "dev";
                     /** @description Deployment type (web handler or events handler) */
                     type?: "web" | "events";
+                    /** @description Permanently delete all associated data */
+                    deleteData?: boolean;
                 };
                 header?: never;
                 path: {
@@ -261,6 +263,223 @@ export interface paths {
                 };
                 /** @description Cloudflare undeploy failed */
                 502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List secrets
+         * @description List all secret names for the app
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Target environment */
+                    env?: "prod" | "dev";
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Secrets list */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SecretsListResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/secrets/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set secret
+         * @description Set a secret value for the app
+         */
+        put: {
+            parameters: {
+                query?: {
+                    /** @description Target environment */
+                    env?: "prod" | "dev";
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                    /** @description Secret name */
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SecretValueRequest"];
+                };
+            };
+            responses: {
+                /** @description Secret set successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SecretResponse"];
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete secret
+         * @description Delete a secret from the app
+         */
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Target environment */
+                    env?: "prod" | "dev";
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                    /** @description Secret name */
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Secret deleted successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SecretResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App or secret not found */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -353,6 +572,17 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         } | null;
+        SecretsListResponse: {
+            secrets: string[];
+        };
+        SecretValueRequest: {
+            value: string;
+        };
+        SecretResponse: {
+            /** @enum {boolean} */
+            success: true;
+            message: string;
+        };
     };
     responses: never;
     parameters: never;
