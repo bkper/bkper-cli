@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
+import "dotenv/config"; // Must be first to load env vars before other imports
+
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./bkper-factory.js";
 import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete } from "./commands/apps/index.js";
 import { updateSkills } from "./commands/skills.js";
-
-import dotenv from "dotenv";
-dotenv.config();
 
 program
     .command("login")
