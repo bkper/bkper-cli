@@ -105,6 +105,7 @@ appsCommand
     .option("--dev", "Remove from development environment")
     .option("--events", "Remove events handler instead of web handler")
     .option("--delete-data", "Permanently delete all associated data (requires confirmation)")
+    .option("--force", "Skip confirmation prompts (use with --delete-data for automation)")
     .action(async (options) => {
         try {
             await undeployApp(options);

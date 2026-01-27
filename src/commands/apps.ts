@@ -28,6 +28,7 @@ interface DeployOptions {
     events?: boolean;
     sync?: boolean;
     deleteData?: boolean;
+    force?: boolean;
 }
 
 interface SyncResult {
@@ -415,7 +416,7 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     }
 
     // 3. Handle --delete-data confirmation
-    if (options.deleteData) {
+    if (options.deleteData && !options.force) {
         const confirmed = await confirmDeletion(config.id);
         if (!confirmed) {
             console.log("Data deletion cancelled.");

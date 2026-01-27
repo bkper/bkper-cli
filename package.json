@@ -46,6 +46,7 @@
         "test": "TS_NODE_PROJECT=tsconfig.test.json mocha",
         "test:unit": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.json",
         "test:integration": "TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.integration.json",
+        "test:deploy": "BKPER_PLATFORM_URL=http://localhost:8790 BKPER_API_URL=https://api-dev.bkper.app TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.deploy.json",
         "test:all": "bun run test:unit && bun run test:integration",
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest",
         "patch": "yarn version --patch",
