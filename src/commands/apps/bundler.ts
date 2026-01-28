@@ -1,89 +1,66 @@
-import * as esbuild from "esbuild";
 import fs from "fs";
-import type { HandlerType } from "./types.js";
+import path from "path";
+import crypto from "crypto";
 
 /**
- * Finds the entry point for bundling based on deploy type.
- * Supports both monorepo (bkper-app-template) and simple project structures.
+ * Recursively gets all files in a directory.
+ *
+ * @param dir - Directory to scan
+ * @returns Array of file paths
  */
-export function findEntryPoint(type: HandlerType): string | null {
-    // Monorepo candidates (for bkper-app-template structure)
-    const monorepoWebCandidates = [
-        "./packages/web/server/src/index.ts",
-        "./packages/web/server/src/index.js",
-        "./packages/web/src/index.ts",
-        "./packages/web/src/index.js",
-    ];
+export async function getFilesRecursive(dir: string): Promise<string[]> {
+    const files: string[] = [];
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
 
-    const monorepoEventsCandidates = [
-        "./packages/events/src/index.ts",
-        "./packages/events/src/index.js",
-    ];
-
-    // Simple project candidates (for single worker projects)
-    const simpleCandidates = [
-        "./src/index.ts",
-        "./src/index.js",
-        "./index.ts",
-        "./index.js",
-    ];
-
-    // Check monorepo first based on type, then fall back to simple
-    const candidates =
-        type === "events"
-            ? [...monorepoEventsCandidates, ...simpleCandidates]
-            : [...monorepoWebCandidates, ...simpleCandidates];
-
-    for (const candidate of candidates) {
-        if (fs.existsSync(candidate)) {
-            return candidate;
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            files.push(...await getFilesRecursive(fullPath));
+        } else {
+            files.push(fullPath);
         }
     }
 
-    return null;
+    return files;
 }
 
 /**
- * Bundles the project using esbuild.
+ * Creates asset manifest for deployment.
+ * Computes SHA-256 hashes for all files in the assets directory.
  *
- * @param type - The deploy type ('web' or 'events')
- * @returns Bundled JavaScript code as a Buffer
+ * @param assetsPath - Path to asset directory (relative to project root)
+ * @returns Asset manifest with hashes and sizes
  */
-export async function bundleProject(type: HandlerType): Promise<Buffer> {
-    const entryPoint = findEntryPoint(type);
-    if (!entryPoint) {
-        const expectedPaths =
-            type === "events"
-                ? "packages/events/src/index.ts or src/index.ts"
-                : "packages/web/server/src/index.ts or src/index.ts";
-        throw new Error(
-            `No entry point found for ${type} handler. Expected: ${expectedPaths}`
-        );
+export async function createAssetManifest(
+    assetsPath: string
+): Promise<Record<string, { hash: string; size: number }>> {
+    const fullPath = path.resolve(assetsPath);
+    if (!fs.existsSync(fullPath)) {
+        throw new Error(`Assets directory not found: ${assetsPath}`);
     }
 
-    console.log(`  Entry point: ${entryPoint}`);
+    const manifest: Record<string, { hash: string; size: number }> = {};
+    const files = await getFilesRecursive(fullPath);
 
-    const result = await esbuild.build({
-        entryPoints: [entryPoint],
-        bundle: true,
-        format: "esm",
-        platform: "neutral",
-        target: "es2020",
-        minify: true,
-        write: false,
-        external: [],
-        conditions: ["workerd", "worker", "browser"],
-        mainFields: ["browser", "module", "main"],
-    });
-
-    if (result.errors.length > 0) {
-        const errorMessages = result.errors.map((e) => e.text).join("\n");
-        throw new Error(`Bundle failed:\n${errorMessages}`);
+    for (const file of files) {
+        const relativePath = "/" + path.relative(fullPath, file).replace(/\\/g, "/");
+        const content = fs.readFileSync(file);
+        const hash = computeHash(content);
+        const size = fs.statSync(file).size;
+        manifest[relativePath] = { hash, size };
     }
 
-    if (!result.outputFiles || result.outputFiles.length === 0) {
-        throw new Error("Bundle produced no output");
-    }
+    return manifest;
+}
 
-    return Buffer.from(result.outputFiles[0].contents);
+/**
+ * Computes SHA-256 hash of content.
+ * Returns first 32 characters as per Cloudflare spec.
+ *
+ * @param content - File content as Buffer
+ * @returns 32-character hex hash
+ */
+export function computeHash(content: Buffer): string {
+    const hash = crypto.createHash("sha256").update(content).digest("hex");
+    return hash.substring(0, 32);
 }

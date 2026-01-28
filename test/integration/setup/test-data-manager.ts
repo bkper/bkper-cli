@@ -1,5 +1,5 @@
 import { withRetry, TestMode } from './test-helpers.js';
-import { getBkperInstance } from '../../../src/mcp/bkper-factory.js';
+import { getBkperInstance } from '../../../src/bkper-factory.js';
 
 /**
  * Manages test data for integration tests

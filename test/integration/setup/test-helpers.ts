@@ -13,6 +13,19 @@ import type {
 export { expect };
 
 /**
+ * Default test book ID for integration tests
+ * Can be overridden by TEST_BOOK_ID environment variable
+ */
+export const DEFAULT_TEST_BOOK_ID = 'agtzfmJrcGVyLWhyZHITCxIGTGVkZ2VyGICA4IyGifUJDA';
+
+/**
+ * Gets the test book ID from environment variable or uses default
+ */
+export function getTestBookId(): string {
+  return process.env.TEST_BOOK_ID || DEFAULT_TEST_BOOK_ID;
+}
+
+/**
  * Test mode configuration using environment variables directly
  */
 export const TestMode = {

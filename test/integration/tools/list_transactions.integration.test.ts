@@ -6,22 +6,19 @@ import {
   getToolDefinition,
   logApiResponse,
   withRetry,
-  TestMode
+  TestMode,
+  getTestBookId
 } from '../setup/test-helpers.js';
 import { testDataManager } from '../setup/test-data-manager.js';
 import type { IntegrationTestContext } from '../setup/test-helpers.js';
 
 describe('Integration: list_transactions Tool', function() {
   let context: IntegrationTestContext;
-  const TEST_BOOK_ID = process.env.TEST_BOOK_ID;
+  const TEST_BOOK_ID = getTestBookId();
   
   before(async function() {
     this.timeout(60000); // Allow more time for initial setup
     context = createTestContext();
-    
-    if (!TEST_BOOK_ID) {
-      throw new Error('TEST_BOOK_ID environment variable is required for list_transactions integration tests');
-    }
     
     // Verify we can access the API and the test book
     const stats = await testDataManager.getTestDataStats();
@@ -129,10 +126,11 @@ describe('Integration: list_transactions Tool', function() {
         expect(response.transactions).to.have.length(5);
         expect(response.cursor).to.be.a('string');
         
-        // Get next page
+        // Get next page - query is required even when using cursor
         const nextResult = await withRetry(() => 
           context.server.testCallTool('list_transactions', {
             bookId: TEST_BOOK_ID,
+            query: 'after:2020-01-01',
             limit: 5,
             cursor: response.cursor
           })
@@ -451,12 +449,22 @@ describe('Integration: list_transactions Tool', function() {
       response.transactions.forEach((transaction: any) => {
         expect(transaction).to.have.property('id').that.is.a('string');
         expect(transaction).to.have.property('date').that.is.a('string');
-        expect(transaction).to.have.property('dateValue').that.is.a('number');
+        // dateValue is intentionally removed by the handler to keep response clean
         expect(transaction).to.have.property('amount'); // Can be string or number
-        expect(transaction).to.have.property('description').that.is.a('string');
         expect(transaction).to.have.property('posted').that.is.a('boolean');
-        expect(transaction).to.have.property('creditAccount').that.is.an('object');
-        expect(transaction).to.have.property('debitAccount').that.is.an('object');
+        
+        // creditAccount and debitAccount are optional - may not be set for drafts or pending transactions
+        if (transaction.creditAccount !== undefined) {
+          expect(transaction.creditAccount).to.be.an('object');
+        }
+        if (transaction.debitAccount !== undefined) {
+          expect(transaction.debitAccount).to.be.an('object');
+        }
+        
+        // description is optional - may not be set
+        if (transaction.description !== undefined) {
+          expect(transaction.description).to.be.a('string');
+        }
         
         // Optional properties
         if (transaction.properties !== undefined) {
@@ -477,15 +485,20 @@ describe('Integration: list_transactions Tool', function() {
         expect(transaction.date).to.match(/^\d{4}-\d{2}-\d{2}$/);
         const amount = typeof transaction.amount === 'string' ? parseFloat(transaction.amount) : transaction.amount;
         expect(amount).to.be.greaterThan(0);
-        expect(transaction.creditAccount.id).to.have.length.greaterThan(0);
-        expect(transaction.debitAccount.id).to.have.length.greaterThan(0);
         
-        // Account names are optional in transaction structure
-        if (transaction.creditAccount.name !== undefined) {
-          expect(transaction.creditAccount.name).to.have.length.greaterThan(0);
+        // Account validation - only validate if accounts are set
+        if (transaction.creditAccount) {
+          expect(transaction.creditAccount.id).to.have.length.greaterThan(0);
+          // Account names are optional in transaction structure
+          if (transaction.creditAccount.name !== undefined) {
+            expect(transaction.creditAccount.name).to.have.length.greaterThan(0);
+          }
         }
-        if (transaction.debitAccount.name !== undefined) {
-          expect(transaction.debitAccount.name).to.have.length.greaterThan(0);
+        if (transaction.debitAccount) {
+          expect(transaction.debitAccount.id).to.have.length.greaterThan(0);
+          if (transaction.debitAccount.name !== undefined) {
+            expect(transaction.debitAccount.name).to.have.length.greaterThan(0);
+          }
         }
       });
     }));

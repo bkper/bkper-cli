@@ -54,7 +54,7 @@ interface UndeployOptions {
  * Execute deploy command - mocks process.exit to prevent test runner exit
  */
 export async function runDeploy(options: DeployOptions): Promise<void> {
-  const { deployApp } = await import('../../../src/commands/apps.js');
+  const { deployApp } = await import('../../../src/commands/apps/index.js');
 
   const originalExit = process.exit;
   let exitCode: number | undefined;
@@ -82,7 +82,7 @@ export async function runDeploy(options: DeployOptions): Promise<void> {
  * Execute undeploy command - mocks process.exit
  */
 export async function runUndeploy(options: UndeployOptions): Promise<void> {
-  const { undeployApp } = await import('../../../src/commands/apps.js');
+  const { undeployApp } = await import('../../../src/commands/apps/index.js');
 
   const originalExit = process.exit;
   let exitCode: number | undefined;

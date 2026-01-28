@@ -124,16 +124,15 @@ export class TransactionMergeOperation {
         const revertAmount = this.revertTransaction.getAmount();
 
         if (editAmount && revertAmount) {
-            // Both have amounts - validate they are equal
+            // Both have amounts - check if they differ
             if (editAmount.cmp(revertAmount) !== 0) {
-                // Amounts differ - throw error for manual reconciliation
-                throw new McpError(
-                    ErrorCode.InvalidParams,
-                    `Cannot merge transactions with different amounts: ${editAmount.toString()} vs ${revertAmount.toString()}. ` +
-                    `Please reconcile amounts manually before merging.`
-                );
+                // Amounts differ - create audit record and keep edit's amount
+                const editDate = this.editTransaction.getDate();
+                const revertDate = this.revertTransaction.getDate();
+                const diff = editAmount.minus(revertAmount);
+                this.record = `Merged on ${editDate} with amount diff: ${diff.toString()} (edit: ${editAmount.toString()}, reverted: ${revertAmount.toString()} on ${revertDate})`;
             }
-            // Amounts are equal - keep edit's amount (no change needed)
+            // Keep edit's amount (already in merged from editTransaction.json())
         } else if (!editAmount && revertAmount) {
             // Edit has no amount, use revert's amount
             merged.amount = revertAmount.toString();

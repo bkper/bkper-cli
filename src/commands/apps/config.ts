@@ -1,7 +1,7 @@
 import { App } from "bkper-js";
 import fs from "fs";
 import * as YAML from "yaml";
-import type { ErrorResponse } from "./types.js";
+import type { ErrorResponse, DeploymentConfig } from "./types.js";
 
 // =============================================================================
 // App Config Loading
@@ -21,6 +21,31 @@ export function loadAppConfig(): bkper.App {
     } else {
         throw new Error("bkperapp.json or bkperapp.yaml not found");
     }
+}
+
+/**
+ * Loads deployment configuration from bkperapp.yaml.
+ *
+ * @returns Deployment configuration or undefined if not configured
+ */
+export function loadDeploymentConfig(): DeploymentConfig | undefined {
+    if (fs.existsSync("./bkperapp.yaml")) {
+        const config = YAML.parse(fs.readFileSync("./bkperapp.yaml", "utf8")) as bkper.App & { 
+            deployment?: { 
+                web: { bundle: string; assets?: string };
+                events: { bundle: string };
+                bindings?: string[];
+            };
+        };
+        if (config.deployment) {
+            return {
+                web: config.deployment.web,
+                events: config.deployment.events,
+                bindings: config.deployment.bindings,
+            };
+        }
+    }
+    return undefined;
 }
 
 /**

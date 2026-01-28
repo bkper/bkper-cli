@@ -61,9 +61,7 @@ function createMockTransaction(data: any) {
           return thisVal === otherVal ? 0 : (thisVal > otherVal ? 1 : -1);
         },
         minus: (other: any) => ({
-          abs: () => ({
-            toString: () => Math.abs(parseFloat(data.amount) - parseFloat(other?.toString() || '0')).toString()
-          })
+          toString: () => (parseFloat(data.amount) - parseFloat(other?.toString() || '0')).toString()
         }),
         toString: () => data.amount
       };
@@ -72,7 +70,8 @@ function createMockTransaction(data: any) {
     getRemoteIds: () => data.remoteIds || [],
     getUrls: () => data.urls || [],
     getProperties: () => data.properties || {},
-    getDateFormatted: () => data.dateFormatted || data.date || ''
+    getDateFormatted: () => data.dateFormatted || data.date || '',
+    getDate: () => data.dateFormatted || data.date || ''
   };
 }
 
@@ -466,7 +465,7 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     setupTestEnvironment();
   });
 
-  it('should throw error when amounts differ', async function() {
+  it('should succeed and create audit record when amounts differ', async function() {
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
@@ -475,30 +474,21 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
 
-    try {
-      await server.testCallTool('merge_transactions', {
-        bookId: fixtureBook.id,
-        transactionId1: scenario.transaction1.id,
-        transactionId2: scenario.transaction2.id
-      });
-      expect.fail('Should have thrown an error for different amounts');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      const errorMessage = (error as Error).message;
+    const response = await server.testCallTool('merge_transactions', {
+      bookId: fixtureBook.id,
+      transactionId1: scenario.transaction1.id,
+      transactionId2: scenario.transaction2.id
+    });
 
-      // Verify error message mentions cannot merge and different amounts
-      expect(errorMessage.toLowerCase()).to.satisfy((msg: string) =>
-        msg.includes('cannot merge') || msg.includes('different amount')
-      );
+    const jsonResponse = JSON.parse(response.content[0].text as string);
 
-      // Verify error message contains both amounts
-      expect(errorMessage).to.satisfy((msg: string) =>
-        msg.includes('100') && msg.includes('80')
-      );
-    }
+    // Should succeed and create audit record
+    expect(jsonResponse.mergedTransaction).to.exist;
+    expect(jsonResponse.auditRecord).to.be.a('string');
+    expect(jsonResponse.auditRecord).to.include('amount diff');
   });
 
-  it('should throw error with helpful message for manual reconciliation', async function() {
+  it('should include amount difference in audit record', async function() {
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
@@ -507,24 +497,20 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
 
-    try {
-      await server.testCallTool('merge_transactions', {
-        bookId: fixtureBook.id,
-        transactionId1: scenario.transaction1.id,
-        transactionId2: scenario.transaction2.id
-      });
-      expect.fail('Should have thrown an error');
-    } catch (error) {
-      const errorMessage = (error as Error).message.toLowerCase();
+    const response = await server.testCallTool('merge_transactions', {
+      bookId: fixtureBook.id,
+      transactionId1: scenario.transaction1.id,
+      transactionId2: scenario.transaction2.id
+    });
 
-      // Should guide user to manual reconciliation
-      expect(errorMessage).to.satisfy((msg: string) =>
-        msg.includes('manual') || msg.includes('reconcile')
-      );
-    }
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+
+    // Audit record should contain both amounts for reference
+    expect(jsonResponse.auditRecord).to.include('edit:');
+    expect(jsonResponse.auditRecord).to.include('reverted:');
   });
 
-  it('should throw error for large amount differences', async function() {
+  it('should create audit record for large amount differences', async function() {
     const tx1 = {
       id: 'txn-1000',
       amount: '1000.00',
@@ -570,21 +556,19 @@ describe('MCP Server - merge_transactions Algorithm: Amount Handling', function(
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
 
-    try {
-      await server.testCallTool('merge_transactions', {
-        bookId: fixtureBook.id,
-        transactionId1: tx1.id,
-        transactionId2: tx2.id
-      });
-      expect.fail('Should have thrown an error for different amounts');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      const errorMessage = (error as Error).message;
+    const response = await server.testCallTool('merge_transactions', {
+      bookId: fixtureBook.id,
+      transactionId1: tx1.id,
+      transactionId2: tx2.id
+    });
 
-      // Should show both amounts in error
-      expect(errorMessage).to.include('1000');
-      expect(errorMessage).to.include('100');
-    }
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+
+    // Should succeed and create audit record with amount info
+    expect(jsonResponse.mergedTransaction).to.exist;
+    expect(jsonResponse.auditRecord).to.be.a('string');
+    expect(jsonResponse.auditRecord).to.include('1000');
+    expect(jsonResponse.auditRecord).to.include('100');
   });
 
   it('should succeed when amounts are the same', async function() {
@@ -851,7 +835,7 @@ describe('MCP Server - merge_transactions Response Format', function() {
     expect(jsonResponse.revertedTransactionId).to.be.a('string');
   });
 
-  it('should throw error when amounts differ (not create auditRecord)', async function() {
+  it('should create auditRecord when amounts differ', async function() {
     const scenario = scenarios.differentAmounts;
     const mockBkper = {
       setConfig: () => {},
@@ -860,18 +844,18 @@ describe('MCP Server - merge_transactions Response Format', function() {
     setMockBkper(mockBkper);
     server = new BkperMcpServer();
 
-    try {
-      await server.testCallTool('merge_transactions', {
-        bookId: fixtureBook.id,
-        transactionId1: scenario.transaction1.id,
-        transactionId2: scenario.transaction2.id
-      });
-      expect.fail('Should have thrown an error for different amounts');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      const errorMessage = (error as Error).message;
-      expect(errorMessage.toLowerCase()).to.include('cannot merge');
-    }
+    const response = await server.testCallTool('merge_transactions', {
+      bookId: fixtureBook.id,
+      transactionId1: scenario.transaction1.id,
+      transactionId2: scenario.transaction2.id
+    });
+
+    const jsonResponse = JSON.parse(response.content[0].text as string);
+
+    // Should succeed and create audit record
+    expect(jsonResponse.mergedTransaction).to.exist;
+    expect(jsonResponse.auditRecord).to.be.a('string');
+    expect(jsonResponse.auditRecord).to.include('amount diff');
   });
 
   it('should set auditRecord to null when amounts are same', async function() {

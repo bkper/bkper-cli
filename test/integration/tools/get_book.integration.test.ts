@@ -6,22 +6,19 @@ import {
   getToolDefinition,
   logApiResponse,
   withRetry,
-  TestMode
+  TestMode,
+  getTestBookId
 } from '../setup/test-helpers.js';
 import { testDataManager } from '../setup/test-data-manager.js';
 import type { IntegrationTestContext } from '../setup/test-helpers.js';
 
 describe('Integration: get_book Tool', function() {
   let context: IntegrationTestContext;
-  const TEST_BOOK_ID = process.env.TEST_BOOK_ID;
+  const TEST_BOOK_ID = getTestBookId();
   
   before(async function() {
     this.timeout(60000); // Allow more time for initial setup
     context = createTestContext();
-    
-    if (!TEST_BOOK_ID) {
-      throw new Error('TEST_BOOK_ID environment variable is required for get_book integration tests');
-    }
     
     // Verify we can access the API and the test book
     const stats = await testDataManager.getTestDataStats();

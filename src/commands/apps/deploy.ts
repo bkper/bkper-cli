@@ -1,10 +1,11 @@
 import * as readline from "readline";
+import fs from "fs";
+import path from "path";
 import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
 import { setupBkper } from "../../bkper-factory.js";
 import { createPlatformClient } from "../../platform/client.js";
-import { extractBindingsForApi, findWranglerConfig, parseWranglerConfig } from "../../utils/wrangler.js";
-import { bundleProject } from "./bundler.js";
-import { handleError, loadAppConfig } from "./config.js";
+import { createAssetManifest } from "./bundler.js";
+import { handleError, loadAppConfig, loadDeploymentConfig } from "./config.js";
 import { syncApp } from "./sync.js";
 import type { DeployOptions, Environment, HandlerType } from "./types.js";
 
@@ -46,65 +47,101 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // Determine deploy type early for bundling
+    // Determine deploy type early
     const type: HandlerType = options.events ? "events" : "web";
 
-    // 4. Bundle the project
-    console.log(`Bundling ${type} handler...`);
-    let bundle: Buffer;
-    try {
-        bundle = await bundleProject(type);
-    } catch (err) {
-        console.error("Error bundling project:", err instanceof Error ? err.message : err);
+    // 4. Load deployment configuration from bkperapp.yaml
+    const deploymentConfig = loadDeploymentConfig();
+    if (!deploymentConfig) {
+        console.error("Error: No deployment configuration found in bkperapp.yaml");
+        console.error("Add deployment section with web.bundle and events.bundle paths");
         process.exit(1);
     }
 
+    // Get handler-specific config
+    const handlerConfig = type === "events" 
+        ? deploymentConfig.events 
+        : deploymentConfig.web;
+
+    if (!handlerConfig?.bundle) {
+        console.error(`Error: No ${type} bundle path configured in bkperapp.yaml`);
+        console.error(`Add deployment.${type}.bundle path`);
+        process.exit(1);
+    }
+
+    // 5. Validate bundle path exists
+    const bundleDir = handlerConfig.bundle;
+    if (!fs.existsSync(bundleDir)) {
+        console.error(`Error: Bundle directory not found: ${bundleDir}`);
+        console.error("Please ensure you have run 'bun run build' or update bkperapp.yaml");
+        process.exit(1);
+    }
+
+    // 6. Read bundle file (default to index.js)
+    const bundlePath = path.join(bundleDir, "index.js");
+    if (!fs.existsSync(bundlePath)) {
+        console.error(`Error: Bundle file not found: ${bundlePath}`);
+        console.error("Expected index.js in the bundle directory");
+        process.exit(1);
+    }
+
+    console.log(`Reading bundle from ${bundlePath}...`);
+    const bundle = fs.readFileSync(bundlePath);
     const bundleSizeKB = (bundle.length / 1024).toFixed(2);
     console.log(`Bundle size: ${bundleSizeKB} KB`);
 
-    // 5. Parse wrangler.jsonc for bindings (optional)
-    let bindings: { kv?: string[]; r2?: string[]; d1?: string[] } | undefined;
-    const wranglerConfigPath = findWranglerConfig(type);
-    if (wranglerConfigPath) {
+    // 7. Validate and create asset manifest if configured (only for web handler)
+    let assetManifest: Record<string, { hash: string; size: number }> | undefined;
+    if (type === "web" && handlerConfig.assets) {
+        const assetsDir = handlerConfig.assets;
+        if (!fs.existsSync(assetsDir)) {
+            console.error(`Error: Assets directory not found: ${assetsDir}`);
+            console.error("Please ensure assets are built or update bkperapp.yaml");
+            process.exit(1);
+        }
+
+        console.log(`Creating asset manifest from ${assetsDir}...`);
         try {
-            const wranglerConfig = parseWranglerConfig(wranglerConfigPath);
-            bindings = extractBindingsForApi(wranglerConfig);
-            if (bindings) {
-                const bindingsList: string[] = [];
-                if (bindings.kv) bindingsList.push(`KV: ${bindings.kv.join(", ")}`);
-                if (bindings.r2) bindingsList.push(`R2: ${bindings.r2.join(", ")}`);
-                if (bindings.d1) bindingsList.push(`D1: ${bindings.d1.join(", ")}`);
-                console.log(`  Bindings: ${bindingsList.join("; ")}`);
-            }
+            assetManifest = await createAssetManifest(assetsDir);
+            const assetCount = Object.keys(assetManifest).length;
+            console.log(`  ${assetCount} assets found`);
         } catch (err) {
-            console.log(`  Warning: Could not parse wrangler config: ${err instanceof Error ? err.message : err}`);
+            console.error("Error creating asset manifest:", err instanceof Error ? err.message : err);
+            process.exit(1);
         }
     }
 
-    // 6. Get OAuth token and create client
+    // 8. Get OAuth token and create client
     const token = await getOAuthToken();
     const client = createPlatformClient(token);
 
-    // 7. Call Platform API
+    // 9. Call Platform API
     const env: Environment = options.dev ? "dev" : "prod";
     console.log(`Deploying ${type} handler to ${env}...`);
 
     // Build query params, including bindings if present
+    const bindings = deploymentConfig?.bindings ? { kv: deploymentConfig.bindings.filter(b => b === 'KV') } : undefined;
     const queryParams: { env: Environment; type: HandlerType; bindings?: string } = { env, type };
-    if (bindings) {
+    if (bindings?.kv && bindings.kv.length > 0) {
         queryParams.bindings = JSON.stringify(bindings);
     }
 
+    // Create multipart form data
+    const formData = new FormData();
+    formData.append('bundle', new Blob([bundle], { type: 'application/javascript+module' }));
+    if (assetManifest) {
+        formData.append('assetManifest', JSON.stringify(assetManifest));
+    }
+
+    // Note: Do NOT set Content-Type header manually - fetch will set it automatically
+    // with the proper boundary when using FormData
     const { data, error } = await client.POST("/api/apps/{appId}/deploy", {
         params: {
             path: { appId: config.id },
             query: queryParams,
         },
-        body: bundle as unknown as string,
+        body: formData as unknown as string,
         bodySerializer: (body) => body as unknown as globalThis.ReadableStream,
-        headers: {
-            "Content-Type": "application/octet-stream",
-        },
     });
 
     if (error) {

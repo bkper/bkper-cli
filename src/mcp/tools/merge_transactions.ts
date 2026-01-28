@@ -107,7 +107,7 @@ export async function handleMergeTransactions(
         const response: MergeTransactionsResponse = {
             mergedTransaction: JSON.parse(JSON.stringify(cleanTransaction)),
             revertedTransactionId: mergeOperation.revertTransaction.getId() || "",
-            auditRecord: null, // Always null - we throw error if amounts differ
+            auditRecord: mergeOperation.record,
         };
 
         const responseText = JSON.stringify(response, null, 2);
