@@ -119,8 +119,8 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const env: Environment = options.dev ? "dev" : "prod";
     console.log(`Deploying ${type} handler to ${env}...`);
 
-    // Build query params, including bindings if present
-    const bindings = deploymentConfig?.bindings ? { kv: deploymentConfig.bindings.filter(b => b === 'KV') } : undefined;
+    // Build query params, mapping services to bindings for the API
+    const bindings = deploymentConfig?.services ? { kv: deploymentConfig.services.filter(s => s === 'KV') } : undefined;
     const queryParams: { env: Environment; type: HandlerType; bindings?: string } = { env, type };
     if (bindings?.kv && bindings.kv.length > 0) {
         queryParams.bindings = JSON.stringify(bindings);

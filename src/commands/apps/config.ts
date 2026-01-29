@@ -51,14 +51,14 @@ export function loadDeploymentConfig(): DeploymentConfig | undefined {
                 deployment?: { 
                     web: { bundle: string; assets?: string };
                     events: { bundle: string };
-                    bindings?: string[];
+                    services?: string[];
                 };
             };
             if (config.deployment) {
                 return {
                     web: config.deployment.web,
                     events: config.deployment.events,
-                    bindings: config.deployment.bindings,
+                    services: config.deployment.services,
                 };
             }
         }

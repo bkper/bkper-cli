@@ -116,20 +116,20 @@ apiVersion: v5
 
 # Events to subscribe to (remove events you don't need)
 events:
-  - TRANSACTION_POSTED
-  - TRANSACTION_CHECKED
-  - TRANSACTION_UNCHECKED
-  - TRANSACTION_UPDATED
-  - TRANSACTION_DELETED
-  - TRANSACTION_RESTORED
-  - ACCOUNT_CREATED
-  - ACCOUNT_UPDATED
-  - ACCOUNT_DELETED
-  - GROUP_CREATED
-  - GROUP_UPDATED
-  - GROUP_DELETED
-  - FILE_CREATED
-  - BOOK_UPDATED
+    - TRANSACTION_POSTED
+    - TRANSACTION_CHECKED
+    - TRANSACTION_UNCHECKED
+    - TRANSACTION_UPDATED
+    - TRANSACTION_DELETED
+    - TRANSACTION_RESTORED
+    - ACCOUNT_CREATED
+    - ACCOUNT_UPDATED
+    - ACCOUNT_DELETED
+    - GROUP_CREATED
+    - GROUP_UPDATED
+    - GROUP_DELETED
+    - FILE_CREATED
+    - BOOK_UPDATED
 
 # -----------------------------------------------------------------------------
 # FILE PATTERNS (optional)
@@ -137,27 +137,8 @@ events:
 # For file processing apps. When a file matching these patterns is uploaded,
 # a FILE_CREATED event is triggered with the file content.
 filePatterns:
-  - "*.ofx"
-  - "*.csv"
-
-# -----------------------------------------------------------------------------
-# DEPLOYMENT CONFIGURATION (optional)
-# -----------------------------------------------------------------------------
-# For apps deployed to Bkper's Workers for Platforms infrastructure.
-deployment:
-  # Web handler (serves UI and API)
-  web:
-    bundle: packages/web/server/dist
-    # assets: packages/web/client/dist  # Static assets (when supported)
-
-  # Events handler (processes webhooks)
-  events:
-    bundle: packages/events/dist
-
-  # Cloudflare bindings available to your workers
-  # See: https://developers.cloudflare.com/workers/runtime-apis/bindings/
-  bindings:
-    - KV    # Key-value storage
+    - "*.ofx"
+    - "*.csv"
 
 # -----------------------------------------------------------------------------
 # PROPERTIES SCHEMA (optional)
@@ -165,22 +146,41 @@ deployment:
 # Defines autocomplete suggestions for custom properties in the Bkper UI.
 # Helps users discover and use the correct property keys/values for your app.
 propertiesSchema:
-  book:
-    keys:
-      - my_app_enabled
-      - my_app_config
-    values:
-      - "true"
-      - "false"
-  group:
-    keys:
-      - my_app_category
-    values:
-      - category_a
-      - category_b
-  account:
-    keys:
-      - my_app_sync_id
-  transaction:
-    keys:
-      - my_app_reference
+    book:
+        keys:
+            - my_app_enabled
+            - my_app_config
+        values:
+            - "true"
+            - "false"
+    group:
+        keys:
+            - my_app_category
+        values:
+            - category_a
+            - category_b
+    account:
+        keys:
+            - my_app_sync_id
+    transaction:
+        keys:
+            - my_app_reference
+
+# -----------------------------------------------------------------------------
+# DEPLOYMENT CONFIGURATION (optional)
+# -----------------------------------------------------------------------------
+# For apps deployed to Bkper's Workers for Platforms infrastructure.
+deployment:
+    # Web handler (serves UI and API)
+    web:
+        bundle: packages/web/server/dist
+        # assets: packages/web/client/dist  # Static assets (when supported)
+
+    # Events handler (processes webhooks)
+    events:
+        bundle: packages/events/dist
+
+    # Platform services available to your app (one per type, auto-provisioned)
+    # See: https://developers.cloudflare.com/kv/
+    services:
+        - KV    # Key-value storage

@@ -59,5 +59,5 @@ export interface HandlerDeploymentConfig {
 export interface DeploymentConfig {
     web: HandlerDeploymentConfig;
     events: HandlerDeploymentConfig;
-    bindings?: string[];  // List of bindings (e.g., ['KV', 'R2'])
+    services?: string[];  // List of services (e.g., ['KV'])
 }
