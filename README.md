@@ -46,7 +46,7 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 
 - `apps init <name>` - Scaffold a new app from the template
 - `apps list` - List all apps you have access to
-- `apps sync` - Sync `bkperapp.yaml` configuration to the platform
+- `apps sync` - Sync `bkper.yaml` configuration to the platform
 - `apps deploy` - Deploy built artifacts to the platform
   - `--dev` - Deploy to development environment
   - `--web` - Deploy web handler only
@@ -152,7 +152,7 @@ The server communicates via stdio, so any MCP client that supports stdio transpo
 
 ## Apps Configuration
 
-Apps are configured via a `bkperapp.yaml` file in the project root.
+Apps are configured via a `bkper.yaml` file in the project root.
 
 ### Environment Variables
 
@@ -160,11 +160,11 @@ Apps are configured via a `bkperapp.yaml` file in the project root.
 
 Set it for direct API access with your own quotas and attribution. Follow [these](https://bkper.com/docs/#rest-api-enabling) steps.
 
-### `bkperapp.yaml` Reference
+### `bkper.yaml` Reference
 
 See the complete reference with all available fields and documentation:
 
-**[docs/bkperapp-reference.yaml](https://raw.githubusercontent.com/bkper/bkper-cli/main/docs/bkperapp-reference.yaml)**
+**[docs/bkper-reference.yaml](https://raw.githubusercontent.com/bkper/bkper-cli/main/docs/bkper-reference.yaml)**
 
 ## Developer Tooling (Skills)
 

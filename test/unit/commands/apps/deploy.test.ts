@@ -77,7 +77,7 @@ describe('CLI - apps undeploy Command', function() {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: bkperapp.yaml or bkperapp.json not found');
+            expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
         });
 
         it('should exit with error when app config has no id', async function() {

@@ -103,13 +103,19 @@ async function downloadTemplate(targetDir: string): Promise<void> {
 // =============================================================================
 
 /**
- * Updates the bkperapp.yaml file with the new app name.
+ * Updates the bkper.yaml file with the new app name.
+ * Also handles bkperapp.yaml for backward compatibility.
  */
-function updateBkperAppYaml(projectDir: string, appName: string): void {
-    const yamlPath = path.join(projectDir, "bkperapp.yaml");
+function updateBkperYaml(projectDir: string, appName: string): void {
+    // Check for bkper.yaml first, then fall back to bkperapp.yaml
+    let yamlPath = path.join(projectDir, "bkper.yaml");
+    
+    if (!fs.existsSync(yamlPath)) {
+        yamlPath = path.join(projectDir, "bkperapp.yaml");
+    }
 
     if (!fs.existsSync(yamlPath)) {
-        throw new Error("bkperapp.yaml not found in template");
+        throw new Error("bkper.yaml not found in template");
     }
 
     const content = fs.readFileSync(yamlPath, "utf8");
@@ -230,12 +236,12 @@ export async function initApp(name: string): Promise<void> {
     // 4. Remove .git directory from template
     removeGitDirectory(targetDir);
 
-    // 5. Update bkperapp.yaml
+    // 5. Update bkper.yaml
     try {
-        updateBkperAppYaml(targetDir, name);
-        console.log("  Updated bkperapp.yaml");
+        updateBkperYaml(targetDir, name);
+        console.log("  Updated bkper.yaml");
     } catch (err) {
-        console.error("Error updating bkperapp.yaml:", err instanceof Error ? err.message : err);
+        console.error("Error updating bkper.yaml:", err instanceof Error ? err.message : err);
         process.exit(1);
     }
 

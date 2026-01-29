@@ -67,7 +67,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 
@@ -127,7 +127,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 
@@ -187,7 +187,7 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 

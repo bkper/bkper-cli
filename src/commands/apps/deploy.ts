@@ -33,12 +33,12 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         console.log(`Synced ${syncResult.id} (${syncResult.action})`);
     }
 
-    // 3. Load bkperapp.yaml/json to get app ID
+    // 3. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 
@@ -50,10 +50,10 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     // Determine deploy type early
     const type: HandlerType = options.events ? "events" : "web";
 
-    // 4. Load deployment configuration from bkperapp.yaml
+    // 4. Load deployment configuration from bkper.yaml
     const deploymentConfig = loadDeploymentConfig();
     if (!deploymentConfig) {
-        console.error("Error: No deployment configuration found in bkperapp.yaml");
+        console.error("Error: No deployment configuration found in bkper.yaml");
         console.error("Add deployment section with web.bundle and events.bundle paths");
         process.exit(1);
     }
@@ -64,7 +64,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         : deploymentConfig.web;
 
     if (!handlerConfig?.bundle) {
-        console.error(`Error: No ${type} bundle path configured in bkperapp.yaml`);
+        console.error(`Error: No ${type} bundle path configured in bkper.yaml`);
         console.error(`Add deployment.${type}.bundle path`);
         process.exit(1);
     }
@@ -96,7 +96,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         const assetsDir = handlerConfig.assets;
         if (!fs.existsSync(assetsDir)) {
             console.error(`Error: Assets directory not found: ${assetsDir}`);
-            console.error("Please ensure assets are built or update bkperapp.yaml");
+            console.error("Please ensure assets are built or update bkper.yaml");
             process.exit(1);
         }
 
@@ -198,12 +198,12 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 2. Load bkperapp.yaml/json to get app ID
+    // 2. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 
@@ -272,12 +272,12 @@ export async function statusApp(): Promise<void> {
         process.exit(1);
     }
 
-    // 2. Load bkperapp.yaml/json to get app ID
+    // 2. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkperapp.yaml or bkperapp.json not found");
+        console.error("Error: bkper.yaml or bkper.json not found");
         process.exit(1);
     }
 

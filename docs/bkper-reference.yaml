@@ -1,8 +1,8 @@
 # =============================================================================
-# bkperapp.yaml Reference
+# bkper.yaml Reference
 # =============================================================================
 # This file documents all available configuration options for Bkper Apps.
-# Copy the fields you need to your app's bkperapp.yaml file.
+# Copy the fields you need to your app's bkper.yaml file.
 #
 # For a minimal working template, see:
 # https://github.com/bkper/bkper-app-template

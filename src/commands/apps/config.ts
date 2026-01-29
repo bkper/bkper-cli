@@ -8,41 +8,59 @@ import type { ErrorResponse, DeploymentConfig } from "./types.js";
 // =============================================================================
 
 /**
- * Loads app configuration from bkperapp.json or bkperapp.yaml in current directory.
+ * Loads app configuration from bkper.json, bkper.yaml, bkperapp.json, or bkperapp.yaml in current directory.
+ * Checks files in priority order: bkper.json → bkper.yaml → bkperapp.json → bkperapp.yaml
  *
  * @returns App configuration object
  * @throws Error if no config file is found
  */
 export function loadAppConfig(): bkper.App {
-    if (fs.existsSync("./bkperapp.json")) {
-        return JSON.parse(fs.readFileSync("./bkperapp.json", "utf8"));
-    } else if (fs.existsSync("./bkperapp.yaml")) {
-        return YAML.parse(fs.readFileSync("./bkperapp.yaml", "utf8"));
-    } else {
-        throw new Error("bkperapp.json or bkperapp.yaml not found");
+    // Priority order: new filenames first, legacy filenames as fallback
+    const configPaths = [
+        "./bkper.json",
+        "./bkper.yaml",
+        "./bkperapp.json",    // Legacy
+        "./bkperapp.yaml"     // Legacy
+    ];
+
+    for (const path of configPaths) {
+        if (fs.existsSync(path)) {
+            const content = fs.readFileSync(path, "utf8");
+            return path.endsWith(".json") 
+                ? JSON.parse(content) 
+                : YAML.parse(content);
+        }
     }
+
+    throw new Error("bkper.yaml or bkper.json not found");
 }
 
 /**
- * Loads deployment configuration from bkperapp.yaml.
+ * Loads deployment configuration from bkper.yaml or bkperapp.yaml.
+ * Checks in priority order: bkper.yaml → bkperapp.yaml
  *
  * @returns Deployment configuration or undefined if not configured
  */
 export function loadDeploymentConfig(): DeploymentConfig | undefined {
-    if (fs.existsSync("./bkperapp.yaml")) {
-        const config = YAML.parse(fs.readFileSync("./bkperapp.yaml", "utf8")) as bkper.App & { 
-            deployment?: { 
-                web: { bundle: string; assets?: string };
-                events: { bundle: string };
-                bindings?: string[];
+    // Priority order: new filename first, legacy as fallback
+    const yamlPaths = ["./bkper.yaml", "./bkperapp.yaml"];
+
+    for (const path of yamlPaths) {
+        if (fs.existsSync(path)) {
+            const config = YAML.parse(fs.readFileSync(path, "utf8")) as bkper.App & { 
+                deployment?: { 
+                    web: { bundle: string; assets?: string };
+                    events: { bundle: string };
+                    bindings?: string[];
+                };
             };
-        };
-        if (config.deployment) {
-            return {
-                web: config.deployment.web,
-                events: config.deployment.events,
-                bindings: config.deployment.bindings,
-            };
+            if (config.deployment) {
+                return {
+                    web: config.deployment.web,
+                    events: config.deployment.events,
+                    bindings: config.deployment.bindings,
+                };
+            }
         }
     }
     return undefined;
@@ -61,7 +79,7 @@ export function loadReadme(): string | undefined {
 }
 
 /**
- * Creates an App instance configured from bkperapp.yaml and environment variables.
+ * Creates an App instance configured from bkper.yaml (or bkperapp.yaml) and environment variables.
  *
  * @returns Configured App instance
  */
