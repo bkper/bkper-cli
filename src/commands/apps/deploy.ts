@@ -4,7 +4,7 @@ import path from "path";
 import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
 import { setupBkper } from "../../bkper-factory.js";
 import { createPlatformClient } from "../../platform/client.js";
-import { createAssetManifest } from "./bundler.js";
+import { createAssetManifest, readAssetFiles } from "./bundler.js";
 import { handleError, loadAppConfig, loadDeploymentConfig } from "./config.js";
 import { syncApp } from "./sync.js";
 import type { DeployOptions, Environment, HandlerType } from "./types.js";
@@ -92,6 +92,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
 
     // 7. Validate and create asset manifest if configured (only for web handler)
     let assetManifest: Record<string, { hash: string; size: number }> | undefined;
+    let assetFiles: Record<string, string> | undefined;
     if (type === "web" && handlerConfig.assets) {
         const assetsDir = handlerConfig.assets;
         if (!fs.existsSync(assetsDir)) {
@@ -105,8 +106,16 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
             assetManifest = await createAssetManifest(assetsDir);
             const assetCount = Object.keys(assetManifest).length;
             console.log(`  ${assetCount} assets found`);
+            
+            // Read asset file contents for upload
+            console.log(`Reading asset file contents...`);
+            assetFiles = await readAssetFiles(assetsDir);
+            const totalSizeMB = Object.values(assetFiles).reduce((sum, base64) => {
+                return sum + (base64.length * 0.75); // base64 is ~1.33x original size
+            }, 0) / 1024 / 1024;
+            console.log(`  Total size: ${totalSizeMB.toFixed(2)} MB`);
         } catch (err) {
-            console.error("Error creating asset manifest:", err instanceof Error ? err.message : err);
+            console.error("Error processing assets:", err instanceof Error ? err.message : err);
             process.exit(1);
         }
     }
@@ -131,6 +140,9 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     formData.append('bundle', new Blob([bundle], { type: 'application/javascript+module' }));
     if (assetManifest) {
         formData.append('assetManifest', JSON.stringify(assetManifest));
+    }
+    if (assetFiles) {
+        formData.append('assetFiles', JSON.stringify(assetFiles));
     }
 
     // Note: Do NOT set Content-Type header manually - fetch will set it automatically
