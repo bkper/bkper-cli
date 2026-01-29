@@ -1,7 +1,7 @@
 import { App } from "bkper-js";
 import fs from "fs";
 import * as YAML from "yaml";
-import type { ErrorResponse, DeploymentConfig } from "./types.js";
+import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from "./types.js";
 
 // =============================================================================
 // App Config Loading
@@ -59,6 +59,64 @@ export function loadDeploymentConfig(): DeploymentConfig | undefined {
                     web: config.deployment.web,
                     events: config.deployment.events,
                     services: config.deployment.services,
+                };
+            }
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Checks if deployment config uses new source-based format.
+ * Source format: entry points end with .ts
+ * Legacy format: paths are directories (no extension)
+ *
+ * @param deployment - The deployment configuration object to check
+ * @returns true if the deployment uses source-based format, false otherwise
+ */
+export function isSourceConfig(deployment: unknown): boolean {
+    if (!deployment || typeof deployment !== "object") return false;
+    const d = deployment as Record<string, unknown>;
+
+    // Check if web.main or events.main ends with .ts
+    const webMain = (d.web as Record<string, unknown> | undefined)?.main;
+    const eventsMain = (d.events as Record<string, unknown> | undefined)?.main;
+
+    return (
+        (typeof webMain === "string" && webMain.endsWith(".ts")) ||
+        (typeof eventsMain === "string" && eventsMain.endsWith(".ts"))
+    );
+}
+
+/**
+ * Loads source-based deployment configuration from bkper.yaml.
+ * Maps snake_case YAML keys to camelCase TypeScript properties.
+ * Checks in priority order: bkper.yaml → bkperapp.yaml
+ *
+ * @returns Source deployment configuration or undefined if not configured
+ */
+export function loadSourceDeploymentConfig(): SourceDeploymentConfig | undefined {
+    const yamlPaths = ["./bkper.yaml", "./bkperapp.yaml"];
+
+    for (const path of yamlPaths) {
+        if (fs.existsSync(path)) {
+            const config = YAML.parse(fs.readFileSync(path, "utf8")) as {
+                deployment?: {
+                    web?: { main: string; client?: string };
+                    events?: { main: string };
+                    services?: string[];
+                    secrets?: string[];
+                    compatibility_date?: string;
+                };
+            };
+            if (config.deployment && isSourceConfig(config.deployment)) {
+                return {
+                    web: config.deployment.web,
+                    events: config.deployment.events,
+                    services: config.deployment.services,
+                    secrets: config.deployment.secrets,
+                    // Map snake_case to camelCase
+                    compatibilityDate: config.deployment.compatibility_date,
                 };
             }
         }

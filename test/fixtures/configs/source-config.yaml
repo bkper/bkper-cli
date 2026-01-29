@@ -1,0 +1,13 @@
+id: test-app
+name: Test App
+deployment:
+  web:
+    main: packages/web/server/src/index.ts
+    client: packages/web/client
+  events:
+    main: packages/events/src/index.ts
+  services:
+    - KV
+  secrets:
+    - API_KEY
+  compatibility_date: "2026-01-29"

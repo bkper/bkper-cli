@@ -1,0 +1,7 @@
+id: test-app
+name: Test App
+deployment:
+  events:
+    main: packages/events/src/index.ts
+  services:
+    - KV

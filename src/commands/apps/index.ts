@@ -12,6 +12,8 @@ export type {
     UndeployResult,
 } from "./types.js";
 
+export type { DevOptions } from "./dev.js";
+
 // =============================================================================
 // Functions
 // =============================================================================
@@ -24,6 +26,12 @@ export { createApp, syncApp, updateApp } from "./sync.js";
 
 // Deploy
 export { deployApp, statusApp, undeployApp } from "./deploy.js";
+
+// Dev
+export { dev } from "./dev.js";
+
+// Build
+export { build } from "./build.js";
 
 // Init
 export { initApp } from "./init.js";

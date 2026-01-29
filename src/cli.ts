@@ -5,7 +5,7 @@ import "dotenv/config"; // Must be first to load env vars before other imports
 import program from "commander";
 import { login, logout } from "./auth/local-auth-service.js";
 import { setupBkper } from "./bkper-factory.js";
-import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete } from "./commands/apps/index.js";
+import { listApps, syncApp, deployApp, undeployApp, statusApp, initApp, secretsPut, secretsList, secretsDelete, dev, build, DevOptions } from "./commands/apps/index.js";
 import { updateSkills } from "./commands/skills.js";
 
 program
@@ -122,6 +122,38 @@ appsCommand
             await statusApp();
         } catch (err) {
             console.error("Error getting app status:", err);
+            process.exit(1);
+        }
+    });
+
+// Development server command
+appsCommand
+    .command("dev")
+    .description("Start the development server")
+    .option("-p, --port <port>", "Client dev server port", "5173")
+    .option("-s, --server-port <port>", "Server simulation port", "8787")
+    .action(async (options) => {
+        try {
+            setupBkper();
+            await dev({
+                port: parseInt(options.port, 10),
+                serverPort: parseInt(options.serverPort, 10),
+            });
+        } catch (err) {
+            console.error("Error starting dev server:", err);
+            process.exit(1);
+        }
+    });
+
+// Build command
+appsCommand
+    .command("build")
+    .description("Build all configured handlers for deployment")
+    .action(async () => {
+        try {
+            await build();
+        } catch (err) {
+            console.error("Error building app:", err);
             process.exit(1);
         }
     });

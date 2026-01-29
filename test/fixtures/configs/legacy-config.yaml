@@ -1,0 +1,10 @@
+id: test-app
+name: Test App
+deployment:
+  web:
+    bundle: packages/web/server/dist
+    assets: packages/web/client/dist
+  events:
+    bundle: packages/events/dist
+  services:
+    - KV
