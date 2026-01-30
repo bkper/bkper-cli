@@ -2,6 +2,8 @@ import { buildWorkerToFile } from "../../dev/esbuild.js";
 import { buildClient } from "../../dev/vite.js";
 import { ensureTypesUpToDate } from "../../dev/types.js";
 import { createLogger, formatSize } from "../../dev/logger.js";
+import { buildSharedIfPresent } from "../../dev/shared.js";
+import { preflightDependencies } from "../../dev/preflight.js";
 import { loadSourceDeploymentConfig } from "./config.js";
 import { statSync, existsSync, mkdirSync, readdirSync } from "fs";
 import path from "path";
@@ -40,6 +42,7 @@ function getDirSize(dirPath: string): number {
 export async function build(): Promise<void> {
     const typesLogger = createLogger("types");
     const buildLogger = createLogger("build");
+    const sharedLogger = createLogger("shared");
 
     // Get the project root (current working directory)
     const projectRoot = process.cwd();
@@ -64,6 +67,32 @@ export async function build(): Promise<void> {
         projectRoot
     );
 
+    const clientRoot = deployConfig.web?.client
+        ? path.resolve(projectRoot, deployConfig.web.client)
+        : undefined;
+    const preflight = preflightDependencies(projectRoot, clientRoot);
+    if (!preflight.ok) {
+        console.error(preflight.message);
+        process.exit(1);
+    }
+
+    sharedLogger.info("Building shared package...");
+    const sharedBuild = await buildSharedIfPresent(projectRoot);
+    if (!sharedBuild.success) {
+        sharedLogger.error("Shared package build failed");
+        if (sharedBuild.diagnostics) {
+            for (const diagnostic of sharedBuild.diagnostics) {
+                sharedLogger.error(diagnostic);
+            }
+        }
+        process.exit(1);
+    }
+    if (sharedBuild.built) {
+        sharedLogger.success("Shared package built");
+    } else {
+        sharedLogger.info("No shared package found");
+    }
+
     const hasWeb = !!deployConfig.web?.main;
     const hasEvents = !!deployConfig.events?.main;
 
@@ -76,10 +105,9 @@ export async function build(): Promise<void> {
     } = {};
 
     // Build web client (Vite)
-    if (hasWeb && deployConfig.web?.client) {
+    if (hasWeb && deployConfig.web?.client && clientRoot) {
         buildLogger.info("Building web client...");
 
-        const clientRoot = path.resolve(projectRoot, deployConfig.web.client);
         const clientOutDir = path.resolve(projectRoot, "dist/web/client");
         await buildClient(clientRoot, { outDir: clientOutDir });
 

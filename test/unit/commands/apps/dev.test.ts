@@ -184,6 +184,41 @@ deployment:
         });
     });
 
+    describe('dev function - dependency preflight', function() {
+        it('should exit with error when dependencies are missing', async function() {
+            const configContent = `id: test-app
+name: Test App
+deployment:
+  web:
+    main: packages/web/server/src/index.ts
+    client: packages/web/client
+`;
+            fs.writeFileSync(path.join(testDir, 'bkper.yaml'), configContent);
+            fs.writeFileSync(
+                path.join(testDir, 'package.json'),
+                JSON.stringify({ name: 'test-app', private: true }, null, 2)
+            );
+            fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
+            fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
+            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
+            fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
+
+            process.chdir(testDir);
+
+            const devModule = await import('../../../../src/commands/apps/dev.js');
+            dev = devModule.dev;
+
+            try {
+                await dev({});
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
+            }
+
+            expect(exitCode).to.equal(1);
+            expect(consoleErrors.some(e => e.includes('Missing dependencies'))).to.be.true;
+        });
+    });
+
     describe('dev function - DevOptions interface', function() {
         it('should export DevOptions interface with correct structure', async function() {
             const devModule = await import('../../../../src/commands/apps/dev.js');

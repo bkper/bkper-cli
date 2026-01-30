@@ -5,9 +5,10 @@ import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
 import { setupBkper } from "../../bkper-factory.js";
 import { createPlatformClient } from "../../platform/client.js";
 import { createAssetManifest, readAssetFiles } from "./bundler.js";
-import { handleError, loadAppConfig, loadDeploymentConfig } from "./config.js";
+import { handleError, loadAppConfig, loadSourceDeploymentConfig } from "./config.js";
+import { build } from "./build.js";
 import { syncApp } from "./sync.js";
-import type { DeployOptions, Environment, HandlerType } from "./types.js";
+import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } from "./types.js";
 
 // =============================================================================
 // Deploy
@@ -51,34 +52,38 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const type: HandlerType = options.events ? "events" : "web";
 
     // 4. Load deployment configuration from bkper.yaml
-    const deploymentConfig = loadDeploymentConfig();
+    const deploymentConfig = loadSourceDeploymentConfig();
     if (!deploymentConfig) {
         console.error("Error: No deployment configuration found in bkper.yaml");
-        console.error("Add deployment section with web.bundle and events.bundle paths");
+        console.error("Expected deployment section with web.main/events.main entry points");
         process.exit(1);
     }
 
-    // Get handler-specific config
-    const handlerConfig = type === "events" 
-        ? deploymentConfig.events 
-        : deploymentConfig.web;
-
-    if (!handlerConfig?.bundle) {
-        console.error(`Error: No ${type} bundle path configured in bkper.yaml`);
-        console.error(`Add deployment.${type}.bundle path`);
+    // 5. Build app before deploy
+    try {
+        await build();
+    } catch (error) {
+        console.error(`Build failed: ${error instanceof Error ? error.message : String(error)}`);
         process.exit(1);
     }
 
-    // 5. Validate bundle path exists
-    const bundleDir = handlerConfig.bundle;
+    // 6. Resolve build outputs
+    let resolvedPaths: { bundleDir: string; bundlePath: string; assetsDir?: string };
+    try {
+        resolvedPaths = resolveSourceDeployPaths(type, deploymentConfig);
+    } catch (error) {
+        console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+    }
+    const { bundleDir, bundlePath, assetsDir } = resolvedPaths;
+
+    // 7. Validate bundle outputs exist
     if (!fs.existsSync(bundleDir)) {
         console.error(`Error: Bundle directory not found: ${bundleDir}`);
-        console.error("Please ensure you have run 'bun run build' or update bkperapp.yaml");
+        console.error("Please ensure the build completed successfully");
         process.exit(1);
     }
 
-    // 6. Read bundle file (default to index.js)
-    const bundlePath = path.join(bundleDir, "index.js");
     if (!fs.existsSync(bundlePath)) {
         console.error(`Error: Bundle file not found: ${bundlePath}`);
         console.error("Expected index.js in the bundle directory");
@@ -90,11 +95,10 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const bundleSizeKB = (bundle.length / 1024).toFixed(2);
     console.log(`Bundle size: ${bundleSizeKB} KB`);
 
-    // 7. Validate and create asset manifest if configured (only for web handler)
+    // 8. Validate and create asset manifest if configured (only for web handler)
     let assetManifest: Record<string, { hash: string; size: number }> | undefined;
     let assetFiles: Record<string, string> | undefined;
-    if (type === "web" && handlerConfig.assets) {
-        const assetsDir = handlerConfig.assets;
+    if (type === "web" && assetsDir) {
         if (!fs.existsSync(assetsDir)) {
             console.error(`Error: Assets directory not found: ${assetsDir}`);
             console.error("Please ensure assets are built or update bkper.yaml");
@@ -120,11 +124,11 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         }
     }
 
-    // 8. Get OAuth token and create client
+    // 9. Get OAuth token and create client
     const token = await getOAuthToken();
     const client = createPlatformClient(token);
 
-    // 9. Call Platform API
+    // 10. Call Platform API
     const env: Environment = options.dev ? "dev" : "prod";
     console.log(`Deploying ${type} handler to ${env}...`);
 
@@ -169,6 +173,34 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     console.log(`  URL: ${data.url}${type === "events" ? "/events" : ""}`);
     console.log(`  Namespace: ${data.namespace}`);
     console.log(`  Script: ${data.scriptName}`);
+}
+
+export function resolveSourceDeployPaths(
+    type: HandlerType,
+    deploymentConfig: SourceDeploymentConfig
+): { bundleDir: string; bundlePath: string; assetsDir?: string } {
+    if (type === "web") {
+        if (!deploymentConfig.web?.main) {
+            throw new Error("No web handler configured");
+        }
+
+        const bundleDir = path.resolve("dist/web/server");
+        const bundlePath = path.join(bundleDir, "index.js");
+        const assetsDir = deploymentConfig.web.client
+            ? path.resolve("dist/web/client")
+            : undefined;
+
+        return { bundleDir, bundlePath, assetsDir };
+    }
+
+    if (!deploymentConfig.events?.main) {
+        throw new Error("No events handler configured");
+    }
+
+    const bundleDir = path.resolve("dist/events");
+    const bundlePath = path.join(bundleDir, "index.js");
+
+    return { bundleDir, bundlePath };
 }
 
 // =============================================================================

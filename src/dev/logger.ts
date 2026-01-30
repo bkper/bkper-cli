@@ -3,7 +3,7 @@
  * Provides prefixed, colored output for different subsystems
  */
 
-export type LogPrefix = 'server' | 'events' | 'client' | 'build' | 'types';
+export type LogPrefix = 'server' | 'events' | 'client' | 'build' | 'types' | 'shared';
 
 export interface Logger {
     info(message: string): void;

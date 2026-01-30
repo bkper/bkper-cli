@@ -92,7 +92,7 @@ describe('Logger Module', function() {
         });
 
         it('should work with all valid prefixes', function() {
-            const prefixes: LogPrefix[] = ['server', 'events', 'client', 'build', 'types'];
+            const prefixes: LogPrefix[] = ['server', 'events', 'client', 'build', 'types', 'shared'];
             
             prefixes.forEach((prefix) => {
                 const logger = createLogger(prefix);

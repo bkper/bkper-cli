@@ -5,6 +5,10 @@ import os from 'os';
 
 const { __dirname } = getTestPaths(import.meta.url);
 
+// Path to CLI's node_modules/typescript (used to symlink into temp projects)
+const cliRoot = path.resolve(__dirname, '../../../..');
+const cliTypescriptPath = path.join(cliRoot, 'node_modules/typescript');
+
 // Module under test - will be imported dynamically
 let build: typeof import('../../../../src/commands/apps/build.js').build;
 
@@ -98,6 +102,71 @@ describe('CLI - apps build command', function() {
 
             expect(exitCode).to.equal(1);
             expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
+        });
+    });
+
+    describe('build - dependency preflight', function() {
+        it('should exit with error when dependencies are missing', async function() {
+            // Manually create config WITHOUT node_modules to trigger preflight error
+            fs.writeFileSync(
+                path.join(tempDir, 'package.json'),
+                JSON.stringify({ name: 'test-app', private: true }, null, 2)
+            );
+            fs.writeFileSync(
+                path.join(tempDir, 'bkper.yaml'),
+                `id: test-app
+name: Test App
+deployment:
+  events:
+    main: src/events/index.ts
+`
+            );
+            fs.mkdirSync(path.join(tempDir, 'src/events'), { recursive: true });
+            fs.writeFileSync(
+                path.join(tempDir, 'src/events/index.ts'),
+                'export default { fetch() { return new Response("ok"); } };'
+            );
+            process.chdir(tempDir);
+
+            try {
+                await build();
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
+            }
+
+            expect(exitCode).to.equal(1);
+            expect(consoleErrors.some(e => e.includes('Missing dependencies'))).to.be.true;
+        });
+
+        it('should exit with error when client deps are missing', async function() {
+            fs.writeFileSync(
+                path.join(tempDir, 'package.json'),
+                JSON.stringify({ name: 'test-app', private: true }, null, 2)
+            );
+            fs.mkdirSync(path.join(tempDir, 'node_modules'), { recursive: true });
+
+            setupProjectStructure(tempDir, {
+                configType: 'web-with-client',
+                createSourceFiles: true,
+                createViteProject: true
+            });
+
+            const clientDir = path.join(tempDir, 'src/client');
+            fs.writeFileSync(
+                path.join(clientDir, 'package.json'),
+                JSON.stringify({ name: 'client', private: true, dependencies: { lit: '^3.3.2' } }, null, 2)
+            );
+
+            process.chdir(tempDir);
+
+            try {
+                await build();
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
+            }
+
+            expect(exitCode).to.equal(1);
+            expect(consoleErrors.some(e => e.includes('Missing client dependencies'))).to.be.true;
         });
     });
 
@@ -261,6 +330,23 @@ describe('CLI - apps build command', function() {
             expect(consoleOutput.some(o => o.includes('Build complete'))).to.be.true;
         });
     });
+
+    describe('build - shared package', function() {
+        it('should build shared package before handlers', async function() {
+            setupProjectStructure(tempDir, {
+                configType: 'events-only',
+                createSourceFiles: true,
+                createSharedPackage: true
+            });
+            process.chdir(tempDir);
+
+            await build();
+
+            expect(fs.existsSync(path.join(tempDir, 'packages/shared/dist/index.js'))).to.be.true;
+            expect(fs.existsSync(path.join(tempDir, 'packages/shared/dist/index.d.ts'))).to.be.true;
+            expect(consoleOutput.some(o => o.includes('Shared package'))).to.be.true;
+        });
+    });
 });
 
 /**
@@ -272,13 +358,24 @@ interface SetupOptions {
     configType: ConfigType;
     createSourceFiles?: boolean;
     createViteProject?: boolean;
+    createSharedPackage?: boolean;
 }
 
 /**
  * Helper to setup a project structure for testing
  */
 function setupProjectStructure(tempDir: string, options: SetupOptions): void {
-    const { configType, createSourceFiles, createViteProject } = options;
+    const { configType, createSourceFiles, createViteProject, createSharedPackage } = options;
+
+    // Create package.json (required by preflight)
+    fs.writeFileSync(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({ name: 'test-app', private: true }, null, 2)
+    );
+
+    // Create node_modules (required by preflight)
+    const nodeModulesPath = path.join(tempDir, 'node_modules');
+    fs.mkdirSync(nodeModulesPath, { recursive: true });
 
     // Create appropriate bkper.yaml based on config type
     const configs: Record<ConfigType, string> = {
@@ -370,6 +467,40 @@ deployment:
         fs.writeFileSync(
             path.join(tempDir, 'src/client/src/main.ts'),
             `document.getElementById('app')!.innerHTML = '<h1>Hello</h1>';`
+        );
+    }
+
+    if (createSharedPackage) {
+        // Symlink TypeScript from CLI's node_modules (required for shared package build)
+        const tsSymlinkPath = path.join(tempDir, 'node_modules/typescript');
+        if (!fs.existsSync(tsSymlinkPath)) {
+            fs.symlinkSync(cliTypescriptPath, tsSymlinkPath, 'dir');
+        }
+
+        const sharedDir = path.join(tempDir, 'packages/shared');
+        const sharedSrcDir = path.join(sharedDir, 'src');
+        fs.mkdirSync(sharedSrcDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(sharedDir, 'tsconfig.json'),
+            JSON.stringify(
+                {
+                    compilerOptions: {
+                        target: 'ES2022',
+                        module: 'ESNext',
+                        moduleResolution: 'bundler',
+                        declaration: true,
+                        outDir: 'dist',
+                        rootDir: 'src',
+                    },
+                    include: ['src/**/*'],
+                },
+                null,
+                2
+            )
+        );
+        fs.writeFileSync(
+            path.join(sharedSrcDir, 'index.ts'),
+            'export const sharedValue = 42;\n'
         );
     }
 }

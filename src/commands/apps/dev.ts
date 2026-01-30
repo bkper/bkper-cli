@@ -8,6 +8,8 @@ import { createClientServer, stopClientServer, getServerUrl } from "../../dev/vi
 import { buildWorkerToFile } from "../../dev/esbuild.js";
 import { ensureTypesUpToDate, loadDevVars } from "../../dev/types.js";
 import { createLogger, logDevServerBanner } from "../../dev/logger.js";
+import { buildSharedIfPresent } from "../../dev/shared.js";
+import { preflightDependencies } from "../../dev/preflight.js";
 import { loadAppConfig, loadSourceDeploymentConfig } from "./config.js";
 import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
 import { createPlatformClient } from "../../platform/client.js";
@@ -87,6 +89,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     const serverLogger = createLogger("server");
     const eventsLogger = createLogger("events");
     const typesLogger = createLogger("types");
+    const sharedLogger = createLogger("shared");
 
     // Load configuration
     const appConfig = loadAppConfig();
@@ -108,6 +111,32 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         { services: deployConfig.services, secrets: deployConfig.secrets },
         process.cwd()
     );
+
+    const clientRoot = deployConfig.web?.client
+        ? path.resolve(process.cwd(), deployConfig.web.client)
+        : undefined;
+    const preflight = preflightDependencies(process.cwd(), clientRoot);
+    if (!preflight.ok) {
+        console.error(preflight.message);
+        process.exit(1);
+    }
+
+    sharedLogger.info("Building shared package...");
+    const sharedBuild = await buildSharedIfPresent(process.cwd());
+    if (!sharedBuild.success) {
+        sharedLogger.error("Shared package build failed");
+        if (sharedBuild.diagnostics) {
+            for (const diagnostic of sharedBuild.diagnostics) {
+                sharedLogger.error(diagnostic);
+            }
+        }
+        process.exit(1);
+    }
+    if (sharedBuild.built) {
+        sharedLogger.success("Shared package built");
+    } else {
+        sharedLogger.info("No shared package found");
+    }
 
     // Load dev vars (secrets for local development)
     const devVars = loadDevVars(process.cwd(), deployConfig.secrets || []);
@@ -151,7 +180,75 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             });
         }
 
-        // Watch server files for hot reload
+    const sharedDir = path.join(process.cwd(), "packages/shared/src");
+    let sharedBuildInProgress = false;
+    let sharedBuildPending = false;
+    let sharedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const rebuildShared = async (): Promise<void> => {
+        if (sharedBuildInProgress) {
+            sharedBuildPending = true;
+            return;
+        }
+
+        sharedBuildInProgress = true;
+        try {
+            sharedLogger.info("Rebuilding shared package...");
+            const result = await buildSharedIfPresent(process.cwd());
+            if (!result.success) {
+                sharedLogger.error("Shared package build failed");
+                if (result.diagnostics) {
+                    for (const diagnostic of result.diagnostics) {
+                        sharedLogger.error(diagnostic);
+                    }
+                }
+                return;
+            }
+
+            if (result.built) {
+                sharedLogger.success("Shared package rebuilt");
+            }
+
+            if (hasWeb && mf) {
+                serverLogger.info("Reloading server after shared update...");
+                await reloadWorker(mf, deployConfig.web!.main);
+                serverLogger.success("Server reloaded");
+            }
+
+            if (hasEvents) {
+                eventsLogger.info("Redeploying events after shared update...");
+                await buildWorkerToFile(
+                    deployConfig.events!.main,
+                    "dist/events/index.js"
+                );
+                await deployHandler(appConfig.id!, "events", "dev", "dist/events/index.js");
+                eventsLogger.success("Deployed");
+            }
+        } catch (err) {
+            sharedLogger.error(`Shared rebuild failed: ${err}`);
+        } finally {
+            sharedBuildInProgress = false;
+            if (sharedBuildPending) {
+                sharedBuildPending = false;
+                setTimeout(rebuildShared, 100);
+            }
+        }
+    };
+
+    if (fs.existsSync(sharedDir)) {
+        watch(sharedDir, {
+            ignoreInitial: true,
+            ignored: /node_modules/,
+        }).on("change", (file) => {
+            sharedLogger.info(`Change detected: ${path.basename(file)}`);
+            if (sharedDebounceTimer) {
+                clearTimeout(sharedDebounceTimer);
+            }
+            sharedDebounceTimer = setTimeout(rebuildShared, 200);
+        });
+    }
+
+    // Watch server files for hot reload
         const serverDir = path.dirname(deployConfig.web!.main);
         watch(serverDir, {
             ignoreInitial: true,
