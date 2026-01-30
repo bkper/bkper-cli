@@ -109,7 +109,7 @@ async function downloadTemplate(targetDir: string): Promise<void> {
 function updateBkperYaml(projectDir: string, appName: string): void {
     // Check for bkper.yaml first, then fall back to bkperapp.yaml
     let yamlPath = path.join(projectDir, "bkper.yaml");
-    
+
     if (!fs.existsSync(yamlPath)) {
         yamlPath = path.join(projectDir, "bkperapp.yaml");
     }
@@ -182,15 +182,6 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
     });
 }
 
-/**
- * Removes the .git directory from the template.
- */
-function removeGitDirectory(projectDir: string): void {
-    const gitDir = path.join(projectDir, ".git");
-    if (fs.existsSync(gitDir)) {
-        fs.rmSync(gitDir, { recursive: true });
-    }
-}
 
 // =============================================================================
 // Public API
@@ -233,10 +224,7 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 4. Remove .git directory from template
-    removeGitDirectory(targetDir);
-
-    // 5. Update bkper.yaml
+    // 4. Update bkper.yaml
     try {
         updateBkperYaml(targetDir, name);
         console.log("  Updated bkper.yaml");
@@ -245,7 +233,7 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 6. Update package.json
+    // 5. Update package.json
     try {
         updatePackageJson(targetDir, name);
         console.log("  Updated package.json");
@@ -254,7 +242,7 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 7. Sync global skills
+    // 6. Sync global skills
     try {
         const result = await updateSkills();
         if (result.updated.length > 0) {
@@ -267,7 +255,7 @@ export async function initApp(name: string): Promise<void> {
         console.log("  Warning: Could not sync skills:", err instanceof Error ? err.message : err);
     }
 
-    // 8. Install dependencies
+    // 7. Install dependencies
     console.log("  Installing dependencies...");
     try {
         await runCommand("bun", ["install"], targetDir);
@@ -276,15 +264,7 @@ export async function initApp(name: string): Promise<void> {
         console.log('  Warning: Could not install dependencies. Run "bun install" manually.');
     }
 
-    // 9. Initialize git repository
-    try {
-        await runCommand("git", ["init"], targetDir);
-        console.log("  Initialized git repository");
-    } catch (err) {
-        console.log('  Warning: Could not initialize git repository. Run "git init" manually.');
-    }
-
-    // 10. Print success message
+    // 8. Print success message
     console.log(`
 Done! To get started:
 
