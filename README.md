@@ -44,24 +44,24 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 
 ### App Management
 
-- `apps init <name>` - Scaffold a new app from the template
-- `apps list` - List all apps you have access to
-- `apps sync` - Sync `bkper.yaml` configuration to the platform
-- `apps deploy` - Deploy built artifacts to the platform
+- `app init <name>` - Scaffold a new app from the template
+- `app list` - List all apps you have access to
+- `app sync` - Sync `bkper.yaml` configuration to the platform
+- `app deploy` - Deploy built artifacts to the platform
   - `--dev` - Deploy to development environment
   - `--web` - Deploy web handler only
   - `--events` - Deploy events handler only
-- `apps status` - Show deployment status
-- `apps undeploy` - Remove app from platform
+- `app status` - Show deployment status
+- `app undeploy` - Remove app from platform
   - `--dev` - Remove from development environment
   - `--web` - Remove web handler only
   - `--events` - Remove events handler only
 
 ### Secrets Management
 
-- `apps secrets put <name>` - Store a secret
-- `apps secrets list` - List all secrets
-- `apps secrets delete <name>` - Delete a secret
+- `app secrets put <name>` - Store a secret
+- `app secrets list` - List all secrets
+- `app secrets delete <name>` - Delete a secret
 
 ### MCP Server
 
@@ -74,23 +74,23 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 bkper login
 
 # Create a new app
-bkper apps init my-app
+bkper app init my-app
 
 # Deploy to production (run from app directory)
-bkper apps deploy
+bkper app deploy
 
 # Deploy to development environment
-bkper apps deploy --dev
+bkper app deploy --dev
 
 # Deploy only the events handler to dev
-bkper apps deploy --dev --events
+bkper app deploy --dev --events
 
 # Check deployment status
-bkper apps status
+bkper app status
 
 # Manage secrets
-bkper apps secrets put API_KEY
-bkper apps secrets list
+bkper app secrets put API_KEY
+bkper app secrets list
 ```
 
 ## MCP (Model Context Protocol) Server
@@ -171,7 +171,7 @@ See the complete reference with all available fields and documentation:
 The CLI automatically syncs AI agent skills from the [skills repository](https://github.com/bkper/skills). Skills provide procedural knowledge to AI coding assistants (Claude Code, OpenCode) when working on Bkper apps.
 
 Skills are synced when running:
-- `bkper apps init <name>` - when creating a new app
+- `bkper app init <name>` - when creating a new app
 - `bkper mcp start` - when starting the MCP server
 
 ## Library

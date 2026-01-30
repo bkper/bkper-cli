@@ -22,10 +22,10 @@ program
         logout();
     });
 
-// New 'apps' command group (plural, standard)
-const appsCommand = program.command("apps").description("Manage Bkper Apps");
+// 'app' command group (singular, modern pattern)
+const appCommand = program.command("app").description("Manage Bkper Apps");
 
-appsCommand
+appCommand
     .command("init <name>")
     .description("Create a new Bkper app from template")
     .action(async (name: string) => {
@@ -37,7 +37,7 @@ appsCommand
         }
     });
 
-appsCommand
+appCommand
     .command("list")
     .description("List all apps you have access to")
     .action(async () => {
@@ -69,7 +69,7 @@ appsCommand
         }
     });
 
-appsCommand
+appCommand
     .command("sync")
     .description("Sync app config to Bkper (creates if new, updates if exists)")
     .action(async () => {
@@ -83,7 +83,7 @@ appsCommand
         }
     });
 
-appsCommand
+appCommand
     .command("deploy")
     .description("Deploy app to Bkper Platform")
     .option("--dev", "Deploy to development environment")
@@ -98,7 +98,7 @@ appsCommand
         }
     });
 
-appsCommand
+appCommand
     .command("undeploy")
     .description("Remove app from Bkper Platform")
     .option("--dev", "Remove from development environment")
@@ -114,7 +114,7 @@ appsCommand
         }
     });
 
-appsCommand
+appCommand
     .command("status")
     .description("Show deployment status for all handlers")
     .action(async () => {
@@ -127,7 +127,7 @@ appsCommand
     });
 
 // Development server command
-appsCommand
+appCommand
     .command("dev")
     .description("Start the development server")
     .option("-p, --port <port>", "Client dev server port", "5173")
@@ -146,7 +146,7 @@ appsCommand
     });
 
 // Build command
-appsCommand
+appCommand
     .command("build")
     .description("Build all configured handlers for deployment")
     .action(async () => {
@@ -159,7 +159,7 @@ appsCommand
     });
 
 // Secrets subcommand
-const secretsCommand = appsCommand.command("secrets").description("Manage app secrets");
+const secretsCommand = appCommand.command("secrets").description("Manage app secrets");
 
 secretsCommand
     .command("put <name>")
