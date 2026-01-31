@@ -46,8 +46,8 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 
 - `app init <name>` - Scaffold a new app from the template
 - `app list` - List all apps you have access to
-- `app sync` - Sync `bkper.yaml` configuration to the platform
-- `app deploy` - Deploy built artifacts to the platform
+- `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
+- `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
   - `--dev` - Deploy to development environment
   - `--web` - Deploy web handler only
   - `--events` - Deploy events handler only
@@ -56,6 +56,10 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
   - `--dev` - Remove from development environment
   - `--web` - Remove web handler only
   - `--events` - Remove events handler only
+
+> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs 
+> in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare.
+> For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
 
 ### Secrets Management
 

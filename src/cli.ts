@@ -88,7 +88,6 @@ appCommand
     .description("Deploy app to Bkper Platform")
     .option("--dev", "Deploy to development environment")
     .option("--events", "Deploy events handler instead of web handler")
-    .option("--sync", "Sync app config before deploying")
     .action(async (options) => {
         try {
             await deployApp(options);

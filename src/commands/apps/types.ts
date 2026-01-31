@@ -16,7 +16,6 @@ export type ErrorResponse = components["schemas"]["ErrorResponse"];
 export interface DeployOptions {
     dev?: boolean;
     events?: boolean;
-    sync?: boolean;
     deleteData?: boolean;
     force?: boolean;
 }

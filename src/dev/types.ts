@@ -7,6 +7,7 @@ import { resolve } from "path";
 export interface DeploymentConfig {
     services?: string[];
     secrets?: string[];
+    hasStaticAssets?: boolean;
 }
 
 /**
@@ -44,10 +45,16 @@ interface KVNamespaceListResult {
 `;
 
 /**
+ * Assets binding type comment - no separate interface needed
+ * ASSETS uses inline type { fetch: typeof fetch } matching Cloudflare's definition
+ */
+
+/**
  * Generates env.d.ts content from deployment config
  * - Services become typed bindings (e.g., KV: KVNamespace)
  * - Secrets become string properties
- * - Includes inline KV types (no @cloudflare/workers-types dependency)
+ * - ASSETS binding added when static assets are configured
+ * - Includes inline KV and Fetcher types (no @cloudflare/workers-types dependency)
  * 
  * @param config - Deployment configuration with services and secrets
  * @returns Generated TypeScript declaration content
@@ -64,6 +71,7 @@ export function generateEnvTypes(config: DeploymentConfig): string {
     const hasServices = config.services && config.services.length > 0;
     const hasSecrets = config.secrets && config.secrets.length > 0;
     const hasKV = config.services?.includes("KV");
+    const hasStaticAssets = config.hasStaticAssets === true;
 
     // Add services section
     if (hasServices) {
@@ -76,9 +84,18 @@ export function generateEnvTypes(config: DeploymentConfig): string {
         }
     }
 
+    // Add static assets binding
+    if (hasStaticAssets) {
+        if (hasServices) {
+            lines.push("");
+        }
+        lines.push("  // Static assets binding");
+        lines.push("  ASSETS: { fetch: typeof fetch };");
+    }
+
     // Add secrets section
     if (hasSecrets) {
-        if (hasServices) {
+        if (hasServices || hasStaticAssets) {
             lines.push("");
         }
         lines.push("  // Secrets");

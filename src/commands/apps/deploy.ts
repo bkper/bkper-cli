@@ -2,12 +2,10 @@ import * as readline from "readline";
 import fs from "fs";
 import path from "path";
 import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
-import { setupBkper } from "../../bkper-factory.js";
 import { createPlatformClient } from "../../platform/client.js";
 import { createAssetManifest, readAssetFiles } from "./bundler.js";
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from "./config.js";
 import { build } from "./build.js";
-import { syncApp } from "./sync.js";
 import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } from "./types.js";
 
 // =============================================================================
@@ -17,7 +15,7 @@ import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } 
 /**
  * Deploys the app to the Bkper Platform.
  *
- * @param options Deploy options (dev, events, sync)
+ * @param options Deploy options (dev, events)
  */
 export async function deployApp(options: DeployOptions = {}): Promise<void> {
     // 1. Check if logged in
@@ -26,15 +24,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 2. Sync app config if requested
-    if (options.sync) {
-        console.log("Syncing app config...");
-        setupBkper();
-        const syncResult = await syncApp();
-        console.log(`Synced ${syncResult.id} (${syncResult.action})`);
-    }
-
-    // 3. Load bkper.yaml/json to get app ID
+    // 2. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();

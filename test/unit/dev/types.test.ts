@@ -110,6 +110,57 @@ describe('Types Generation Module', function() {
             expect(result).to.include('interface KVNamespaceListOptions');
             expect(result).to.include('interface KVNamespaceListResult');
         });
+
+        it('should include ASSETS binding when hasStaticAssets is true', function() {
+            const config = {
+                hasStaticAssets: true
+            };
+
+            const result = generateEnvTypes(config);
+
+            expect(result).to.include('export interface Env');
+            expect(result).to.include('ASSETS: { fetch: typeof fetch }');
+            expect(result).not.to.include('interface Fetcher');
+        });
+
+        it('should include ASSETS binding alongside services and secrets', function() {
+            const config = {
+                services: ['KV'],
+                secrets: ['API_KEY'],
+                hasStaticAssets: true
+            };
+
+            const result = generateEnvTypes(config);
+
+            expect(result).to.include('KV: KVNamespace');
+            expect(result).to.include('API_KEY: string');
+            expect(result).to.include('ASSETS: { fetch: typeof fetch }');
+            expect(result).to.include('interface KVNamespace');
+            expect(result).not.to.include('interface Fetcher');
+        });
+
+        it('should not include ASSETS binding when hasStaticAssets is false', function() {
+            const config = {
+                services: ['KV'],
+                hasStaticAssets: false
+            };
+
+            const result = generateEnvTypes(config);
+
+            expect(result).to.include('KV: KVNamespace');
+            expect(result).not.to.include('ASSETS:');
+        });
+
+        it('should not include ASSETS binding when hasStaticAssets is not provided', function() {
+            const config = {
+                services: ['KV']
+            };
+
+            const result = generateEnvTypes(config);
+
+            expect(result).to.include('KV: KVNamespace');
+            expect(result).not.to.include('ASSETS:');
+        });
     });
 
     describe('generateDevVarsExample', function() {

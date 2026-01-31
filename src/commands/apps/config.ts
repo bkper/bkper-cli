@@ -160,10 +160,17 @@ export function createConfiguredApp(): App {
 /**
  * Handles error response from Platform API
  */
-export function handleError(error: ErrorResponse): never {
-    console.error(`Error: ${error.error.message}`);
-    if (error.error.details) {
-        console.error("Details:", JSON.stringify(error.error.details, null, 2));
+export function handleError(error: ErrorResponse | unknown): never {
+    // Handle unexpected error shapes (e.g., network errors, non-JSON responses)
+    if (!error || typeof error !== 'object' || !('error' in error) || !(error as ErrorResponse).error?.message) {
+        console.error("Error deploying app:", error);
+        process.exit(1);
+    }
+    
+    const typedError = error as ErrorResponse;
+    console.error(`Error: ${typedError.error.message}`);
+    if (typedError.error.details) {
+        console.error("Details:", JSON.stringify(typedError.error.details, null, 2));
     }
     process.exit(1);
 }

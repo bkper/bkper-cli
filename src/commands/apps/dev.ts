@@ -108,7 +108,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     // Ensure types are up to date
     typesLogger.info("Checking types...");
     ensureTypesUpToDate(
-        { services: deployConfig.services, secrets: deployConfig.secrets },
+        { 
+            services: deployConfig.services, 
+            secrets: deployConfig.secrets,
+            hasStaticAssets: !!deployConfig.web?.client,
+        },
         process.cwd()
     );
 
