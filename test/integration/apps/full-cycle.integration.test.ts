@@ -4,7 +4,7 @@ import {
   isUserLoggedIn,
   sleep,
   TestConfig,
-} from '../setup/deploy-test-helpers.js';
+} from '../helpers.js';
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';

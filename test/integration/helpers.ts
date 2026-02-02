@@ -1,15 +1,17 @@
 import { expect } from "chai";
-import { isLoggedIn } from "../../../src/auth/local-auth-service.js";
+import { isLoggedIn } from "../../src/auth/local-auth-service.js";
 
 export { expect };
 
-// Test configuration
+/**
+ * Test configuration for integration tests
+ */
 export const TestConfig = {
     APP_TEMPLATE_PATH: "../bkper-app-template",
     APP_ID: "my-app",
     PLATFORM_URL: process.env.BKPER_PLATFORM_URL || "http://localhost:8790",
     DEV_WEB_URL: "https://my-app-dev.bkper.app",
-    DEV_EVENTS_URL: "https://my-app-dev.bkper.app/events", // Events worker is at /events/*
+    DEV_EVENTS_URL: "https://my-app-dev.bkper.app/events",
     HTTP_TIMEOUT: 10000,
     DEPLOY_TIMEOUT: 60000,
     POLL_INTERVAL: 2000,
@@ -54,7 +56,7 @@ interface UndeployOptions {
  * Execute deploy command - mocks process.exit to prevent test runner exit
  */
 export async function runDeploy(options: DeployOptions): Promise<void> {
-    const { deployApp } = await import("../../../src/commands/apps/index.js");
+    const { deployApp } = await import("../../src/commands/apps/index.js");
 
     const originalExit = process.exit;
     let exitCode: number | undefined;
@@ -82,7 +84,7 @@ export async function runDeploy(options: DeployOptions): Promise<void> {
  * Execute undeploy command - mocks process.exit
  */
 export async function runUndeploy(options: UndeployOptions): Promise<void> {
-    const { undeployApp } = await import("../../../src/commands/apps/index.js");
+    const { undeployApp } = await import("../../src/commands/apps/index.js");
 
     const originalExit = process.exit;
     let exitCode: number | undefined;
@@ -124,7 +126,6 @@ export async function fetchWorker(
     // Handle empty path (just hit the base URL)
     let url: string;
     if (urlPath === "" || urlPath === "/") {
-        // For events worker, base URL is already /events, so don't add trailing slash
         url = options?.isEvents && urlPath === "" ? baseUrl : `${baseUrl}${urlPath}`;
     } else {
         url = urlPath.startsWith("/") ? `${baseUrl}${urlPath}` : `${baseUrl}/${urlPath}`;
