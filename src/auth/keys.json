@@ -1,12 +1,10 @@
 {
-  "installed": {
-    "client_id": "360398463400-l3sfmb1tipagc7bfh4tf2eptu1b62g7c.apps.googleusercontent.com",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_secret": "iQ87o7Y9xks1T0tKC7qmhnPw",
-    "redirect_uris": [
-      "http://localhost:3000/oauth2callback"
-    ]
-  }
+    "installed": {
+        "client_id": "927657669669-ig60i5ic9i9esdc8q59plardm11fuubc.apps.googleusercontent.com",
+        "project_id": "bkper-cli",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "redirect_uris": ["http://localhost:3000/oauth2callback"]
+    }
 }
