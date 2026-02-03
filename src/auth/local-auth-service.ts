@@ -168,9 +168,9 @@ async function authenticateLocal(): Promise<OAuth2Client> {
         });
 
         server.listen(port, () => {
-            console.log('Opening browser for authentication...');
+            console.log(`\nOpen this URL to authenticate:\n${authorizeUrl}\n`);
             open(authorizeUrl, { wait: false }).catch(() => {
-                console.log(`Please open the following URL in your browser:\n${authorizeUrl}`);
+                // Browser couldn't open - URL already displayed above
             });
         });
 
