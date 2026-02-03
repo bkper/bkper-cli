@@ -8,3 +8,4 @@ temp/
 tmp/
 dist/
 .env
+src/auth/keys.json

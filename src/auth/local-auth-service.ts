@@ -1,10 +1,11 @@
 import fs from 'fs';
 import http from 'http';
-import { Credentials, OAuth2Client } from 'google-auth-library';
+import { Credentials, OAuth2Client, CodeChallengeMethod } from 'google-auth-library';
 import os from 'os';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import crypto from 'crypto';
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
@@ -34,7 +35,7 @@ if (!fs.existsSync(storedCredentialsPath) && fs.existsSync(oldCredentialsPath)) 
 }
 
 try {
-    let credentialsJson = fs.readFileSync(storedCredentialsPath, 'utf8');
+    const credentialsJson = fs.readFileSync(storedCredentialsPath, 'utf8');
     storedCredentials = JSON.parse(credentialsJson);
 } catch (err) {
     // Credentials will be null if not found - no need to log during module loading
@@ -59,21 +60,43 @@ export function isLoggedIn() {
 }
 
 /**
+ * Generates PKCE code verifier and code challenge
+ * PKCE (Proof Key for Code Exchange) eliminates the need for client_secret
+ * in public clients like CLI applications.
+ * @returns Object containing codeVerifier and codeChallenge
+ */
+function generatePKCECodes(): { codeVerifier: string; codeChallenge: string } {
+    // Generate code_verifier: 128 bytes of random data, base64url encoded
+    const codeVerifier = crypto.randomBytes(96).toString('base64url').slice(0, 128);
+
+    // Generate code_challenge: SHA256 hash of verifier, base64url encoded
+    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+
+    return { codeVerifier, codeChallenge };
+}
+
+/**
  * Performs local OAuth2 authentication by starting a local server,
  * opening the user's browser, and waiting for the authorization code.
+ * Uses PKCE (Proof Key for Code Exchange) for enhanced security without client_secret.
  */
 async function authenticateLocal(): Promise<OAuth2Client> {
+    // PKCE: Generate code verifier and challenge for secure authentication
+    // This eliminates the need for client_secret in public clients (CLI apps)
+    const pkceCodes = generatePKCECodes();
+
     const oAuth2Client = new OAuth2Client({
         clientId: keys.installed.client_id,
-        clientSecret: keys.installed.client_secret,
         redirectUri: keys.installed.redirect_uris[0],
     });
 
-    // Generate the authorization URL
+    // Generate the authorization URL with PKCE code challenge
     const authorizeUrl = oAuth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: ['https://www.googleapis.com/auth/userinfo.email'],
         prompt: 'consent',
+        code_challenge: pkceCodes.codeChallenge,
+        code_challenge_method: CodeChallengeMethod.S256,
     });
 
     // Dynamically import 'open' to open the browser
@@ -96,8 +119,11 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                             '<html><body><h1>Authentication successful!</h1><p>You can close this window and return to the terminal.</p></body></html>'
                         );
 
-                        // Exchange the authorization code for tokens
-                        const { tokens } = await oAuth2Client.getToken(code);
+                        // Exchange the authorization code for tokens using PKCE
+                        const { tokens } = await oAuth2Client.getToken({
+                            code: code,
+                            codeVerifier: pkceCodes.codeVerifier,
+                        });
                         oAuth2Client.setCredentials(tokens);
 
                         // Close the server and all connections
@@ -128,7 +154,7 @@ async function authenticateLocal(): Promise<OAuth2Client> {
         });
 
         server.listen(port, () => {
-            console.log(`Opening browser for authentication...`);
+            console.log('Opening browser for authentication...');
             open(authorizeUrl, { wait: false }).catch(() => {
                 console.log(`Please open the following URL in your browser:\n${authorizeUrl}`);
             });
@@ -149,7 +175,6 @@ export async function getOAuthToken(): Promise<string> {
     if (storedCredentials) {
         localAuth = new OAuth2Client({
             clientId: keys.installed.client_id,
-            clientSecret: keys.installed.client_secret,
             redirectUri: keys.installed.redirect_uris[0],
         });
         localAuth.setCredentials(storedCredentials);
@@ -165,7 +190,7 @@ export async function getOAuthToken(): Promise<string> {
         }
     });
 
-    let token = await localAuth.getAccessToken();
+    const token = await localAuth.getAccessToken();
 
     return token.token || '';
 }
