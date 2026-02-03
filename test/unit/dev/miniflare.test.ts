@@ -10,7 +10,7 @@ let createWorkerServer: typeof import('../../../src/dev/miniflare.js').createWor
 let reloadWorker: typeof import('../../../src/dev/miniflare.js').reloadWorker;
 let stopWorkerServer: typeof import('../../../src/dev/miniflare.js').stopWorkerServer;
 
-describe('Miniflare Integration', function() {
+describe('Miniflare Integration', function () {
     // Increase timeout for server operations
     this.timeout(30000);
 
@@ -26,7 +26,7 @@ describe('Miniflare Integration', function() {
     // Unique port for each test to avoid conflicts
     let testPort: number;
 
-    before(async function() {
+    before(async function () {
         setupTestEnvironment();
         // Import the module
         const miniflareModule = await import('../../../src/dev/miniflare.js');
@@ -35,12 +35,12 @@ describe('Miniflare Integration', function() {
         stopWorkerServer = miniflareModule.stopWorkerServer;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         // Use a unique port for each test (8800-8899 range)
         testPort = 8800 + Math.floor(Math.random() * 100);
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
         // Clean up Miniflare instance after each test
         if (mf) {
             await stopWorkerServer(mf);
@@ -53,15 +53,15 @@ describe('Miniflare Integration', function() {
         }
     });
 
-    describe('createWorkerServer', function() {
-        it('should start and return Miniflare instance', async function() {
+    describe('createWorkerServer', function () {
+        it('should start and return Miniflare instance', async function () {
             mf = await createWorkerServer(simpleWorkerPath, { port: testPort });
 
             expect(mf).to.be.an('object');
             expect(mf).to.have.property('ready');
         });
 
-        it('should respond to HTTP requests', async function() {
+        it('should respond to HTTP requests', async function () {
             mf = await createWorkerServer(simpleWorkerPath, { port: testPort });
 
             const response = await fetch(`http://localhost:${testPort}/`);
@@ -71,11 +71,11 @@ describe('Miniflare Integration', function() {
             expect(text).to.include('Hello');
         });
 
-        it('should configure KV namespaces properly', async function() {
+        it('should configure KV namespaces properly', async function () {
             mf = await createWorkerServer(withKvWorkerPath, {
                 port: testPort,
                 kvNamespaces: ['KV'],
-                persist: false
+                persist: false,
             });
 
             // Set a value in KV
@@ -91,10 +91,10 @@ describe('Miniflare Integration', function() {
             expect(getValue).to.equal('Value: value');
         });
 
-        it('should pass custom vars/secrets to Worker', async function() {
+        it('should pass custom vars/secrets to Worker', async function () {
             mf = await createWorkerServer(withVarsWorkerPath, {
                 port: testPort,
-                vars: { API_KEY: 'test-secret-key' }
+                vars: { API_KEY: 'test-secret-key' },
             });
 
             const response = await fetch(`http://localhost:${testPort}/`);
@@ -104,10 +104,10 @@ describe('Miniflare Integration', function() {
             expect(text).to.equal('API Key: test-secret-key');
         });
 
-        it('should apply custom compatibility date', async function() {
+        it('should apply custom compatibility date', async function () {
             mf = await createWorkerServer(simpleWorkerPath, {
                 port: testPort,
-                compatibilityDate: '2024-01-01'
+                compatibilityDate: '2024-01-01',
             });
 
             // Server should start successfully with custom compatibility date
@@ -116,8 +116,8 @@ describe('Miniflare Integration', function() {
         });
     });
 
-    describe('reloadWorker', function() {
-        it('should update Worker code without restarting server', async function() {
+    describe('reloadWorker', function () {
+        it('should update Worker code without restarting server', async function () {
             // Start with simple worker
             mf = await createWorkerServer(simpleWorkerPath, { port: testPort });
 
@@ -136,8 +136,8 @@ describe('Miniflare Integration', function() {
         });
     });
 
-    describe('stopWorkerServer', function() {
-        it('should gracefully stop Miniflare instance', async function() {
+    describe('stopWorkerServer', function () {
+        it('should gracefully stop Miniflare instance', async function () {
             mf = await createWorkerServer(simpleWorkerPath, { port: testPort });
 
             // Verify server is running

@@ -1,5 +1,5 @@
-import { Bkper } from "bkper-js";
-import { getOAuthToken } from "./auth/local-auth-service.js";
+import { Bkper } from 'bkper-js';
+import { getOAuthToken } from './auth/local-auth-service.js';
 
 let configuredBkperInstance: Bkper | undefined = undefined;
 
@@ -11,7 +11,7 @@ let configuredBkperInstance: Bkper | undefined = undefined;
  */
 export function getBkperInstance(): Bkper {
     // Return mock instance if in test environment
-    if (process.env.NODE_ENV === "test" || (globalThis as any).__mockBkper) {
+    if (process.env.NODE_ENV === 'test' || (globalThis as any).__mockBkper) {
         return (globalThis as any).__mockBkper || Bkper;
     }
 

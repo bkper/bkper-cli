@@ -1,6 +1,6 @@
-import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { getBkperInstance } from "../../bkper-factory.js";
-import { AccountType, BalanceType } from "bkper-js";
+import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getBkperInstance } from '../../bkper-factory.js';
+import { AccountType, BalanceType } from 'bkper-js';
 
 interface GetBalancesParams {
     bookId: string;
@@ -16,15 +16,15 @@ export async function handleGetBalances(params: GetBalancesParams): Promise<Call
     try {
         // Validate required parameters
         if (!params.bookId) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: bookId");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: bookId');
         }
 
         if (!params.query) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: query");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: query');
         }
 
         // Validate query contains either group: or account: operator
-        if (!params.query.includes("group:") && !params.query.includes("account:")) {
+        if (!params.query.includes('group:') && !params.query.includes('account:')) {
             throw new McpError(
                 ErrorCode.InvalidParams,
                 "Query must include either 'group:' or 'account:' operator for proper balance filtering. Example: \"group:'Assets' before:$m\" or \"account:'Cash' before:$m\""
@@ -44,15 +44,15 @@ export async function handleGetBalances(params: GetBalancesParams): Promise<Call
         let actualQuery = params.query;
 
         // Enforce monthly periodicity by modifying query
-        if (actualQuery.includes("by:d")) {
+        if (actualQuery.includes('by:d')) {
             // Replace daily periodicity with monthly
-            actualQuery = actualQuery.replace(/by:d/g, "by:m");
-        } else if (actualQuery.includes("by:y")) {
+            actualQuery = actualQuery.replace(/by:d/g, 'by:m');
+        } else if (actualQuery.includes('by:y')) {
             // Replace yearly periodicity with monthly
-            actualQuery = actualQuery.replace(/by:y/g, "by:m");
-        } else if (!actualQuery.includes("by:")) {
+            actualQuery = actualQuery.replace(/by:y/g, 'by:m');
+        } else if (!actualQuery.includes('by:')) {
             // Append monthly periodicity if no by: operator present
-            actualQuery = actualQuery + " by:m";
+            actualQuery = actualQuery + ' by:m';
         }
         // If by:m is already present, keep it unchanged
 
@@ -60,7 +60,7 @@ export async function handleGetBalances(params: GetBalancesParams): Promise<Call
         const balancesReport = await book.getBalancesReport(actualQuery);
 
         // Determine balance type based on presence of after: operator
-        const type = actualQuery.includes("after:") ? BalanceType.PERIOD : BalanceType.CUMULATIVE;
+        const type = actualQuery.includes('after:') ? BalanceType.PERIOD : BalanceType.CUMULATIVE;
 
         // Use BalancesDataTableBuilder to generate matrix
         let matrix: any[][];
@@ -85,7 +85,7 @@ export async function handleGetBalances(params: GetBalancesParams): Promise<Call
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: JSON.stringify(response, null, 2),
                 },
             ],
@@ -105,23 +105,22 @@ export async function handleGetBalances(params: GetBalancesParams): Promise<Call
 }
 
 export const getBalancesToolDefinition = {
-    name: "get_balances",
+    name: 'get_balances',
     description:
-        "Get account balances with query filtering. Use get_book first to understand group hierarchy and usage rules.",
+        'Get account balances with query filtering. Use get_book first to understand group hierarchy and usage rules.',
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             bookId: {
-                type: "string",
-                description: "The unique identifier of the book",
+                type: 'string',
+                description: 'The unique identifier of the book',
             },
             query: {
-                type: "string",
+                type: 'string',
                 description:
                     'Required query to filter balances (e.g., "account:\'Cash\'", "group:\'Assets\'", "before:2024-01-31")',
             },
         },
-        required: ["bookId", "query"],
+        required: ['bookId', 'query'],
     },
 };
-

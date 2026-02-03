@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/health": {
+    '/api/health': {
         parameters: {
             query?: never;
             header?: never;
@@ -30,7 +30,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["HealthResponse"];
+                        'application/json': components['schemas']['HealthResponse'];
                     };
                 };
             };
@@ -43,7 +43,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{appId}/deploy": {
+    '/api/apps/{appId}/deploy': {
         parameters: {
             query?: never;
             header?: never;
@@ -60,9 +60,9 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: "prod" | "dev";
+                    env?: 'prod' | 'dev';
                     /** @description Deployment type (web handler or events handler) */
-                    type?: "web" | "events";
+                    type?: 'web' | 'events';
                 };
                 header?: never;
                 path: {
@@ -73,7 +73,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/octet-stream": string;
+                    'application/octet-stream': string;
                 };
             };
             responses: {
@@ -83,7 +83,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["DeployResult"];
+                        'application/json': components['schemas']['DeployResult'];
                     };
                 };
                 /** @description Invalid request (empty bundle, bundle too large, invalid parameters) */
@@ -92,7 +92,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Authentication failed (missing or invalid token) */
@@ -101,7 +101,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Permission denied */
@@ -110,7 +110,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App not found */
@@ -119,7 +119,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Cloudflare deployment failed */
@@ -128,7 +128,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -139,7 +139,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{appId}": {
+    '/api/apps/{appId}': {
         parameters: {
             query?: never;
             header?: never;
@@ -168,7 +168,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AppStatus"];
+                        'application/json': components['schemas']['AppStatus'];
                     };
                 };
                 /** @description Authentication failed */
@@ -177,7 +177,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App not found */
@@ -186,7 +186,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -201,9 +201,9 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: "prod" | "dev";
+                    env?: 'prod' | 'dev';
                     /** @description Deployment type (web handler or events handler) */
-                    type?: "web" | "events";
+                    type?: 'web' | 'events';
                     /** @description Permanently delete all associated data */
                     deleteData?: boolean;
                 };
@@ -222,7 +222,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["UndeployResult"];
+                        'application/json': components['schemas']['UndeployResult'];
                     };
                 };
                 /** @description Invalid parameters */
@@ -231,7 +231,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Authentication failed */
@@ -240,7 +240,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Permission denied */
@@ -249,7 +249,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App not found */
@@ -258,7 +258,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Cloudflare undeploy failed */
@@ -267,7 +267,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -277,7 +277,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{appId}/secrets": {
+    '/api/apps/{appId}/secrets': {
         parameters: {
             query?: never;
             header?: never;
@@ -292,7 +292,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: "prod" | "dev";
+                    env?: 'prod' | 'dev';
                 };
                 header?: never;
                 path: {
@@ -309,7 +309,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SecretsListResponse"];
+                        'application/json': components['schemas']['SecretsListResponse'];
                     };
                 };
                 /** @description Authentication failed */
@@ -318,7 +318,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Permission denied */
@@ -327,7 +327,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App not found */
@@ -336,7 +336,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -349,7 +349,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/apps/{appId}/secrets/{name}": {
+    '/api/apps/{appId}/secrets/{name}': {
         parameters: {
             query?: never;
             header?: never;
@@ -365,7 +365,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: "prod" | "dev";
+                    env?: 'prod' | 'dev';
                 };
                 header?: never;
                 path: {
@@ -378,7 +378,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["SecretValueRequest"];
+                    'application/json': components['schemas']['SecretValueRequest'];
                 };
             };
             responses: {
@@ -388,7 +388,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SecretResponse"];
+                        'application/json': components['schemas']['SecretResponse'];
                     };
                 };
                 /** @description Invalid request */
@@ -397,7 +397,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Authentication failed */
@@ -406,7 +406,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Permission denied */
@@ -415,7 +415,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App not found */
@@ -424,7 +424,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -438,7 +438,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: "prod" | "dev";
+                    env?: 'prod' | 'dev';
                 };
                 header?: never;
                 path: {
@@ -457,7 +457,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SecretResponse"];
+                        'application/json': components['schemas']['SecretResponse'];
                     };
                 };
                 /** @description Authentication failed */
@@ -466,7 +466,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description Permission denied */
@@ -475,7 +475,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
                 /** @description App or secret not found */
@@ -484,7 +484,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        'application/json': components['schemas']['ErrorResponse'];
                     };
                 };
             };
@@ -500,7 +500,7 @@ export interface components {
     schemas: {
         HealthResponse: {
             /** @enum {string} */
-            status: "ok";
+            status: 'ok';
             /** @example prod */
             environment: string;
             /**
@@ -518,9 +518,9 @@ export interface components {
              */
             url: string;
             /** @enum {string} */
-            environment: "prod" | "dev";
+            environment: 'prod' | 'dev';
             /** @enum {string} */
-            type: "web" | "events";
+            type: 'web' | 'events';
             /** @example bkper-apps-prod */
             namespace: string;
             /** @example my-app-123 */
@@ -556,12 +556,12 @@ export interface components {
         };
         AppStatus: {
             appId: string;
-            prod: components["schemas"]["EnvStatus"];
-            dev: components["schemas"]["EnvStatus"];
+            prod: components['schemas']['EnvStatus'];
+            dev: components['schemas']['EnvStatus'];
         };
         EnvStatus: {
-            web: components["schemas"]["ScriptStatus"];
-            events: components["schemas"]["ScriptStatus"];
+            web: components['schemas']['ScriptStatus'];
+            events: components['schemas']['ScriptStatus'];
         };
         ScriptStatus: {
             deployed: boolean;

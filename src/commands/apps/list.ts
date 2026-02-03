@@ -1,4 +1,4 @@
-import { getBkperInstance } from "../../bkper-factory.js";
+import { getBkperInstance } from '../../bkper-factory.js';
 
 /**
  * Lists all apps the authenticated user has access to.
@@ -8,5 +8,5 @@ import { getBkperInstance } from "../../bkper-factory.js";
 export async function listApps(): Promise<bkper.App[]> {
     const bkper = getBkperInstance();
     const apps = await bkper.getApps();
-    return apps.map((app) => app.json());
+    return apps.map(app => app.json());
 }

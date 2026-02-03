@@ -1,6 +1,6 @@
-import fs from "fs";
-import path from "path";
-import { createRequire } from "module";
+import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
 
 export interface SharedBuildResult {
     built: boolean;
@@ -12,17 +12,19 @@ export interface SharedBuildResult {
  * Dynamically loads TypeScript from the project's node_modules.
  * Returns undefined if TypeScript is not installed in the project.
  */
-async function loadProjectTypeScript(projectRoot: string): Promise<typeof import("typescript") | undefined> {
+async function loadProjectTypeScript(
+    projectRoot: string
+): Promise<typeof import('typescript') | undefined> {
     const require = createRequire(import.meta.url);
-    const tsPath = path.join(projectRoot, "node_modules", "typescript");
-    
+    const tsPath = path.join(projectRoot, 'node_modules', 'typescript');
+
     if (!fs.existsSync(tsPath)) {
         return undefined;
     }
 
     try {
         // Resolve the actual TypeScript module from the project
-        const resolvedPath = require.resolve("typescript", { paths: [projectRoot] });
+        const resolvedPath = require.resolve('typescript', { paths: [projectRoot] });
         const ts = await import(resolvedPath);
         return ts.default || ts;
     } catch {
@@ -30,29 +32,26 @@ async function loadProjectTypeScript(projectRoot: string): Promise<typeof import
     }
 }
 
-function formatDiagnostic(ts: typeof import("typescript"), diagnostic: import("typescript").Diagnostic): string {
-    const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, " ");
+function formatDiagnostic(
+    ts: typeof import('typescript'),
+    diagnostic: import('typescript').Diagnostic
+): string {
+    const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ');
     if (diagnostic.file && diagnostic.start !== undefined) {
-        const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(
-            diagnostic.start
-        );
+        const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
         const filePath = diagnostic.file.fileName;
         return `${filePath}:${line + 1}:${character + 1} - ${message}`;
     }
     return message;
 }
 
-function findConfigFile(ts: typeof import("typescript"), searchPath: string): string | undefined {
-    const configPath = ts.findConfigFile(
-        searchPath,
-        ts.sys.fileExists,
-        "tsconfig.json"
-    );
+function findConfigFile(ts: typeof import('typescript'), searchPath: string): string | undefined {
+    const configPath = ts.findConfigFile(searchPath, ts.sys.fileExists, 'tsconfig.json');
     return configPath ?? undefined;
 }
 
 export async function buildSharedIfPresent(projectRoot: string): Promise<SharedBuildResult> {
-    const sharedRoot = path.join(projectRoot, "packages/shared");
+    const sharedRoot = path.join(projectRoot, 'packages/shared');
     if (!fs.existsSync(sharedRoot)) {
         return { built: false, success: true };
     }
@@ -63,7 +62,9 @@ export async function buildSharedIfPresent(projectRoot: string): Promise<SharedB
         return {
             built: false,
             success: false,
-            diagnostics: ["TypeScript not found. Run bun install at the app root (required for shared package build)."],
+            diagnostics: [
+                'TypeScript not found. Run bun install at the app root (required for shared package build).',
+            ],
         };
     }
 
@@ -72,7 +73,7 @@ export async function buildSharedIfPresent(projectRoot: string): Promise<SharedB
         return {
             built: false,
             success: false,
-            diagnostics: ["tsconfig.json not found in packages/shared"],
+            diagnostics: ['tsconfig.json not found in packages/shared'],
         };
     }
 

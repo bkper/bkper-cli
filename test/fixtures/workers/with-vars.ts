@@ -5,5 +5,5 @@ export interface Env {
 export default {
     async fetch(request: Request, env: Env): Promise<Response> {
         return new Response(`API Key: ${env.API_KEY}`);
-    }
+    },
 };

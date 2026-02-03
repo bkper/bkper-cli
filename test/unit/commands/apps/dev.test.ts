@@ -8,7 +8,7 @@ const { __dirname } = getTestPaths(import.meta.url);
 // Temp directory for test app config
 const testDir = path.join(__dirname, '../../../fixtures/temp-dev-test');
 
-describe('dev command', function() {
+describe('dev command', function () {
     // Increase timeout for async operations
     this.timeout(10000);
 
@@ -57,12 +57,16 @@ describe('dev command', function() {
     /**
      * Creates stubs and imports the dev module with stubbed dependencies
      */
-    async function createModuleWithStubs(): Promise<typeof import('../../../../src/commands/apps/dev.js')> {
+    async function createModuleWithStubs(): Promise<
+        typeof import('../../../../src/commands/apps/dev.js')
+    > {
         // Create stubs
         createWorkerServerStub = sinon.stub().resolves({ ready: Promise.resolve() });
         stopWorkerServerStub = sinon.stub().resolves();
         reloadWorkerStub = sinon.stub().resolves();
-        createClientServerStub = sinon.stub().resolves({ resolvedUrls: { local: ['http://localhost:5173'] } });
+        createClientServerStub = sinon
+            .stub()
+            .resolves({ resolvedUrls: { local: ['http://localhost:5173'] } });
         stopClientServerStub = sinon.stub().resolves();
         getServerUrlStub = sinon.stub().returns('http://localhost:5173');
         buildWorkerToFileStub = sinon.stub().resolves();
@@ -86,7 +90,7 @@ describe('dev command', function() {
         return await import('../../../../src/commands/apps/dev.js');
     }
 
-    beforeEach(function() {
+    beforeEach(function () {
         setupTestEnvironment();
         exitCode = undefined;
         consoleOutput = [];
@@ -115,7 +119,7 @@ describe('dev command', function() {
         fs.mkdirSync(testDir, { recursive: true });
     });
 
-    afterEach(function() {
+    afterEach(function () {
         process.chdir(originalCwd);
         process.exit = originalExit;
         console.log = originalConsoleLog;
@@ -129,8 +133,8 @@ describe('dev command', function() {
         }
     });
 
-    describe('dev function - Configuration Detection', function() {
-        it('should exit with error when deployment config is not found', async function() {
+    describe('dev function - Configuration Detection', function () {
+        it('should exit with error when deployment config is not found', async function () {
             // Create minimal app config without deployment section
             const configContent = 'id: test-app\nname: Test App\n';
             fs.writeFileSync(path.join(testDir, 'bkper.yaml'), configContent);
@@ -149,7 +153,7 @@ describe('dev command', function() {
             expect(consoleErrors.some(e => e.includes('No deployment configuration'))).to.be.true;
         });
 
-        it('should load app config correctly', async function() {
+        it('should load app config correctly', async function () {
             // Create config with deployment section
             const configContent = `id: test-app
 name: Test App
@@ -164,13 +168,16 @@ deployment:
   compatibility_date: "2026-01-29"
 `;
             fs.writeFileSync(path.join(testDir, 'bkper.yaml'), configContent);
-            
+
             // Create the directory structure that the config references
             fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
             fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
-            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
+            fs.writeFileSync(
+                path.join(testDir, 'packages/web/server/src/index.ts'),
+                'export default {}'
+            );
             fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
-            
+
             process.chdir(testDir);
 
             const configModule = await import('../../../../src/commands/apps/config.js');
@@ -184,8 +191,8 @@ deployment:
         });
     });
 
-    describe('dev function - dependency preflight', function() {
-        it('should exit with error when dependencies are missing', async function() {
+    describe('dev function - dependency preflight', function () {
+        it('should exit with error when dependencies are missing', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -200,7 +207,10 @@ deployment:
             );
             fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
             fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
-            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
+            fs.writeFileSync(
+                path.join(testDir, 'packages/web/server/src/index.ts'),
+                'export default {}'
+            );
             fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
 
             process.chdir(testDir);
@@ -219,15 +229,15 @@ deployment:
         });
     });
 
-    describe('dev function - DevOptions interface', function() {
-        it('should export DevOptions interface with correct structure', async function() {
+    describe('dev function - DevOptions interface', function () {
+        it('should export DevOptions interface with correct structure', async function () {
             const devModule = await import('../../../../src/commands/apps/dev.js');
 
             // Verify the function exists and has correct signature
             expect(devModule.dev).to.be.a('function');
         });
 
-        it('should use default port 5173 for client', async function() {
+        it('should use default port 5173 for client', async function () {
             // This test validates the interface - actual server creation is tested elsewhere
             const configContent = `id: test-app
 name: Test App
@@ -245,22 +255,22 @@ deployment:
             expect(devModule.dev).to.be.a('function');
         });
 
-        it('should use default port 8787 for server', async function() {
+        it('should use default port 8787 for server', async function () {
             // Similar to above - validates interface contract
             const devModule = await import('../../../../src/commands/apps/dev.js');
             expect(devModule.dev).to.be.a('function');
         });
     });
 
-    describe('dev function - Type generation', function() {
-        it('should have ensureTypesUpToDate function available', async function() {
+    describe('dev function - Type generation', function () {
+        it('should have ensureTypesUpToDate function available', async function () {
             const typesModule = await import('../../../../src/dev/types.js');
 
             // Verify the function exists and has correct signature
             expect(typesModule.ensureTypesUpToDate).to.be.a('function');
         });
 
-        it('should generate types when called directly', async function() {
+        it('should generate types when called directly', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -278,10 +288,7 @@ deployment:
             const typesModule = await import('../../../../src/dev/types.js');
 
             // Call the function directly and verify it works
-            typesModule.ensureTypesUpToDate(
-                { services: ['KV'], secrets: ['API_KEY'] },
-                testDir
-            );
+            typesModule.ensureTypesUpToDate({ services: ['KV'], secrets: ['API_KEY'] }, testDir);
 
             // Verify env.d.ts was created
             const envDtsPath = path.join(testDir, 'env.d.ts');
@@ -293,8 +300,8 @@ deployment:
         });
     });
 
-    describe('dev function - Dev vars loading', function() {
-        it('should load dev vars from .dev.vars file', async function() {
+    describe('dev function - Dev vars loading', function () {
+        it('should load dev vars from .dev.vars file', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -315,7 +322,7 @@ deployment:
             expect(vars.API_KEY).to.equal('test-secret-value');
         });
 
-        it('should return empty object when .dev.vars does not exist', async function() {
+        it('should return empty object when .dev.vars does not exist', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -336,21 +343,21 @@ deployment:
         });
     });
 
-    describe('dev function - Export validation', function() {
-        it('should export dev function', async function() {
+    describe('dev function - Export validation', function () {
+        it('should export dev function', async function () {
             const devModule = await import('../../../../src/commands/apps/dev.js');
             expect(devModule.dev).to.be.a('function');
         });
 
-        it('should export DevOptions type (via interface presence in function signature)', async function() {
+        it('should export DevOptions type (via interface presence in function signature)', async function () {
             const devModule = await import('../../../../src/commands/apps/dev.js');
             // The function should accept an options parameter
             expect(devModule.dev.length).to.be.at.most(1);
         });
     });
 
-    describe('dev function - Signal handling', function() {
-        it('should register SIGINT handler', async function() {
+    describe('dev function - Signal handling', function () {
+        it('should register SIGINT handler', async function () {
             // Verify that the process event listeners can be added
             // We can't fully test signal handling in unit tests, but we verify the mechanism
             const listeners = process.listeners('SIGINT');
@@ -361,15 +368,15 @@ deployment:
             expect(initialCount).to.be.a('number');
         });
 
-        it('should register SIGTERM handler', async function() {
+        it('should register SIGTERM handler', async function () {
             const listeners = process.listeners('SIGTERM');
             const initialCount = listeners.length;
             expect(initialCount).to.be.a('number');
         });
     });
 
-    describe('Configuration requirements', function() {
-        it('should require web.main when starting web server', async function() {
+    describe('Configuration requirements', function () {
+        it('should require web.main when starting web server', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -387,7 +394,7 @@ deployment:
             expect(deployConfig?.events?.main).to.equal('packages/events/src/index.ts');
         });
 
-        it('should detect hasWeb correctly when web.main is configured', async function() {
+        it('should detect hasWeb correctly when web.main is configured', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -405,7 +412,7 @@ deployment:
             expect(!!deployConfig?.web?.main).to.be.true; // hasWeb check
         });
 
-        it('should detect hasEvents correctly when events.main is configured', async function() {
+        it('should detect hasEvents correctly when events.main is configured', async function () {
             const configContent = `id: test-app
 name: Test App
 deployment:
@@ -423,10 +430,10 @@ deployment:
         });
     });
 
-    describe('deployHandler integration', function() {
-        it('should export deployHandler from deploy module', async function() {
+    describe('deployHandler integration', function () {
+        it('should export deployHandler from deploy module', async function () {
             const deployModule = await import('../../../../src/commands/apps/deploy.js');
-            
+
             // Check that the module has the expected exports
             expect(deployModule.deployApp).to.be.a('function');
             expect(deployModule.undeployApp).to.be.a('function');

@@ -1,9 +1,9 @@
-import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { getBkperInstance } from "../../bkper-factory.js";
-import { Group } from "bkper-js";
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getBkperInstance } from '../../bkper-factory.js';
+import { Group } from 'bkper-js';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 interface GetBookParams {
     bookId: string;
@@ -24,11 +24,11 @@ function buildHierarchicalStructure(groups: Group[]): GroupNode[] {
     const rootGroups: GroupNode[] = [];
 
     // First pass: create all group nodes
-    groups.forEach((group) => {
+    groups.forEach(group => {
         const node: GroupNode = {
-            id: group.getId() || "",
-            name: group.getName() || "",
-            type: group.getType() || "",
+            id: group.getId() || '',
+            name: group.getName() || '',
+            type: group.getType() || '',
             hidden: group.isHidden() || false,
             permanent: group.isPermanent() || false,
             properties: group.getProperties() || {},
@@ -39,13 +39,13 @@ function buildHierarchicalStructure(groups: Group[]): GroupNode[] {
     });
 
     // Second pass: build hierarchy
-    groups.forEach((group) => {
-        const node = groupMap.get(group.getId() || "");
+    groups.forEach(group => {
+        const node = groupMap.get(group.getId() || '');
         if (!node) return;
 
         const parent = group.getParent();
         if (parent) {
-            const parentNode = groupMap.get(parent.getId() || "");
+            const parentNode = groupMap.get(parent.getId() || '');
             if (parentNode) {
                 parentNode.children.push(node);
             }
@@ -63,9 +63,9 @@ function loadSystemPrompt(): string {
         // Get the directory where this file is located and navigate to the parent mcp directory
         const __filename = fileURLToPath(import.meta.url);
         const __dirname = dirname(__filename);
-        const mcpPath = join(__dirname, "..");
+        const mcpPath = join(__dirname, '..');
 
-        const systemPrompt = readFileSync(join(mcpPath, "system-prompt.md"), "utf-8");
+        const systemPrompt = readFileSync(join(mcpPath, 'system-prompt.md'), 'utf-8');
 
         return systemPrompt;
     } catch (error) {
@@ -73,8 +73,8 @@ function loadSystemPrompt(): string {
             error instanceof Error ? error.message : String(error)
         }\nPath attempted: ${join(
             dirname(fileURLToPath(import.meta.url)),
-            "..",
-            "system-prompt.md"
+            '..',
+            'system-prompt.md'
         )}`;
     }
 }
@@ -83,7 +83,7 @@ export async function handleGetBook(params: GetBookParams): Promise<CallToolResu
     try {
         // Validate required parameters
         if (!params.bookId) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: bookId");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: bookId');
         }
 
         // Get configured Bkper instance
@@ -116,14 +116,14 @@ export async function handleGetBook(params: GetBookParams): Promise<CallToolResu
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: JSON.stringify(response, null, 2),
                 },
             ],
         };
     } catch (error) {
         // Handle specific book not found errors
-        if (error instanceof Error && error.message.includes("not found")) {
+        if (error instanceof Error && error.message.includes('not found')) {
             throw new McpError(ErrorCode.InvalidParams, `Book not found: ${params.bookId}`);
         }
 
@@ -141,18 +141,17 @@ export async function handleGetBook(params: GetBookParams): Promise<CallToolResu
 }
 
 export const getBookToolDefinition = {
-    name: "get_book",
+    name: 'get_book',
     description:
-        "Retrieve detailed information about a specific book including its group hierarchy and system prompt",
+        'Retrieve detailed information about a specific book including its group hierarchy and system prompt',
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             bookId: {
-                type: "string",
-                description: "The unique identifier of the book to retrieve",
+                type: 'string',
+                description: 'The unique identifier of the book to retrieve',
             },
         },
-        required: ["bookId"],
+        required: ['bookId'],
     },
 };
-

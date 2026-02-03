@@ -1,5 +1,5 @@
-import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { getBkperInstance } from "../../bkper-factory.js";
+import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getBkperInstance } from '../../bkper-factory.js';
 
 interface ListTransactionsParams {
     bookId: string;
@@ -22,11 +22,11 @@ export async function handleListTransactions(
     try {
         // Validate required parameters
         if (!params.bookId) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: bookId");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: bookId');
         }
 
         if (!params.query) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: query");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: query');
         }
 
         // Get configured Bkper instance
@@ -79,7 +79,7 @@ export async function handleListTransactions(
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: JSON.stringify(response, null, 2),
                 },
             ],
@@ -99,32 +99,32 @@ export async function handleListTransactions(
 }
 
 export const listTransactionsToolDefinition = {
-    name: "list_transactions",
+    name: 'list_transactions',
     description:
-        "List transactions with native API cursor-based pagination and query filtering. Use get_book first to understand query syntax and usage rules.",
+        'List transactions with native API cursor-based pagination and query filtering. Use get_book first to understand query syntax and usage rules.',
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             bookId: {
-                type: "string",
-                description: "The unique identifier of the book",
+                type: 'string',
+                description: 'The unique identifier of the book',
             },
             cursor: {
-                type: "string",
-                description: "Pagination cursor for next page (provided by previous response)",
+                type: 'string',
+                description: 'Pagination cursor for next page (provided by previous response)',
             },
             query: {
-                type: "string",
+                type: 'string',
                 description:
-                    "Required query string to filter transactions using comprehensive syntax (account:, from:, to:, group:, on:, after:, before:, amount:, text search, logical operators, etc.)",
+                    'Required query string to filter transactions using comprehensive syntax (account:, from:, to:, group:, on:, after:, before:, amount:, text search, logical operators, etc.)',
             },
             limit: {
-                type: "number",
-                description: "Number of transactions per page (default: 25, maximum: 100)",
+                type: 'number',
+                description: 'Number of transactions per page (default: 25, maximum: 100)',
                 minimum: 1,
                 maximum: 100,
             },
         },
-        required: ["bookId", "query"],
+        required: ['bookId', 'query'],
     },
 };

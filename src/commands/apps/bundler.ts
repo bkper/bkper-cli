@@ -1,6 +1,6 @@
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 /**
  * Recursively gets all files in a directory.
@@ -15,7 +15,7 @@ export async function getFilesRecursive(dir: string): Promise<string[]> {
     for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-            files.push(...await getFilesRecursive(fullPath));
+            files.push(...(await getFilesRecursive(fullPath)));
         } else {
             files.push(fullPath);
         }
@@ -43,7 +43,7 @@ export async function createAssetManifest(
     const files = await getFilesRecursive(fullPath);
 
     for (const file of files) {
-        const relativePath = "/" + path.relative(fullPath, file).replace(/\\/g, "/");
+        const relativePath = '/' + path.relative(fullPath, file).replace(/\\/g, '/');
         const content = fs.readFileSync(file);
         const hash = computeHash(content);
         const size = fs.statSync(file).size;
@@ -61,19 +61,17 @@ export async function createAssetManifest(
  * @returns 32-character hex hash
  */
 export function computeHash(content: Buffer): string {
-    const hash = crypto.createHash("sha256").update(content).digest("hex");
+    const hash = crypto.createHash('sha256').update(content).digest('hex');
     return hash.substring(0, 32);
 }
 
 /**
  * Reads asset file contents for deployment.
- * 
+ *
  * @param assetsPath - Path to asset directory
  * @returns Map of hash to base64-encoded content
  */
-export async function readAssetFiles(
-    assetsPath: string
-): Promise<Record<string, string>> {
+export async function readAssetFiles(assetsPath: string): Promise<Record<string, string>> {
     const fullPath = path.resolve(assetsPath);
     if (!fs.existsSync(fullPath)) {
         throw new Error(`Assets directory not found: ${assetsPath}`);
@@ -96,12 +94,20 @@ export async function readAssetFiles(
 
         if (fileSize > MAX_FILE_SIZE) {
             const fileName = path.relative(fullPath, file);
-            throw new Error(`File ${fileName} exceeds 25 MB Cloudflare limit (${(fileSize / 1024 / 1024).toFixed(2)} MB)`);
+            throw new Error(
+                `File ${fileName} exceeds 25 MB Cloudflare limit (${(
+                    fileSize /
+                    1024 /
+                    1024
+                ).toFixed(2)} MB)`
+            );
         }
 
         totalSize += fileSize;
         if (totalSize > MAX_TOTAL_SIZE) {
-            throw new Error(`Total asset size exceeds 50 MB limit (${(totalSize / 1024 / 1024).toFixed(2)} MB)`);
+            throw new Error(
+                `Total asset size exceeds 50 MB limit (${(totalSize / 1024 / 1024).toFixed(2)} MB)`
+            );
         }
 
         const hash = computeHash(content);

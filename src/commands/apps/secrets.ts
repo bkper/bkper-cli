@@ -1,8 +1,8 @@
-import * as readline from "readline";
-import { getOAuthToken, isLoggedIn } from "../../auth/local-auth-service.js";
-import { createPlatformClient } from "../../platform/client.js";
-import { handleError, loadAppConfig } from "./config.js";
-import type { Environment, SecretsOptions } from "./types.js";
+import * as readline from 'readline';
+import { getOAuthToken, isLoggedIn } from '../../auth/local-auth-service.js';
+import { createPlatformClient } from '../../platform/client.js';
+import { handleError, loadAppConfig } from './config.js';
+import type { Environment, SecretsOptions } from './types.js';
 
 // =============================================================================
 // Helper Functions
@@ -19,15 +19,15 @@ async function promptSecretValue(): Promise<string> {
     if (!process.stdin.isTTY) {
         // Read from piped input
         return new Promise((resolve, reject) => {
-            let data = "";
-            process.stdin.setEncoding("utf8");
-            process.stdin.on("data", (chunk) => {
+            let data = '';
+            process.stdin.setEncoding('utf8');
+            process.stdin.on('data', chunk => {
                 data += chunk;
             });
-            process.stdin.on("end", () => {
+            process.stdin.on('end', () => {
                 resolve(data.trim());
             });
-            process.stdin.on("error", reject);
+            process.stdin.on('error', reject);
         });
     }
 
@@ -37,8 +37,8 @@ async function promptSecretValue(): Promise<string> {
         output: process.stdout,
     });
 
-    return new Promise((resolve) => {
-        rl.question("Enter secret value: ", (answer) => {
+    return new Promise(resolve => {
+        rl.question('Enter secret value: ', answer => {
             rl.close();
             resolve(answer);
         });
@@ -58,7 +58,7 @@ async function promptSecretValue(): Promise<string> {
 export async function secretsPut(name: string, options: SecretsOptions = {}): Promise<void> {
     // 1. Check if logged in
     if (!isLoggedIn()) {
-        console.error("Error: You must be logged in. Run: bkper login");
+        console.error('Error: You must be logged in. Run: bkper login');
         process.exit(1);
     }
 
@@ -67,7 +67,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkper.yaml or bkper.json not found");
+        console.error('Error: bkper.yaml or bkper.json not found');
         process.exit(1);
     }
 
@@ -79,7 +79,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     // 3. Prompt for secret value
     const value = await promptSecretValue();
     if (!value) {
-        console.error("Error: Secret value cannot be empty");
+        console.error('Error: Secret value cannot be empty');
         process.exit(1);
     }
 
@@ -88,9 +88,9 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
-    const env: Environment = options.dev ? "dev" : "prod";
+    const env: Environment = options.dev ? 'dev' : 'prod';
 
-    const { data, error } = await client.PUT("/api/apps/{appId}/secrets/{name}", {
+    const { data, error } = await client.PUT('/api/apps/{appId}/secrets/{name}', {
         params: {
             path: { appId: config.id, name },
             query: { env },
@@ -103,7 +103,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     }
 
     if (!data) {
-        console.error("Error: Unexpected empty response");
+        console.error('Error: Unexpected empty response');
         process.exit(1);
     }
 
@@ -118,7 +118,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
 export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     // 1. Check if logged in
     if (!isLoggedIn()) {
-        console.error("Error: You must be logged in. Run: bkper login");
+        console.error('Error: You must be logged in. Run: bkper login');
         process.exit(1);
     }
 
@@ -127,7 +127,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkper.yaml or bkper.json not found");
+        console.error('Error: bkper.yaml or bkper.json not found');
         process.exit(1);
     }
 
@@ -141,9 +141,9 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 4. Call Platform API
-    const env: Environment = options.dev ? "dev" : "prod";
+    const env: Environment = options.dev ? 'dev' : 'prod';
 
-    const { data, error } = await client.GET("/api/apps/{appId}/secrets", {
+    const { data, error } = await client.GET('/api/apps/{appId}/secrets', {
         params: {
             path: { appId: config.id },
             query: { env },
@@ -155,7 +155,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     }
 
     if (!data) {
-        console.error("Error: Unexpected empty response");
+        console.error('Error: Unexpected empty response');
         process.exit(1);
     }
 
@@ -166,7 +166,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     }
 
     console.log(`Secrets in ${env}:`);
-    console.log(data.secrets.join(", "));
+    console.log(data.secrets.join(', '));
 }
 
 /**
@@ -178,7 +178,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
 export async function secretsDelete(name: string, options: SecretsOptions = {}): Promise<void> {
     // 1. Check if logged in
     if (!isLoggedIn()) {
-        console.error("Error: You must be logged in. Run: bkper login");
+        console.error('Error: You must be logged in. Run: bkper login');
         process.exit(1);
     }
 
@@ -187,7 +187,7 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
     try {
         config = loadAppConfig();
     } catch {
-        console.error("Error: bkper.yaml or bkper.json not found");
+        console.error('Error: bkper.yaml or bkper.json not found');
         process.exit(1);
     }
 
@@ -201,9 +201,9 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
     const client = createPlatformClient(token);
 
     // 4. Call Platform API
-    const env: Environment = options.dev ? "dev" : "prod";
+    const env: Environment = options.dev ? 'dev' : 'prod';
 
-    const { data, error } = await client.DELETE("/api/apps/{appId}/secrets/{name}", {
+    const { data, error } = await client.DELETE('/api/apps/{appId}/secrets/{name}', {
         params: {
             path: { appId: config.id, name },
             query: { env },
@@ -215,7 +215,7 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
     }
 
     if (!data) {
-        console.error("Error: Unexpected empty response");
+        console.error('Error: Unexpected empty response');
         process.exit(1);
     }
 

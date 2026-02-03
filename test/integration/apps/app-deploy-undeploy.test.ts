@@ -1,9 +1,9 @@
-import { describe, it, before, after } from "mocha";
-import { AppStateManager } from "./helpers/app-state.js";
-import { setupDeployTest } from "./helpers/test-setup.js";
-import { runCli } from "./helpers/cli-helpers.js";
+import { describe, it, before, after } from 'mocha';
+import { AppStateManager } from './helpers/app-state.js';
+import { setupDeployTest } from './helpers/test-setup.js';
+import { runCli } from './helpers/cli-helpers.js';
 
-describe("Integration: app deploy/undeploy", function () {
+describe('Integration: app deploy/undeploy', function () {
     let stateManager: AppStateManager | undefined;
     let appDir: string | undefined;
     let setupComplete = false;
@@ -17,7 +17,7 @@ describe("Integration: app deploy/undeploy", function () {
         stateManager = new AppStateManager();
 
         // Get a built app (already has dist/ artifacts)
-        appDir = await stateManager.getApp("built");
+        appDir = await stateManager.getApp('built');
     });
 
     after(async function () {
@@ -30,15 +30,15 @@ describe("Integration: app deploy/undeploy", function () {
 
         // Always cleanup: undeploy both web and events, even if tests failed
         try {
-            console.log("\n  Cleaning up: undeploying events handler...");
-            await runCli(["app", "undeploy", "--dev", "--events", "--force"], appDir!);
+            console.log('\n  Cleaning up: undeploying events handler...');
+            await runCli(['app', 'undeploy', '--dev', '--events', '--force'], appDir!);
         } catch {
             // Ignore errors - may not be deployed
         }
 
         try {
-            console.log("  Cleaning up: undeploying web handler...");
-            await runCli(["app", "undeploy", "--dev", "--force"], appDir!);
+            console.log('  Cleaning up: undeploying web handler...');
+            await runCli(['app', 'undeploy', '--dev', '--force'], appDir!);
         } catch {
             // Ignore errors - may not be deployed
         }
@@ -47,33 +47,33 @@ describe("Integration: app deploy/undeploy", function () {
         await stateManager!.reset();
     });
 
-    it("should deploy web handler to dev environment", async function () {
+    it('should deploy web handler to dev environment', async function () {
         this.timeout(120000);
 
         // Deploy web handler (uses --dev flag)
         // Command succeeds = deploy worked (CLI handles errors internally)
-        await runCli(["app", "deploy", "--dev"], appDir!);
+        await runCli(['app', 'deploy', '--dev'], appDir!);
     });
 
-    it("should deploy events handler to dev environment", async function () {
+    it('should deploy events handler to dev environment', async function () {
         this.timeout(120000);
 
         // Deploy events handler (uses --dev and --events flags)
-        await runCli(["app", "deploy", "--dev", "--events"], appDir!);
+        await runCli(['app', 'deploy', '--dev', '--events'], appDir!);
     });
 
-    it("should undeploy events handler from dev environment", async function () {
+    it('should undeploy events handler from dev environment', async function () {
         this.timeout(60000);
 
         // Undeploy events handler
         // Command succeeds = undeploy worked (CLI handles errors internally)
-        await runCli(["app", "undeploy", "--dev", "--events", "--force"], appDir!);
+        await runCli(['app', 'undeploy', '--dev', '--events', '--force'], appDir!);
     });
 
-    it("should undeploy web handler from dev environment", async function () {
+    it('should undeploy web handler from dev environment', async function () {
         this.timeout(60000);
 
         // Undeploy web handler
-        await runCli(["app", "undeploy", "--dev", "--force"], appDir!);
+        await runCli(['app', 'undeploy', '--dev', '--force'], appDir!);
     });
 });

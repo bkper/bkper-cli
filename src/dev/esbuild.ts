@@ -1,13 +1,13 @@
-import * as esbuild from "esbuild";
-import fs from "fs";
-import path from "path";
+import * as esbuild from 'esbuild';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Plugin to externalize cloudflare:* and node:* imports.
  * These are provided by the Workers runtime and should not be bundled.
  */
 export const workersExternalsPlugin: esbuild.Plugin = {
-    name: "workers-externals",
+    name: 'workers-externals',
     setup(build) {
         // Cloudflare-specific imports (Durable Objects, Sockets, etc.)
         build.onResolve({ filter: /^cloudflare:.*/ }, () => ({ external: true }));
@@ -29,11 +29,11 @@ function getBaseConfig(entryPoint: string): esbuild.BuildOptions {
     return {
         entryPoints: [entryPoint],
         bundle: true,
-        format: "esm",
-        target: "es2024",
-        conditions: ["workerd", "worker", "browser"],
+        format: 'esm',
+        target: 'es2024',
+        conditions: ['workerd', 'worker', 'browser'],
         plugins: [workersExternalsPlugin],
-        minify: process.env.NODE_ENV === "production",
+        minify: process.env.NODE_ENV === 'production',
     };
 }
 
@@ -53,11 +53,11 @@ export async function buildWorker(entryPoint: string): Promise<string> {
     const result = await esbuild.build({
         ...getBaseConfig(entryPoint),
         write: false,
-        sourcemap: "inline",
+        sourcemap: 'inline',
     });
 
     if (!result.outputFiles || result.outputFiles.length === 0) {
-        throw new Error("Build produced no output files");
+        throw new Error('Build produced no output files');
     }
 
     return result.outputFiles[0].text;

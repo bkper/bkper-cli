@@ -11,7 +11,7 @@ const testDir = path.join(__dirname, '../../fixtures/temp-secrets-test');
  * These tests verify the error handling paths for the secrets commands.
  * The actual API calls would require integration tests with the Platform API.
  */
-describe('CLI - apps secrets Commands', function() {
+describe('CLI - apps secrets Commands', function () {
     const originalCwd = process.cwd();
     const originalExit = process.exit;
     let exitCode: number | undefined;
@@ -25,7 +25,7 @@ describe('CLI - apps secrets Commands', function() {
     let secretsList: typeof import('../../../../src/commands/apps/index.js').secretsList;
     let secretsDelete: typeof import('../../../../src/commands/apps/index.js').secretsDelete;
 
-    before(async function() {
+    before(async function () {
         // Import the functions
         const apps = await import('../../../../src/commands/apps/index.js');
         secretsPut = apps.secretsPut;
@@ -33,7 +33,7 @@ describe('CLI - apps secrets Commands', function() {
         secretsDelete = apps.secretsDelete;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         setupTestEnvironment();
         exitCode = undefined;
         consoleOutput = [];
@@ -51,14 +51,11 @@ describe('CLI - apps secrets Commands', function() {
 
         // Create temp directory with app config
         fs.mkdirSync(testDir, { recursive: true });
-        fs.writeFileSync(
-            path.join(testDir, 'bkperapp.yaml'),
-            'id: test-app\nname: Test App\n'
-        );
+        fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'id: test-app\nname: Test App\n');
         process.chdir(testDir);
     });
 
-    afterEach(function() {
+    afterEach(function () {
         process.chdir(originalCwd);
         process.exit = originalExit;
         console.log = originalConsoleLog;
@@ -70,8 +67,8 @@ describe('CLI - apps secrets Commands', function() {
         }
     });
 
-    describe('secretsPut - Config Loading', function() {
-        it('should exit with error when app config is missing', async function() {
+    describe('secretsPut - Config Loading', function () {
+        it('should exit with error when app config is missing', async function () {
             fs.unlinkSync(path.join(testDir, 'bkperapp.yaml'));
 
             try {
@@ -84,11 +81,8 @@ describe('CLI - apps secrets Commands', function() {
             expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
         });
 
-        it('should exit with error when app config has no id', async function() {
-            fs.writeFileSync(
-                path.join(testDir, 'bkperapp.yaml'),
-                'name: Test App Without ID\n'
-            );
+        it('should exit with error when app config has no id', async function () {
+            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'name: Test App Without ID\n');
 
             try {
                 await secretsPut('SECRET', {});
@@ -101,8 +95,8 @@ describe('CLI - apps secrets Commands', function() {
         });
     });
 
-    describe('secretsList - Config Loading', function() {
-        it('should exit with error when app config is missing', async function() {
+    describe('secretsList - Config Loading', function () {
+        it('should exit with error when app config is missing', async function () {
             fs.unlinkSync(path.join(testDir, 'bkperapp.yaml'));
 
             try {
@@ -115,11 +109,8 @@ describe('CLI - apps secrets Commands', function() {
             expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
         });
 
-        it('should exit with error when app config has no id', async function() {
-            fs.writeFileSync(
-                path.join(testDir, 'bkperapp.yaml'),
-                'name: Test App Without ID\n'
-            );
+        it('should exit with error when app config has no id', async function () {
+            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'name: Test App Without ID\n');
 
             try {
                 await secretsList({});
@@ -132,8 +123,8 @@ describe('CLI - apps secrets Commands', function() {
         });
     });
 
-    describe('secretsDelete - Config Loading', function() {
-        it('should exit with error when app config is missing', async function() {
+    describe('secretsDelete - Config Loading', function () {
+        it('should exit with error when app config is missing', async function () {
             fs.unlinkSync(path.join(testDir, 'bkperapp.yaml'));
 
             try {
@@ -146,11 +137,8 @@ describe('CLI - apps secrets Commands', function() {
             expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
         });
 
-        it('should exit with error when app config has no id', async function() {
-            fs.writeFileSync(
-                path.join(testDir, 'bkperapp.yaml'),
-                'name: Test App Without ID\n'
-            );
+        it('should exit with error when app config has no id', async function () {
+            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'name: Test App Without ID\n');
 
             try {
                 await secretsDelete('SECRET', {});
@@ -163,16 +151,16 @@ describe('CLI - apps secrets Commands', function() {
         });
     });
 
-    describe('Function exports', function() {
-        it('should export secretsPut function', function() {
+    describe('Function exports', function () {
+        it('should export secretsPut function', function () {
             expect(secretsPut).to.be.a('function');
         });
 
-        it('should export secretsList function', function() {
+        it('should export secretsList function', function () {
             expect(secretsList).to.be.a('function');
         });
 
-        it('should export secretsDelete function', function() {
+        it('should export secretsDelete function', function () {
             expect(secretsDelete).to.be.a('function');
         });
     });

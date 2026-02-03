@@ -28,7 +28,7 @@ async function waitForServer(url: string, maxRetries = 10, delay = 100): Promise
     throw new Error(`Server at ${url} did not become ready`);
 }
 
-describe('Vite Integration', function() {
+describe('Vite Integration', function () {
     // Increase timeout for Vite operations (startup and build can be slow)
     this.timeout(30000);
 
@@ -41,7 +41,7 @@ describe('Vite Integration', function() {
     // Track server for cleanup
     let server: ViteDevServer | null = null;
 
-    before(async function() {
+    before(async function () {
         setupTestEnvironment();
         // Import the module
         const viteModule = await import('../../../src/dev/vite.js');
@@ -51,7 +51,7 @@ describe('Vite Integration', function() {
         getServerUrl = viteModule.getServerUrl;
     });
 
-    afterEach(async function() {
+    afterEach(async function () {
         // Cleanup server after each test
         if (server) {
             await stopClientServer(server);
@@ -59,15 +59,15 @@ describe('Vite Integration', function() {
         }
     });
 
-    after(function() {
+    after(function () {
         // Cleanup temp build directory
         if (fs.existsSync(tempBuildDir)) {
             fs.rmSync(tempBuildDir, { recursive: true });
         }
     });
 
-    describe('createClientServer', function() {
-        it('should start dev server and return ViteDevServer instance', async function() {
+    describe('createClientServer', function () {
+        it('should start dev server and return ViteDevServer instance', async function () {
             const port = await getPort();
             server = await createClientServer(fixtureRoot, {
                 port,
@@ -79,7 +79,7 @@ describe('Vite Integration', function() {
             expect(server).to.have.property('close');
         });
 
-        it('should respond to HTTP requests', async function() {
+        it('should respond to HTTP requests', async function () {
             const port = await getPort();
             server = await createClientServer(fixtureRoot, {
                 port,
@@ -102,8 +102,8 @@ describe('Vite Integration', function() {
         });
     });
 
-    describe('getServerUrl', function() {
-        it('should return the correct URL format', async function() {
+    describe('getServerUrl', function () {
+        it('should return the correct URL format', async function () {
             const port = await getPort();
             server = await createClientServer(fixtureRoot, {
                 port,
@@ -117,8 +117,8 @@ describe('Vite Integration', function() {
         });
     });
 
-    describe('stopClientServer', function() {
-        it('should stop the server properly', async function() {
+    describe('stopClientServer', function () {
+        it('should stop the server properly', async function () {
             const port = await getPort();
             server = await createClientServer(fixtureRoot, {
                 port,
@@ -153,8 +153,8 @@ describe('Vite Integration', function() {
         });
     });
 
-    describe('buildClient', function() {
-        it('should build client to specified output directory', async function() {
+    describe('buildClient', function () {
+        it('should build client to specified output directory', async function () {
             // Clean up before test
             if (fs.existsSync(tempBuildDir)) {
                 fs.rmSync(tempBuildDir, { recursive: true });
@@ -166,7 +166,7 @@ describe('Vite Integration', function() {
             expect(fs.existsSync(path.join(tempBuildDir, 'index.html'))).to.be.true;
         });
 
-        it('should create assets directory with bundled JavaScript', async function() {
+        it('should create assets directory with bundled JavaScript', async function () {
             // Use a different temp directory
             const buildDir = path.resolve(__dirname, '../../temp/vite-build-assets-test');
 
@@ -191,8 +191,8 @@ describe('Vite Integration', function() {
         });
     });
 
-    describe('proxy configuration', function() {
-        it('should configure proxy for /api requests', async function() {
+    describe('proxy configuration', function () {
+        it('should configure proxy for /api requests', async function () {
             const port = await getPort();
             server = await createClientServer(fixtureRoot, {
                 port,

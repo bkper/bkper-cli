@@ -5,10 +5,10 @@
  * and delegates business logic to the domain layer.
  */
 
-import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { getBkperInstance } from "../../bkper-factory.js";
-import { TransactionMergeOperation } from "../domain/transaction/merge-operation.js";
-import { MergedTransactionData } from "../domain/transaction/merge-types.js";
+import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getBkperInstance } from '../../bkper-factory.js';
+import { TransactionMergeOperation } from '../domain/transaction/merge-operation.js';
+import { MergedTransactionData } from '../domain/transaction/merge-types.js';
 
 /**
  * MCP-specific request parameters
@@ -34,20 +34,20 @@ export async function handleMergeTransactions(
     try {
         // Validate required parameters
         if (!params.bookId) {
-            throw new McpError(ErrorCode.InvalidParams, "Missing required parameter: bookId");
+            throw new McpError(ErrorCode.InvalidParams, 'Missing required parameter: bookId');
         }
 
         if (!params.transactionId1) {
             throw new McpError(
                 ErrorCode.InvalidParams,
-                "Missing required parameter: transactionId1"
+                'Missing required parameter: transactionId1'
             );
         }
 
         if (!params.transactionId2) {
             throw new McpError(
                 ErrorCode.InvalidParams,
-                "Missing required parameter: transactionId2"
+                'Missing required parameter: transactionId2'
             );
         }
 
@@ -84,7 +84,7 @@ export async function handleMergeTransactions(
         await mergeOperation.revertTransaction.trash();
 
         // Apply merged data to edit transaction (only needed for real API, not mocks)
-        if (typeof mergeOperation.editTransaction.setDescription === "function") {
+        if (typeof mergeOperation.editTransaction.setDescription === 'function') {
             mergeOperation.applyMergedData();
             // Update the edit transaction with merged data
             await mergeOperation.editTransaction.update();
@@ -106,7 +106,7 @@ export async function handleMergeTransactions(
         // Build response
         const response: MergeTransactionsResponse = {
             mergedTransaction: JSON.parse(JSON.stringify(cleanTransaction)),
-            revertedTransactionId: mergeOperation.revertTransaction.getId() || "",
+            revertedTransactionId: mergeOperation.revertTransaction.getId() || '',
             auditRecord: mergeOperation.record,
         };
 
@@ -115,7 +115,7 @@ export async function handleMergeTransactions(
         return {
             content: [
                 {
-                    type: "text" as const,
+                    type: 'text' as const,
                     text: responseText,
                 },
             ],
@@ -127,7 +127,7 @@ export async function handleMergeTransactions(
         }
 
         // Handle other errors
-        console.error("Merge transactions error details:", error);
+        console.error('Merge transactions error details:', error);
         throw new McpError(
             ErrorCode.InternalError,
             `Failed to merge transactions: ${
@@ -138,25 +138,25 @@ export async function handleMergeTransactions(
 }
 
 export const mergeTransactionsToolDefinition = {
-    name: "merge_transactions",
+    name: 'merge_transactions',
     description:
-        "Merge two duplicate or related transactions into a single consolidated transaction. Intelligently combines descriptions, attachments, amounts, and metadata while marking one transaction as reverted.",
+        'Merge two duplicate or related transactions into a single consolidated transaction. Intelligently combines descriptions, attachments, amounts, and metadata while marking one transaction as reverted.',
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             bookId: {
-                type: "string",
-                description: "The unique identifier of the book",
+                type: 'string',
+                description: 'The unique identifier of the book',
             },
             transactionId1: {
-                type: "string",
-                description: "The ID of the first transaction to merge",
+                type: 'string',
+                description: 'The ID of the first transaction to merge',
             },
             transactionId2: {
-                type: "string",
-                description: "The ID of the second transaction to merge",
+                type: 'string',
+                description: 'The ID of the second transaction to merge',
             },
         },
-        required: ["bookId", "transactionId1", "transactionId2"],
+        required: ['bookId', 'transactionId1', 'transactionId2'],
     },
 };

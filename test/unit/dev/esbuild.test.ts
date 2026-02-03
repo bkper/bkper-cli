@@ -10,7 +10,7 @@ let buildWorker: typeof import('../../../src/dev/esbuild.js').buildWorker;
 let buildWorkerToFile: typeof import('../../../src/dev/esbuild.js').buildWorkerToFile;
 let workersExternalsPlugin: typeof import('../../../src/dev/esbuild.js').workersExternalsPlugin;
 
-describe('esbuild - Worker Bundling Utilities', function() {
+describe('esbuild - Worker Bundling Utilities', function () {
     // Increase timeout for build operations
     this.timeout(10000);
 
@@ -22,7 +22,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
     // Temp directory for file output tests
     let tempDir: string;
 
-    before(async function() {
+    before(async function () {
         setupTestEnvironment();
         // Import the module
         const esbuildModule = await import('../../../src/dev/esbuild.js');
@@ -31,28 +31,28 @@ describe('esbuild - Worker Bundling Utilities', function() {
         workersExternalsPlugin = esbuildModule.workersExternalsPlugin;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         // Create temp directory for each test
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'esbuild-test-'));
     });
 
-    afterEach(function() {
+    afterEach(function () {
         // Cleanup temp directory
         if (tempDir && fs.existsSync(tempDir)) {
             fs.rmSync(tempDir, { recursive: true });
         }
     });
 
-    describe('workersExternalsPlugin', function() {
-        it('should export workersExternalsPlugin', function() {
+    describe('workersExternalsPlugin', function () {
+        it('should export workersExternalsPlugin', function () {
             expect(workersExternalsPlugin).to.be.an('object');
             expect(workersExternalsPlugin.name).to.equal('workers-externals');
             expect(workersExternalsPlugin.setup).to.be.a('function');
         });
     });
 
-    describe('buildWorker', function() {
-        it('should return valid JavaScript string', async function() {
+    describe('buildWorker', function () {
+        it('should return valid JavaScript string', async function () {
             const result = await buildWorker(simpleWorkerPath);
 
             expect(result).to.be.a('string');
@@ -61,7 +61,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(result).to.include('Hello from Worker!');
         });
 
-        it('should handle TypeScript entry point', async function() {
+        it('should handle TypeScript entry point', async function () {
             const result = await buildWorker(simpleWorkerPath);
 
             expect(result).to.be.a('string');
@@ -70,14 +70,14 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(result).to.not.include(': Request');
         });
 
-        it('should produce ES modules format', async function() {
+        it('should produce ES modules format', async function () {
             const result = await buildWorker(simpleWorkerPath);
 
             // ESM format should have export default
             expect(result).to.include('export');
         });
 
-        it('should externalize cloudflare:* imports', async function() {
+        it('should externalize cloudflare:* imports', async function () {
             const result = await buildWorker(withImportsWorkerPath);
 
             expect(result).to.be.a('string');
@@ -86,7 +86,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(result).to.include('cloudflare:workers');
         });
 
-        it('should externalize node:* imports', async function() {
+        it('should externalize node:* imports', async function () {
             const result = await buildWorker(withImportsWorkerPath);
 
             expect(result).to.be.a('string');
@@ -94,7 +94,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(result).to.include('node:buffer');
         });
 
-        it('should throw error for invalid entry point', async function() {
+        it('should throw error for invalid entry point', async function () {
             const invalidPath = path.join(fixturesDir, 'nonexistent.ts');
 
             try {
@@ -106,8 +106,8 @@ describe('esbuild - Worker Bundling Utilities', function() {
         });
     });
 
-    describe('buildWorkerToFile', function() {
-        it('should create output file', async function() {
+    describe('buildWorkerToFile', function () {
+        it('should create output file', async function () {
             const outfile = path.join(tempDir, 'output.js');
 
             await buildWorkerToFile(simpleWorkerPath, outfile);
@@ -117,7 +117,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(content).to.include('Hello from Worker!');
         });
 
-        it('should create sourcemap file', async function() {
+        it('should create sourcemap file', async function () {
             const outfile = path.join(tempDir, 'output.js');
 
             await buildWorkerToFile(simpleWorkerPath, outfile);
@@ -132,7 +132,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             expect(sourcemap).to.have.property('sources');
         });
 
-        it('should throw error for invalid entry point', async function() {
+        it('should throw error for invalid entry point', async function () {
             const invalidPath = path.join(fixturesDir, 'nonexistent.ts');
             const outfile = path.join(tempDir, 'output.js');
 
@@ -144,7 +144,7 @@ describe('esbuild - Worker Bundling Utilities', function() {
             }
         });
 
-        it('should create parent directories if needed', async function() {
+        it('should create parent directories if needed', async function () {
             const outfile = path.join(tempDir, 'nested', 'dir', 'output.js');
 
             await buildWorkerToFile(simpleWorkerPath, outfile);

@@ -1,5 +1,5 @@
-import { CallToolResult, ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
-import { getBkperInstance } from "../../bkper-factory.js";
+import { CallToolResult, ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
+import { getBkperInstance } from '../../bkper-factory.js';
 
 interface ListBooksParams {
     filter: string;
@@ -39,7 +39,7 @@ export async function handleListBooks(params: ListBooksParams): Promise<CallTool
         return {
             content: [
                 {
-                    type: "text",
+                    type: 'text',
                     text: JSON.stringify(response, null, 2),
                 },
             ],
@@ -59,18 +59,17 @@ export async function handleListBooks(params: ListBooksParams): Promise<CallTool
 }
 
 export const listBooksToolDefinition = {
-    name: "list_books",
-    description: "List books with mandatory filtering by name or property",
+    name: 'list_books',
+    description: 'List books with mandatory filtering by name or property',
     inputSchema: {
-        type: "object",
+        type: 'object',
         properties: {
             filter: {
-                type: "string",
+                type: 'string',
                 description:
-                    "Required filter to search books by name or property (case-insensitive substring match)",
+                    'Required filter to search books by name or property (case-insensitive substring match)',
             },
         },
-        required: ["filter"],
+        required: ['filter'],
     },
 };
-

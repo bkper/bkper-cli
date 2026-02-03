@@ -12,7 +12,7 @@ const cliTypescriptPath = path.join(cliRoot, 'node_modules/typescript');
 // Module under test - will be imported dynamically
 let build: typeof import('../../../../src/commands/apps/build.js').build;
 
-describe('CLI - apps build command', function() {
+describe('CLI - apps build command', function () {
     this.timeout(30000);
 
     const fixturesDir = path.join(__dirname, '../../../fixtures');
@@ -29,7 +29,7 @@ describe('CLI - apps build command', function() {
     let consoleErrors: string[] = [];
     let consoleWarns: string[] = [];
 
-    before(async function() {
+    before(async function () {
         setupTestEnvironment();
 
         // Import the module
@@ -37,7 +37,7 @@ describe('CLI - apps build command', function() {
         build = buildModule.build;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         originalCwd = process.cwd();
         tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'build-test-'));
 
@@ -59,7 +59,7 @@ describe('CLI - apps build command', function() {
         }) as never;
     });
 
-    afterEach(function() {
+    afterEach(function () {
         process.chdir(originalCwd);
         process.exit = originalExit;
         console.log = originalConsoleLog;
@@ -72,13 +72,10 @@ describe('CLI - apps build command', function() {
         }
     });
 
-    describe('build - configuration loading', function() {
-        it('should exit with error when no deployment config found', async function() {
+    describe('build - configuration loading', function () {
+        it('should exit with error when no deployment config found', async function () {
             // Create config without deployment section
-            fs.writeFileSync(
-                path.join(tempDir, 'bkper.yaml'),
-                'id: test-app\nname: Test App\n'
-            );
+            fs.writeFileSync(path.join(tempDir, 'bkper.yaml'), 'id: test-app\nname: Test App\n');
             process.chdir(tempDir);
 
             try {
@@ -88,10 +85,11 @@ describe('CLI - apps build command', function() {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
+                .true;
         });
 
-        it('should exit with error when no config file exists', async function() {
+        it('should exit with error when no config file exists', async function () {
             process.chdir(tempDir);
 
             try {
@@ -101,12 +99,13 @@ describe('CLI - apps build command', function() {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
+                .true;
         });
     });
 
-    describe('build - dependency preflight', function() {
-        it('should exit with error when dependencies are missing', async function() {
+    describe('build - dependency preflight', function () {
+        it('should exit with error when dependencies are missing', async function () {
             // Manually create config WITHOUT node_modules to trigger preflight error
             fs.writeFileSync(
                 path.join(tempDir, 'package.json'),
@@ -138,7 +137,7 @@ deployment:
             expect(consoleErrors.some(e => e.includes('Missing dependencies'))).to.be.true;
         });
 
-        it('should exit with error when client deps are missing', async function() {
+        it('should exit with error when client deps are missing', async function () {
             fs.writeFileSync(
                 path.join(tempDir, 'package.json'),
                 JSON.stringify({ name: 'test-app', private: true }, null, 2)
@@ -148,13 +147,17 @@ deployment:
             setupProjectStructure(tempDir, {
                 configType: 'web-with-client',
                 createSourceFiles: true,
-                createViteProject: true
+                createViteProject: true,
             });
 
             const clientDir = path.join(tempDir, 'src/client');
             fs.writeFileSync(
                 path.join(clientDir, 'package.json'),
-                JSON.stringify({ name: 'client', private: true, dependencies: { lit: '^3.3.2' } }, null, 2)
+                JSON.stringify(
+                    { name: 'client', private: true, dependencies: { lit: '^3.3.2' } },
+                    null,
+                    2
+                )
             );
 
             process.chdir(tempDir);
@@ -170,12 +173,12 @@ deployment:
         });
     });
 
-    describe('build - types generation', function() {
-        it('should ensure types are up to date before building', async function() {
+    describe('build - types generation', function () {
+        it('should ensure types are up to date before building', async function () {
             // Create source files and config with services/secrets
             setupProjectStructure(tempDir, {
                 configType: 'events-with-services',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -192,13 +195,13 @@ deployment:
         });
     });
 
-    describe('build - web client', function() {
-        it('should build web client when configured', async function() {
+    describe('build - web client', function () {
+        it('should build web client when configured', async function () {
             // Create Vite project structure
             setupProjectStructure(tempDir, {
                 configType: 'web-with-client',
                 createSourceFiles: true,
-                createViteProject: true
+                createViteProject: true,
             });
             process.chdir(tempDir);
 
@@ -209,10 +212,10 @@ deployment:
             expect(consoleOutput.some(o => o.includes('Web client'))).to.be.true;
         });
 
-        it('should skip client build when only server is configured', async function() {
+        it('should skip client build when only server is configured', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'web-server-only',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -224,11 +227,11 @@ deployment:
         });
     });
 
-    describe('build - web server', function() {
-        it('should build web server when configured', async function() {
+    describe('build - web server', function () {
+        it('should build web server when configured', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'web-server-only',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -241,11 +244,11 @@ deployment:
         });
     });
 
-    describe('build - events handler', function() {
-        it('should build events handler when configured', async function() {
+    describe('build - events handler', function () {
+        it('should build events handler when configured', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'events-only',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -257,10 +260,10 @@ deployment:
             expect(consoleOutput.some(o => o.includes('Events'))).to.be.true;
         });
 
-        it('should skip events build if not configured', async function() {
+        it('should skip events build if not configured', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'web-server-only',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -271,12 +274,12 @@ deployment:
         });
     });
 
-    describe('build - output directories', function() {
-        it('should create output directories if they do not exist', async function() {
+    describe('build - output directories', function () {
+        it('should create output directories if they do not exist', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'full',
                 createSourceFiles: true,
-                createViteProject: true
+                createViteProject: true,
             });
             process.chdir(tempDir);
 
@@ -292,11 +295,11 @@ deployment:
         });
     });
 
-    describe('build - file sizes', function() {
-        it('should report file sizes in output', async function() {
+    describe('build - file sizes', function () {
+        it('should report file sizes in output', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'events-only',
-                createSourceFiles: true
+                createSourceFiles: true,
             });
             process.chdir(tempDir);
 
@@ -310,12 +313,12 @@ deployment:
         });
     });
 
-    describe('build - full build', function() {
-        it('should build all configured handlers', async function() {
+    describe('build - full build', function () {
+        it('should build all configured handlers', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'full',
                 createSourceFiles: true,
-                createViteProject: true
+                createViteProject: true,
             });
             process.chdir(tempDir);
 
@@ -331,12 +334,12 @@ deployment:
         });
     });
 
-    describe('build - shared package', function() {
-        it('should build shared package before handlers', async function() {
+    describe('build - shared package', function () {
+        it('should build shared package before handlers', async function () {
             setupProjectStructure(tempDir, {
                 configType: 'events-only',
                 createSourceFiles: true,
-                createSharedPackage: true
+                createSharedPackage: true,
             });
             process.chdir(tempDir);
 
@@ -352,7 +355,12 @@ deployment:
 /**
  * Configuration types for test projects
  */
-type ConfigType = 'full' | 'web-with-client' | 'web-server-only' | 'events-only' | 'events-with-services';
+type ConfigType =
+    | 'full'
+    | 'web-with-client'
+    | 'web-server-only'
+    | 'events-only'
+    | 'events-with-services';
 
 interface SetupOptions {
     configType: ConfigType;
@@ -379,7 +387,7 @@ function setupProjectStructure(tempDir: string, options: SetupOptions): void {
 
     // Create appropriate bkper.yaml based on config type
     const configs: Record<ConfigType, string> = {
-        'full': `
+        full: `
 id: test-app
 name: Test App
 deployment:
@@ -425,7 +433,7 @@ deployment:
     - KV
   secrets:
     - API_KEY
-`
+`,
     };
 
     fs.writeFileSync(path.join(tempDir, 'bkper.yaml'), configs[configType]);
@@ -444,7 +452,11 @@ deployment:
             fs.writeFileSync(path.join(tempDir, 'src/server/index.ts'), workerCode);
         }
 
-        if (configType === 'full' || configType === 'events-only' || configType === 'events-with-services') {
+        if (
+            configType === 'full' ||
+            configType === 'events-only' ||
+            configType === 'events-with-services'
+        ) {
             fs.mkdirSync(path.join(tempDir, 'src/events'), { recursive: true });
             fs.writeFileSync(path.join(tempDir, 'src/events/index.ts'), workerCode);
         }
@@ -498,9 +510,6 @@ deployment:
                 2
             )
         );
-        fs.writeFileSync(
-            path.join(sharedSrcDir, 'index.ts'),
-            'export const sharedValue = 42;\n'
-        );
+        fs.writeFileSync(path.join(sharedSrcDir, 'index.ts'), 'export const sharedValue = 42;\n');
     }
 }

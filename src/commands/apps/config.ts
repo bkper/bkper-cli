@@ -1,7 +1,7 @@
-import { App } from "bkper-js";
-import fs from "fs";
-import * as YAML from "yaml";
-import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from "./types.js";
+import { App } from 'bkper-js';
+import fs from 'fs';
+import * as YAML from 'yaml';
+import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from './types.js';
 
 // =============================================================================
 // App Config Loading
@@ -17,22 +17,20 @@ import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from "./
 export function loadAppConfig(): bkper.App {
     // Priority order: new filenames first, legacy filenames as fallback
     const configPaths = [
-        "./bkper.json",
-        "./bkper.yaml",
-        "./bkperapp.json",    // Legacy
-        "./bkperapp.yaml"     // Legacy
+        './bkper.json',
+        './bkper.yaml',
+        './bkperapp.json', // Legacy
+        './bkperapp.yaml', // Legacy
     ];
 
     for (const path of configPaths) {
         if (fs.existsSync(path)) {
-            const content = fs.readFileSync(path, "utf8");
-            return path.endsWith(".json") 
-                ? JSON.parse(content) 
-                : YAML.parse(content);
+            const content = fs.readFileSync(path, 'utf8');
+            return path.endsWith('.json') ? JSON.parse(content) : YAML.parse(content);
         }
     }
 
-    throw new Error("bkper.yaml or bkper.json not found");
+    throw new Error('bkper.yaml or bkper.json not found');
 }
 
 /**
@@ -43,12 +41,12 @@ export function loadAppConfig(): bkper.App {
  */
 export function loadDeploymentConfig(): DeploymentConfig | undefined {
     // Priority order: new filename first, legacy as fallback
-    const yamlPaths = ["./bkper.yaml", "./bkperapp.yaml"];
+    const yamlPaths = ['./bkper.yaml', './bkperapp.yaml'];
 
     for (const path of yamlPaths) {
         if (fs.existsSync(path)) {
-            const config = YAML.parse(fs.readFileSync(path, "utf8")) as bkper.App & { 
-                deployment?: { 
+            const config = YAML.parse(fs.readFileSync(path, 'utf8')) as bkper.App & {
+                deployment?: {
                     web: { bundle: string; assets?: string };
                     events: { bundle: string };
                     services?: string[];
@@ -75,7 +73,7 @@ export function loadDeploymentConfig(): DeploymentConfig | undefined {
  * @returns true if the deployment uses source-based format, false otherwise
  */
 export function isSourceConfig(deployment: unknown): boolean {
-    if (!deployment || typeof deployment !== "object") return false;
+    if (!deployment || typeof deployment !== 'object') return false;
     const d = deployment as Record<string, unknown>;
 
     // Check if web.main or events.main ends with .ts
@@ -83,8 +81,8 @@ export function isSourceConfig(deployment: unknown): boolean {
     const eventsMain = (d.events as Record<string, unknown> | undefined)?.main;
 
     return (
-        (typeof webMain === "string" && webMain.endsWith(".ts")) ||
-        (typeof eventsMain === "string" && eventsMain.endsWith(".ts"))
+        (typeof webMain === 'string' && webMain.endsWith('.ts')) ||
+        (typeof eventsMain === 'string' && eventsMain.endsWith('.ts'))
     );
 }
 
@@ -96,11 +94,11 @@ export function isSourceConfig(deployment: unknown): boolean {
  * @returns Source deployment configuration or undefined if not configured
  */
 export function loadSourceDeploymentConfig(): SourceDeploymentConfig | undefined {
-    const yamlPaths = ["./bkper.yaml", "./bkperapp.yaml"];
+    const yamlPaths = ['./bkper.yaml', './bkperapp.yaml'];
 
     for (const path of yamlPaths) {
         if (fs.existsSync(path)) {
-            const config = YAML.parse(fs.readFileSync(path, "utf8")) as {
+            const config = YAML.parse(fs.readFileSync(path, 'utf8')) as {
                 deployment?: {
                     web?: { main: string; client?: string };
                     events?: { main: string };
@@ -130,8 +128,8 @@ export function loadSourceDeploymentConfig(): SourceDeploymentConfig | undefined
  * @returns README content or undefined
  */
 export function loadReadme(): string | undefined {
-    if (fs.existsSync("./README.md")) {
-        return fs.readFileSync("./README.md", "utf8");
+    if (fs.existsSync('./README.md')) {
+        return fs.readFileSync('./README.md', 'utf8');
     }
     return undefined;
 }
@@ -162,15 +160,20 @@ export function createConfiguredApp(): App {
  */
 export function handleError(error: ErrorResponse | unknown): never {
     // Handle unexpected error shapes (e.g., network errors, non-JSON responses)
-    if (!error || typeof error !== 'object' || !('error' in error) || !(error as ErrorResponse).error?.message) {
-        console.error("Error deploying app:", error);
+    if (
+        !error ||
+        typeof error !== 'object' ||
+        !('error' in error) ||
+        !(error as ErrorResponse).error?.message
+    ) {
+        console.error('Error deploying app:', error);
         process.exit(1);
     }
-    
+
     const typedError = error as ErrorResponse;
     console.error(`Error: ${typedError.error.message}`);
     if (typedError.error.details) {
-        console.error("Details:", JSON.stringify(typedError.error.details, null, 2));
+        console.error('Details:', JSON.stringify(typedError.error.details, null, 2));
     }
     process.exit(1);
 }

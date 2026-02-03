@@ -1,5 +1,5 @@
-import { Miniflare, Log, LogLevel } from "miniflare";
-import { buildWorker } from "./esbuild.js";
+import { Miniflare, Log, LogLevel } from 'miniflare';
+import { buildWorker } from './esbuild.js';
 
 export interface WorkerServerOptions {
     port: number;
@@ -39,7 +39,7 @@ const instanceConfigs = new WeakMap<Miniflare, BaseConfig>();
  */
 export async function createWorkerServer(
     entryPoint: string,
-    options: WorkerServerOptions,
+    options: WorkerServerOptions
 ): Promise<Miniflare> {
     // Build the Worker code from TypeScript
     const script = await buildWorker(entryPoint);
@@ -50,8 +50,8 @@ export async function createWorkerServer(
         port: options.port,
 
         // Compatibility settings (match production)
-        compatibilityDate: options.compatibilityDate || "2026-01-29",
-        compatibilityFlags: ["nodejs_compat"],
+        compatibilityDate: options.compatibilityDate || '2026-01-29',
+        compatibilityFlags: ['nodejs_compat'],
 
         // Logging
         log: new Log(LogLevel.INFO),
@@ -63,11 +63,11 @@ export async function createWorkerServer(
         // ["KV"] -> { KV: "kv-local" }
         kvNamespaces: options.kvNamespaces?.reduce(
             (acc, ns) => ({ ...acc, [ns]: `${ns.toLowerCase()}-local` }),
-            {} as Record<string, string>,
+            {} as Record<string, string>
         ),
 
         // Persist KV data across restarts
-        kvPersist: options.persist !== false ? "./.mf/kv" : undefined,
+        kvPersist: options.persist !== false ? './.mf/kv' : undefined,
 
         // Environment variables and secrets
         bindings: options.vars,
@@ -80,8 +80,8 @@ export async function createWorkerServer(
         // like cloudflare:workers that are used by libraries (e.g., Hono)
         modules: [
             {
-                type: "ESModule",
-                path: "index.js", // Virtual path for the bundled module
+                type: 'ESModule',
+                path: 'index.js', // Virtual path for the bundled module
                 contents: script,
             },
         ],
@@ -112,8 +112,8 @@ export async function reloadWorker(mf: Miniflare, entryPoint: string): Promise<v
         await mf.setOptions({
             modules: [
                 {
-                    type: "ESModule",
-                    path: "index.js",
+                    type: 'ESModule',
+                    path: 'index.js',
                     contents: script,
                 },
             ],
@@ -126,8 +126,8 @@ export async function reloadWorker(mf: Miniflare, entryPoint: string): Promise<v
         ...baseConfig,
         modules: [
             {
-                type: "ESModule",
-                path: "index.js",
+                type: 'ESModule',
+                path: 'index.js',
                 contents: script,
             },
         ],

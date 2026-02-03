@@ -24,11 +24,7 @@ export class TransactionMergeOperation {
 
     private static readonly WORD_SPLITTER = /[ \-_]+/;
 
-    constructor(
-        private book: Book,
-        transaction1: Transaction,
-        transaction2: Transaction
-    ) {
+    constructor(private book: Book, transaction1: Transaction, transaction2: Transaction) {
         // Determine which transaction to edit vs revert based on priority rules
         const tx1IsPosted = transaction1.isPosted() ?? false;
         const tx2IsPosted = transaction2.isPosted() ?? false;
@@ -76,10 +72,7 @@ export class TransactionMergeOperation {
         // Merge files using Transaction wrapper
         const editFiles = this.editTransaction.getFiles() || [];
         const revertFiles = this.revertTransaction.getFiles() || [];
-        const mergedFiles = [
-            ...editFiles.map(f => f.json()),
-            ...revertFiles.map(f => f.json())
-        ];
+        const mergedFiles = [...editFiles.map(f => f.json()), ...revertFiles.map(f => f.json())];
         merged.files = mergedFiles;
         // Keep "attachments" for backward compatibility with test fixtures
         merged.attachments = mergedFiles;
@@ -99,7 +92,7 @@ export class TransactionMergeOperation {
         const revertProperties = this.revertTransaction.getProperties();
         merged.properties = {
             ...editProperties,
-            ...revertProperties
+            ...revertProperties,
         };
 
         // Backfill credit account - get from revert if edit doesn't have it
@@ -153,12 +146,11 @@ export class TransactionMergeOperation {
         if (!desc2) return desc1;
 
         const desc1Lower = desc1.toLowerCase();
-        const words = desc2.split(TransactionMergeOperation.WORD_SPLITTER)
+        const words = desc2
+            .split(TransactionMergeOperation.WORD_SPLITTER)
             .filter(word => word.length > 0);
 
-        const uniqueWords = words.filter(word =>
-            !desc1Lower.includes(word.toLowerCase())
-        );
+        const uniqueWords = words.filter(word => !desc1Lower.includes(word.toLowerCase()));
 
         return this.trim(desc1 + ' ' + uniqueWords.join(' '));
     }

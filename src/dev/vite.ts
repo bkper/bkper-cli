@@ -1,5 +1,5 @@
-import { createServer, build as viteBuild, ViteDevServer } from "vite";
-import path from "path";
+import { createServer, build as viteBuild, ViteDevServer } from 'vite';
+import path from 'path';
 
 /**
  * Options for creating a Vite client dev server
@@ -29,17 +29,17 @@ export interface ClientBuildOptions {
  */
 export async function createClientServer(
     root: string,
-    options: ClientServerOptions,
+    options: ClientServerOptions
 ): Promise<ViteDevServer> {
     const server = await createServer({
         root,
         server: {
             port: options.port,
-            host: "127.0.0.1", // Explicitly bind to IPv4 localhost
+            host: '127.0.0.1', // Explicitly bind to IPv4 localhost
             strictPort: false, // Allow fallback to next available port
             proxy: {
                 // Proxy API requests to Miniflare
-                "/api": {
+                '/api': {
                     target: `http://localhost:${options.serverPort}`,
                     changeOrigin: true,
                 },
@@ -48,7 +48,7 @@ export async function createClientServer(
         // Disable config file to ensure CLI controls everything
         configFile: false,
         // Suppress Vite's own logging (we use our own logger)
-        logLevel: "warn",
+        logLevel: 'warn',
     });
 
     await server.listen();
@@ -61,10 +61,7 @@ export async function createClientServer(
  * @param root - Path to Vite project root (client directory)
  * @param options - Build configuration options
  */
-export async function buildClient(
-    root: string,
-    options: ClientBuildOptions,
-): Promise<void> {
+export async function buildClient(root: string, options: ClientBuildOptions): Promise<void> {
     await viteBuild({
         root,
         build: {
@@ -77,7 +74,7 @@ export async function buildClient(
         // Disable config file
         configFile: false,
         // Silent logging for clean CLI output
-        logLevel: "silent",
+        logLevel: 'silent',
     });
 }
 

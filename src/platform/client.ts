@@ -21,8 +21,7 @@
 import createClient from 'openapi-fetch';
 import type { paths } from './types.js';
 
-const PLATFORM_API_URL =
-  process.env.BKPER_PLATFORM_URL || 'https://platform.bkper.app';
+const PLATFORM_API_URL = process.env.BKPER_PLATFORM_URL || 'https://platform.bkper.app';
 
 /**
  * Creates a typed Platform API client.
@@ -32,12 +31,12 @@ const PLATFORM_API_URL =
  * @returns Typed openapi-fetch client
  */
 export function createPlatformClient(token: string, baseUrl = PLATFORM_API_URL) {
-  return createClient<paths>({
-    baseUrl,
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+    return createClient<paths>({
+        baseUrl,
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    });
 }
 
 /**

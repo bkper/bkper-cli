@@ -54,7 +54,7 @@ export function createLogger(prefix: LogPrefix): Logger {
         },
         debug(message: string): void {
             console.log(formatMessage(message));
-        }
+        },
     };
 }
 
@@ -67,12 +67,12 @@ export function formatSize(bytes: number): string {
     if (bytes < 1024) {
         return `${bytes} B`;
     }
-    
+
     const kb = bytes / 1024;
     if (kb < 1024) {
         return `${kb.toFixed(1)} KB`;
     }
-    
+
     const mb = kb / 1024;
     return `${mb.toFixed(1)} MB`;
 }
@@ -89,19 +89,19 @@ export function logDevServerBanner(options: {
     console.log('');
     console.log(`${icons.rocket} Bkper App Development Server`);
     console.log('');
-    
+
     if (options.clientUrl) {
         console.log(`   Web Client:   ${options.clientUrl}`);
     }
-    
+
     if (options.serverUrl) {
         console.log(`   Web Server:   ${options.serverUrl} (simulated)`);
     }
-    
+
     if (options.eventsUrl) {
         console.log(`   Events:       ${options.eventsUrl} (watching)`);
     }
-    
+
     console.log('');
     console.log('   Press Ctrl+C to stop');
     console.log('');
@@ -119,19 +119,31 @@ export function logBuildResults(results: {
     console.log('');
     console.log(`${icons.package} Building Bkper App...`);
     console.log('');
-    
+
     if (results.webClient) {
-        console.log(`   \u2713 Web client    \u2192 ${results.webClient.path.padEnd(20)} (${formatSize(results.webClient.size)})`);
+        console.log(
+            `   \u2713 Web client    \u2192 ${results.webClient.path.padEnd(20)} (${formatSize(
+                results.webClient.size
+            )})`
+        );
     }
-    
+
     if (results.webServer) {
-        console.log(`   \u2713 Web server    \u2192 ${results.webServer.path.padEnd(20)} (${formatSize(results.webServer.size)})`);
+        console.log(
+            `   \u2713 Web server    \u2192 ${results.webServer.path.padEnd(20)} (${formatSize(
+                results.webServer.size
+            )})`
+        );
     }
-    
+
     if (results.events) {
-        console.log(`   \u2713 Events        \u2192 ${results.events.path.padEnd(20)} (${formatSize(results.events.size)})`);
+        console.log(
+            `   \u2713 Events        \u2192 ${results.events.path.padEnd(20)} (${formatSize(
+                results.events.size
+            )})`
+        );
     }
-    
+
     console.log('');
     console.log(`${icons.success} Build complete`);
     console.log('');

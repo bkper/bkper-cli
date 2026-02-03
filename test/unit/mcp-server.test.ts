@@ -15,45 +15,45 @@ setMockBkper(createMockBkperForBooks(currentMockBooks));
 
 const { BkperMcpServer } = await import('../../src/mcp/server.js');
 
-describe('MCP Server - General Tests', function() {
-  let server: BkperMcpServerType;
+describe('MCP Server - General Tests', function () {
+    let server: BkperMcpServerType;
 
-  beforeEach(function() {
-    setupTestEnvironment();
-    currentMockBooks = mockBooks;
-    const mockBkper = createMockBkperForBooks(currentMockBooks);
-    setMockBkper(mockBkper);
-    server = new BkperMcpServer();
-  });
+    beforeEach(function () {
+        setupTestEnvironment();
+        currentMockBooks = mockBooks;
+        const mockBkper = createMockBkperForBooks(currentMockBooks);
+        setMockBkper(mockBkper);
+        server = new BkperMcpServer();
+    });
 
-  it('should return proper MCP error for unknown tool', async function() {
-    try {
-      await server.testCallTool('unknown_tool');
-      expect.fail('Should have thrown an error');
-    } catch (error) {
-      expect(error).to.be.an('error');
-      expect((error as Error).message).to.include('Unknown tool');
-    }
-  });
+    it('should return proper MCP error for unknown tool', async function () {
+        try {
+            await server.testCallTool('unknown_tool');
+            expect.fail('Should have thrown an error');
+        } catch (error) {
+            expect(error).to.be.an('error');
+            expect((error as Error).message).to.include('Unknown tool');
+        }
+    });
 
-  it('should have testListTools helper method for testing', async function() {
-    const response = await server.testListTools();
-    
-    expect(response).to.have.property('tools');
-    expect(response.tools).to.be.an('array');
-    expect(response.tools.length).to.be.greaterThan(0);
-  });
+    it('should have testListTools helper method for testing', async function () {
+        const response = await server.testListTools();
 
-  it('should have testCallTool helper method for testing', async function() {
-    // Test that the helper method exists and works with any tool
-    expect(server.testCallTool).to.be.a('function');
-    
-    // This should throw an error for unknown tool, proving the method works
-    try {
-      await server.testCallTool('non_existent_tool');
-      expect.fail('Should have thrown an error');
-    } catch (error) {
-      expect(error).to.be.an('error');
-    }
-  });
+        expect(response).to.have.property('tools');
+        expect(response.tools).to.be.an('array');
+        expect(response.tools.length).to.be.greaterThan(0);
+    });
+
+    it('should have testCallTool helper method for testing', async function () {
+        // Test that the helper method exists and works with any tool
+        expect(server.testCallTool).to.be.a('function');
+
+        // This should throw an error for unknown tool, proving the method works
+        try {
+            await server.testCallTool('non_existent_tool');
+            expect.fail('Should have thrown an error');
+        } catch (error) {
+            expect(error).to.be.an('error');
+        }
+    });
 });

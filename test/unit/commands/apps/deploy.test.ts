@@ -11,7 +11,7 @@ const testDir = path.join(__dirname, '../../fixtures/temp-undeploy-test');
  * These tests verify the error handling paths for the undeploy command.
  * The actual API calls would require integration tests with the Platform API.
  */
-describe('CLI - apps undeploy Command', function() {
+describe('CLI - apps undeploy Command', function () {
     const originalCwd = process.cwd();
     const originalExit = process.exit;
     let exitCode: number | undefined;
@@ -23,13 +23,13 @@ describe('CLI - apps undeploy Command', function() {
     // Store reference to the function we'll test
     let undeployApp: typeof import('../../../../src/commands/apps/index.js').undeployApp;
 
-    before(async function() {
+    before(async function () {
         // Import the function
         const apps = await import('../../../../src/commands/apps/index.js');
         undeployApp = apps.undeployApp;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         setupTestEnvironment();
         exitCode = undefined;
         consoleOutput = [];
@@ -47,14 +47,11 @@ describe('CLI - apps undeploy Command', function() {
 
         // Create temp directory with app config
         fs.mkdirSync(testDir, { recursive: true });
-        fs.writeFileSync(
-            path.join(testDir, 'bkperapp.yaml'),
-            'id: test-app\nname: Test App\n'
-        );
+        fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'id: test-app\nname: Test App\n');
         process.chdir(testDir);
     });
 
-    afterEach(function() {
+    afterEach(function () {
         process.chdir(originalCwd);
         process.exit = originalExit;
         console.log = originalConsoleLog;
@@ -66,8 +63,8 @@ describe('CLI - apps undeploy Command', function() {
         }
     });
 
-    describe('undeployApp - Config Loading', function() {
-        it('should exit with error when app config is missing', async function() {
+    describe('undeployApp - Config Loading', function () {
+        it('should exit with error when app config is missing', async function () {
             fs.unlinkSync(path.join(testDir, 'bkperapp.yaml'));
 
             try {
@@ -80,11 +77,8 @@ describe('CLI - apps undeploy Command', function() {
             expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
         });
 
-        it('should exit with error when app config has no id', async function() {
-            fs.writeFileSync(
-                path.join(testDir, 'bkperapp.yaml'),
-                'name: Test App Without ID\n'
-            );
+        it('should exit with error when app config has no id', async function () {
+            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'name: Test App Without ID\n');
 
             try {
                 await undeployApp({});
@@ -97,8 +91,8 @@ describe('CLI - apps undeploy Command', function() {
         });
     });
 
-    describe('undeployApp - Options', function() {
-        it('should accept deleteData option', function() {
+    describe('undeployApp - Options', function () {
+        it('should accept deleteData option', function () {
             // Verify the function signature accepts deleteData
             expect(undeployApp).to.be.a('function');
             // The function should accept an options object with deleteData
@@ -106,8 +100,8 @@ describe('CLI - apps undeploy Command', function() {
         });
     });
 
-    describe('Function exports', function() {
-        it('should export undeployApp function', function() {
+    describe('Function exports', function () {
+        it('should export undeployApp function', function () {
             expect(undeployApp).to.be.a('function');
         });
     });

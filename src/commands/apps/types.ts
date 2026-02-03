@@ -1,13 +1,13 @@
-import type { components } from "../../platform/types.js";
+import type { components } from '../../platform/types.js';
 
 // =============================================================================
 // OpenAPI Types
 // =============================================================================
 
-export type DeployResult = components["schemas"]["DeployResult"];
-export type UndeployResult = components["schemas"]["UndeployResult"];
-export type AppStatus = components["schemas"]["AppStatus"];
-export type ErrorResponse = components["schemas"]["ErrorResponse"];
+export type DeployResult = components['schemas']['DeployResult'];
+export type UndeployResult = components['schemas']['UndeployResult'];
+export type AppStatus = components['schemas']['AppStatus'];
+export type ErrorResponse = components['schemas']['ErrorResponse'];
 
 // =============================================================================
 // Command Options
@@ -30,15 +30,15 @@ export interface SecretsOptions {
 
 export interface SyncResult {
     id: string;
-    action: "created" | "updated";
+    action: 'created' | 'updated';
 }
 
 // =============================================================================
 // Internal Types
 // =============================================================================
 
-export type HandlerType = "web" | "events";
-export type Environment = "dev" | "prod";
+export type HandlerType = 'web' | 'events';
+export type Environment = 'dev' | 'prod';
 
 // =============================================================================
 // Deployment Configuration
@@ -48,7 +48,7 @@ export type Environment = "dev" | "prod";
  * Handler-specific deployment configuration (legacy bundle-based format)
  */
 export interface HandlerDeploymentConfig {
-    bundle: string;  // Path to worker bundle directory
+    bundle: string; // Path to worker bundle directory
     assets?: string; // Path to static assets directory (web only)
 }
 
@@ -58,7 +58,7 @@ export interface HandlerDeploymentConfig {
 export interface DeploymentConfig {
     web: HandlerDeploymentConfig;
     events: HandlerDeploymentConfig;
-    services?: string[];  // List of services (e.g., ['KV'])
+    services?: string[]; // List of services (e.g., ['KV'])
 }
 
 // =============================================================================
@@ -69,8 +69,8 @@ export interface DeploymentConfig {
  * Source-based handler configuration using TypeScript entry points
  */
 export interface SourceHandlerConfig {
-    main: string;     // TypeScript entry point (.ts file)
-    client?: string;  // Vite project root (web only)
+    main: string; // TypeScript entry point (.ts file)
+    client?: string; // Vite project root (web only)
 }
 
 /**
@@ -80,7 +80,7 @@ export interface SourceHandlerConfig {
 export interface SourceDeploymentConfig {
     web?: SourceHandlerConfig;
     events?: SourceHandlerConfig;
-    services?: string[];       // List of services (e.g., ['KV'])
-    secrets?: string[];        // List of secret names (e.g., ['API_KEY'])
+    services?: string[]; // List of services (e.g., ['KV'])
+    secrets?: string[]; // List of secret names (e.g., ['API_KEY'])
     compatibilityDate?: string; // camelCase in TS, maps from compatibility_date in YAML
 }

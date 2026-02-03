@@ -13,8 +13,8 @@ let generateDevVarsExample: typeof import('../../../src/dev/types.js').generateD
 let loadDevVars: typeof import('../../../src/dev/types.js').loadDevVars;
 let ensureTypesUpToDate: typeof import('../../../src/dev/types.js').ensureTypesUpToDate;
 
-describe('Types Generation Module', function() {
-    before(async function() {
+describe('Types Generation Module', function () {
+    before(async function () {
         const types = await import('../../../src/dev/types.js');
         generateEnvTypes = types.generateEnvTypes;
         generateDevVarsExample = types.generateDevVarsExample;
@@ -22,23 +22,23 @@ describe('Types Generation Module', function() {
         ensureTypesUpToDate = types.ensureTypesUpToDate;
     });
 
-    beforeEach(function() {
+    beforeEach(function () {
         setupTestEnvironment();
         // Create temp directory
         fs.mkdirSync(testDir, { recursive: true });
     });
 
-    afterEach(function() {
+    afterEach(function () {
         // Cleanup temp directory
         if (fs.existsSync(testDir)) {
             fs.rmSync(testDir, { recursive: true });
         }
     });
 
-    describe('generateEnvTypes', function() {
-        it('should generate types with KV service only', function() {
+    describe('generateEnvTypes', function () {
+        it('should generate types with KV service only', function () {
             const config = {
-                services: ['KV']
+                services: ['KV'],
             };
 
             const result = generateEnvTypes(config);
@@ -50,9 +50,9 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('// Secrets');
         });
 
-        it('should generate types with secrets only', function() {
+        it('should generate types with secrets only', function () {
             const config = {
-                secrets: ['API_KEY', 'WEBHOOK_URL']
+                secrets: ['API_KEY', 'WEBHOOK_URL'],
             };
 
             const result = generateEnvTypes(config);
@@ -65,10 +65,10 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('// Services');
         });
 
-        it('should generate types with both services and secrets', function() {
+        it('should generate types with both services and secrets', function () {
             const config = {
                 services: ['KV'],
-                secrets: ['API_KEY', 'WEBHOOK_URL']
+                secrets: ['API_KEY', 'WEBHOOK_URL'],
             };
 
             const result = generateEnvTypes(config);
@@ -82,7 +82,7 @@ describe('Types Generation Module', function() {
             expect(result).to.include('interface KVNamespace');
         });
 
-        it('should generate empty Env interface with empty config', function() {
+        it('should generate empty Env interface with empty config', function () {
             const config = {};
 
             const result = generateEnvTypes(config);
@@ -94,9 +94,9 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('// Secrets');
         });
 
-        it('should include KV helper types when KV service is present', function() {
+        it('should include KV helper types when KV service is present', function () {
             const config = {
-                services: ['KV']
+                services: ['KV'],
             };
 
             const result = generateEnvTypes(config);
@@ -111,9 +111,9 @@ describe('Types Generation Module', function() {
             expect(result).to.include('interface KVNamespaceListResult');
         });
 
-        it('should include ASSETS binding when hasStaticAssets is true', function() {
+        it('should include ASSETS binding when hasStaticAssets is true', function () {
             const config = {
-                hasStaticAssets: true
+                hasStaticAssets: true,
             };
 
             const result = generateEnvTypes(config);
@@ -123,11 +123,11 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('interface Fetcher');
         });
 
-        it('should include ASSETS binding alongside services and secrets', function() {
+        it('should include ASSETS binding alongside services and secrets', function () {
             const config = {
                 services: ['KV'],
                 secrets: ['API_KEY'],
-                hasStaticAssets: true
+                hasStaticAssets: true,
             };
 
             const result = generateEnvTypes(config);
@@ -139,10 +139,10 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('interface Fetcher');
         });
 
-        it('should not include ASSETS binding when hasStaticAssets is false', function() {
+        it('should not include ASSETS binding when hasStaticAssets is false', function () {
             const config = {
                 services: ['KV'],
-                hasStaticAssets: false
+                hasStaticAssets: false,
             };
 
             const result = generateEnvTypes(config);
@@ -151,9 +151,9 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('ASSETS:');
         });
 
-        it('should not include ASSETS binding when hasStaticAssets is not provided', function() {
+        it('should not include ASSETS binding when hasStaticAssets is not provided', function () {
             const config = {
-                services: ['KV']
+                services: ['KV'],
             };
 
             const result = generateEnvTypes(config);
@@ -163,8 +163,8 @@ describe('Types Generation Module', function() {
         });
     });
 
-    describe('generateDevVarsExample', function() {
-        it('should generate example with multiple secrets', function() {
+    describe('generateDevVarsExample', function () {
+        it('should generate example with multiple secrets', function () {
             const secrets = ['API_KEY', 'WEBHOOK_URL', 'SECRET_TOKEN'];
 
             const result = generateDevVarsExample(secrets);
@@ -176,7 +176,7 @@ describe('Types Generation Module', function() {
             expect(result).to.include('SECRET_TOKEN=your-secret-token-here');
         });
 
-        it('should generate minimal content with empty array', function() {
+        it('should generate minimal content with empty array', function () {
             const secrets: string[] = [];
 
             const result = generateDevVarsExample(secrets);
@@ -187,7 +187,7 @@ describe('Types Generation Module', function() {
             expect(result).not.to.include('=your-');
         });
 
-        it('should convert secret names to placeholder format', function() {
+        it('should convert secret names to placeholder format', function () {
             const secrets = ['MY_SECRET_KEY'];
 
             const result = generateDevVarsExample(secrets);
@@ -196,8 +196,8 @@ describe('Types Generation Module', function() {
         });
     });
 
-    describe('loadDevVars', function() {
-        it('should load key-value pairs from valid .dev.vars file', function() {
+    describe('loadDevVars', function () {
+        it('should load key-value pairs from valid .dev.vars file', function () {
             const devVarsContent = `API_KEY=test-api-key
 WEBHOOK_URL=https://example.com/webhook
 SECRET_TOKEN=abc123`;
@@ -208,17 +208,17 @@ SECRET_TOKEN=abc123`;
             expect(result).to.deep.equal({
                 API_KEY: 'test-api-key',
                 WEBHOOK_URL: 'https://example.com/webhook',
-                SECRET_TOKEN: 'abc123'
+                SECRET_TOKEN: 'abc123',
             });
         });
 
-        it('should return empty object when .dev.vars file does not exist', function() {
+        it('should return empty object when .dev.vars file does not exist', function () {
             const result = loadDevVars(testDir, ['API_KEY']);
 
             expect(result).to.deep.equal({});
         });
 
-        it('should warn about missing secrets but not block', function() {
+        it('should warn about missing secrets but not block', function () {
             const devVarsContent = `API_KEY=test-api-key`;
             fs.writeFileSync(path.join(testDir, '.dev.vars'), devVarsContent);
 
@@ -230,7 +230,7 @@ SECRET_TOKEN=abc123`;
                 const result = loadDevVars(testDir, ['API_KEY', 'MISSING_SECRET']);
 
                 expect(result).to.deep.equal({
-                    API_KEY: 'test-api-key'
+                    API_KEY: 'test-api-key',
                 });
                 expect(consoleWarnings.some(w => w.includes('MISSING_SECRET'))).to.be.true;
             } finally {
@@ -238,7 +238,7 @@ SECRET_TOKEN=abc123`;
             }
         });
 
-        it('should handle comments and empty lines in .dev.vars', function() {
+        it('should handle comments and empty lines in .dev.vars', function () {
             const devVarsContent = `# This is a comment
 API_KEY=test-key
 
@@ -250,27 +250,27 @@ WEBHOOK_URL=https://example.com`;
 
             expect(result).to.deep.equal({
                 API_KEY: 'test-key',
-                WEBHOOK_URL: 'https://example.com'
+                WEBHOOK_URL: 'https://example.com',
             });
         });
 
-        it('should handle values with equals signs', function() {
+        it('should handle values with equals signs', function () {
             const devVarsContent = `API_KEY=key=with=equals`;
             fs.writeFileSync(path.join(testDir, '.dev.vars'), devVarsContent);
 
             const result = loadDevVars(testDir, ['API_KEY']);
 
             expect(result).to.deep.equal({
-                API_KEY: 'key=with=equals'
+                API_KEY: 'key=with=equals',
             });
         });
     });
 
-    describe('ensureTypesUpToDate', function() {
-        it('should create env.d.ts if it does not exist', function() {
+    describe('ensureTypesUpToDate', function () {
+        it('should create env.d.ts if it does not exist', function () {
             const config = {
                 services: ['KV'],
-                secrets: ['API_KEY']
+                secrets: ['API_KEY'],
             };
 
             ensureTypesUpToDate(config, testDir);
@@ -283,9 +283,9 @@ WEBHOOK_URL=https://example.com`;
             expect(content).to.include('API_KEY: string');
         });
 
-        it('should create .dev.vars.example if it does not exist', function() {
+        it('should create .dev.vars.example if it does not exist', function () {
             const config = {
-                secrets: ['API_KEY', 'WEBHOOK_URL']
+                secrets: ['API_KEY', 'WEBHOOK_URL'],
             };
 
             ensureTypesUpToDate(config, testDir);
@@ -298,10 +298,10 @@ WEBHOOK_URL=https://example.com`;
             expect(content).to.include('WEBHOOK_URL=your-webhook-url-here');
         });
 
-        it('should warn and update env.d.ts if content differs', function() {
+        it('should warn and update env.d.ts if content differs', function () {
             const config = {
                 services: ['KV'],
-                secrets: ['API_KEY']
+                secrets: ['API_KEY'],
             };
 
             // Create outdated env.d.ts
@@ -327,10 +327,10 @@ WEBHOOK_URL=https://example.com`;
             }
         });
 
-        it('should not warn if env.d.ts content matches', function() {
+        it('should not warn if env.d.ts content matches', function () {
             const config = {
                 services: ['KV'],
-                secrets: ['API_KEY']
+                secrets: ['API_KEY'],
             };
 
             // First run to create the file
@@ -350,9 +350,9 @@ WEBHOOK_URL=https://example.com`;
             }
         });
 
-        it('should handle config with no secrets (no .dev.vars.example created)', function() {
+        it('should handle config with no secrets (no .dev.vars.example created)', function () {
             const config = {
-                services: ['KV']
+                services: ['KV'],
             };
 
             ensureTypesUpToDate(config, testDir);
