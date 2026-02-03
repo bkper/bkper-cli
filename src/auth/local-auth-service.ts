@@ -3,6 +3,7 @@ import http from 'http';
 import { Credentials, OAuth2Client, CodeChallengeMethod } from 'google-auth-library';
 import os from 'os';
 import crypto from 'crypto';
+import { generateAuthPage } from './auth-page.js';
 
 /**
  * OAuth configuration for Bkper CLI.
@@ -134,7 +135,11 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                         // Only send success response after token exchange succeeds
                         res.writeHead(200, { 'Content-Type': 'text/html' });
                         res.end(
-                            '<html><body><h1>Authentication successful!</h1><p>You can close this window and return to the terminal.</p></body></html>'
+                            generateAuthPage({
+                                type: 'success',
+                                title: 'Authentication Successful',
+                                message: 'You have been successfully authenticated with Bkper CLI.',
+                            })
                         );
 
                         // Close the server and all connections
@@ -146,9 +151,11 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                         const error = searchParams.get('error');
                         res.writeHead(400, { 'Content-Type': 'text/html' });
                         res.end(
-                            `<html><body><h1>Authentication failed</h1><p>${
-                                error || 'No authorization code received'
-                            }</p></body></html>`
+                            generateAuthPage({
+                                type: 'error',
+                                title: 'Authentication Failed',
+                                message: error || 'No authorization code received.',
+                            })
                         );
                         server.closeAllConnections();
                         server.close();
@@ -159,7 +166,11 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                 const errorMessage = err instanceof Error ? err.message : String(err);
                 res.writeHead(500, { 'Content-Type': 'text/html' });
                 res.end(
-                    `<html><body><h1>Authentication error</h1><p>${errorMessage}</p></body></html>`
+                    generateAuthPage({
+                        type: 'error',
+                        title: 'Authentication Error',
+                        message: errorMessage,
+                    })
                 );
                 server.closeAllConnections();
                 server.close();
