@@ -10,6 +10,7 @@ export const TestConfig = {
   APP_TEMPLATE_PATH: '../bkper-app-template',
   APP_ID: 'my-app',
   PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
+  FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',
   DEV_WEB_URL: 'https://my-app-dev.bkper.app',
   DEV_EVENTS_URL: 'https://my-app-dev.bkper.app/events',
   HTTP_TIMEOUT: 10000,
@@ -17,6 +18,37 @@ export const TestConfig = {
   POLL_INTERVAL: 2000,
   POLL_MAX_ATTEMPTS: 30,
 } as const;
+
+/**
+ * Determine which platform URL to use (localhost:8790 or fallback to dev)
+ */
+export async function determinePlatformUrl(): Promise<string | null> {
+  // First try localhost
+  try {
+    const response = await fetch(`${TestConfig.PLATFORM_URL}/api/health`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (response.ok) {
+      return TestConfig.PLATFORM_URL;
+    }
+  } catch {
+    // Localhost not available, try fallback
+  }
+
+  // Try fallback URL
+  try {
+    const response = await fetch(`${TestConfig.FALLBACK_PLATFORM_URL}/api/health`, {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (response.ok) {
+      return TestConfig.FALLBACK_PLATFORM_URL;
+    }
+  } catch {
+    // Fallback also not available
+  }
+
+  return null;
+}
 
 /**
  * Check if platform worker is accessible at localhost:8790

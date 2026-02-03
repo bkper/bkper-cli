@@ -1,33 +1,57 @@
 import { spawn, type ChildProcess } from 'child_process';
-import { TestConfig } from '../../helpers.js';
+import { TestConfig, determinePlatformUrl } from '../../helpers.js';
 import fs from 'fs';
 import path from 'path';
 import { expect } from 'chai';
 
 const CLI_PATH = '/workspace/bkper-cli/lib/cli.js';
 const API_URL = process.env.BKPER_API_URL || 'https://api-dev.bkper.app';
-const PLATFORM_URL = TestConfig.PLATFORM_URL;
+
+// Dynamic platform URL - set during test setup
+let dynamicPlatformUrl: string | null = null;
+
+/**
+ * Initialize the platform URL for tests (tries localhost, falls back to dev)
+ */
+export async function initializePlatformUrl(): Promise<string | null> {
+  dynamicPlatformUrl = await determinePlatformUrl();
+  return dynamicPlatformUrl;
+}
+
+/**
+ * Get the currently configured platform URL
+ */
+export function getPlatformUrl(): string {
+  if (!dynamicPlatformUrl) {
+    throw new Error('Platform URL not initialized. Call initializePlatformUrl() first.');
+  }
+  return dynamicPlatformUrl;
+}
 
 /**
  * Run a CLI command and wait for completion
  */
-export async function runCli(args: string[], cwd: string): Promise<void> {
+export async function runCli(args: string[], cwd: string, envOverrides?: Record<string, string>): Promise<void> {
+  const platformUrl = dynamicPlatformUrl || TestConfig.PLATFORM_URL;
   await runCommand('node', [CLI_PATH, ...args], cwd, {
-    BKPER_PLATFORM_URL: PLATFORM_URL,
-    BKPER_API_URL: API_URL,
+    BKPER_PLATFORM_URL: envOverrides?.BKPER_PLATFORM_URL || platformUrl,
+    BKPER_API_URL: envOverrides?.BKPER_API_URL || API_URL,
+    ...envOverrides,
   });
 }
 
 /**
  * Start a CLI command and return the process (for long-running commands like dev)
  */
-export function startCli(args: string[], cwd: string): ChildProcess {
+export function startCli(args: string[], cwd: string, envOverrides?: Record<string, string>): ChildProcess {
+  const platformUrl = dynamicPlatformUrl || TestConfig.PLATFORM_URL;
   const child = spawn('node', [CLI_PATH, ...args], {
     cwd,
     env: {
       ...process.env,
-      BKPER_PLATFORM_URL: PLATFORM_URL,
-      BKPER_API_URL: API_URL,
+      BKPER_PLATFORM_URL: envOverrides?.BKPER_PLATFORM_URL || platformUrl,
+      BKPER_API_URL: envOverrides?.BKPER_API_URL || API_URL,
+      ...envOverrides,
     },
     stdio: 'pipe',
   });
