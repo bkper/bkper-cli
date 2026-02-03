@@ -2,16 +2,24 @@ import fs from 'fs';
 import http from 'http';
 import { Credentials, OAuth2Client, CodeChallengeMethod } from 'google-auth-library';
 import os from 'os';
-import { createRequire } from 'module';
-import { fileURLToPath } from 'url';
-import path from 'path';
 import crypto from 'crypto';
 
-const require = createRequire(import.meta.url);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const keys = require(`${__dirname}/keys.json`);
+/**
+ * OAuth configuration for Bkper CLI.
+ * Uses PKCE (Proof Key for Code Exchange) for enhanced security.
+ *
+ * Note: Google requires client_secret even for desktop apps with PKCE.
+ * For desktop/CLI apps, Google considers the client_secret "not confidential"
+ * as it can be extracted from distributed applications. The real security
+ * comes from PKCE, user consent, and secure token storage.
+ *
+ * See: https://developers.google.com/identity/protocols/oauth2/native-app
+ */
+const OAUTH_CONFIG = {
+    clientId: '927657669669-ig60i5ic9i9esdc8q59plardm11fuubc.apps.googleusercontent.com',
+    clientSecret: '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',
+    redirectUri: 'http://localhost:3000/oauth2callback',
+};
 
 let storedCredentials: Credentials;
 
@@ -86,8 +94,9 @@ async function authenticateLocal(): Promise<OAuth2Client> {
     const pkceCodes = generatePKCECodes();
 
     const oAuth2Client = new OAuth2Client({
-        clientId: keys.installed.client_id,
-        redirectUri: keys.installed.redirect_uris[0],
+        clientId: OAUTH_CONFIG.clientId,
+        clientSecret: OAUTH_CONFIG.clientSecret,
+        redirectUri: OAUTH_CONFIG.redirectUri,
     });
 
     // Generate the authorization URL with PKCE code challenge
@@ -104,7 +113,7 @@ async function authenticateLocal(): Promise<OAuth2Client> {
 
     return new Promise((resolve, reject) => {
         // Extract port from redirect URI
-        const redirectUrl = new URL(keys.installed.redirect_uris[0]);
+        const redirectUrl = new URL(OAUTH_CONFIG.redirectUri);
         const port = parseInt(redirectUrl.port) || 3000;
 
         const server = http.createServer(async (req, res) => {
@@ -114,17 +123,19 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                     const code = searchParams.get('code');
 
                     if (code) {
-                        res.writeHead(200, { 'Content-Type': 'text/html' });
-                        res.end(
-                            '<html><body><h1>Authentication successful!</h1><p>You can close this window and return to the terminal.</p></body></html>'
-                        );
-
                         // Exchange the authorization code for tokens using PKCE
+                        // Do this BEFORE sending response so we can show error if it fails
                         const { tokens } = await oAuth2Client.getToken({
                             code: code,
                             codeVerifier: pkceCodes.codeVerifier,
                         });
                         oAuth2Client.setCredentials(tokens);
+
+                        // Only send success response after token exchange succeeds
+                        res.writeHead(200, { 'Content-Type': 'text/html' });
+                        res.end(
+                            '<html><body><h1>Authentication successful!</h1><p>You can close this window and return to the terminal.</p></body></html>'
+                        );
 
                         // Close the server and all connections
                         server.closeAllConnections();
@@ -145,8 +156,11 @@ async function authenticateLocal(): Promise<OAuth2Client> {
                     }
                 }
             } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : String(err);
                 res.writeHead(500, { 'Content-Type': 'text/html' });
-                res.end('<html><body><h1>Authentication error</h1></body></html>');
+                res.end(
+                    `<html><body><h1>Authentication error</h1><p>${errorMessage}</p></body></html>`
+                );
                 server.closeAllConnections();
                 server.close();
                 reject(err);
@@ -174,8 +188,9 @@ export async function getOAuthToken(): Promise<string> {
 
     if (storedCredentials) {
         localAuth = new OAuth2Client({
-            clientId: keys.installed.client_id,
-            redirectUri: keys.installed.redirect_uris[0],
+            clientId: OAUTH_CONFIG.clientId,
+            clientSecret: OAUTH_CONFIG.clientSecret,
+            redirectUri: OAUTH_CONFIG.redirectUri,
         });
         localAuth.setCredentials(storedCredentials);
     } else {
