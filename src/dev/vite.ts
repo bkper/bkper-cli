@@ -1,5 +1,6 @@
-import { createServer, build as viteBuild, ViteDevServer } from 'vite';
+import { createServer, build as viteBuild, ViteDevServer, Plugin } from 'vite';
 import path from 'path';
+import { createAuthMiddleware } from './auth-middleware.js';
 
 /**
  * Options for creating a Vite client dev server
@@ -22,15 +23,22 @@ export interface ClientBuildOptions {
 /**
  * Creates and starts a Vite dev server for the client.
  * Configures proxy to forward /api requests to Miniflare.
+ * Adds middleware to handle /auth/refresh for local development auth.
  *
  * @param root - Path to Vite project root (client directory)
  * @param options - Server configuration options
  * @returns Running Vite dev server instance
  */
-export async function createClientServer(
-    root: string,
-    options: ClientServerOptions
-): Promise<ViteDevServer> {
+export async function createClientServer(root: string, options: ClientServerOptions): Promise<ViteDevServer> {
+    // Plugin to add auth middleware for local development
+    const authPlugin: Plugin = {
+        name: 'bkper-dev-auth',
+        configureServer(server) {
+            // Add middleware before other handlers
+            server.middlewares.use(createAuthMiddleware());
+        },
+    };
+
     const server = await createServer({
         root,
         server: {
@@ -45,6 +53,7 @@ export async function createClientServer(
                 },
             },
         },
+        plugins: [authPlugin],
         // Disable config file to ensure CLI controls everything
         configFile: false,
         // Suppress Vite's own logging (we use our own logger)
@@ -66,9 +75,7 @@ export async function buildClient(root: string, options: ClientBuildOptions): Pr
         root,
         build: {
             // IMPORTANT: Use absolute path to ensure output goes to project root
-            outDir: path.isAbsolute(options.outDir)
-                ? options.outDir
-                : path.resolve(process.cwd(), options.outDir),
+            outDir: path.isAbsolute(options.outDir) ? options.outDir : path.resolve(process.cwd(), options.outDir),
             emptyOutDir: true,
         },
         // Disable config file
