@@ -7,7 +7,7 @@
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.13.1",
         "bkper": "^3.8.0",
-        "bkper-js": "^2.26.1",
+        "bkper-js": "^2.28.0",
         "chokidar": "^5.0.0",
         "commander": "^6.2.1",
         "dotenv": "^8.2.0",
@@ -22,7 +22,7 @@
         "yaml": "^2.5.1",
       },
       "devDependencies": {
-        "@bkper/bkper-api-types": "^5.34.0",
+        "@bkper/bkper-api-types": "^5.35.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^10.0.0",
         "@types/node": "^22.5.1",
@@ -51,7 +51,7 @@
 
     "@babel/runtime": ["@babel/runtime@7.28.4", "", {}, "sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ=="],
 
-    "@bkper/bkper-api-types": ["@bkper/bkper-api-types@5.34.0", "", {}, "sha512-CCXMmLPdQC547I9CgHW7q7JNNosTuPB1jpeWfO2/kw5LhhxtLO3/GrOaTgq0zWrzEGHCIWJsXKZvEOj0BF45Wg=="],
+    "@bkper/bkper-api-types": ["@bkper/bkper-api-types@5.35.0", "", {}, "sha512-mj9bkl01IN5Wb7nx2e/m1L8tGw6j27pCiLYPynp8qG0K9oVR2RlWRb2wCPVpRyuc82b5nrDEKK74kRsVH4f42Q=="],
 
     "@cloudflare/workerd-darwin-64": ["@cloudflare/workerd-darwin-64@1.20260128.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-XJN8zWWNG3JwAUqqwMLNKJ9fZfdlQkx/zTTHW/BB8wHat9LjKD6AzxqCu432YmfjR+NxEKCzUOxMu1YOxlVxmg=="],
 
@@ -363,7 +363,7 @@
 
     "bkper": ["bkper@3.8.0", "", { "dependencies": { "@google-cloud/local-auth": "^3.0.1", "@modelcontextprotocol/sdk": "^1.13.1", "bkper-js": "^2.19.0", "commander": "^6.2.1", "dotenv": "^8.2.0", "google-auth-library": "^9.14.0", "yaml": "^2.5.1" }, "bin": { "bkper": "lib/cli.js" } }, "sha512-zB/8o0lVG50xt2nwVW0TR72f+7ogtFBcSsZrDUjdCj0aQQTA+UJgmatZtAKmEflA804Aaiee6fvRgeBsd58WkQ=="],
 
-    "bkper-js": ["bkper-js@2.26.1", "", { "dependencies": { "@bkper/bkper-api-types": "^5.34.0", "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" } }, "sha512-aJjs+VTA2Sp70B5m++IWLgK7PpAuHiscnP8guQ/GPVgg0XVHBj9vqEdMH0OUorULLUU7criEKdbhtG1NGXQbZA=="],
+    "bkper-js": ["bkper-js@2.28.0", "", { "dependencies": { "@bkper/bkper-api-types": "^5.35.0", "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" } }, "sha512-BGZGViJQRsG4q9UR/dE3DKEhBOw8P77cB93JJPLAazZS2xDVgaF6f+1V8GvSvav7176Ekrg4kEdniT+YXVpNww=="],
 
     "body-parser": ["body-parser@2.2.0", "", { "dependencies": { "bytes": "^3.1.2", "content-type": "^1.0.5", "debug": "^4.4.0", "http-errors": "^2.0.0", "iconv-lite": "^0.6.3", "on-finished": "^2.4.1", "qs": "^6.14.0", "raw-body": "^3.0.0", "type-is": "^2.0.0" } }, "sha512-02qvAaxv8tp7fBa/mw1ga98OGm+eCbqzJOKoRt70sLmfEEi+jyBYVTDGfCL/k06/4EMk/z01gCe7HoCH/f2LTg=="],
 
