@@ -142,16 +142,20 @@ appCommand
 appCommand
     .command('dev')
     .description('Start the development server')
-    .option('-p, --port <port>', 'Client dev server port', '5173')
-    .option('-s, --server-port <port>', 'Server simulation port', '8787')
-    .option('-e, --events-port <port>', 'Events handler port', '8791')
+    .option('-cp, --client-port <port>', 'Client dev server port', '5173')
+    .option('-sp, --server-port <port>', 'Server simulation port', '8787')
+    .option('-ep, --events-port <port>', 'Events handler port', '8791')
+    .option('-w, --web', 'Run only the web handler')
+    .option('-e, --events', 'Run only the events handler')
     .action(async options => {
         try {
             setupBkper();
             await dev({
-                port: parseInt(options.port, 10),
+                clientPort: parseInt(options.clientPort, 10),
                 serverPort: parseInt(options.serverPort, 10),
                 eventsPort: parseInt(options.eventsPort, 10),
+                web: options.web,
+                events: options.events,
             });
         } catch (err) {
             console.error('Error starting dev server:', err);

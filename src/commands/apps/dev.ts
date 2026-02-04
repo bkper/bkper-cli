@@ -20,11 +20,15 @@ import { runCleanupStep } from '../../dev/cleanup.js';
  */
 export interface DevOptions {
     /** Client dev server port (default: 5173) */
-    port?: number;
+    clientPort?: number;
     /** Server simulation port (default: 8787) */
     serverPort?: number;
     /** Events handler port (default: 8791) */
     eventsPort?: number;
+    /** Run only the web handler */
+    web?: boolean;
+    /** Run only the events handler */
+    events?: boolean;
 }
 
 /**
@@ -55,6 +59,27 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         console.error('      client: packages/web/client');
         process.exit(1);
     }
+
+    // Check what's configured in bkper.yaml
+    const webConfigured = !!deployConfig.web?.main;
+    const eventsConfigured = !!deployConfig.events?.main;
+
+    // Validate flags against configuration (early validation before heavy operations)
+    if (options.web && !webConfigured) {
+        console.error('--web specified but no web handler configured in bkper.yaml');
+        process.exit(1);
+    }
+    if (options.events && !eventsConfigured) {
+        console.error('--events specified but no events handler configured in bkper.yaml');
+        process.exit(1);
+    }
+
+    // Determine what to run based on flags
+    // If no flags specified, run everything configured (backwards compatible)
+    // If flags specified, run only what's requested
+    const explicitMode = options.web || options.events;
+    const hasWeb = webConfigured && (!explicitMode || options.web);
+    const hasEvents = eventsConfigured && (!explicitMode || options.events);
 
     // Ensure types are up to date
     typesLogger.info('Checking types...');
@@ -94,12 +119,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     // Load dev vars (secrets for local development)
     const devVars = loadDevVars(process.cwd(), deployConfig.secrets || []);
 
-    const clientPort = options.port || 5173;
+    const clientPort = options.clientPort || 5173;
     const serverPort = options.serverPort || 8787;
     const eventsPort = options.eventsPort || 8791;
-
-    const hasWeb = !!deployConfig.web?.main;
-    const hasEvents = !!deployConfig.events?.main;
 
     let mf: Miniflare | null = null;
     let eventsMf: Miniflare | null = null;
@@ -117,84 +139,73 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         if (!cleanupKeepAlive) {
             cleanupKeepAlive = setInterval(() => {}, 1000);
         }
-        console.log('\n\nShutting down...');
-        eventsLogger.info('Cleanup handler started');
+        process.stdout.write('\n\nShutting down...');
+
         const appId = appConfig.id;
-        const cleanupSteps: Promise<void>[] = [];
-        cleanupSteps.push(
-            runCleanupStep({
-                label: 'client server',
-                timeoutMs: 5000,
-                logger: eventsLogger,
-                action: async () => {
-                    if (vite) await stopClientServer(vite);
-                },
-            })
-        );
-        cleanupSteps.push(
-            runCleanupStep({
-                label: 'web worker',
-                timeoutMs: 5000,
-                logger: eventsLogger,
-                action: async () => {
-                    if (mf) await stopWorkerServer(mf);
-                },
-            })
-        );
-        cleanupSteps.push(
-            runCleanupStep({
-                label: 'events worker',
-                timeoutMs: 5000,
-                logger: eventsLogger,
-                action: async () => {
-                    if (eventsMf) await stopWorkerServer(eventsMf);
-                },
-            })
-        );
-        cleanupSteps.push(
-            runCleanupStep({
-                label: 'events tunnel',
-                timeoutMs: 5000,
-                logger: eventsLogger,
-                action: async () => {
-                    if (eventsTunnel) {
-                        eventsLogger.info('Stopping tunnel...');
-                        await eventsTunnel.stop();
-                        eventsLogger.success('Tunnel stopped');
-                    }
-                },
-            })
-        );
-        if (hasEvents && appId) {
-            if (!isLoggedIn()) {
-                eventsLogger.warn('Not logged in. Skipping webhookUrlDev cleanup.');
-            } else {
-                cleanupSteps.push(
-                    runCleanupStep({
-                        label: 'webhookUrlDev',
-                        timeoutMs: 5000,
-                        logger: eventsLogger,
-                        action: async () => {
+        const warnings: string[] = [];
+
+        // Run all cleanup in parallel, collect warnings
+        await Promise.allSettled(
+            [
+                runCleanupStep({
+                    label: 'vite',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (vite) await stopClientServer(vite);
+                    },
+                }),
+                runCleanupStep({
+                    label: 'web',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (mf) await stopWorkerServer(mf);
+                    },
+                }),
+                runCleanupStep({
+                    label: 'events',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (eventsMf) await stopWorkerServer(eventsMf);
+                    },
+                }),
+                runCleanupStep({
+                    label: 'tunnel',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (eventsTunnel) await eventsTunnel.stop();
+                    },
+                }),
+                runCleanupStep({
+                    label: 'webhookUrlDev',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (hasEvents && appId && isLoggedIn()) {
                             await updateWebhookUrlDev(appId, null);
-                            eventsLogger.success('webhookUrlDev cleared');
-                        },
-                    })
-                );
-            }
+                        }
+                    },
+                }),
+            ].map(step =>
+                step.catch(err => {
+                    warnings.push(err.message);
+                })
+            )
+        );
+
+        if (warnings.length > 0) {
+            console.log(` (${warnings.join(', ')})`);
+        } else {
+            console.log(' done.');
         }
-        await Promise.allSettled(cleanupSteps);
-        console.log('Shutdown complete.');
         if (cleanupKeepAlive) {
             clearInterval(cleanupKeepAlive);
             cleanupKeepAlive = null;
         }
         process.exit(0);
     };
-    process.on('exit', code => {
+    process.on('exit', () => {
         if (!cleaningUp) {
-            console.log('\n\nShutting down...');
+            console.log('\n\nShutting down... done.');
         }
-        eventsLogger.info(`Process exit with code ${code ?? 0}`);
     });
     process.stdin.resume();
 
@@ -376,18 +387,16 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     logDevServerBanner({
         clientUrl: hasWeb && vite ? getServerUrl(vite) : undefined,
         serverUrl: hasWeb ? `http://localhost:${serverPort}` : undefined,
-        eventsUrl: hasEvents ? eventsUrl : undefined,
+        eventsUrl: hasEvents ? `http://localhost:${eventsPort}/events` : undefined,
     });
 
     process.removeAllListeners('SIGINT');
     process.removeAllListeners('SIGTERM');
     process.once('SIGINT', async () => {
-        eventsLogger.info('Received SIGINT');
         process.exitCode = 0;
         await cleanup();
     });
     process.once('SIGTERM', async () => {
-        eventsLogger.info('Received SIGTERM');
         process.exitCode = 0;
         await cleanup();
     });

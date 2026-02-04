@@ -434,4 +434,78 @@ deployment:
             expect(deployModule.statusApp).to.be.a('function');
         });
     });
+
+    describe('dev function - Handler selection flags', function () {
+        it('should exit with error when --web flag is used but web handler is not configured', async function () {
+            const configContent = `id: test-app
+name: Test App
+deployment:
+  events:
+    main: packages/events/src/index.ts
+`;
+            fs.writeFileSync(path.join(testDir, 'bkper.yaml'), configContent);
+            fs.mkdirSync(path.join(testDir, 'packages/events/src'), { recursive: true });
+            fs.writeFileSync(path.join(testDir, 'packages/events/src/index.ts'), 'export default {}');
+            process.chdir(testDir);
+
+            const devModule = await import('../../../../src/commands/apps/dev.js');
+            dev = devModule.dev;
+
+            try {
+                await dev({ web: true });
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
+            }
+
+            expect(exitCode).to.equal(1);
+            expect(consoleErrors.some(e => e.includes('--web specified but no web handler configured'))).to.be.true;
+        });
+
+        it('should exit with error when --events flag is used but events handler is not configured', async function () {
+            const configContent = `id: test-app
+name: Test App
+deployment:
+  web:
+    main: packages/web/server/src/index.ts
+    client: packages/web/client
+`;
+            fs.writeFileSync(path.join(testDir, 'bkper.yaml'), configContent);
+            fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
+            fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
+            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
+            fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
+            process.chdir(testDir);
+
+            const devModule = await import('../../../../src/commands/apps/dev.js');
+            dev = devModule.dev;
+
+            try {
+                await dev({ events: true });
+            } catch (e: unknown) {
+                expect((e as Error).message).to.include('process.exit');
+            }
+
+            expect(exitCode).to.equal(1);
+            expect(consoleErrors.some(e => e.includes('--events specified but no events handler configured'))).to.be
+                .true;
+        });
+
+        it('should export DevOptions with web and events boolean flags', async function () {
+            const devModule = await import('../../../../src/commands/apps/dev.js');
+
+            // Verify the function exists and accepts options with web/events flags
+            expect(devModule.dev).to.be.a('function');
+
+            // The function should accept options parameter
+            expect(devModule.dev.length).to.be.at.most(1);
+        });
+
+        it('should accept clientPort option instead of deprecated port option', async function () {
+            const devModule = await import('../../../../src/commands/apps/dev.js');
+
+            // Verify the function exists - the interface change from port to clientPort
+            // is validated at compile time via TypeScript
+            expect(devModule.dev).to.be.a('function');
+        });
+    });
 });

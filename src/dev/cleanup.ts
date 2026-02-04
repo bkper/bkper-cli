@@ -1,39 +1,27 @@
-export interface CleanupLogger {
-    info(message: string): void;
-    success(message: string): void;
-    warn(message: string): void;
-    error(message: string): void;
-}
-
 export interface CleanupStepOptions {
     label: string;
     timeoutMs: number;
     action: () => Promise<void>;
-    logger?: CleanupLogger;
 }
 
+/**
+ * Runs a cleanup step with timeout. Throws on timeout or failure.
+ */
 export async function runCleanupStep(options: CleanupStepOptions): Promise<void> {
-    const { label, timeoutMs, action, logger } = options;
-
-    logger?.info(`Cleaning up: ${label}...`);
+    const { label, timeoutMs, action } = options;
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<void>((_resolve, reject) => {
         timeoutId = setTimeout(() => {
-            reject(new Error('timeout'));
+            reject(new Error(`${label} cleanup timed out`));
         }, timeoutMs);
     });
 
     try {
         await Promise.race([action(), timeoutPromise]);
-        logger?.success(`Cleanup done: ${label}`);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
-        if (message === 'timeout') {
-            logger?.warn(`Cleanup timeout: ${label} after ${timeoutMs}ms`);
-        } else {
-            logger?.warn(`Cleanup failed: ${label} (${message})`);
-        }
+        throw new Error(`${label}: ${message}`);
     } finally {
         if (timeoutId) {
             clearTimeout(timeoutId);

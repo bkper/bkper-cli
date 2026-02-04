@@ -6,46 +6,51 @@ describe('cleanup helpers', function () {
         setupTestEnvironment();
     });
 
-    it('should log success when action completes', async function () {
-        const logs: string[] = [];
-        const logger = {
-            info: (message: string) => logs.push(message),
-            success: (message: string) => logs.push(message),
-            warn: (message: string) => logs.push(message),
-            error: (message: string) => logs.push(message),
-        };
-
+    it('should resolve when action completes', async function () {
         await runCleanupStep({
             label: 'sample',
             timeoutMs: 50,
-            logger,
             action: async () => Promise.resolve(),
         });
-
-        expect(logs[0]).to.equal('Cleaning up: sample...');
-        expect(logs[1]).to.equal('Cleanup done: sample');
+        // No error thrown = success
     });
 
-    it('should warn on timeout and continue', async function () {
-        const logs: string[] = [];
-        const logger = {
-            info: (message: string) => logs.push(message),
-            success: (message: string) => logs.push(message),
-            warn: (message: string) => logs.push(message),
-            error: (message: string) => logs.push(message),
-        };
+    it('should throw on timeout', async function () {
+        let error: Error | null = null;
+        try {
+            await runCleanupStep({
+                label: 'slow',
+                timeoutMs: 10,
+                action: async () =>
+                    new Promise<void>(resolve => {
+                        setTimeout(resolve, 100);
+                    }),
+            });
+        } catch (err) {
+            error = err as Error;
+        }
 
-        await runCleanupStep({
-            label: 'slow',
-            timeoutMs: 10,
-            logger,
-            action: async () =>
-                new Promise<void>(resolve => {
-                    setTimeout(resolve, 50);
-                }),
-        });
+        expect(error).to.not.be.null;
+        expect(error!.message).to.include('slow');
+        expect(error!.message).to.include('timed out');
+    });
 
-        expect(logs[0]).to.equal('Cleaning up: slow...');
-        expect(logs[1]).to.equal('Cleanup timeout: slow after 10ms');
+    it('should throw on action failure', async function () {
+        let error: Error | null = null;
+        try {
+            await runCleanupStep({
+                label: 'failing',
+                timeoutMs: 100,
+                action: async () => {
+                    throw new Error('action failed');
+                },
+            });
+        } catch (err) {
+            error = err as Error;
+        }
+
+        expect(error).to.not.be.null;
+        expect(error!.message).to.include('failing');
+        expect(error!.message).to.include('action failed');
     });
 });
