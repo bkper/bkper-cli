@@ -50,6 +50,8 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
         }
     }
 
+    logger?.info('Starting tunnel...');
+
     const tunnel = Tunnel.quick(`http://localhost:${port}`);
 
     // Wait for URL assignment with timeout
@@ -76,8 +78,6 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
             }
         });
     });
-
-    logger?.info(`Tunnel assigned: ${url}`);
 
     return {
         url,

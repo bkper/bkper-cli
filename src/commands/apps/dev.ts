@@ -315,7 +315,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                 logger: eventsLogger,
             });
             eventsUrl = `${eventsTunnel.url}/events`;
-            eventsLogger.success(`Tunnel ready: ${eventsUrl}`);
+            eventsLogger.success('Tunnel ready');
         } catch (err) {
             eventsLogger.error(`Tunnel failed: ${err}`);
             process.exit(1);
@@ -325,7 +325,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             if (!isLoggedIn()) {
                 eventsLogger.warn('Not logged in. Skipping webhookUrlDev update.');
             } else {
-                eventsLogger.info('Updating webhookUrlDev...');
                 try {
                     await updateWebhookUrlDev(appConfig.id, eventsUrl || null);
                     eventsLogger.success('webhookUrlDev updated');
