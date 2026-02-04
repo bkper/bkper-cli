@@ -309,7 +309,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             persistPath: './.mf/kv-events',
         });
 
-        eventsLogger.info('Starting tunnel...');
         try {
             eventsTunnel = await startCloudflaredTunnel({
                 port: eventsPort,

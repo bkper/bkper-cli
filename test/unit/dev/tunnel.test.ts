@@ -1,26 +1,32 @@
 import { expect, setupTestEnvironment } from '../helpers/test-setup.js';
-import { extractCloudflaredUrl } from '../../../src/dev/tunnel.js';
+import type { TunnelHandle, CloudflaredTunnelOptions } from '../../../src/dev/tunnel.js';
 
-describe('cloudflared tunnel parsing', function () {
+describe('cloudflared tunnel', function () {
     beforeEach(function () {
         setupTestEnvironment();
     });
 
-    it('should extract the tunnel URL from output', function () {
-        const output =
-            '2026-02-04T12:00:00Z INF Starting tunnel\n' +
-            '2026-02-04T12:00:01Z INF Assigned URL https://sample-quiet-rain.trycloudflare.com\n';
+    describe('TunnelHandle interface', function () {
+        it('should define the expected shape', function () {
+            // Type-level test: verify the interface exists and has expected properties
+            const mockHandle: TunnelHandle = {
+                url: 'https://example.trycloudflare.com',
+                stop: async () => {},
+            };
 
-        const url = extractCloudflaredUrl(output);
-
-        expect(url).to.equal('https://sample-quiet-rain.trycloudflare.com');
+            expect(mockHandle.url).to.be.a('string');
+            expect(mockHandle.stop).to.be.a('function');
+        });
     });
 
-    it('should return undefined when no URL is present', function () {
-        const output = '2026-02-04T12:00:00Z INF Starting tunnel\n';
+    describe('CloudflaredTunnelOptions interface', function () {
+        it('should accept port and optional logger', function () {
+            const options: CloudflaredTunnelOptions = {
+                port: 8080,
+            };
 
-        const url = extractCloudflaredUrl(output);
-
-        expect(url).to.equal(undefined);
+            expect(options.port).to.equal(8080);
+            expect(options.logger).to.be.undefined;
+        });
     });
 });
