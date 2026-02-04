@@ -15,6 +15,8 @@ export interface CleanupStepOptions {
 export async function runCleanupStep(options: CleanupStepOptions): Promise<void> {
     const { label, timeoutMs, action, logger } = options;
 
+    logger?.info(`Cleaning up: ${label}...`);
+
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     const timeoutPromise = new Promise<void>((_resolve, reject) => {
         timeoutId = setTimeout(() => {
@@ -24,6 +26,7 @@ export async function runCleanupStep(options: CleanupStepOptions): Promise<void>
 
     try {
         await Promise.race([action(), timeoutPromise]);
+        logger?.success(`Cleanup done: ${label}`);
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         if (message === 'timeout') {

@@ -23,6 +23,12 @@ export interface CloudflaredTunnelOptions {
 }
 
 /**
+ * Maximum number of output lines to show on tunnel failure.
+ * Balances debugging context with avoiding log bloat.
+ */
+const MAX_ERROR_OUTPUT_LINES = 20;
+
+/**
  * Starts a cloudflared Quick Tunnel to expose a local port to the internet.
  *
  * On first invocation, downloads the cloudflared binary to ~/.config/bkper/bin/.
@@ -50,9 +56,25 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
         }
     }
 
+    // Verify binary is executable
+    try {
+        fs.accessSync(bin, fs.constants.X_OK);
+    } catch {
+        throw new Error(`cloudflared binary is not executable: ${bin}\n` + `Try running: chmod +x "${bin}"`);
+    }
+
     logger?.info('Starting tunnel...');
 
     const tunnel = Tunnel.quick(`http://localhost:${port}`);
+
+    // Collect output for error reporting (cloudflared uses both stdout and stderr)
+    const outputLines: string[] = [];
+    const collectOutput = (data: string): void => {
+        const lines = data.split('\n').filter(line => line.trim());
+        outputLines.push(...lines);
+    };
+    tunnel.on('stdout', collectOutput);
+    tunnel.on('stderr', collectOutput);
 
     // Wait for URL assignment with timeout
     const url = await new Promise<string>((resolve, reject) => {
@@ -74,6 +96,17 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
         tunnel.once('exit', (code: number | null) => {
             clearTimeout(timeout);
             if (code !== 0 && code !== null) {
+                // Log captured output for debugging
+                if (outputLines.length > 0) {
+                    const linesToShow = outputLines.slice(-MAX_ERROR_OUTPUT_LINES);
+                    if (outputLines.length > MAX_ERROR_OUTPUT_LINES) {
+                        logger?.warn(`... (${outputLines.length - MAX_ERROR_OUTPUT_LINES} lines omitted)`);
+                    }
+                    logger?.warn('cloudflared output:');
+                    for (const line of linesToShow) {
+                        logger?.warn(`  ${line}`);
+                    }
+                }
                 reject(new Error(`cloudflared exited with code ${code}`));
             }
         });
