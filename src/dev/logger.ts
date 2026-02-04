@@ -99,7 +99,7 @@ export function logDevServerBanner(options: {
     }
 
     if (options.eventsUrl) {
-        console.log(`   Events:       ${options.eventsUrl} (watching)`);
+        console.log(`   Events:       ${options.eventsUrl} (tunneled)`);
     }
 
     console.log('');

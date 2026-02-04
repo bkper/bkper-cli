@@ -7,6 +7,7 @@ export interface WorkerServerOptions {
     vars?: Record<string, string>;
     compatibilityDate?: string;
     persist?: boolean;
+    persistPath?: string;
 }
 
 /**
@@ -67,7 +68,7 @@ export async function createWorkerServer(
         ),
 
         // Persist KV data across restarts
-        kvPersist: options.persist !== false ? './.mf/kv' : undefined,
+        kvPersist: options.persist !== false ? (options.persistPath ?? './.mf/kv') : undefined,
 
         // Environment variables and secrets
         bindings: options.vars,

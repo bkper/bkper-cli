@@ -29,12 +29,10 @@ describe('dev command', function () {
     let createClientServerStub: sinon.SinonStub;
     let stopClientServerStub: sinon.SinonStub;
     let getServerUrlStub: sinon.SinonStub;
-    let buildWorkerToFileStub: sinon.SinonStub;
     let ensureTypesUpToDateStub: sinon.SinonStub;
     let loadDevVarsStub: sinon.SinonStub;
     let loadAppConfigStub: sinon.SinonStub;
     let loadSourceDeploymentConfigStub: sinon.SinonStub;
-    let deployHandlerStub: sinon.SinonStub;
     let chokidarWatchStub: sinon.SinonStub;
     let logDevServerBannerStub: sinon.SinonStub;
     let createLoggerStub: sinon.SinonStub;
@@ -57,24 +55,18 @@ describe('dev command', function () {
     /**
      * Creates stubs and imports the dev module with stubbed dependencies
      */
-    async function createModuleWithStubs(): Promise<
-        typeof import('../../../../src/commands/apps/dev.js')
-    > {
+    async function createModuleWithStubs(): Promise<typeof import('../../../../src/commands/apps/dev.js')> {
         // Create stubs
         createWorkerServerStub = sinon.stub().resolves({ ready: Promise.resolve() });
         stopWorkerServerStub = sinon.stub().resolves();
         reloadWorkerStub = sinon.stub().resolves();
-        createClientServerStub = sinon
-            .stub()
-            .resolves({ resolvedUrls: { local: ['http://localhost:5173'] } });
+        createClientServerStub = sinon.stub().resolves({ resolvedUrls: { local: ['http://localhost:5173'] } });
         stopClientServerStub = sinon.stub().resolves();
         getServerUrlStub = sinon.stub().returns('http://localhost:5173');
-        buildWorkerToFileStub = sinon.stub().resolves();
         ensureTypesUpToDateStub = sinon.stub();
         loadDevVarsStub = sinon.stub().returns({ API_KEY: 'test-key' });
         loadAppConfigStub = sinon.stub().returns({ id: 'test-app', name: 'Test App' });
         loadSourceDeploymentConfigStub = sinon.stub();
-        deployHandlerStub = sinon.stub().resolves();
         logDevServerBannerStub = sinon.stub();
         createLoggerStub = sinon.stub().returns(mockLogger);
 
@@ -172,10 +164,7 @@ deployment:
             // Create the directory structure that the config references
             fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
             fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
-            fs.writeFileSync(
-                path.join(testDir, 'packages/web/server/src/index.ts'),
-                'export default {}'
-            );
+            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
             fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
 
             process.chdir(testDir);
@@ -207,10 +196,7 @@ deployment:
             );
             fs.mkdirSync(path.join(testDir, 'packages/web/server/src'), { recursive: true });
             fs.mkdirSync(path.join(testDir, 'packages/web/client'), { recursive: true });
-            fs.writeFileSync(
-                path.join(testDir, 'packages/web/server/src/index.ts'),
-                'export default {}'
-            );
+            fs.writeFileSync(path.join(testDir, 'packages/web/server/src/index.ts'), 'export default {}');
             fs.writeFileSync(path.join(testDir, 'packages/web/client/index.html'), '<html></html>');
 
             process.chdir(testDir);
@@ -372,6 +358,14 @@ deployment:
             const listeners = process.listeners('SIGTERM');
             const initialCount = listeners.length;
             expect(initialCount).to.be.a('number');
+        });
+
+        it('should have process exit handler mechanism', async function () {
+            // The dev command registers an exit handler via process.on('exit', ...)
+            // We verify that Node.js supports this mechanism - actual handler registration
+            // happens when dev() is called and is tested via integration tests
+            const listeners = process.listeners('exit');
+            expect(listeners.length).to.be.a('number');
         });
     });
 

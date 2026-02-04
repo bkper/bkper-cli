@@ -2,7 +2,7 @@ id: bkper-cli
 name: Bkper CLI
 description: Command-line interface for building and deploying Bkper Apps. Initialize projects from templates, manage secrets, run local dev servers, and deploy to the Bkper Platform.
 
-logoUrl: https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-cli-logo.svg
+logoUrl: https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-cli.svg
 
 website: https://github.com/bkper/bkper-cli
 ownerName: Bkper

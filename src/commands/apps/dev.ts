@@ -5,15 +5,15 @@ import path from 'path';
 import fs from 'fs';
 import { createWorkerServer, reloadWorker, stopWorkerServer } from '../../dev/miniflare.js';
 import { createClientServer, stopClientServer, getServerUrl } from '../../dev/vite.js';
-import { buildWorkerToFile } from '../../dev/esbuild.js';
 import { ensureTypesUpToDate, loadDevVars } from '../../dev/types.js';
 import { createLogger, logDevServerBanner } from '../../dev/logger.js';
 import { buildSharedIfPresent } from '../../dev/shared.js';
 import { preflightDependencies } from '../../dev/preflight.js';
 import { loadAppConfig, loadSourceDeploymentConfig } from './config.js';
-import { getOAuthToken, isLoggedIn } from '../../auth/local-auth-service.js';
-import { createPlatformClient } from '../../platform/client.js';
-import type { Environment, HandlerType, ErrorResponse } from './types.js';
+import { isLoggedIn } from '../../auth/local-auth-service.js';
+import { startCloudflaredTunnel, TunnelHandle } from '../../dev/tunnel.js';
+import { updateWebhookUrlDev } from '../../dev/webhook-dev.js';
+import { runCleanupStep } from '../../dev/cleanup.js';
 
 /**
  * Options for the dev command
@@ -23,57 +23,8 @@ export interface DevOptions {
     port?: number;
     /** Server simulation port (default: 8787) */
     serverPort?: number;
-}
-
-/**
- * Deploys a handler to the Bkper Platform programmatically.
- * This is a simplified version of deployApp for use in the dev command.
- *
- * @param appId - The app ID
- * @param type - Handler type ('web' or 'events')
- * @param env - Environment ('dev' or 'prod')
- * @param bundlePath - Path to the built bundle
- */
-async function deployHandler(
-    appId: string,
-    type: HandlerType,
-    env: Environment,
-    bundlePath: string
-): Promise<void> {
-    // Check if logged in
-    if (!isLoggedIn()) {
-        throw new Error('Not logged in. Run: bkper login');
-    }
-
-    // Read bundle file
-    if (!fs.existsSync(bundlePath)) {
-        throw new Error(`Bundle not found: ${bundlePath}`);
-    }
-
-    const bundle = fs.readFileSync(bundlePath);
-
-    // Get OAuth token and create client
-    const token = await getOAuthToken();
-    const client = createPlatformClient(token);
-
-    // Create multipart form data
-    const formData = new FormData();
-    formData.append('bundle', new Blob([bundle], { type: 'application/javascript+module' }));
-
-    // Call Platform API
-    const { error } = await client.POST('/api/apps/{appId}/deploy', {
-        params: {
-            path: { appId },
-            query: { env, type },
-        },
-        body: formData as unknown as string,
-        bodySerializer: body => body as unknown as globalThis.ReadableStream,
-    });
-
-    if (error) {
-        const errResponse = error as ErrorResponse;
-        throw new Error(errResponse.error?.message || 'Deploy failed');
-    }
+    /** Events handler port (default: 8791) */
+    eventsPort?: number;
 }
 
 /**
@@ -81,7 +32,7 @@ async function deployHandler(
  * Auto-detects what's configured and runs it:
  *
  * - If web is configured: starts Vite + Miniflare
- * - If events is configured: watches and auto-deploys to dev
+ * - If events is configured: runs locally with tunnel
  *
  * @param options - Dev command options
  */
@@ -116,9 +67,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         process.cwd()
     );
 
-    const clientRoot = deployConfig.web?.client
-        ? path.resolve(process.cwd(), deployConfig.web.client)
-        : undefined;
+    const clientRoot = deployConfig.web?.client ? path.resolve(process.cwd(), deployConfig.web.client) : undefined;
     const preflight = preflightDependencies(process.cwd(), clientRoot);
     if (!preflight.ok) {
         console.error(preflight.message);
@@ -147,23 +96,107 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
     const clientPort = options.port || 5173;
     const serverPort = options.serverPort || 8787;
-    const eventsUrl = `https://${appConfig.id}-dev.bkper.app/events`;
+    const eventsPort = options.eventsPort || 8791;
 
     const hasWeb = !!deployConfig.web?.main;
     const hasEvents = !!deployConfig.events?.main;
 
     let mf: Miniflare | null = null;
+    let eventsMf: Miniflare | null = null;
     let vite: ViteDevServer | null = null;
+    let eventsTunnel: TunnelHandle | null = null;
+    let eventsUrl: string | undefined;
 
     // Handle graceful shutdown
+    let cleaningUp = false;
+    let cleanupKeepAlive: ReturnType<typeof setInterval> | null = null;
     const cleanup = async () => {
+        if (cleaningUp) return;
+        cleaningUp = true;
+        process.exitCode = 0;
+        if (!cleanupKeepAlive) {
+            cleanupKeepAlive = setInterval(() => {}, 1000);
+        }
         console.log('\n\nShutting down...');
-        if (vite) await stopClientServer(vite);
-        if (mf) await stopWorkerServer(mf);
+        eventsLogger.info('Cleanup handler started');
+        const appId = appConfig.id;
+        const cleanupSteps: Promise<void>[] = [];
+        cleanupSteps.push(
+            runCleanupStep({
+                label: 'client server',
+                timeoutMs: 5000,
+                logger: eventsLogger,
+                action: async () => {
+                    if (vite) await stopClientServer(vite);
+                },
+            })
+        );
+        cleanupSteps.push(
+            runCleanupStep({
+                label: 'web worker',
+                timeoutMs: 5000,
+                logger: eventsLogger,
+                action: async () => {
+                    if (mf) await stopWorkerServer(mf);
+                },
+            })
+        );
+        cleanupSteps.push(
+            runCleanupStep({
+                label: 'events worker',
+                timeoutMs: 5000,
+                logger: eventsLogger,
+                action: async () => {
+                    if (eventsMf) await stopWorkerServer(eventsMf);
+                },
+            })
+        );
+        cleanupSteps.push(
+            runCleanupStep({
+                label: 'events tunnel',
+                timeoutMs: 5000,
+                logger: eventsLogger,
+                action: async () => {
+                    if (eventsTunnel) {
+                        eventsLogger.info('Stopping tunnel...');
+                        await eventsTunnel.stop();
+                        eventsLogger.success('Tunnel stopped');
+                    }
+                },
+            })
+        );
+        if (hasEvents && appId) {
+            if (!isLoggedIn()) {
+                eventsLogger.warn('Not logged in. Skipping webhookUrlDev cleanup.');
+            } else {
+                cleanupSteps.push(
+                    runCleanupStep({
+                        label: 'webhookUrlDev',
+                        timeoutMs: 5000,
+                        logger: eventsLogger,
+                        action: async () => {
+                            await updateWebhookUrlDev(appId, null);
+                            eventsLogger.success('webhookUrlDev cleared');
+                        },
+                    })
+                );
+            }
+        }
+        await Promise.allSettled(cleanupSteps);
+        console.log('Shutdown complete.');
+        if (cleanupKeepAlive) {
+            clearInterval(cleanupKeepAlive);
+            cleanupKeepAlive = null;
+        }
         process.exit(0);
     };
-    process.on('SIGINT', cleanup);
-    process.on('SIGTERM', cleanup);
+    process.on('exit', code => {
+        if (!cleaningUp) {
+            console.log('\n\nShutting down...');
+        }
+        eventsLogger.info(`Process exit with code ${code ?? 0}`);
+    });
+    process.stdin.resume();
 
     // Start web server (Miniflare)
     if (hasWeb) {
@@ -219,11 +252,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                     serverLogger.success('Server reloaded');
                 }
 
-                if (hasEvents) {
-                    eventsLogger.info('Redeploying events after shared update...');
-                    await buildWorkerToFile(deployConfig.events!.main, 'dist/events/index.js');
-                    await deployHandler(appConfig.id!, 'events', 'dev', 'dist/events/index.js');
-                    eventsLogger.success('Deployed');
+                if (hasEvents && eventsMf) {
+                    eventsLogger.info('Reloading events after shared update...');
+                    await reloadWorker(eventsMf, deployConfig.events!.main);
+                    eventsLogger.success('Events reloaded');
                 }
             } catch (err) {
                 sharedLogger.error(`Shared rebuild failed: ${err}`);
@@ -265,52 +297,81 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         });
     }
 
-    // Watch events files for auto-deploy
+    // Watch events files for local reload
     if (hasEvents) {
-        const eventsDir = path.dirname(deployConfig.events!.main);
-        const bundleOutPath = 'dist/events/index.js';
-        let deploying = false;
-        let deployPending = false;
+        eventsLogger.info('Starting events server...');
+        eventsMf = await createWorkerServer(deployConfig.events!.main, {
+            port: eventsPort,
+            kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
+            vars: devVars,
+            compatibilityDate: deployConfig.compatibilityDate,
+            persist: true,
+            persistPath: './.mf/kv-events',
+        });
 
-        const deployToDevDebounced = async () => {
-            if (deploying) {
-                deployPending = true;
+        eventsLogger.info('Starting tunnel...');
+        try {
+            eventsTunnel = await startCloudflaredTunnel({
+                port: eventsPort,
+                logger: eventsLogger,
+            });
+            eventsUrl = `${eventsTunnel.url}/events`;
+            eventsLogger.success(`Tunnel ready: ${eventsUrl}`);
+        } catch (err) {
+            eventsLogger.error(`Tunnel failed: ${err}`);
+            process.exit(1);
+        }
+
+        if (appConfig.id) {
+            if (!isLoggedIn()) {
+                eventsLogger.warn('Not logged in. Skipping webhookUrlDev update.');
+            } else {
+                eventsLogger.info('Updating webhookUrlDev...');
+                try {
+                    await updateWebhookUrlDev(appConfig.id, eventsUrl || null);
+                    eventsLogger.success('webhookUrlDev updated');
+                } catch (err) {
+                    eventsLogger.warn(`Failed to update webhookUrlDev: ${err}`);
+                }
+            }
+        }
+
+        const eventsDir = path.dirname(deployConfig.events!.main);
+        let eventsReloadInProgress = false;
+        let eventsReloadPending = false;
+        let eventsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+        const reloadEvents = async (): Promise<void> => {
+            if (!eventsMf) return;
+            if (eventsReloadInProgress) {
+                eventsReloadPending = true;
                 return;
             }
-            deploying = true;
 
+            eventsReloadInProgress = true;
             try {
-                eventsLogger.info('Building...');
-                await buildWorkerToFile(deployConfig.events!.main, bundleOutPath);
-                eventsLogger.info('Deploying to dev...');
-                await deployHandler(appConfig.id!, 'events', 'dev', bundleOutPath);
-                eventsLogger.success('Deployed');
+                eventsLogger.info('Reloading events...');
+                await reloadWorker(eventsMf, deployConfig.events!.main);
+                eventsLogger.success('Events reloaded');
             } catch (err) {
-                eventsLogger.error(`Deploy failed: ${err}`);
+                eventsLogger.error(`Events reload failed: ${err}`);
             } finally {
-                deploying = false;
-                if (deployPending) {
-                    deployPending = false;
-                    // Process pending deploy
-                    setTimeout(deployToDevDebounced, 100);
+                eventsReloadInProgress = false;
+                if (eventsReloadPending) {
+                    eventsReloadPending = false;
+                    setTimeout(reloadEvents, 100);
                 }
             }
         };
 
-        // Debounce file changes (500ms)
-        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
         watch(eventsDir, {
             ignoreInitial: true,
             ignored: /node_modules/,
         }).on('change', file => {
             eventsLogger.info(`Change detected: ${path.basename(file)}`);
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(deployToDevDebounced, 500);
+            if (eventsDebounceTimer) clearTimeout(eventsDebounceTimer);
+            eventsDebounceTimer = setTimeout(reloadEvents, 200);
         });
-
-        // Initial deploy
-        eventsLogger.info('Initial deploy...');
-        await deployToDevDebounced();
     }
 
     // Display status
@@ -318,5 +379,34 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         clientUrl: hasWeb && vite ? getServerUrl(vite) : undefined,
         serverUrl: hasWeb ? `http://localhost:${serverPort}` : undefined,
         eventsUrl: hasEvents ? eventsUrl : undefined,
+    });
+
+    process.removeAllListeners('SIGINT');
+    process.removeAllListeners('SIGTERM');
+    process.once('SIGINT', async () => {
+        eventsLogger.info('Received SIGINT');
+        process.exitCode = 0;
+        await cleanup();
+    });
+    process.once('SIGTERM', async () => {
+        eventsLogger.info('Received SIGTERM');
+        process.exitCode = 0;
+        await cleanup();
+    });
+    process.once('uncaughtException', async err => {
+        eventsLogger.warn(`Uncaught exception: ${err instanceof Error ? err.message : String(err)}`);
+        try {
+            await cleanup();
+        } catch {
+            process.exit(1);
+        }
+    });
+    process.once('unhandledRejection', async reason => {
+        eventsLogger.warn(`Unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`);
+        try {
+            await cleanup();
+        } catch {
+            process.exit(1);
+        }
     });
 }

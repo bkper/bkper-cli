@@ -108,8 +108,8 @@ menuPopupHeight: 300
 # Production webhook URL
 webhookUrl: https://${id}.bkper.app/events
 
-# Development webhook URL (used when developer triggers events)
-webhookUrlDev: https://${id}-dev.bkper.app/events
+# Development webhook URL (auto-updated by bkper app dev)
+webhookUrlDev: https://<random>.trycloudflare.com/events
 
 # API version for event payloads
 apiVersion: v5
@@ -137,8 +137,8 @@ events:
 # For file processing apps. When a file matching these patterns is uploaded,
 # a FILE_CREATED event is triggered with the file content.
 filePatterns:
-    - "*.ofx"
-    - "*.csv"
+    - '*.ofx'
+    - '*.csv'
 
 # -----------------------------------------------------------------------------
 # PROPERTIES SCHEMA (optional)
@@ -151,8 +151,8 @@ propertiesSchema:
             - my_app_enabled
             - my_app_config
         values:
-            - "true"
-            - "false"
+            - 'true'
+            - 'false'
     group:
         keys:
             - my_app_category
@@ -183,4 +183,4 @@ deployment:
     # Platform services available to your app (one per type, auto-provisioned)
     # See: https://developers.cloudflare.com/kv/
     services:
-        - KV    # Key-value storage
+        - KV # Key-value storage
