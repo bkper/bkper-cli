@@ -56,8 +56,7 @@ function createMockBkperForBookWithGroups(books: BookData[]) {
                             isPermanent: (): boolean => groupData.permanent || false,
                             getParent: (): any => null, // Will be set in second pass
                             getChildren: (): any[] => [], // Will be populated in second pass
-                            getProperties: (): { [name: string]: string } =>
-                                groupData.properties || {},
+                            getProperties: (): { [name: string]: string } => groupData.properties || {},
                             json: (): GroupData => groupData,
                         };
 
@@ -279,15 +278,7 @@ describe('MCP Server - get_book Tool Calls', function () {
 
         // Verify each group has required properties
         book.groups.forEach((group: any) => {
-            expect(group).to.have.all.keys(
-                'id',
-                'name',
-                'type',
-                'hidden',
-                'permanent',
-                'properties',
-                'children'
-            );
+            expect(group).to.have.all.keys('id', 'name', 'type', 'hidden', 'permanent', 'properties', 'children');
             expect(group.id).to.be.a('string');
             expect(group.name).to.be.a('string');
             expect(group.type).to.be.a('string');
@@ -306,15 +297,7 @@ describe('MCP Server - get_book Tool Calls', function () {
 
         if (assetsGroup) {
             assetsGroup.children.forEach((child: any) => {
-                expect(child).to.have.all.keys(
-                    'id',
-                    'name',
-                    'type',
-                    'hidden',
-                    'permanent',
-                    'properties',
-                    'children'
-                );
+                expect(child).to.have.all.keys('id', 'name', 'type', 'hidden', 'permanent', 'properties', 'children');
             });
         }
     });

@@ -32,12 +32,7 @@ describe('MCP Server - get_balances Tool Registration', function () {
         process.env.BKPER_API_KEY = 'test-api-key';
         currentMockAccountBalances = mockAccountBalances;
         // Create mock with books + account balances support
-        const mockBkper = createMockBkperForBook(
-            mockBooks,
-            undefined,
-            undefined,
-            currentMockAccountBalances
-        );
+        const mockBkper = createMockBkperForBook(mockBooks, undefined, undefined, currentMockAccountBalances);
         setMockBkper(mockBkper);
         server = new BkperMcpServer();
     });
@@ -90,12 +85,7 @@ describe('MCP Server - get_balances Tool Calls', function () {
         process.env.BKPER_API_KEY = 'test-api-key';
         currentMockAccountBalances = mockAccountBalances;
         // Create mock with books + account balances support
-        const mockBkper = createMockBkperForBook(
-            mockBooks,
-            undefined,
-            undefined,
-            currentMockAccountBalances
-        );
+        const mockBkper = createMockBkperForBook(mockBooks, undefined, undefined, currentMockAccountBalances);
         setMockBkper(mockBkper);
         server = new BkperMcpServer();
     });
@@ -147,12 +137,7 @@ describe('MCP Server - get_balances Tool Calls', function () {
     it('should handle MCP get_balances tool call with large dataset', async function () {
         // Switch to large dataset
         currentMockAccountBalances = largeMockAccountBalances;
-        const mockBkper = createMockBkperForBook(
-            mockBooks,
-            undefined,
-            undefined,
-            currentMockAccountBalances
-        );
+        const mockBkper = createMockBkperForBook(mockBooks, undefined, undefined, currentMockAccountBalances);
         setMockBkper(mockBkper);
         server = new BkperMcpServer();
 
@@ -300,9 +285,7 @@ describe('MCP Server - get_balances Tool Calls', function () {
         });
 
         const jsonResponse = JSON.parse(response.content[0].text as string);
-        expect(jsonResponse.query).to.equal(
-            "group:'Assets' after:2023-01-01 before:2023-12-31 by:m"
-        );
+        expect(jsonResponse.query).to.equal("group:'Assets' after:2023-01-01 before:2023-12-31 by:m");
 
         // The matrix should be in the format that PERIOD type would produce
         expect(jsonResponse.matrix).to.be.an('array');

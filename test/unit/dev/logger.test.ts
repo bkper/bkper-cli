@@ -11,11 +11,7 @@ describe('Logger Module', function () {
 
     // Dynamic imports to allow module to be loaded after stubs are set up
     let createLogger: (prefix: LogPrefix) => Logger;
-    let logDevServerBanner: (options: {
-        clientUrl?: string;
-        serverUrl?: string;
-        eventsUrl?: string;
-    }) => void;
+    let logDevServerBanner: (options: { clientUrl?: string; serverUrl?: string; eventsUrl?: string }) => void;
     let logBuildResults: (results: {
         webClient?: { path: string; size: number };
         webServer?: { path: string; size: number };
@@ -100,14 +96,7 @@ describe('Logger Module', function () {
         });
 
         it('should work with all valid prefixes', function () {
-            const prefixes: LogPrefix[] = [
-                'server',
-                'events',
-                'client',
-                'build',
-                'types',
-                'shared',
-            ];
+            const prefixes: LogPrefix[] = ['server', 'events', 'client', 'build', 'types', 'shared'];
 
             prefixes.forEach(prefix => {
                 const logger = createLogger(prefix);

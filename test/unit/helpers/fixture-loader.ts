@@ -107,9 +107,7 @@ export function generateLargeAccounts(count: number = 150): AccountData[] {
         normalizedName: `account_${i + 1}`,
         type: ['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4] as any,
         balance: Math.floor(Math.random() * 10000).toString(),
-        credit: ['LIABILITY', 'INCOMING'].includes(
-            ['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4]
-        ),
+        credit: ['LIABILITY', 'INCOMING'].includes(['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4]),
         groups: [
             {
                 id: `group-${Math.floor(i / 10)}`,
@@ -134,13 +132,7 @@ export function generateLargeTransactions(count: number = 500): TransactionData[
         dateValue: Date.now() + i * 24 * 60 * 60 * 1000,
         amount: (Math.floor(Math.random() * 5000) + 100).toString(),
         description: `Transaction ${i + 1} - ${
-            [
-                'Service payment',
-                'Equipment purchase',
-                'Utility bill',
-                'Office rent',
-                'Consulting fee',
-            ][i % 5]
+            ['Service payment', 'Equipment purchase', 'Utility bill', 'Office rent', 'Consulting fee'][i % 5]
         }`,
         posted: Math.random() > 0.1, // 90% posted
         checked: Math.random() > 0.5,
@@ -187,9 +179,7 @@ export function generateLargeAccountBalances(count: number = 150): AccountBalanc
             name: `Account ${i + 1}`,
             type: ['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4] as any,
             balance: (Math.floor(Math.random() * 10000) - 5000).toString(),
-            credit: ['LIABILITY', 'INCOMING'].includes(
-                ['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4]
-            ),
+            credit: ['LIABILITY', 'INCOMING'].includes(['ASSET', 'LIABILITY', 'INCOMING', 'OUTGOING'][i % 4]),
         },
         balance: (Math.floor(Math.random() * 10000) - 5000).toString(),
         cumulative: Math.abs(Math.floor(Math.random() * 10000)).toString(),

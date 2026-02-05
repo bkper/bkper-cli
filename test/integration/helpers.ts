@@ -149,10 +149,7 @@ interface FetchWorkerOptions {
 /**
  * Make HTTP request to deployed worker
  */
-export async function fetchWorker(
-    urlPath: string,
-    options?: FetchWorkerOptions
-): Promise<Response> {
+export async function fetchWorker(urlPath: string, options?: FetchWorkerOptions): Promise<Response> {
     const baseUrl = options?.isEvents ? TestConfig.DEV_EVENTS_URL : TestConfig.DEV_WEB_URL;
 
     // Handle empty path (just hit the base URL)
@@ -179,10 +176,7 @@ export async function fetchWorker(
 /**
  * Wait for worker to be ready by polling health endpoint
  */
-export async function waitForWorkerReady(
-    healthPath: string,
-    isEvents: boolean = false
-): Promise<boolean> {
+export async function waitForWorkerReady(healthPath: string, isEvents: boolean = false): Promise<boolean> {
     for (let i = 0; i < TestConfig.POLL_MAX_ATTEMPTS; i++) {
         try {
             const response = await fetchWorker(healthPath, { isEvents });

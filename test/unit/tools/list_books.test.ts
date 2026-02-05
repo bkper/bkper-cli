@@ -232,8 +232,7 @@ describe('MCP Server - list_books Tool Schema with Filter Parameter', function (
         expect(listBooksTool.inputSchema.properties).to.have.property('filter');
         expect(listBooksTool.inputSchema.properties.filter).to.deep.equal({
             type: 'string',
-            description:
-                'Required filter to search books by name or property (case-insensitive substring match)',
+            description: 'Required filter to search books by name or property (case-insensitive substring match)',
         });
     });
 

@@ -30,18 +30,14 @@ describe('MCP Server - create_transactions Tool Registration', function () {
         expect(response).to.have.property('tools');
         expect(response.tools).to.be.an('array');
 
-        const createTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'create_transactions'
-        );
+        const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions');
         expect(createTransactionsTool).to.exist;
         expect(createTransactionsTool!.name).to.equal('create_transactions');
     });
 
     it('should have description mentioning structured data', async function () {
         const response = await server.testListTools();
-        const createTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'create_transactions'
-        );
+        const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions');
 
         expect(createTransactionsTool).to.exist;
         if (createTransactionsTool) {
@@ -51,9 +47,7 @@ describe('MCP Server - create_transactions Tool Registration', function () {
 
     it('should have proper MCP tool schema for create_transactions', async function () {
         const response = await server.testListTools();
-        const createTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'create_transactions'
-        ) as any;
+        const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions') as any;
 
         expect(createTransactionsTool).to.exist;
         expect(createTransactionsTool.inputSchema).to.have.property('properties');
@@ -65,9 +59,7 @@ describe('MCP Server - create_transactions Tool Registration', function () {
 
     it('should have bookId and transactions as required parameters', async function () {
         const response = await server.testListTools();
-        const createTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'create_transactions'
-        ) as any;
+        const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions') as any;
 
         expect(createTransactionsTool.inputSchema.required).to.be.an('array');
         expect(createTransactionsTool.inputSchema.required).to.include('bookId');
@@ -76,49 +68,31 @@ describe('MCP Server - create_transactions Tool Registration', function () {
 
     it('should have transaction schema with required and optional fields', async function () {
         const response = await server.testListTools();
-        const createTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'create_transactions'
-        ) as any;
+        const createTransactionsTool = response.tools.find((tool: any) => tool.name === 'create_transactions') as any;
 
         expect(createTransactionsTool.inputSchema.properties.transactions.items).to.exist;
-        expect(createTransactionsTool.inputSchema.properties.transactions.items.type).to.equal(
-            'object'
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.type).to.equal('object');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property('date');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property('amount');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property(
+            'from_account'
         );
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.properties
-        ).to.have.property('date');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.properties
-        ).to.have.property('amount');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.properties
-        ).to.have.property('from_account');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.properties
-        ).to.have.property('to_account');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.properties
-        ).to.have.property('description');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property(
+            'to_account'
+        );
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.properties).to.have.property(
+            'description'
+        );
 
         // Verify only date, amount, and description are required
-        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.be.an(
-            'array'
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.be.an('array');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('date');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('amount');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.include('description');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.not.include(
+            'from_account'
         );
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.required
-        ).to.include('date');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.required
-        ).to.include('amount');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.required
-        ).to.include('description');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.required
-        ).to.not.include('from_account');
-        expect(
-            createTransactionsTool.inputSchema.properties.transactions.items.required
-        ).to.not.include('to_account');
+        expect(createTransactionsTool.inputSchema.properties.transactions.items.required).to.not.include('to_account');
     });
 });
 
@@ -290,9 +264,7 @@ describe('MCP Server - create_transactions Parameter Validation', function () {
                 if (id === 'invalid-book-id') {
                     throw new Error('Book not found: invalid-book-id');
                 }
-                return createMockBkperForBook(mockBooks, undefined, createdTransactions).getBook!(
-                    id
-                );
+                return createMockBkperForBook(mockBooks, undefined, createdTransactions).getBook!(id);
             },
         };
         setMockBkper(mockBkper);
@@ -545,10 +517,7 @@ describe('MCP Server - create_transactions Optional Account Fields', function ()
 
         const jsonResponse = JSON.parse(response.content[0].text as string);
         expect(jsonResponse.transactions).to.have.length(1);
-        expect(jsonResponse.transactions[0]).to.have.property(
-            'description',
-            'Cash Rent Monthly rent'
-        );
+        expect(jsonResponse.transactions[0]).to.have.property('description', 'Cash Rent Monthly rent');
     });
 });
 

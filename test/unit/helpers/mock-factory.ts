@@ -24,10 +24,7 @@ import { fileURLToPath } from 'url';
 export const mockGetOAuthToken = async (): Promise<string> => 'mock-token';
 
 // Mock DataTableBuilder implementation
-function createMockDataTableBuilder(
-    balances: AccountBalanceData[],
-    query?: string
-): MockDataTableBuilder {
+function createMockDataTableBuilder(balances: AccountBalanceData[], query?: string): MockDataTableBuilder {
     let formatValues = false;
     let formatDates = false;
     let transposed = false;
@@ -65,8 +62,7 @@ function createMockDataTableBuilder(
         },
         build(): any[][] {
             // Determine if this is a time-based query
-            const isTimeBased =
-                query?.includes('on:') || query?.includes('after:') || query?.includes('before:');
+            const isTimeBased = query?.includes('on:') || query?.includes('after:') || query?.includes('before:');
 
             if (isTimeBased && transposed) {
                 // Period/Cumulative format - load from fixture
@@ -219,8 +215,7 @@ export function createMockBkperForBooks(books: BookData[]): MockBkper {
             // Apply name filtering if query is provided
             if (query && query.trim()) {
                 filteredBooks = books.filter(
-                    (book: BookData) =>
-                        book.name?.toLowerCase().includes(query.toLowerCase()) || false
+                    (book: BookData) => book.name?.toLowerCase().includes(query.toLowerCase()) || false
                 );
             }
 
@@ -268,60 +263,41 @@ export function createMockBkperForBook(
 
                           // Handle query filtering - empty/undefined queries use 'on:$m' default
                           const effectiveQuery = query || 'on:$m';
-                          if (
-                              effectiveQuery &&
-                              effectiveQuery.trim() &&
-                              effectiveQuery !== 'on:$m'
-                          ) {
+                          if (effectiveQuery && effectiveQuery.trim() && effectiveQuery !== 'on:$m') {
                               // Simple query simulation for testing
                               if (effectiveQuery.includes("account:'Cash'")) {
-                                  filteredBalances = accountBalances.filter(
-                                      b => b.account.name === 'Cash'
-                                  );
+                                  filteredBalances = accountBalances.filter(b => b.account.name === 'Cash');
                               } else if (effectiveQuery.includes("group:'Assets'")) {
-                                  filteredBalances = accountBalances.filter(
-                                      b => b.account.type === 'ASSET'
-                                  );
+                                  filteredBalances = accountBalances.filter(b => b.account.type === 'ASSET');
                               } else if (effectiveQuery.includes("group:'Liabilities'")) {
-                                  filteredBalances = accountBalances.filter(
-                                      b => b.account.type === 'LIABILITY'
-                                  );
+                                  filteredBalances = accountBalances.filter(b => b.account.type === 'LIABILITY');
                               }
                           }
                           // For 'on:$m' default or other date queries, return all balances (no filtering in mock)
 
                           return {
                               getBalancesContainers: (): MockAccountBalance[] => {
-                                  const containers = filteredBalances.map(
-                                      (balanceData: AccountBalanceData) => ({
-                                          json: (): AccountBalanceData => balanceData,
-                                          getAccount: (): MockAccount => ({
-                                              json: (): AccountData => balanceData.account,
-                                              getId: (): string => balanceData.account.id || '',
-                                              getName: (): string => balanceData.account.name || '',
-                                              getType: (): string => balanceData.account.type || '',
-                                          }),
-                                          getGroup: (): MockGroup | null => null,
+                                  const containers = filteredBalances.map((balanceData: AccountBalanceData) => ({
+                                      json: (): AccountBalanceData => balanceData,
+                                      getAccount: (): MockAccount => ({
+                                          json: (): AccountData => balanceData.account,
+                                          getId: (): string => balanceData.account.id || '',
                                           getName: (): string => balanceData.account.name || '',
-                                          getPeriodBalance: (): string => balanceData.balance,
-                                          getCumulativeBalance: (): string =>
-                                              balanceData.cumulative,
-                                          createDataTable: (): MockDataTableBuilder =>
-                                              createMockDataTableBuilder(
-                                                  filteredBalances,
-                                                  effectiveQuery
-                                              ),
-                                      })
-                                  );
+                                          getType: (): string => balanceData.account.type || '',
+                                      }),
+                                      getGroup: (): MockGroup | null => null,
+                                      getName: (): string => balanceData.account.name || '',
+                                      getPeriodBalance: (): string => balanceData.balance,
+                                      getCumulativeBalance: (): string => balanceData.cumulative,
+                                      createDataTable: (): MockDataTableBuilder =>
+                                          createMockDataTableBuilder(filteredBalances, effectiveQuery),
+                                  }));
 
                                   // For matrix functionality, we need to add createDataTable to the first container
                                   // This simulates the real API where you call it on the first container or the report
                                   if (containers.length > 0) {
                                       containers[0].createDataTable = () =>
-                                          createMockDataTableBuilder(
-                                              filteredBalances,
-                                              effectiveQuery
-                                          );
+                                          createMockDataTableBuilder(filteredBalances, effectiveQuery);
                                   }
 
                                   return containers;
@@ -340,18 +316,12 @@ export function createMockBkperForBook(
                           if (query) {
                               // Simple query simulation for testing
                               if (query.includes('posted:true')) {
-                                  filteredTransactions = transactions.filter(
-                                      t => t.posted === true
-                                  );
+                                  filteredTransactions = transactions.filter(t => t.posted === true);
                               } else if (query.includes('posted:false')) {
-                                  filteredTransactions = transactions.filter(
-                                      t => t.posted === false
-                                  );
+                                  filteredTransactions = transactions.filter(t => t.posted === false);
                               } else if (query.includes("account:'Cash'")) {
                                   filteredTransactions = transactions.filter(
-                                      t =>
-                                          t.creditAccount?.name === 'Cash' ||
-                                          t.debitAccount?.name === 'Cash'
+                                      t => t.creditAccount?.name === 'Cash' || t.debitAccount?.name === 'Cash'
                                   );
                               }
                           }
@@ -360,9 +330,7 @@ export function createMockBkperForBook(
                           let startIndex = 0;
                           if (cursor) {
                               try {
-                                  const cursorData = JSON.parse(
-                                      Buffer.from(cursor, 'base64').toString()
-                                  );
+                                  const cursorData = JSON.parse(Buffer.from(cursor, 'base64').toString());
                                   startIndex = cursorData.offset || 0;
                               } catch {
                                   startIndex = 0; // Invalid cursor, start from beginning
@@ -374,9 +342,9 @@ export function createMockBkperForBook(
                           const pageTransactions = filteredTransactions.slice(startIndex, endIndex);
                           const hasMore = endIndex < filteredTransactions.length;
                           const nextCursor = hasMore
-                              ? Buffer.from(
-                                    JSON.stringify({ offset: endIndex, timestamp: Date.now() })
-                                ).toString('base64')
+                              ? Buffer.from(JSON.stringify({ offset: endIndex, timestamp: Date.now() })).toString(
+                                    'base64'
+                                )
                               : undefined;
 
                           return {
@@ -399,17 +367,12 @@ export function createMockBkperForBook(
                               return {
                                   json: (): TransactionData => ({
                                       ...txData,
-                                      id:
-                                          txData.id ||
-                                          fixtureTransaction?.id ||
-                                          `tx-created-${Date.now()}-${index}`,
+                                      id: txData.id || fixtureTransaction?.id || `tx-created-${Date.now()}-${index}`,
                                       posted: fixtureTransaction?.posted ?? true,
                                       checked: fixtureTransaction?.checked ?? false,
                                       trashed: fixtureTransaction?.trashed ?? false,
-                                      createdAt:
-                                          fixtureTransaction?.createdAt || Date.now().toString(),
-                                      createdBy:
-                                          fixtureTransaction?.createdBy || 'test@example.com',
+                                      createdAt: fixtureTransaction?.createdAt || Date.now().toString(),
+                                      createdBy: fixtureTransaction?.createdBy || 'test@example.com',
                                       creditAccount: fixtureTransaction?.creditAccount,
                                       debitAccount: fixtureTransaction?.debitAccount,
                                   }),
@@ -435,8 +398,7 @@ export function createMockBkperForBook(
                                   isPermanent: (): boolean => groupData.permanent || false,
                                   getParent: (): MockGroup | null => null, // Will be set in second pass
                                   getChildren: (): MockGroup[] => [], // Will be populated in second pass
-                                  getProperties: (): { [name: string]: string } =>
-                                      groupData.properties || {},
+                                  getProperties: (): { [name: string]: string } => groupData.properties || {},
                                   json: (): GroupData => groupData,
                               };
 
@@ -460,8 +422,7 @@ export function createMockBkperForBook(
 
                               // Collect children
                               const children = mockGroups.filter(
-                                  (child, childIndex) =>
-                                      groups[childIndex].parent?.id === groupData.id
+                                  (child, childIndex) => groups[childIndex].parent?.id === groupData.id
                               );
                               mockGroup.getChildren = () => children;
                           });

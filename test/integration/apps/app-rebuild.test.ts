@@ -32,11 +32,7 @@ describe('Integration: app rebuild after clean', function () {
         await runCommand('bun', ['install'], appDir);
 
         // Recompile shared types
-        await runCommand(
-            'bun',
-            ['x', 'tsc', '-p', 'tsconfig.json'],
-            path.join(appDir, 'packages/shared')
-        );
+        await runCommand('bun', ['x', 'tsc', '-p', 'tsconfig.json'], path.join(appDir, 'packages/shared'));
 
         // Rebuild
         await runCli(['app', 'build'], appDir);

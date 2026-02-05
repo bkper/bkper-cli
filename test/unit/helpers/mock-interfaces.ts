@@ -156,11 +156,7 @@ export interface MockBook {
     json(): BookData;
     getAccounts?(): Promise<MockAccount[]>;
     getBalancesReport?(query?: string): Promise<MockBalanceReport>;
-    listTransactions?(
-        query?: string,
-        limit?: number,
-        cursor?: string
-    ): Promise<MockTransactionIterator>;
+    listTransactions?(query?: string, limit?: number, cursor?: string): Promise<MockTransactionIterator>;
     getGroups?(): Promise<MockGroup[]>;
     batchCreateTransactions?(transactions: MockTransaction[]): Promise<MockTransaction[]>;
 }
@@ -240,6 +236,4 @@ export interface MockBkper {
 }
 
 // BkperMcpServer type helper
-export type BkperMcpServerType = InstanceType<
-    typeof import('../../../src/mcp/server.js').BkperMcpServer
->;
+export type BkperMcpServerType = InstanceType<typeof import('../../../src/mcp/server.js').BkperMcpServer>;

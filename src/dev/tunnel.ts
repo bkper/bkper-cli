@@ -38,7 +38,9 @@ const MAX_ERROR_OUTPUT_LINES = 20;
  * @returns A handle to the running tunnel with URL and stop method.
  * @throws If the tunnel fails to start or times out.
  */
-export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions): Promise<TunnelHandle> {
+export async function startCloudflaredTunnel(
+    options: CloudflaredTunnelOptions
+): Promise<TunnelHandle> {
     const { port, logger } = options;
 
     // Lazy download: only install cloudflared when actually needed
@@ -60,7 +62,9 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
     try {
         fs.accessSync(bin, fs.constants.X_OK);
     } catch {
-        throw new Error(`cloudflared binary is not executable: ${bin}\n` + `Try running: chmod +x "${bin}"`);
+        throw new Error(
+            `cloudflared binary is not executable: ${bin}\n` + `Try running: chmod +x "${bin}"`
+        );
     }
 
     logger?.info('Starting tunnel...');
@@ -100,7 +104,9 @@ export async function startCloudflaredTunnel(options: CloudflaredTunnelOptions):
                 if (outputLines.length > 0) {
                     const linesToShow = outputLines.slice(-MAX_ERROR_OUTPUT_LINES);
                     if (outputLines.length > MAX_ERROR_OUTPUT_LINES) {
-                        logger?.warn(`... (${outputLines.length - MAX_ERROR_OUTPUT_LINES} lines omitted)`);
+                        logger?.warn(
+                            `... (${outputLines.length - MAX_ERROR_OUTPUT_LINES} lines omitted)`
+                        );
                     }
                     logger?.warn('cloudflared output:');
                     for (const line of linesToShow) {

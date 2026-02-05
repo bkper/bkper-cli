@@ -115,11 +115,7 @@ export class AppStateManager {
         await runCommand('bun', ['install'], appDir);
 
         // Compile shared types
-        await runCommand(
-            'bun',
-            ['x', 'tsc', '-p', 'tsconfig.json'],
-            path.join(appDir, 'packages/shared')
-        );
+        await runCommand('bun', ['x', 'tsc', '-p', 'tsconfig.json'], path.join(appDir, 'packages/shared'));
 
         // Move to cache location
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });

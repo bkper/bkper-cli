@@ -29,22 +29,12 @@ describe('Integration: app init', function () {
 
         // Verify app directory exists
         expect(fs.existsSync(appDir), 'appDir should exist').to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'package.json')), 'package.json should exist').to.be
-            .true;
-        expect(fs.existsSync(path.join(appDir, 'bkper.yaml')), 'bkper.yaml should exist').to.be
-            .true;
-        expect(fs.existsSync(path.join(appDir, 'packages/shared')), 'packages/shared should exist')
-            .to.be.true;
-        expect(
-            fs.existsSync(path.join(appDir, 'packages/web/client')),
-            'packages/web/client should exist'
-        ).to.be.true;
-        expect(
-            fs.existsSync(path.join(appDir, 'packages/web/server')),
-            'packages/web/server should exist'
-        ).to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/events')), 'packages/events should exist')
-            .to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'package.json')), 'package.json should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'bkper.yaml')), 'bkper.yaml should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'packages/shared')), 'packages/shared should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'packages/web/client')), 'packages/web/client should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'packages/web/server')), 'packages/web/server should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'packages/events')), 'packages/events should exist').to.be.true;
     });
 
     it('should not include VCS metadata in the created app', async function () {

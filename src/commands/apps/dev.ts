@@ -92,7 +92,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         process.cwd()
     );
 
-    const clientRoot = deployConfig.web?.client ? path.resolve(process.cwd(), deployConfig.web.client) : undefined;
+    const clientRoot = deployConfig.web?.client
+        ? path.resolve(process.cwd(), deployConfig.web.client)
+        : undefined;
     const preflight = preflightDependencies(process.cwd(), clientRoot);
     if (!preflight.ok) {
         console.error(preflight.message);
@@ -401,7 +403,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         await cleanup();
     });
     process.once('uncaughtException', async err => {
-        eventsLogger.warn(`Uncaught exception: ${err instanceof Error ? err.message : String(err)}`);
+        eventsLogger.warn(
+            `Uncaught exception: ${err instanceof Error ? err.message : String(err)}`
+        );
         try {
             await cleanup();
         } catch {
@@ -409,7 +413,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         }
     });
     process.once('unhandledRejection', async reason => {
-        eventsLogger.warn(`Unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`);
+        eventsLogger.warn(
+            `Unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`
+        );
         try {
             await cleanup();
         } catch {

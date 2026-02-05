@@ -29,7 +29,10 @@ export interface ClientBuildOptions {
  * @param options - Server configuration options
  * @returns Running Vite dev server instance
  */
-export async function createClientServer(root: string, options: ClientServerOptions): Promise<ViteDevServer> {
+export async function createClientServer(
+    root: string,
+    options: ClientServerOptions
+): Promise<ViteDevServer> {
     // Plugin to add auth middleware for local development
     const authPlugin: Plugin = {
         name: 'bkper-dev-auth',
@@ -75,7 +78,9 @@ export async function buildClient(root: string, options: ClientBuildOptions): Pr
         root,
         build: {
             // IMPORTANT: Use absolute path to ensure output goes to project root
-            outDir: path.isAbsolute(options.outDir) ? options.outDir : path.resolve(process.cwd(), options.outDir),
+            outDir: path.isAbsolute(options.outDir)
+                ? options.outDir
+                : path.resolve(process.cwd(), options.outDir),
             emptyOutDir: true,
         },
         // Disable config file

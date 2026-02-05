@@ -28,10 +28,7 @@ async function isDeployApiAvailable(platformUrl: string): Promise<boolean> {
  * Checks prerequisites and skips if not met.
  * Tries localhost:8790 first, falls back to platform-dev.bkper.app
  */
-export async function setupAppTest(
-    context: Mocha.Context,
-    timeoutMs: number = 30000
-): Promise<void> {
+export async function setupAppTest(context: Mocha.Context, timeoutMs: number = 30000): Promise<void> {
     context.timeout(timeoutMs);
 
     if (!fs.existsSync(CLI_PATH)) {
@@ -45,9 +42,7 @@ export async function setupAppTest(
     if (!platformUrl) {
         console.log('\n  Skipping: Platform not accessible');
         console.log('   Tried: localhost:8790 and platform-dev.bkper.app');
-        console.log(
-            '   Start local platform with: cd bkper-clients/packages/platform && bun dev\n'
-        );
+        console.log('   Start local platform with: cd bkper-clients/packages/platform && bun dev\n');
         return context.skip();
     }
 
@@ -66,10 +61,7 @@ export async function setupAppTest(
  * Setup hook specifically for deploy/undeploy tests.
  * Checks that platform has full deploy API available.
  */
-export async function setupDeployTest(
-    context: Mocha.Context,
-    timeoutMs: number = 30000
-): Promise<void> {
+export async function setupDeployTest(context: Mocha.Context, timeoutMs: number = 30000): Promise<void> {
     await setupAppTest(context, timeoutMs);
 
     // If we get here, basic setup passed - now check for deploy API

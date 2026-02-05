@@ -133,7 +133,10 @@ export class Tunnel extends EventEmitter {
         return super.off(event, listener);
     }
 
-    public emit<E extends keyof TunnelEvents>(event: E, ...args: Parameters<TunnelEvents[E]>): boolean {
+    public emit<E extends keyof TunnelEvents>(
+        event: E,
+        ...args: Parameters<TunnelEvents[E]>
+    ): boolean {
         return super.emit(event, ...args);
     }
 

@@ -31,9 +31,7 @@ describe('MCP Server - list_transactions Tool Registration', function () {
     it('should register list_transactions tool in MCP tools list', async function () {
         const response = await server.testListTools();
 
-        const listTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'list_transactions'
-        );
+        const listTransactionsTool = response.tools.find((tool: any) => tool.name === 'list_transactions');
 
         // This test will FAIL until list_transactions tool is implemented
         expect(listTransactionsTool).to.exist;

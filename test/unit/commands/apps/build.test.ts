@@ -85,8 +85,7 @@ describe('CLI - apps build command', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
-                .true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
         });
 
         it('should exit with error when no config file exists', async function () {
@@ -99,8 +98,7 @@ describe('CLI - apps build command', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
-                .true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
         });
     });
 
@@ -153,11 +151,7 @@ deployment:
             const clientDir = path.join(tempDir, 'src/client');
             fs.writeFileSync(
                 path.join(clientDir, 'package.json'),
-                JSON.stringify(
-                    { name: 'client', private: true, dependencies: { lit: '^3.3.2' } },
-                    null,
-                    2
-                )
+                JSON.stringify({ name: 'client', private: true, dependencies: { lit: '^3.3.2' } }, null, 2)
             );
 
             process.chdir(tempDir);
@@ -355,12 +349,7 @@ deployment:
 /**
  * Configuration types for test projects
  */
-type ConfigType =
-    | 'full'
-    | 'web-with-client'
-    | 'web-server-only'
-    | 'events-only'
-    | 'events-with-services';
+type ConfigType = 'full' | 'web-with-client' | 'web-server-only' | 'events-only' | 'events-with-services';
 
 interface SetupOptions {
     configType: ConfigType;
@@ -376,10 +365,7 @@ function setupProjectStructure(tempDir: string, options: SetupOptions): void {
     const { configType, createSourceFiles, createViteProject, createSharedPackage } = options;
 
     // Create package.json (required by preflight)
-    fs.writeFileSync(
-        path.join(tempDir, 'package.json'),
-        JSON.stringify({ name: 'test-app', private: true }, null, 2)
-    );
+    fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'test-app', private: true }, null, 2));
 
     // Create node_modules (required by preflight)
     const nodeModulesPath = path.join(tempDir, 'node_modules');
@@ -452,11 +438,7 @@ deployment:
             fs.writeFileSync(path.join(tempDir, 'src/server/index.ts'), workerCode);
         }
 
-        if (
-            configType === 'full' ||
-            configType === 'events-only' ||
-            configType === 'events-with-services'
-        ) {
+        if (configType === 'full' || configType === 'events-only' || configType === 'events-with-services') {
             fs.mkdirSync(path.join(tempDir, 'src/events'), { recursive: true });
             fs.writeFileSync(path.join(tempDir, 'src/events/index.ts'), workerCode);
         }

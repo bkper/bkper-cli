@@ -79,8 +79,7 @@ function createMockTransaction(data: any) {
                     return thisVal === otherVal ? 0 : thisVal > otherVal ? 1 : -1;
                 },
                 minus: (other: any) => ({
-                    toString: () =>
-                        (parseFloat(data.amount) - parseFloat(other?.toString() || '0')).toString(),
+                    toString: () => (parseFloat(data.amount) - parseFloat(other?.toString() || '0')).toString(),
                 }),
                 toString: () => data.amount,
             };
@@ -95,13 +94,7 @@ function createMockTransaction(data: any) {
 }
 
 // Helper function to create mock Book with Transaction factory
-function createMockBookForMerge(
-    book: any,
-    tx1Data: any,
-    tx2Data: any,
-    onTrash?: Function,
-    onUpdate?: Function
-) {
+function createMockBookForMerge(book: any, tx1Data: any, tx2Data: any, onTrash?: Function, onUpdate?: Function) {
     const mockBook = {
         json: () => book,
         getId: () => book.id,
@@ -161,18 +154,14 @@ describe('MCP Server - merge_transactions Tool Registration', function () {
         expect(response).to.have.property('tools');
         expect(response.tools).to.be.an('array');
 
-        const mergeTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'merge_transactions'
-        );
+        const mergeTransactionsTool = response.tools.find((tool: any) => tool.name === 'merge_transactions');
         expect(mergeTransactionsTool).to.exist;
         expect(mergeTransactionsTool!.name).to.equal('merge_transactions');
     });
 
     it('should have description mentioning merge and duplicate', async function () {
         const response = await server.testListTools();
-        const mergeTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'merge_transactions'
-        );
+        const mergeTransactionsTool = response.tools.find((tool: any) => tool.name === 'merge_transactions');
 
         expect(mergeTransactionsTool).to.exist;
         if (mergeTransactionsTool && mergeTransactionsTool.description) {
@@ -183,9 +172,7 @@ describe('MCP Server - merge_transactions Tool Registration', function () {
 
     it('should have proper MCP tool schema for merge_transactions', async function () {
         const response = await server.testListTools();
-        const mergeTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'merge_transactions'
-        ) as any;
+        const mergeTransactionsTool = response.tools.find((tool: any) => tool.name === 'merge_transactions') as any;
 
         expect(mergeTransactionsTool).to.exist;
         expect(mergeTransactionsTool.inputSchema).to.have.property('properties');
@@ -199,9 +186,7 @@ describe('MCP Server - merge_transactions Tool Registration', function () {
 
     it('should have all parameters as required', async function () {
         const response = await server.testListTools();
-        const mergeTransactionsTool = response.tools.find(
-            (tool: any) => tool.name === 'merge_transactions'
-        ) as any;
+        const mergeTransactionsTool = response.tools.find((tool: any) => tool.name === 'merge_transactions') as any;
 
         expect(mergeTransactionsTool.inputSchema.required).to.be.an('array');
         expect(mergeTransactionsTool.inputSchema.required).to.include('bookId');
@@ -443,8 +428,7 @@ describe('MCP Server - merge_transactions Algorithm: Description Merging', funct
 
         // Check it matches expected pattern (not exact match due to possible implementation variations)
         expect(mergedDescription.toLowerCase()).to.satisfy(
-            (desc: string) =>
-                desc.includes('int') && desc.includes('impostos') && desc.includes('nacional')
+            (desc: string) => desc.includes('int') && desc.includes('impostos') && desc.includes('nacional')
         );
     });
 
@@ -682,9 +666,7 @@ describe('MCP Server - merge_transactions Algorithm: Account Backfilling', funct
 
         const jsonResponse = JSON.parse(response.content[0].text as string);
 
-        expect(jsonResponse.mergedTransaction.creditAccountId).to.equal(
-            scenario.expectedEdit.creditAccountId
-        );
+        expect(jsonResponse.mergedTransaction.creditAccountId).to.equal(scenario.expectedEdit.creditAccountId);
     });
 
     it('should backfill missing debit account', async function () {
@@ -705,9 +687,7 @@ describe('MCP Server - merge_transactions Algorithm: Account Backfilling', funct
 
         const jsonResponse = JSON.parse(response.content[0].text as string);
 
-        expect(jsonResponse.mergedTransaction.debitAccountId).to.equal(
-            scenario.expectedEdit.debitAccountId
-        );
+        expect(jsonResponse.mergedTransaction.debitAccountId).to.equal(scenario.expectedEdit.debitAccountId);
     });
 });
 
@@ -737,12 +717,8 @@ describe('MCP Server - merge_transactions Algorithm: Metadata Merging', function
         const jsonResponse = JSON.parse(response.content[0].text as string);
 
         expect(jsonResponse.mergedTransaction.attachments).to.have.length(2);
-        expect(
-            jsonResponse.mergedTransaction.attachments.some((a: any) => a.artifactId === 'attach1')
-        ).to.be.true;
-        expect(
-            jsonResponse.mergedTransaction.attachments.some((a: any) => a.artifactId === 'attach2')
-        ).to.be.true;
+        expect(jsonResponse.mergedTransaction.attachments.some((a: any) => a.artifactId === 'attach1')).to.be.true;
+        expect(jsonResponse.mergedTransaction.attachments.some((a: any) => a.artifactId === 'attach2')).to.be.true;
     });
 
     it('should merge URLs from both transactions', async function () {
