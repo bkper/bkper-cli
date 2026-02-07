@@ -7,7 +7,6 @@
  */
 
 import { Transaction, Book } from 'bkper-js';
-import { ErrorCode, McpError } from '@modelcontextprotocol/sdk/types.js';
 import { MergedTransactionData } from './merge-types.js';
 
 /**
@@ -24,7 +23,11 @@ export class TransactionMergeOperation {
 
     private static readonly WORD_SPLITTER = /[ \-_]+/;
 
-    constructor(private book: Book, transaction1: Transaction, transaction2: Transaction) {
+    constructor(
+        private book: Book,
+        transaction1: Transaction,
+        transaction2: Transaction
+    ) {
         // Determine which transaction to edit vs revert based on priority rules
         const tx1IsPosted = transaction1.isPosted() ?? false;
         const tx2IsPosted = transaction2.isPosted() ?? false;

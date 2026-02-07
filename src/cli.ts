@@ -19,7 +19,6 @@ import {
     build,
     DevOptions,
 } from './commands/apps/index.js';
-import { updateSkills } from './commands/skills.js';
 
 program
     .command('login')
@@ -214,26 +213,6 @@ secretsCommand
             await secretsDelete(name, options);
         } catch (err) {
             console.error('Error deleting secret:', err);
-            process.exit(1);
-        }
-    });
-
-const mcpCommand = program.command('mcp').description('Bkper MCP server commands');
-
-mcpCommand
-    .command('start')
-    .description('Start Bkper MCP server')
-    .action(async () => {
-        try {
-            // Sync global skills before starting
-            await updateSkills();
-
-            // Import and start the MCP server directly
-            const { BkperMcpServer } = await import('./mcp/server.js');
-            const server = new BkperMcpServer();
-            await server.run();
-        } catch (err) {
-            console.error('Error starting MCP server:', err);
             process.exit(1);
         }
     });
