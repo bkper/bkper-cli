@@ -273,7 +273,7 @@ bookCommand
                     )
                 );
             } else {
-                const matrix = new BooksDataTableBuilder(books).build();
+                const matrix = new BooksDataTableBuilder(books).ids(true).build();
                 renderTable(matrix, false);
             }
         } catch (err) {
@@ -348,7 +348,10 @@ accountCommand
                     )
                 );
             } else {
-                const matrix = await new AccountsDataTableBuilder(accounts).groups(true).build();
+                const matrix = await new AccountsDataTableBuilder(accounts)
+                    .ids(true)
+                    .groups(true)
+                    .build();
                 renderTable(matrix, false);
             }
         } catch (err) {
@@ -454,7 +457,7 @@ groupCommand
                     )
                 );
             } else {
-                const matrix = new GroupsDataTableBuilder(groups).build();
+                const matrix = new GroupsDataTableBuilder(groups).ids(true).build();
                 renderTable(matrix, false);
             }
         } catch (err) {
@@ -567,6 +570,7 @@ transactionCommand
             } else {
                 const builder = result.book
                     .createTransactionsDataTable(result.items, result.account)
+                    .ids(true)
                     .formatDates(true)
                     .formatValues(true)
                     .recordedAt(false);

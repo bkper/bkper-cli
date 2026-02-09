@@ -233,26 +233,169 @@ describe('table-formatter', function () {
             expect(lines[0]).to.contain('name:');
         });
 
-        it('should handle nested objects by serializing to JSON', function () {
+        it('should render nested objects with indented key-value pairs', function () {
             const item: Record<string, unknown> = {
                 name: 'Test',
-                properties: { key: 'value' },
+                properties: { key: 'value', other: 'data' },
             };
 
             const result = formatItem(item);
-            expect(result).to.contain('properties:');
-            expect(result).to.contain('{"key":"value"}');
+            const lines = result.split('\n');
+
+            expect(lines[0]).to.contain('name:');
+            expect(lines[0]).to.contain('Test');
+            expect(lines[1]).to.equal('properties:');
+            expect(lines[2]).to.match(/^\s+key:/);
+            expect(lines[2]).to.contain('value');
+            expect(lines[3]).to.match(/^\s+other:/);
+            expect(lines[3]).to.contain('data');
         });
 
-        it('should handle arrays by serializing to JSON', function () {
+        it('should align nested object keys independently', function () {
             const item: Record<string, unknown> = {
                 name: 'Test',
-                groups: ['Group A', 'Group B'],
+                collection: { id: '123', longFieldName: 'val' },
             };
 
             const result = formatItem(item);
-            expect(result).to.contain('groups:');
-            expect(result).to.contain('["Group A","Group B"]');
+            const lines = result.split('\n');
+
+            // id and longFieldName lines should have values aligned within the nested block
+            const idValueStart = lines[2].indexOf('123');
+            const longValueStart = lines[3].indexOf('val');
+
+            expect(idValueStart).to.equal(longValueStart);
+        });
+
+        it('should render arrays of primitives with dash prefix', function () {
+            const item: Record<string, unknown> = {
+                name: 'Test',
+                tags: ['tag1', 'tag2', 'tag3'],
+            };
+
+            const result = formatItem(item);
+            const lines = result.split('\n');
+
+            expect(lines[0]).to.contain('name:');
+            expect(lines[1]).to.equal('tags:');
+            expect(lines[2]).to.match(/^\s+- tag1$/);
+            expect(lines[3]).to.match(/^\s+- tag2$/);
+            expect(lines[4]).to.match(/^\s+- tag3$/);
+        });
+
+        it('should render arrays of objects with dash prefix and indented fields', function () {
+            const item: Record<string, unknown> = {
+                name: 'Book',
+                groups: [
+                    { name: 'Assets', type: 'ASSET' },
+                    { name: 'Liabilities', type: 'LIABILITY' },
+                ],
+            };
+
+            const result = formatItem(item);
+            const lines = result.split('\n');
+
+            expect(lines[0]).to.contain('name:');
+            expect(lines[0]).to.contain('Book');
+            expect(lines[1]).to.equal('groups:');
+            // First array element
+            expect(lines[2]).to.match(/^\s+- name:/);
+            expect(lines[2]).to.contain('Assets');
+            expect(lines[3]).to.match(/^\s+type:/);
+            expect(lines[3]).to.contain('ASSET');
+            // Second array element
+            expect(lines[4]).to.match(/^\s+- name:/);
+            expect(lines[4]).to.contain('Liabilities');
+            expect(lines[5]).to.match(/^\s+type:/);
+            expect(lines[5]).to.contain('LIABILITY');
+        });
+
+        it('should handle deep nesting (object within object)', function () {
+            const item: Record<string, unknown> = {
+                name: 'Child Group',
+                parent: {
+                    name: 'Parent Group',
+                    parent: {
+                        name: 'Grandparent',
+                    },
+                },
+            };
+
+            const result = formatItem(item);
+            const lines = result.split('\n');
+
+            expect(lines[0]).to.contain('name:');
+            expect(lines[0]).to.contain('Child Group');
+            expect(lines[1]).to.equal('parent:');
+            expect(lines[2]).to.contain('name:');
+            expect(lines[2]).to.contain('Parent Group');
+            expect(lines[3]).to.match(/^\s+parent:$/);
+            expect(lines[4]).to.contain('name:');
+            expect(lines[4]).to.contain('Grandparent');
+        });
+
+        it('should skip empty arrays', function () {
+            const item: Record<string, unknown> = {
+                name: 'Test',
+                tags: [],
+            };
+
+            const result = formatItem(item);
+            const lines = result.split('\n');
+
+            expect(lines).to.have.length(1);
+            expect(result).to.not.contain('tags');
+        });
+
+        it('should skip empty objects', function () {
+            const item: Record<string, unknown> = {
+                name: 'Test',
+                properties: {},
+            };
+
+            const result = formatItem(item);
+            const lines = result.split('\n');
+
+            expect(lines).to.have.length(1);
+            expect(result).to.not.contain('properties');
+        });
+
+        it('should render a realistic book object correctly', function () {
+            const item: Record<string, unknown> = {
+                id: 'abc123',
+                name: 'My Book',
+                ownerName: 'mael',
+                permission: 'OWNER',
+                visibility: 'PRIVATE',
+                collection: {
+                    id: 'col-456',
+                    name: 'My Collection',
+                },
+                properties: {
+                    stock_book: 'true',
+                    report_url: 'https://example.com',
+                },
+            };
+
+            const result = formatItem(item);
+
+            // Top-level primitives rendered inline
+            expect(result).to.contain('id:');
+            expect(result).to.contain('abc123');
+            expect(result).to.contain('name:');
+            expect(result).to.contain('My Book');
+
+            // collection rendered as nested block
+            expect(result).to.contain('collection:\n');
+            expect(result).to.contain('col-456');
+            expect(result).to.contain('My Collection');
+
+            // properties rendered as nested block
+            expect(result).to.contain('properties:\n');
+            expect(result).to.contain('stock_book:');
+            expect(result).to.contain('true');
+            expect(result).to.contain('report_url:');
+            expect(result).to.contain('https://example.com');
         });
 
         it('should return empty string for empty record', function () {
