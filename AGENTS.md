@@ -112,6 +112,7 @@ src/
 ├── commands/       # CLI command implementations
 ├── domain/         # Domain-specific operations (reusable business logic)
 │   └── transaction/ # Transaction merge operation
+├── render/         # Output formatting (table, key-value, JSON)
 └── cli.ts          # Main CLI entry point
 
 test/

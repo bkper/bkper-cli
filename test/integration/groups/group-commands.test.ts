@@ -36,6 +36,7 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Assets',
@@ -49,6 +50,7 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Current Assets',
@@ -64,6 +66,7 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Internal',
@@ -80,6 +83,7 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Expenses',
@@ -95,7 +99,7 @@ describe('CLI - group commands', function () {
 
     describe('group list', function () {
         it('should return an array of groups', async function () {
-            const result = await runBkperJson<bkper.Group[]>(['group', 'list', bookId]);
+            const result = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookId]);
 
             expect(result).to.be.an('array');
             expect(result.length).to.be.greaterThanOrEqual(4);
@@ -110,14 +114,20 @@ describe('CLI - group commands', function () {
 
     describe('group get', function () {
         it('should get a group by name', async function () {
-            const result = await runBkperJson<bkper.Group>(['group', 'get', bookId, 'Assets']);
+            const result = await runBkperJson<bkper.Group>([
+                'group',
+                'get',
+                'Assets',
+                '-b',
+                bookId,
+            ]);
 
             expect(result).to.be.an('object');
             expect(result.name).to.equal('Assets');
         });
 
         it('should fail for a non-existent group', async function () {
-            const result = await runBkper(['group', 'get', bookId, 'NonExistent']);
+            const result = await runBkper(['group', 'get', 'NonExistent', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });
@@ -128,8 +138,9 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'update',
-                bookId,
                 'Expenses',
+                '-b',
+                bookId,
                 '--name',
                 'Operating Expenses',
             ]);
@@ -143,8 +154,9 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'update',
-                bookId,
                 'Operating Expenses',
+                '-b',
+                bookId,
                 '--properties',
                 props,
             ]);
@@ -157,15 +169,28 @@ describe('CLI - group commands', function () {
     describe('group delete', function () {
         it('should delete a group', async function () {
             // Create a disposable group
-            await runBkperJson<bkper.Group>(['group', 'create', bookId, '--name', 'ToDelete']);
+            await runBkperJson<bkper.Group>([
+                'group',
+                'create',
+                '-b',
+                bookId,
+                '--name',
+                'ToDelete',
+            ]);
 
-            const result = await runBkperJson<bkper.Group>(['group', 'delete', bookId, 'ToDelete']);
+            const result = await runBkperJson<bkper.Group>([
+                'group',
+                'delete',
+                'ToDelete',
+                '-b',
+                bookId,
+            ]);
 
             expect(result).to.be.an('object');
             expect(result.name).to.equal('ToDelete');
 
             // Verify it's gone
-            const getResult = await runBkper(['group', 'get', bookId, 'ToDelete']);
+            const getResult = await runBkper(['group', 'get', 'ToDelete', '-b', bookId]);
             expect(getResult.exitCode).to.not.equal(0);
         });
     });

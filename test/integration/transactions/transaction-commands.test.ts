@@ -25,10 +25,20 @@ describe('CLI - transaction commands', function () {
         bookId = await createTestBook(bookName);
 
         // Seed accounts for transactions
-        await runBkperJson(['account', 'create', bookId, '--name', 'Cash', '--type', 'ASSET']);
         await runBkperJson([
             'account',
             'create',
+            '-b',
+            bookId,
+            '--name',
+            'Cash',
+            '--type',
+            'ASSET',
+        ]);
+        await runBkperJson([
+            'account',
+            'create',
+            '-b',
             bookId,
             '--name',
             'Revenue',
@@ -38,6 +48,7 @@ describe('CLI - transaction commands', function () {
         await runBkperJson([
             'account',
             'create',
+            '-b',
             bookId,
             '--name',
             'Expenses',
@@ -67,6 +78,7 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
@@ -99,6 +111,7 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
@@ -123,6 +136,7 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
@@ -139,6 +153,7 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<{ items: bkper.Transaction[]; cursor?: string }>([
                 'transaction',
                 'list',
+                '-b',
                 bookId,
                 '-q',
                 'after:01/01/2025',
@@ -153,6 +168,7 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<{ items: bkper.Transaction[]; cursor?: string }>([
                 'transaction',
                 'list',
+                '-b',
                 bookId,
                 '-q',
                 'after:01/01/2025',
@@ -181,6 +197,7 @@ describe('CLI - transaction commands', function () {
             const created = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
@@ -191,8 +208,9 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'post',
-                bookId,
                 txId,
+                '-b',
+                bookId,
             ]);
 
             expect(result).to.be.an('object');
@@ -216,20 +234,22 @@ describe('CLI - transaction commands', function () {
             const created = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
             ]);
             const txId = created[0].id!;
 
-            await runBkperJson<bkper.Transaction>(['transaction', 'post', bookId, txId]);
+            await runBkperJson<bkper.Transaction>(['transaction', 'post', txId, '-b', bookId]);
 
             // Check the transaction
             const result = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'check',
-                bookId,
                 txId,
+                '-b',
+                bookId,
             ]);
 
             expect(result).to.be.an('object');
@@ -253,6 +273,7 @@ describe('CLI - transaction commands', function () {
             const created = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 txData,
@@ -263,8 +284,9 @@ describe('CLI - transaction commands', function () {
             const result = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'trash',
-                bookId,
                 txId,
+                '-b',
+                bookId,
             ]);
 
             expect(result).to.be.an('object');
@@ -298,6 +320,7 @@ describe('CLI - transaction commands', function () {
             const created1 = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 tx1Data,
@@ -305,6 +328,7 @@ describe('CLI - transaction commands', function () {
             const created2 = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 tx2Data,
@@ -314,14 +338,14 @@ describe('CLI - transaction commands', function () {
             const txId2 = created2[0].id!;
 
             // Post both transactions before merging
-            await runBkperJson(['transaction', 'post', bookId, txId1]);
-            await runBkperJson(['transaction', 'post', bookId, txId2]);
+            await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
+            await runBkperJson(['transaction', 'post', txId2, '-b', bookId]);
 
             const result = await runBkperJson<{
                 mergedTransaction: bkper.Transaction;
                 revertedTransactionId: string;
                 auditRecord: string | null;
-            }>(['transaction', 'merge', bookId, txId1, txId2]);
+            }>(['transaction', 'merge', txId1, txId2, '-b', bookId]);
 
             expect(result).to.be.an('object');
             expect(result.mergedTransaction).to.be.an('object');
@@ -351,6 +375,7 @@ describe('CLI - transaction commands', function () {
             const created1 = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 tx1Data,
@@ -358,6 +383,7 @@ describe('CLI - transaction commands', function () {
             const created2 = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'create',
+                '-b',
                 bookId,
                 '--transactions',
                 tx2Data,
@@ -366,10 +392,10 @@ describe('CLI - transaction commands', function () {
             const txId1 = created1[0].id!;
             const txId2 = created2[0].id!;
 
-            await runBkperJson(['transaction', 'post', bookId, txId1]);
-            await runBkperJson(['transaction', 'post', bookId, txId2]);
+            await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
+            await runBkperJson(['transaction', 'post', txId2, '-b', bookId]);
 
-            const result = await runBkper(['transaction', 'merge', bookId, txId1, txId2]);
+            const result = await runBkper(['transaction', 'merge', txId1, txId2, '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });
@@ -377,19 +403,19 @@ describe('CLI - transaction commands', function () {
 
     describe('transaction error handling', function () {
         it('should fail for a non-existent transaction ID', async function () {
-            const result = await runBkper(['transaction', 'post', bookId, 'nonexistent-id']);
+            const result = await runBkper(['transaction', 'post', 'nonexistent-id', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });
 
         it('should fail when missing required --transactions option', async function () {
-            const result = await runBkper(['transaction', 'create', bookId]);
+            const result = await runBkper(['transaction', 'create', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });
 
         it('should fail when missing required --query option for list', async function () {
-            const result = await runBkper(['transaction', 'list', bookId]);
+            const result = await runBkper(['transaction', 'list', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });

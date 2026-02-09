@@ -36,6 +36,7 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Cash',
@@ -53,6 +54,7 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Bank',
@@ -72,6 +74,7 @@ describe('CLI - account commands', function () {
             await runBkperJson<bkper.Group>([
                 'group',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Current Assets',
@@ -80,6 +83,7 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'Petty Cash',
@@ -96,7 +100,7 @@ describe('CLI - account commands', function () {
 
     describe('account list', function () {
         it('should return an array of accounts', async function () {
-            const result = await runBkperJson<bkper.Account[]>(['account', 'list', bookId]);
+            const result = await runBkperJson<bkper.Account[]>(['account', 'list', '-b', bookId]);
 
             expect(result).to.be.an('array');
             expect(result.length).to.be.greaterThanOrEqual(3);
@@ -110,7 +114,13 @@ describe('CLI - account commands', function () {
 
     describe('account get', function () {
         it('should get an account by name', async function () {
-            const result = await runBkperJson<bkper.Account>(['account', 'get', bookId, 'Cash']);
+            const result = await runBkperJson<bkper.Account>([
+                'account',
+                'get',
+                'Cash',
+                '-b',
+                bookId,
+            ]);
 
             expect(result).to.be.an('object');
             expect(result.name).to.equal('Cash');
@@ -118,7 +128,7 @@ describe('CLI - account commands', function () {
         });
 
         it('should fail for a non-existent account', async function () {
-            const result = await runBkper(['account', 'get', bookId, 'NonExistent']);
+            const result = await runBkper(['account', 'get', 'NonExistent', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });
@@ -129,8 +139,9 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'update',
-                bookId,
                 'Cash',
+                '-b',
+                bookId,
                 '--name',
                 'Cash Updated',
             ]);
@@ -144,8 +155,9 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'update',
-                bookId,
                 'Cash Updated',
+                '-b',
+                bookId,
                 '--properties',
                 props,
             ]);
@@ -161,6 +173,7 @@ describe('CLI - account commands', function () {
             await runBkperJson<bkper.Account>([
                 'account',
                 'create',
+                '-b',
                 bookId,
                 '--name',
                 'ToDelete',
@@ -171,15 +184,16 @@ describe('CLI - account commands', function () {
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'delete',
-                bookId,
                 'ToDelete',
+                '-b',
+                bookId,
             ]);
 
             expect(result).to.be.an('object');
             expect(result.name).to.equal('ToDelete');
 
             // Verify it's gone
-            const getResult = await runBkper(['account', 'get', bookId, 'ToDelete']);
+            const getResult = await runBkper(['account', 'get', 'ToDelete', '-b', bookId]);
             expect(getResult.exitCode).to.not.equal(0);
         });
     });

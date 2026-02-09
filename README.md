@@ -1,8 +1,8 @@
 [Bkper REST API]: https://bkper.com/docs/#rest-api-enabling
 
-A **command line** utility for managing [Bkper Apps](https://bkper.com/docs/) and running the [Model Context Protocol (MCP) server](https://modelcontextprotocol.io).
+A **command line** utility for managing [Bkper Apps](https://bkper.com/docs/) and interacting with Bkper data.
 
-The CLI provides atomic operations for app deployment and management, designed to work seamlessly with AI coding agents (Claude Code, OpenCode) that orchestrate the development workflow.
+The CLI provides atomic operations for app deployment and management, plus data commands for books, accounts, groups, transactions, and balances. Designed to work seamlessly with AI coding agents (Claude Code, OpenCode) that orchestrate the development workflow.
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
@@ -48,16 +48,16 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 - `app list` - List all apps you have access to
 - `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
 - `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
-  - `--dev` - Deploy to development environment
-  - `--web` - Deploy web handler only
-  - `--events` - Deploy events handler only
+    - `--dev` - Deploy to development environment
+    - `--web` - Deploy web handler only
+    - `--events` - Deploy events handler only
 - `app status` - Show deployment status
 - `app undeploy` - Remove app from platform
-  - `--dev` - Remove from development environment
-  - `--web` - Remove web handler only
-  - `--events` - Remove events handler only
+    - `--dev` - Remove from development environment
+    - `--web` - Remove web handler only
+    - `--events` - Remove events handler only
 
-> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs 
+> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs
 > in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare.
 > For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
 
@@ -67,9 +67,63 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 - `app secrets list` - List all secrets
 - `app secrets delete <name>` - Delete a secret
 
-### MCP Server
+### Data Commands
 
-- `mcp start` - Start the Model Context Protocol server
+All data commands that operate within a book use `-b, --book <bookId>` to specify the book context.
+
+#### Books
+
+- `book list` - List all books
+- `book get <bookId>` - Get a book's details
+- `book update <bookId>` - Update a book
+
+#### Accounts
+
+- `account list -b <bookId>` - List accounts in a book
+- `account get <nameOrId> -b <bookId>` - Get an account
+- `account create <name> -b <bookId>` - Create an account
+- `account update <nameOrId> -b <bookId>` - Update an account
+- `account delete <nameOrId> -b <bookId>` - Delete an account
+
+#### Groups
+
+- `group list -b <bookId>` - List groups in a book
+- `group get <nameOrId> -b <bookId>` - Get a group
+- `group create <name> -b <bookId>` - Create a group
+- `group update <nameOrId> -b <bookId>` - Update a group
+- `group delete <nameOrId> -b <bookId>` - Delete a group
+
+#### Transactions
+
+- `transaction list -b <bookId> -q <query>` - List transactions matching a query
+    - `-p, --properties` - Include custom properties in the output
+- `transaction create -b <bookId>` - Create a transaction
+- `transaction post <id> -b <bookId>` - Post a draft transaction
+- `transaction check <id> -b <bookId>` - Check a transaction
+- `transaction trash <id> -b <bookId>` - Trash a transaction
+- `transaction merge -b <bookId>` - Merge duplicate transactions
+
+#### Balances
+
+- `balance get -b <bookId>` - Get account balances
+
+### Output Format
+
+All commands output human-readable formatted tables by default. Use the `--json` global flag to get raw JSON output instead.
+
+```bash
+# Table output (default)
+bkper book list
+
+# JSON output
+bkper book list --json
+
+# List accounts in a book
+bkper account list -b abc123
+
+# List transactions with properties
+bkper transaction list -b abc123 -q "after:2025-01-01" -p
+```
 
 ### Examples
 
@@ -97,63 +151,6 @@ bkper app secrets put API_KEY
 bkper app secrets list
 ```
 
-## MCP (Model Context Protocol) Server
-
-Bkper includes an MCP server that allows AI assistants and other tools to interact with your Bkper books through the [Model Context Protocol](https://modelcontextprotocol.io).
-
-### Starting the MCP Server
-
-```bash
-bkper mcp start
-```
-
-The server runs on stdio and provides the following tools:
-
-- **list_books** - List all books accessible by the authenticated user
-- **get_book** - Get detailed information about a specific book
-- **get_balances** - Get account balances with query filtering
-- **list_transactions** - List transactions with filtering and pagination
-- **create_transactions** - Create transactions in batch
-- **merge_transactions** - Merge duplicate transactions into one
-
-### Prerequisites
-
-Before using the MCP server:
-
-1. Login using `bkper login` to set up authentication
-
-The MCP server uses the same authentication as the CLI, reading credentials from `~/.config/bkper/.bkper-credentials.json`.
-
-### Integration Examples
-
-#### Claude Desktop
-
-Add to your configuration file:
-
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-```json
-{
-    "mcpServers": {
-        "bkper": {
-            "command": "bkper",
-            "args": ["mcp", "start"]
-        }
-    }
-}
-```
-
-#### Other MCP Clients
-
-For other MCP-compatible clients, configure them to run:
-
-```bash
-bkper mcp start
-```
-
-The server communicates via stdio, so any MCP client that supports stdio transport can connect to it.
-
 ## Apps Configuration
 
 Apps are configured via a `bkper.yaml` file in the project root.
@@ -175,16 +172,16 @@ See the complete reference with all available fields and documentation:
 The CLI automatically syncs AI agent skills from the [skills repository](https://github.com/bkper/skills). Skills provide procedural knowledge to AI coding assistants (Claude Code, OpenCode) when working on Bkper apps.
 
 Skills are synced when running:
+
 - `bkper app init <name>` - when creating a new app
-- `bkper mcp start` - when starting the MCP server
 
 ## Library
 
 The `getOAuthToken` function returns a Promise that resolves to a valid OAuth token, for use with the [`bkper-js`](https://github.com/bkper/bkper-js) library:
 
 ```javascript
-import { Bkper } from "bkper-js";
-import { getOAuthToken } from "bkper";
+import { Bkper } from 'bkper-js';
+import { getOAuthToken } from 'bkper';
 
 Bkper.setConfig({
     oauthTokenProvider: async () => getOAuthToken(),

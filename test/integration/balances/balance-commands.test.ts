@@ -25,12 +25,13 @@ describe('CLI - balance commands', function () {
         bookId = await createTestBook(bookName);
 
         // Create a group
-        await runBkperJson(['group', 'create', bookId, '--name', 'Assets']);
+        await runBkperJson(['group', 'create', '-b', bookId, '--name', 'Assets']);
 
         // Create accounts
         await runBkperJson([
             'account',
             'create',
+            '-b',
             bookId,
             '--name',
             'Cash',
@@ -42,6 +43,7 @@ describe('CLI - balance commands', function () {
         await runBkperJson([
             'account',
             'create',
+            '-b',
             bookId,
             '--name',
             'Revenue',
@@ -69,6 +71,7 @@ describe('CLI - balance commands', function () {
         const created = await runBkperJson<bkper.Transaction[]>([
             'transaction',
             'create',
+            '-b',
             bookId,
             '--transactions',
             txData,
@@ -76,7 +79,7 @@ describe('CLI - balance commands', function () {
 
         // Post all transactions
         for (const tx of created) {
-            await runBkperJson(['transaction', 'post', bookId, tx.id!]);
+            await runBkperJson(['transaction', 'post', tx.id!, '-b', bookId]);
         }
     });
 
@@ -94,7 +97,7 @@ describe('CLI - balance commands', function () {
                     periodBalance: string;
                     cumulativeBalance: string;
                 }>;
-            }>(['balance', 'get', bookId, '-q', 'account:Cash']);
+            }>(['balance', 'get', '-b', bookId, '-q', 'account:Cash']);
 
             expect(result).to.be.an('object');
             expect(result.items).to.be.an('array');
@@ -111,7 +114,7 @@ describe('CLI - balance commands', function () {
                     periodBalance: string;
                     cumulativeBalance: string;
                 }>;
-            }>(['balance', 'get', bookId, '-q', 'group:Assets']);
+            }>(['balance', 'get', '-b', bookId, '-q', 'group:Assets']);
 
             expect(result).to.be.an('object');
             expect(result.items).to.be.an('array');
@@ -126,7 +129,7 @@ describe('CLI - balance commands', function () {
                     cumulativeBalance: string;
                 }>;
                 matrix?: unknown[][];
-            }>(['balance', 'get', bookId, '-q', 'account:Cash', '--raw']);
+            }>(['balance', 'get', '-b', bookId, '-q', 'account:Cash', '--raw']);
 
             expect(result).to.be.an('object');
             expect(result.items).to.be.an('array');
@@ -141,7 +144,7 @@ describe('CLI - balance commands', function () {
                     cumulativeBalance: string;
                 }>;
                 matrix?: unknown[][];
-            }>(['balance', 'get', bookId, '-q', 'group:Assets', '--expanded', '2']);
+            }>(['balance', 'get', '-b', bookId, '-q', 'group:Assets', '--expanded', '2']);
 
             expect(result).to.be.an('object');
             expect(result.items).to.be.an('array');
@@ -149,7 +152,7 @@ describe('CLI - balance commands', function () {
         });
 
         it('should fail when missing required --query option', async function () {
-            const result = await runBkper(['balance', 'get', bookId]);
+            const result = await runBkper(['balance', 'get', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });

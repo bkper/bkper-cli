@@ -333,11 +333,13 @@ bookCommand
 const accountCommand = program.command('account').description('Manage Accounts');
 
 accountCommand
-    .command('list <bookId>')
+    .command('list')
     .description('List all accounts in a book')
-    .action(async (bookId: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const accounts = await listAccounts(bookId);
             if (isJson()) {
                 console.log(
@@ -361,11 +363,13 @@ accountCommand
     });
 
 accountCommand
-    .command('get <bookId> <idOrName>')
+    .command('get <idOrName>')
     .description('Get an account by ID or name')
-    .action(async (bookId: string, idOrName: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const account = await getAccount(bookId, idOrName);
             renderItem(account.json(), isJson());
         } catch (err) {
@@ -375,16 +379,18 @@ accountCommand
     });
 
 accountCommand
-    .command('create <bookId>')
+    .command('create')
     .description('Create a new account')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('--name <name>', 'Account name')
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--description <description>', 'Account description')
     .option('--groups <groups>', 'Comma-separated group names')
     .option('--properties <json>', 'Properties as JSON object')
-    .action(async (bookId: string, options) => {
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const account = await createAccount(bookId, {
                 name: options.name,
                 type: options.type,
@@ -402,15 +408,17 @@ accountCommand
     });
 
 accountCommand
-    .command('update <bookId> <idOrName>')
+    .command('update <idOrName>')
     .description('Update an account')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .option('--name <name>', 'Account name')
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--archived <archived>', 'Archive status (true/false)')
     .option('--properties <json>', 'Properties as JSON object')
-    .action(async (bookId: string, idOrName: string, options) => {
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const account = await updateAccount(bookId, idOrName, {
                 name: options.name,
                 type: options.type,
@@ -425,11 +433,13 @@ accountCommand
     });
 
 accountCommand
-    .command('delete <bookId> <idOrName>')
+    .command('delete <idOrName>')
     .description('Delete an account')
-    .action(async (bookId: string, idOrName: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const account = await deleteAccount(bookId, idOrName);
             renderItem(account.json(), isJson());
         } catch (err) {
@@ -442,11 +452,13 @@ accountCommand
 const groupCommand = program.command('group').description('Manage Groups');
 
 groupCommand
-    .command('list <bookId>')
+    .command('list')
     .description('List all groups in a book')
-    .action(async (bookId: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const groups = await listGroups(bookId);
             if (isJson()) {
                 console.log(
@@ -457,7 +469,7 @@ groupCommand
                     )
                 );
             } else {
-                const matrix = new GroupsDataTableBuilder(groups).ids(true).build();
+                const matrix = new GroupsDataTableBuilder(groups).ids(true).tree(true).build();
                 renderTable(matrix, false);
             }
         } catch (err) {
@@ -467,11 +479,13 @@ groupCommand
     });
 
 groupCommand
-    .command('get <bookId> <idOrName>')
+    .command('get <idOrName>')
     .description('Get a group by ID or name')
-    .action(async (bookId: string, idOrName: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const group = await getGroup(bookId, idOrName);
             renderItem(group.json(), isJson());
         } catch (err) {
@@ -481,15 +495,17 @@ groupCommand
     });
 
 groupCommand
-    .command('create <bookId>')
+    .command('create')
     .description('Create a new group')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('--name <name>', 'Group name')
     .option('--parent <parent>', 'Parent group name or ID')
     .option('--hidden', 'Hide the group')
     .option('--properties <json>', 'Properties as JSON object')
-    .action(async (bookId: string, options) => {
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const group = await createGroup(bookId, {
                 name: options.name,
                 parent: options.parent,
@@ -504,14 +520,16 @@ groupCommand
     });
 
 groupCommand
-    .command('update <bookId> <idOrName>')
+    .command('update <idOrName>')
     .description('Update a group')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .option('--name <name>', 'Group name')
     .option('--hidden <hidden>', 'Hide status (true/false)')
     .option('--properties <json>', 'Properties as JSON object')
-    .action(async (bookId: string, idOrName: string, options) => {
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const group = await updateGroup(bookId, idOrName, {
                 name: options.name,
                 hidden: options.hidden !== undefined ? options.hidden === 'true' : undefined,
@@ -525,11 +543,13 @@ groupCommand
     });
 
 groupCommand
-    .command('delete <bookId> <idOrName>')
+    .command('delete <idOrName>')
     .description('Delete a group')
-    .action(async (bookId: string, idOrName: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (idOrName: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const group = await deleteGroup(bookId, idOrName);
             renderItem(group.json(), isJson());
         } catch (err) {
@@ -542,15 +562,17 @@ groupCommand
 const transactionCommand = program.command('transaction').description('Manage Transactions');
 
 transactionCommand
-    .command('list <bookId>')
+    .command('list')
     .description('List transactions in a book')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('-q, --query <query>', 'Search query')
     .option('-l, --limit <limit>', 'Maximum number of results', parseInt)
     .option('-c, --cursor <cursor>', 'Pagination cursor')
     .option('-p, --properties', 'Include custom properties')
-    .action(async (bookId: string, options) => {
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const result = await listTransactions(bookId, {
                 query: options.query,
                 limit: options.limit,
@@ -590,12 +612,14 @@ transactionCommand
     });
 
 transactionCommand
-    .command('create <bookId>')
+    .command('create')
     .description('Create transactions (batch)')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('--transactions <json>', 'Transaction data as JSON array')
-    .action(async (bookId: string, options) => {
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const inputs = JSON.parse(options.transactions);
             const transactions = await createTransactions(bookId, inputs);
             if (isJson()) {
@@ -619,11 +643,13 @@ transactionCommand
     });
 
 transactionCommand
-    .command('post <bookId> <transactionId>')
+    .command('post <transactionId>')
     .description('Post a transaction')
-    .action(async (bookId: string, transactionId: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (transactionId: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const transaction = await postTransaction(bookId, transactionId);
             renderItem(transaction.json(), isJson());
         } catch (err) {
@@ -633,11 +659,13 @@ transactionCommand
     });
 
 transactionCommand
-    .command('check <bookId> <transactionId>')
+    .command('check <transactionId>')
     .description('Check a transaction')
-    .action(async (bookId: string, transactionId: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (transactionId: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const transaction = await checkTransaction(bookId, transactionId);
             renderItem(transaction.json(), isJson());
         } catch (err) {
@@ -647,11 +675,13 @@ transactionCommand
     });
 
 transactionCommand
-    .command('trash <bookId> <transactionId>')
+    .command('trash <transactionId>')
     .description('Trash a transaction')
-    .action(async (bookId: string, transactionId: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (transactionId: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const transaction = await trashTransaction(bookId, transactionId);
             renderItem(transaction.json(), isJson());
         } catch (err) {
@@ -661,11 +691,13 @@ transactionCommand
     });
 
 transactionCommand
-    .command('merge <bookId> <transactionId1> <transactionId2>')
+    .command('merge <transactionId1> <transactionId2>')
     .description('Merge two transactions')
-    .action(async (bookId: string, transactionId1: string, transactionId2: string) => {
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (transactionId1: string, transactionId2: string, options) => {
         try {
             setupBkper();
+            const bookId = options.book;
             const result = await mergeTransactions(bookId, transactionId1, transactionId2);
             if (isJson()) {
                 console.log(
@@ -692,13 +724,15 @@ transactionCommand
 const balanceCommand = program.command('balance').description('Manage Balances');
 
 balanceCommand
-    .command('get <bookId>')
+    .command('get')
     .description('Get balances report')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('-q, --query <query>', 'Balances query')
     .option('--expanded <level>', 'Expand groups to specified depth', parseInt)
-    .action(async (bookId: string, options) => {
+    .action(async options => {
         try {
             setupBkper();
+            const bookId = options.book;
             const matrix = await getBalancesMatrix(bookId, {
                 query: options.query,
                 expanded: options.expanded,
