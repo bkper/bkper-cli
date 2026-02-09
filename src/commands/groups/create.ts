@@ -8,10 +8,7 @@ export interface CreateGroupOptions {
     properties?: Record<string, string>;
 }
 
-export async function createGroup(
-    bookId: string,
-    options: CreateGroupOptions
-): Promise<bkper.Group> {
+export async function createGroup(bookId: string, options: CreateGroupOptions): Promise<Group> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
@@ -27,6 +24,5 @@ export async function createGroup(
         }
     }
 
-    const created = await group.create();
-    return created.json();
+    return group.create();
 }

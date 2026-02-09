@@ -15,7 +15,7 @@ export interface CreateTransactionInput {
 export async function createTransactions(
     bookId: string,
     inputs: CreateTransactionInput[]
-): Promise<bkper.Transaction[]> {
+): Promise<Transaction[]> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
@@ -40,6 +40,5 @@ export async function createTransactions(
         transactions.push(tx);
     }
 
-    const created = await book.batchCreateTransactions(transactions);
-    return created.map(tx => tx.json());
+    return book.batchCreateTransactions(transactions);
 }

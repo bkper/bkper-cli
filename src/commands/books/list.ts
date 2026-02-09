@@ -1,7 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Book } from 'bkper-js';
 
-export async function listBooks(query?: string): Promise<bkper.Book[]> {
+export async function listBooks(query?: string): Promise<Book[]> {
     const bkper = getBkperInstance();
-    const books = await bkper.getBooks(query);
-    return books.map(book => book.json());
+    return bkper.getBooks(query);
 }

@@ -3,6 +3,12 @@
 import 'dotenv/config'; // Must be first to load env vars before other imports
 
 import { program } from 'commander';
+import {
+    BooksDataTableBuilder,
+    AccountsDataTableBuilder,
+    GroupsDataTableBuilder,
+    TransactionsDataTableBuilder,
+} from 'bkper-js';
 import { login, logout } from './auth/local-auth-service.js';
 import { setupBkper } from './bkper-factory.js';
 import {
@@ -42,7 +48,15 @@ import {
     trashTransaction,
     mergeTransactions,
 } from './commands/transactions/index.js';
-import { getBalances } from './commands/balances/index.js';
+import { getBalancesMatrix } from './commands/balances/index.js';
+import { renderTable, renderItem } from './render/index.js';
+
+// Global --json option
+program.option('--json', 'Output as JSON');
+
+function isJson(): boolean {
+    return program.opts().json === true;
+}
 
 program
     .command('login')
@@ -81,24 +95,22 @@ appCommand
             setupBkper();
             const apps = await listApps();
 
-            if (apps.length === 0) {
-                console.log('No apps found.');
+            if (isJson()) {
+                console.log(JSON.stringify(apps, null, 2));
                 return;
             }
 
-            // Table-style output
-            console.log('\nApps:\n');
-            console.log('ID'.padEnd(25) + 'Name'.padEnd(30) + 'Published');
-            console.log('-'.repeat(65));
-
-            for (const app of apps) {
-                const id = (app.id || '').padEnd(25);
-                const name = (app.name || '').padEnd(30);
-                const published = app.published ? 'Yes' : 'No';
-                console.log(`${id}${name}${published}`);
+            if (apps.length === 0) {
+                console.log('No results found.');
+                return;
             }
 
-            console.log(`\nTotal: ${apps.length} app(s)`);
+            const matrix: unknown[][] = [['ID', 'Name', 'Published']];
+            for (const app of apps) {
+                matrix.push([app.id || '', app.name || '', app.published ? 'Yes' : 'No']);
+            }
+
+            renderTable(matrix, false);
         } catch (err) {
             console.error('Error listing apps:', err);
             process.exit(1);
@@ -251,8 +263,19 @@ bookCommand
     .action(async options => {
         try {
             setupBkper();
-            const result = await listBooks(options.query);
-            console.log(JSON.stringify(result, null, 2));
+            const books = await listBooks(options.query);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        books.map(b => b.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                const matrix = new BooksDataTableBuilder(books).build();
+                renderTable(matrix, false);
+            }
         } catch (err) {
             console.error('Error listing books:', err);
             process.exit(1);
@@ -265,8 +288,8 @@ bookCommand
     .action(async (bookId: string) => {
         try {
             setupBkper();
-            const result = await getBook(bookId);
-            console.log(JSON.stringify(result, null, 2));
+            const book = await getBook(bookId);
+            renderItem(book.json(), isJson());
         } catch (err) {
             console.error('Error getting book:', err);
             process.exit(1);
@@ -288,7 +311,7 @@ bookCommand
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
-            const result = await updateBook(bookId, {
+            const book = await updateBook(bookId, {
                 name: options.name,
                 fractionDigits: options.fractionDigits,
                 datePattern: options.datePattern,
@@ -299,7 +322,7 @@ bookCommand
                 period: options.period,
                 properties: options.properties ? JSON.parse(options.properties) : undefined,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderItem(book.json(), isJson());
         } catch (err) {
             console.error('Error updating book:', err);
             process.exit(1);
@@ -315,8 +338,19 @@ accountCommand
     .action(async (bookId: string) => {
         try {
             setupBkper();
-            const result = await listAccounts(bookId);
-            console.log(JSON.stringify(result, null, 2));
+            const accounts = await listAccounts(bookId);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        accounts.map(a => a.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                const matrix = await new AccountsDataTableBuilder(accounts).groups(true).build();
+                renderTable(matrix, false);
+            }
         } catch (err) {
             console.error('Error listing accounts:', err);
             process.exit(1);
@@ -329,8 +363,8 @@ accountCommand
     .action(async (bookId: string, idOrName: string) => {
         try {
             setupBkper();
-            const result = await getAccount(bookId, idOrName);
-            console.log(JSON.stringify(result, null, 2));
+            const account = await getAccount(bookId, idOrName);
+            renderItem(account.json(), isJson());
         } catch (err) {
             console.error('Error getting account:', err);
             process.exit(1);
@@ -348,7 +382,7 @@ accountCommand
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
-            const result = await createAccount(bookId, {
+            const account = await createAccount(bookId, {
                 name: options.name,
                 type: options.type,
                 description: options.description,
@@ -357,7 +391,7 @@ accountCommand
                     : undefined,
                 properties: options.properties ? JSON.parse(options.properties) : undefined,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderItem(account.json(), isJson());
         } catch (err) {
             console.error('Error creating account:', err);
             process.exit(1);
@@ -374,13 +408,13 @@ accountCommand
     .action(async (bookId: string, idOrName: string, options) => {
         try {
             setupBkper();
-            const result = await updateAccount(bookId, idOrName, {
+            const account = await updateAccount(bookId, idOrName, {
                 name: options.name,
                 type: options.type,
                 archived: options.archived !== undefined ? options.archived === 'true' : undefined,
                 properties: options.properties ? JSON.parse(options.properties) : undefined,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderItem(account.json(), isJson());
         } catch (err) {
             console.error('Error updating account:', err);
             process.exit(1);
@@ -393,8 +427,8 @@ accountCommand
     .action(async (bookId: string, idOrName: string) => {
         try {
             setupBkper();
-            const result = await deleteAccount(bookId, idOrName);
-            console.log(JSON.stringify(result, null, 2));
+            const account = await deleteAccount(bookId, idOrName);
+            renderItem(account.json(), isJson());
         } catch (err) {
             console.error('Error deleting account:', err);
             process.exit(1);
@@ -410,8 +444,19 @@ groupCommand
     .action(async (bookId: string) => {
         try {
             setupBkper();
-            const result = await listGroups(bookId);
-            console.log(JSON.stringify(result, null, 2));
+            const groups = await listGroups(bookId);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        groups.map(g => g.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                const matrix = new GroupsDataTableBuilder(groups).build();
+                renderTable(matrix, false);
+            }
         } catch (err) {
             console.error('Error listing groups:', err);
             process.exit(1);
@@ -424,8 +469,8 @@ groupCommand
     .action(async (bookId: string, idOrName: string) => {
         try {
             setupBkper();
-            const result = await getGroup(bookId, idOrName);
-            console.log(JSON.stringify(result, null, 2));
+            const group = await getGroup(bookId, idOrName);
+            renderItem(group.json(), isJson());
         } catch (err) {
             console.error('Error getting group:', err);
             process.exit(1);
@@ -442,13 +487,13 @@ groupCommand
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
-            const result = await createGroup(bookId, {
+            const group = await createGroup(bookId, {
                 name: options.name,
                 parent: options.parent,
                 hidden: options.hidden,
                 properties: options.properties ? JSON.parse(options.properties) : undefined,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderItem(group.json(), isJson());
         } catch (err) {
             console.error('Error creating group:', err);
             process.exit(1);
@@ -464,12 +509,12 @@ groupCommand
     .action(async (bookId: string, idOrName: string, options) => {
         try {
             setupBkper();
-            const result = await updateGroup(bookId, idOrName, {
+            const group = await updateGroup(bookId, idOrName, {
                 name: options.name,
                 hidden: options.hidden !== undefined ? options.hidden === 'true' : undefined,
                 properties: options.properties ? JSON.parse(options.properties) : undefined,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderItem(group.json(), isJson());
         } catch (err) {
             console.error('Error updating group:', err);
             process.exit(1);
@@ -482,8 +527,8 @@ groupCommand
     .action(async (bookId: string, idOrName: string) => {
         try {
             setupBkper();
-            const result = await deleteGroup(bookId, idOrName);
-            console.log(JSON.stringify(result, null, 2));
+            const group = await deleteGroup(bookId, idOrName);
+            renderItem(group.json(), isJson());
         } catch (err) {
             console.error('Error deleting group:', err);
             process.exit(1);
@@ -499,6 +544,7 @@ transactionCommand
     .requiredOption('-q, --query <query>', 'Search query')
     .option('-l, --limit <limit>', 'Maximum number of results', parseInt)
     .option('-c, --cursor <cursor>', 'Pagination cursor')
+    .option('-p, --properties', 'Include custom properties')
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
@@ -507,7 +553,32 @@ transactionCommand
                 limit: options.limit,
                 cursor: options.cursor,
             });
-            console.log(JSON.stringify(result, null, 2));
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        {
+                            items: result.items.map(tx => tx.json()),
+                            cursor: result.cursor,
+                        },
+                        null,
+                        2
+                    )
+                );
+            } else {
+                const builder = result.book
+                    .createTransactionsDataTable(result.items, result.account)
+                    .formatDates(true)
+                    .formatValues(true)
+                    .recordedAt(false);
+                if (options.properties) {
+                    builder.properties(true);
+                }
+                const matrix = await builder.build();
+                renderTable(matrix, false);
+                if (result.cursor) {
+                    console.log(`\nNext cursor: ${result.cursor}`);
+                }
+            }
         } catch (err) {
             console.error('Error listing transactions:', err);
             process.exit(1);
@@ -522,8 +593,21 @@ transactionCommand
         try {
             setupBkper();
             const inputs = JSON.parse(options.transactions);
-            const result = await createTransactions(bookId, inputs);
-            console.log(JSON.stringify(result, null, 2));
+            const transactions = await createTransactions(bookId, inputs);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        transactions.map(tx => tx.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                for (const tx of transactions) {
+                    renderItem(tx.json(), false);
+                    console.log('');
+                }
+            }
         } catch (err) {
             console.error('Error creating transactions:', err);
             process.exit(1);
@@ -536,8 +620,8 @@ transactionCommand
     .action(async (bookId: string, transactionId: string) => {
         try {
             setupBkper();
-            const result = await postTransaction(bookId, transactionId);
-            console.log(JSON.stringify(result, null, 2));
+            const transaction = await postTransaction(bookId, transactionId);
+            renderItem(transaction.json(), isJson());
         } catch (err) {
             console.error('Error posting transaction:', err);
             process.exit(1);
@@ -550,8 +634,8 @@ transactionCommand
     .action(async (bookId: string, transactionId: string) => {
         try {
             setupBkper();
-            const result = await checkTransaction(bookId, transactionId);
-            console.log(JSON.stringify(result, null, 2));
+            const transaction = await checkTransaction(bookId, transactionId);
+            renderItem(transaction.json(), isJson());
         } catch (err) {
             console.error('Error checking transaction:', err);
             process.exit(1);
@@ -564,8 +648,8 @@ transactionCommand
     .action(async (bookId: string, transactionId: string) => {
         try {
             setupBkper();
-            const result = await trashTransaction(bookId, transactionId);
-            console.log(JSON.stringify(result, null, 2));
+            const transaction = await trashTransaction(bookId, transactionId);
+            renderItem(transaction.json(), isJson());
         } catch (err) {
             console.error('Error trashing transaction:', err);
             process.exit(1);
@@ -579,7 +663,21 @@ transactionCommand
         try {
             setupBkper();
             const result = await mergeTransactions(bookId, transactionId1, transactionId2);
-            console.log(JSON.stringify(result, null, 2));
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        {
+                            mergedTransaction: result.mergedTransaction.json(),
+                            revertedTransactionId: result.revertedTransactionId,
+                            auditRecord: result.auditRecord,
+                        },
+                        null,
+                        2
+                    )
+                );
+            } else {
+                renderItem(result.mergedTransaction.json(), false);
+            }
         } catch (err) {
             console.error('Error merging transactions:', err);
             process.exit(1);
@@ -593,17 +691,15 @@ balanceCommand
     .command('get <bookId>')
     .description('Get balances report')
     .requiredOption('-q, --query <query>', 'Balances query')
-    .option('--raw', 'Include raw data table')
     .option('--expanded <level>', 'Expand groups to specified depth', parseInt)
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
-            const result = await getBalances(bookId, {
+            const matrix = await getBalancesMatrix(bookId, {
                 query: options.query,
-                raw: options.raw,
                 expanded: options.expanded,
             });
-            console.log(JSON.stringify(result, null, 2));
+            renderTable(matrix, isJson());
         } catch (err) {
             console.error('Error getting balances:', err);
             process.exit(1);

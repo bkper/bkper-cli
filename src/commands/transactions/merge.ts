@@ -1,8 +1,9 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Transaction } from 'bkper-js';
 import { TransactionMergeOperation } from '../../domain/transaction/merge-operation.js';
 
 export interface MergeResult {
-    mergedTransaction: bkper.Transaction;
+    mergedTransaction: Transaction;
     revertedTransactionId: string;
     auditRecord: string | null;
 }
@@ -43,7 +44,7 @@ export async function mergeTransactions(
     ]);
 
     return {
-        mergedTransaction: updated.json(),
+        mergedTransaction: updated,
         revertedTransactionId: mergeOp.revertTransaction.getId() || '',
         auditRecord: mergeOp.record,
     };

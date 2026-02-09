@@ -1,5 +1,5 @@
 import { getBkperInstance } from '../../bkper-factory.js';
-import { AccountType } from 'bkper-js';
+import { Account, AccountType } from 'bkper-js';
 
 export interface UpdateAccountOptions {
     name?: string;
@@ -12,7 +12,7 @@ export async function updateAccount(
     bookId: string,
     accountIdOrName: string,
     options: UpdateAccountOptions
-): Promise<bkper.Account> {
+): Promise<Account> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
     const account = await book.getAccount(accountIdOrName);
@@ -25,6 +25,5 @@ export async function updateAccount(
     if (options.archived !== undefined) account.setArchived(options.archived);
     if (options.properties !== undefined) account.setProperties(options.properties);
 
-    const updated = await account.update();
-    return updated.json();
+    return account.update();
 }

@@ -1,4 +1,5 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Book, Transaction, Account, TransactionList } from 'bkper-js';
 
 export interface ListTransactionsOptions {
     query: string;
@@ -7,7 +8,9 @@ export interface ListTransactionsOptions {
 }
 
 export interface ListTransactionsResult {
-    items: bkper.Transaction[];
+    book: Book;
+    items: Transaction[];
+    account?: Account;
     cursor?: string;
 }
 
@@ -19,8 +22,11 @@ export async function listTransactions(
     const book = await bkper.getBook(bookId);
     const result = await book.listTransactions(options.query, options.limit, options.cursor);
     const items = result.getItems();
+    const account = await result.getAccount();
     return {
-        items: items ? items.map(tx => tx.json()) : [],
+        book,
+        items: items || [],
+        account,
         cursor: result.getCursor(),
     };
 }

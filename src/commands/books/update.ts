@@ -1,5 +1,5 @@
 import { getBkperInstance } from '../../bkper-factory.js';
-import { DecimalSeparator, Period } from 'bkper-js';
+import { Book, DecimalSeparator, Period } from 'bkper-js';
 
 export interface UpdateBookOptions {
     name?: string;
@@ -13,7 +13,7 @@ export interface UpdateBookOptions {
     properties?: Record<string, string>;
 }
 
-export async function updateBook(bookId: string, options: UpdateBookOptions): Promise<bkper.Book> {
+export async function updateBook(bookId: string, options: UpdateBookOptions): Promise<Book> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
@@ -28,6 +28,5 @@ export async function updateBook(bookId: string, options: UpdateBookOptions): Pr
     if (options.period !== undefined) book.setPeriod(options.period as Period);
     if (options.properties !== undefined) book.setProperties(options.properties);
 
-    const updated = await book.update();
-    return updated.json();
+    return book.update();
 }

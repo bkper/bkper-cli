@@ -1,15 +1,15 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Transaction } from 'bkper-js';
 
 export async function trashTransaction(
     bookId: string,
     transactionId: string
-): Promise<bkper.Transaction> {
+): Promise<Transaction> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
     const transaction = await book.getTransaction(transactionId);
     if (!transaction) {
         throw new Error(`Transaction not found: ${transactionId}`);
     }
-    const trashed = await transaction.trash();
-    return trashed.json();
+    return transaction.trash();
 }

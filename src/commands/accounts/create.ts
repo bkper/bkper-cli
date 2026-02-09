@@ -12,7 +12,7 @@ export interface CreateAccountOptions {
 export async function createAccount(
     bookId: string,
     options: CreateAccountOptions
-): Promise<bkper.Account> {
+): Promise<Account> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
@@ -30,6 +30,5 @@ export async function createAccount(
         }
     }
 
-    const created = await account.create();
-    return created.json();
+    return account.create();
 }

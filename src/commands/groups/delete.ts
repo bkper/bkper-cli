@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Group } from 'bkper-js';
 
-export async function deleteGroup(bookId: string, groupIdOrName: string): Promise<bkper.Group> {
+export async function deleteGroup(bookId: string, groupIdOrName: string): Promise<Group> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
     const group = await book.getGroup(groupIdOrName);
@@ -8,6 +9,5 @@ export async function deleteGroup(bookId: string, groupIdOrName: string): Promis
         throw new Error(`Group not found: ${groupIdOrName}`);
     }
 
-    const removed = await group.remove();
-    return removed.json();
+    return group.remove();
 }

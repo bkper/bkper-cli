@@ -1,4 +1,5 @@
 import { getBkperInstance } from '../../bkper-factory.js';
+import { Group } from 'bkper-js';
 
 export interface UpdateGroupOptions {
     name?: string;
@@ -10,7 +11,7 @@ export async function updateGroup(
     bookId: string,
     groupIdOrName: string,
     options: UpdateGroupOptions
-): Promise<bkper.Group> {
+): Promise<Group> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
     const group = await book.getGroup(groupIdOrName);
@@ -22,6 +23,5 @@ export async function updateGroup(
     if (options.hidden !== undefined) group.setHidden(options.hidden);
     if (options.properties !== undefined) group.setProperties(options.properties);
 
-    const updated = await group.update();
-    return updated.json();
+    return group.update();
 }
