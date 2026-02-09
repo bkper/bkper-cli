@@ -2,7 +2,7 @@
 
 import 'dotenv/config'; // Must be first to load env vars before other imports
 
-import program from 'commander';
+import { program } from 'commander';
 import { login, logout } from './auth/local-auth-service.js';
 import { setupBkper } from './bkper-factory.js';
 import {
@@ -165,9 +165,9 @@ appCommand
 appCommand
     .command('dev')
     .description('Start the development server')
-    .option('-cp, --client-port <port>', 'Client dev server port', '5173')
-    .option('-sp, --server-port <port>', 'Server simulation port', '8787')
-    .option('-ep, --events-port <port>', 'Events handler port', '8791')
+    .option('--cp, --client-port <port>', 'Client dev server port', '5173')
+    .option('--sp, --server-port <port>', 'Server simulation port', '8787')
+    .option('--ep, --events-port <port>', 'Events handler port', '8791')
     .option('-w, --web', 'Run only the web handler')
     .option('-e, --events', 'Run only the events handler')
     .action(async options => {
