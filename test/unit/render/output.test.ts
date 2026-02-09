@@ -46,13 +46,14 @@ describe('output', function () {
             expect(parsed[0]).to.deep.equal(['Name', 'Type']);
         });
 
-        it('should print "No results found." for empty data matrix', function () {
-            const matrix = [['Name', 'Type']];
+        it('should render a single-row headerless matrix as table', function () {
+            const matrix = [['Total Equity', '-1753687.09']];
 
             renderTable(matrix, false);
 
             const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.equal('No results found.');
+            expect(output).to.contain('Total Equity');
+            expect(output).to.contain('-1753687.09');
         });
 
         it('should print "No results found." for empty matrix', function () {

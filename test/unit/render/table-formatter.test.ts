@@ -50,9 +50,32 @@ describe('table-formatter', function () {
             expect(result).to.equal('');
         });
 
-        it('should return empty string for header-only matrix', function () {
-            const result = formatTable([['Name', 'Type']]);
-            expect(result).to.equal('');
+        it('should render a single-row matrix as header with divider', function () {
+            const result = formatTable([['Total Equity', '-1753687.09']]);
+            const lines = result.split('\n');
+
+            expect(lines).to.have.length(2);
+            expect(lines[0]).to.contain('Total Equity');
+            expect(lines[0]).to.contain('-1753687.09');
+            expect(lines[1]).to.match(/^_+$/);
+        });
+
+        it('should render headerless multi-row matrices', function () {
+            const matrix = [
+                ['Bank Account', '43636.46'],
+                ['Petty Cash', '-791728.42'],
+                ['Broker', '1731135.21'],
+            ];
+
+            const result = formatTable(matrix);
+            const lines = result.split('\n');
+
+            // Row 0 treated as header, divider, then 2 data rows
+            expect(lines).to.have.length(4);
+            expect(lines[0]).to.contain('Bank Account');
+            expect(lines[0]).to.contain('43636.46');
+            expect(lines[2]).to.contain('Petty Cash');
+            expect(lines[3]).to.contain('Broker');
         });
 
         it('should handle null and undefined values as empty strings', function () {

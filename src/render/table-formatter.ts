@@ -28,7 +28,7 @@ function truncateCell(value: string, maxWidth: number): string {
  * @returns Formatted table string
  */
 export function formatTable(matrix: unknown[][]): string {
-    if (!matrix || matrix.length <= 1) {
+    if (!matrix || matrix.length === 0) {
         return '';
     }
 
