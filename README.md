@@ -74,38 +74,68 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 #### Books
 
 - `book list` - List all books
+    - `-q, --query <query>` - Search query
 - `book get <bookId>` - Get a book's details
 - `book update <bookId>` - Update a book
+    - `--name <name>` - Book name
+    - `--fraction-digits <digits>` - Number of decimal places
+    - `--date-pattern <pattern>` - Date format pattern
+    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    - `--time-zone <timezone>` - Time zone
+    - `--lock-date <date>` - Lock date
+    - `--closing-date <date>` - Closing date
+    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    - `--properties <json>` - Properties as JSON object
 
 #### Accounts
 
 - `account list -b <bookId>` - List accounts in a book
 - `account get <nameOrId> -b <bookId>` - Get an account
-- `account create <name> -b <bookId>` - Create an account
+- `account create -b <bookId>` - Create a new account
+    - `--name <name>` - Account name (required)
+    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    - `--description <description>` - Account description
+    - `--groups <groups>` - Comma-separated group names
+    - `--properties <json>` - Properties as JSON object
 - `account update <nameOrId> -b <bookId>` - Update an account
+    - `--name <name>` - Account name
+    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    - `--archived <true|false>` - Archive status
+    - `--properties <json>` - Properties as JSON object
 - `account delete <nameOrId> -b <bookId>` - Delete an account
 
 #### Groups
 
 - `group list -b <bookId>` - List groups in a book
 - `group get <nameOrId> -b <bookId>` - Get a group
-- `group create <name> -b <bookId>` - Create a group
+- `group create -b <bookId>` - Create a new group
+    - `--name <name>` - Group name (required)
+    - `--parent <parent>` - Parent group name or ID
+    - `--hidden` - Hide the group
+    - `--properties <json>` - Properties as JSON object
 - `group update <nameOrId> -b <bookId>` - Update a group
+    - `--name <name>` - Group name
+    - `--hidden <true|false>` - Hide status
+    - `--properties <json>` - Properties as JSON object
 - `group delete <nameOrId> -b <bookId>` - Delete a group
 
 #### Transactions
 
 - `transaction list -b <bookId> -q <query>` - List transactions matching a query
+    - `-l, --limit <limit>` - Maximum number of results
+    - `-c, --cursor <cursor>` - Pagination cursor
     - `-p, --properties` - Include custom properties in the output
-- `transaction create -b <bookId>` - Create a transaction
+- `transaction create -b <bookId>` - Create transactions (batch)
+    - `--transactions <json>` - Transaction data as JSON array (required)
 - `transaction post <id> -b <bookId>` - Post a draft transaction
 - `transaction check <id> -b <bookId>` - Check a transaction
 - `transaction trash <id> -b <bookId>` - Trash a transaction
-- `transaction merge -b <bookId>` - Merge duplicate transactions
+- `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
 #### Balances
 
-- `balance get -b <bookId>` - Get account balances
+- `balance get -b <bookId> -q <query>` - Get account balances
+    - `--expanded <level>` - Expand groups to specified depth
 
 ### Output Format
 
