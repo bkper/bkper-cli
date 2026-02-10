@@ -11,7 +11,11 @@ describe('Logger Module', function () {
 
     // Dynamic imports to allow module to be loaded after stubs are set up
     let createLogger: (prefix: LogPrefix) => Logger;
-    let logDevServerBanner: (options: { clientUrl?: string; serverUrl?: string; eventsUrl?: string }) => void;
+    let logDevServerBanner: (options: {
+        clientUrl?: string;
+        serverUrl?: string;
+        eventsUrl?: string;
+    }) => void;
     let logBuildResults: (results: {
         webClient?: { path: string; size: number };
         webServer?: { path: string; size: number };
@@ -96,7 +100,14 @@ describe('Logger Module', function () {
         });
 
         it('should work with all valid prefixes', function () {
-            const prefixes: LogPrefix[] = ['server', 'events', 'client', 'build', 'types', 'shared'];
+            const prefixes: LogPrefix[] = [
+                'server',
+                'events',
+                'client',
+                'build',
+                'types',
+                'shared',
+            ];
 
             prefixes.forEach(prefix => {
                 const logger = createLogger(prefix);
@@ -135,7 +146,7 @@ describe('Logger Module', function () {
             logDevServerBanner({
                 clientUrl: 'http://localhost:5173',
                 serverUrl: 'http://localhost:8787',
-                eventsUrl: 'https://my-app-dev.bkper.app/events',
+                eventsUrl: 'https://my-app-preview.bkper.app/events',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -147,13 +158,13 @@ describe('Logger Module', function () {
             expect(allOutput).to.include('Bkper App');
             expect(allOutput).to.include('http://localhost:5173');
             expect(allOutput).to.include('http://localhost:8787');
-            expect(allOutput).to.include('https://my-app-dev.bkper.app/events');
+            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
         });
 
         it('should handle missing clientUrl', function () {
             logDevServerBanner({
                 serverUrl: 'http://localhost:8787',
-                eventsUrl: 'https://my-app-dev.bkper.app/events',
+                eventsUrl: 'https://my-app-preview.bkper.app/events',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -163,13 +174,13 @@ describe('Logger Module', function () {
                 .map(call => call.args[0])
                 .join('\n');
             expect(allOutput).to.include('http://localhost:8787');
-            expect(allOutput).to.include('https://my-app-dev.bkper.app/events');
+            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
         });
 
         it('should handle missing serverUrl', function () {
             logDevServerBanner({
                 clientUrl: 'http://localhost:5173',
-                eventsUrl: 'https://my-app-dev.bkper.app/events',
+                eventsUrl: 'https://my-app-preview.bkper.app/events',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -179,7 +190,7 @@ describe('Logger Module', function () {
                 .map(call => call.args[0])
                 .join('\n');
             expect(allOutput).to.include('http://localhost:5173');
-            expect(allOutput).to.include('https://my-app-dev.bkper.app/events');
+            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
         });
 
         it('should handle missing eventsUrl', function () {

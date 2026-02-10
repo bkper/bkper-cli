@@ -31,14 +31,14 @@ describe('Integration: app deploy/undeploy', function () {
         // Always cleanup: undeploy both web and events, even if tests failed
         try {
             console.log('\n  Cleaning up: undeploying events handler...');
-            await runCli(['app', 'undeploy', '--dev', '--events', '--force'], appDir!);
+            await runCli(['app', 'undeploy', '--preview', '--events', '--force'], appDir!);
         } catch {
             // Ignore errors - may not be deployed
         }
 
         try {
             console.log('  Cleaning up: undeploying web handler...');
-            await runCli(['app', 'undeploy', '--dev', '--force'], appDir!);
+            await runCli(['app', 'undeploy', '--preview', '--force'], appDir!);
         } catch {
             // Ignore errors - may not be deployed
         }
@@ -52,14 +52,14 @@ describe('Integration: app deploy/undeploy', function () {
 
         // Deploy web handler (uses --dev flag)
         // Command succeeds = deploy worked (CLI handles errors internally)
-        await runCli(['app', 'deploy', '--dev'], appDir!);
+        await runCli(['app', 'deploy', '--preview'], appDir!);
     });
 
     it('should deploy events handler to dev environment', async function () {
         this.timeout(120000);
 
         // Deploy events handler (uses --dev and --events flags)
-        await runCli(['app', 'deploy', '--dev', '--events'], appDir!);
+        await runCli(['app', 'deploy', '--preview', '--events'], appDir!);
     });
 
     it('should undeploy events handler from dev environment', async function () {
@@ -67,13 +67,13 @@ describe('Integration: app deploy/undeploy', function () {
 
         // Undeploy events handler
         // Command succeeds = undeploy worked (CLI handles errors internally)
-        await runCli(['app', 'undeploy', '--dev', '--events', '--force'], appDir!);
+        await runCli(['app', 'undeploy', '--preview', '--events', '--force'], appDir!);
     });
 
     it('should undeploy web handler from dev environment', async function () {
         this.timeout(60000);
 
         // Undeploy web handler
-        await runCli(['app', 'undeploy', '--dev', '--force'], appDir!);
+        await runCli(['app', 'undeploy', '--preview', '--force'], appDir!);
     });
 });

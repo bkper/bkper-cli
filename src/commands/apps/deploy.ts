@@ -122,7 +122,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 10. Call Platform API
-    const env: Environment = options.dev ? 'dev' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'prod';
     console.log(`Deploying ${type} handler to ${env}...`);
 
     // Build query params, mapping services to bindings for the API
@@ -263,7 +263,7 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
-    const env: Environment = options.dev ? 'dev' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'prod';
     const type: HandlerType = options.events ? 'events' : 'web';
     console.log(`Removing ${type} handler from ${env}...`);
 
@@ -363,14 +363,16 @@ export async function statusApp(): Promise<void> {
         console.log('  Events: (not deployed)');
     }
 
-    console.log('\nDevelopment:');
-    if (data.dev.web?.deployed) {
-        console.log(`  Web:    ${data.dev.web.url} (deployed ${data.dev.web.updatedAt})`);
+    console.log('\nPreview:');
+    if (data.preview.web?.deployed) {
+        console.log(`  Web:    ${data.preview.web.url} (deployed ${data.preview.web.updatedAt})`);
     } else {
         console.log('  Web:    (not deployed)');
     }
-    if (data.dev.events?.deployed) {
-        console.log(`  Events: ${data.dev.events.url} (deployed ${data.dev.events.updatedAt})`);
+    if (data.preview.events?.deployed) {
+        console.log(
+            `  Events: ${data.preview.events.url} (deployed ${data.preview.events.updatedAt})`
+        );
     } else {
         console.log('  Events: (not deployed)');
     }

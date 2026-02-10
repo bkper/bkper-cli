@@ -14,14 +14,14 @@ export type ErrorResponse = components['schemas']['ErrorResponse'];
 // =============================================================================
 
 export interface DeployOptions {
-    dev?: boolean;
+    preview?: boolean;
     events?: boolean;
     deleteData?: boolean;
     force?: boolean;
 }
 
 export interface SecretsOptions {
-    dev?: boolean;
+    preview?: boolean;
 }
 
 // =============================================================================
@@ -38,7 +38,7 @@ export interface SyncResult {
 // =============================================================================
 
 export type HandlerType = 'web' | 'events';
-export type Environment = 'dev' | 'prod';
+export type Environment = 'preview' | 'prod';
 
 // =============================================================================
 // Deployment Configuration

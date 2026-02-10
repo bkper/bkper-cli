@@ -150,7 +150,7 @@ appCommand
 appCommand
     .command('deploy')
     .description('Deploy app to Bkper Platform')
-    .option('--dev', 'Deploy to development environment')
+    .option('-p, --preview', 'Deploy to preview environment')
     .option('--events', 'Deploy events handler instead of web handler')
     .action(async options => {
         try {
@@ -164,7 +164,7 @@ appCommand
 appCommand
     .command('undeploy')
     .description('Remove app from Bkper Platform')
-    .option('--dev', 'Remove from development environment')
+    .option('-p, --preview', 'Remove from preview environment')
     .option('--events', 'Remove events handler instead of web handler')
     .option('--delete-data', 'Permanently delete all associated data (requires confirmation)')
     .option('--force', 'Skip confirmation prompts (use with --delete-data for automation)')
@@ -233,7 +233,7 @@ const secretsCommand = appCommand.command('secrets').description('Manage app sec
 secretsCommand
     .command('put <name>')
     .description('Set a secret value')
-    .option('--dev', 'Set in development environment')
+    .option('-p, --preview', 'Set in preview environment')
     .action(async (name: string, options) => {
         try {
             await secretsPut(name, options);
@@ -246,7 +246,7 @@ secretsCommand
 secretsCommand
     .command('list')
     .description('List all secrets')
-    .option('--dev', 'List from development environment')
+    .option('-p, --preview', 'List from preview environment')
     .action(async options => {
         try {
             await secretsList(options);
@@ -259,7 +259,7 @@ secretsCommand
 secretsCommand
     .command('delete <name>')
     .description('Delete a secret')
-    .option('--dev', 'Delete from development environment')
+    .option('-p, --preview', 'Delete from preview environment')
     .action(async (name: string, options) => {
         try {
             await secretsDelete(name, options);

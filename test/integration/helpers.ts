@@ -11,8 +11,8 @@ export const TestConfig = {
     APP_ID: 'my-app',
     PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
     FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',
-    DEV_WEB_URL: 'https://my-app-dev.bkper.app',
-    DEV_EVENTS_URL: 'https://my-app-dev.bkper.app/events',
+    PREVIEW_WEB_URL: 'https://my-app-preview.bkper.app',
+    PREVIEW_EVENTS_URL: 'https://my-app-preview.bkper.app/events',
     HTTP_TIMEOUT: 10000,
     DEPLOY_TIMEOUT: 60000,
     POLL_INTERVAL: 2000,
@@ -20,7 +20,7 @@ export const TestConfig = {
 } as const;
 
 /**
- * Determine which platform URL to use (localhost:8790 or fallback to dev)
+ * Determine which platform URL to use (localhost:8790 or fallback to preview)
  */
 export async function determinePlatformUrl(): Promise<string | null> {
     // First try localhost
@@ -72,13 +72,13 @@ export function isUserLoggedIn(): boolean {
 }
 
 interface DeployOptions {
-    dev?: boolean;
+    preview?: boolean;
     events?: boolean;
     sync?: boolean;
 }
 
 interface UndeployOptions {
-    dev?: boolean;
+    preview?: boolean;
     events?: boolean;
     deleteData?: boolean;
     force?: boolean;
@@ -149,8 +149,11 @@ interface FetchWorkerOptions {
 /**
  * Make HTTP request to deployed worker
  */
-export async function fetchWorker(urlPath: string, options?: FetchWorkerOptions): Promise<Response> {
-    const baseUrl = options?.isEvents ? TestConfig.DEV_EVENTS_URL : TestConfig.DEV_WEB_URL;
+export async function fetchWorker(
+    urlPath: string,
+    options?: FetchWorkerOptions
+): Promise<Response> {
+    const baseUrl = options?.isEvents ? TestConfig.PREVIEW_EVENTS_URL : TestConfig.PREVIEW_WEB_URL;
 
     // Handle empty path (just hit the base URL)
     let url: string;
@@ -176,7 +179,10 @@ export async function fetchWorker(urlPath: string, options?: FetchWorkerOptions)
 /**
  * Wait for worker to be ready by polling health endpoint
  */
-export async function waitForWorkerReady(healthPath: string, isEvents: boolean = false): Promise<boolean> {
+export async function waitForWorkerReady(
+    healthPath: string,
+    isEvents: boolean = false
+): Promise<boolean> {
     for (let i = 0; i < TestConfig.POLL_MAX_ATTEMPTS; i++) {
         try {
             const response = await fetchWorker(healthPath, { isEvents });
@@ -223,7 +229,7 @@ export async function readFromKV(key: string): Promise<string | null> {
         found?: boolean;
         value?: string;
     };
-    return data.found ? data.value ?? null : null;
+    return data.found ? (data.value ?? null) : null;
 }
 
 /**
