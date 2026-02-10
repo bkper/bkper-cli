@@ -52,35 +52,43 @@ describe('CLI - balance commands', function () {
         ]);
 
         // Create and post transactions so balances exist
-        const txData = JSON.stringify([
-            {
-                date: '2025-01-10',
-                amount: 1000,
-                description: 'Initial revenue',
-                from: 'Revenue',
-                to: 'Cash',
-            },
-            {
-                date: '2025-01-20',
-                amount: 500,
-                description: 'Second revenue',
-                from: 'Revenue',
-                to: 'Cash',
-            },
-        ]);
-        const created = await runBkperJson<bkper.Transaction[]>([
+        const tx1 = await runBkperJson<bkper.Transaction>([
             'transaction',
             'create',
             '-b',
             bookId,
-            '--transactions',
-            txData,
+            '--date',
+            '2025-01-10',
+            '--amount',
+            '1000',
+            '--description',
+            'Initial revenue',
+            '--from',
+            'Revenue',
+            '--to',
+            'Cash',
+        ]);
+
+        const tx2 = await runBkperJson<bkper.Transaction>([
+            'transaction',
+            'create',
+            '-b',
+            bookId,
+            '--date',
+            '2025-01-20',
+            '--amount',
+            '500',
+            '--description',
+            'Second revenue',
+            '--from',
+            'Revenue',
+            '--to',
+            'Cash',
         ]);
 
         // Post all transactions
-        for (const tx of created) {
-            await runBkperJson(['transaction', 'post', tx.id!, '-b', bookId]);
-        }
+        await runBkperJson(['transaction', 'post', tx1.id!, '-b', bookId]);
+        await runBkperJson(['transaction', 'post', tx2.id!, '-b', bookId]);
     });
 
     after(async function () {
@@ -90,65 +98,52 @@ describe('CLI - balance commands', function () {
     });
 
     describe('balance get', function () {
-        it('should return balances for an account query', async function () {
-            const result = await runBkperJson<{
-                items: Array<{
-                    accountOrGroup: string;
-                    periodBalance: string;
-                    cumulativeBalance: string;
-                }>;
-            }>(['balance', 'get', '-b', bookId, '-q', 'account:Cash']);
+        it('should return a balance matrix for an account query', async function () {
+            const result = await runBkperJson<unknown[][]>([
+                'balance',
+                'get',
+                '-b',
+                bookId,
+                '-q',
+                'account:Cash',
+            ]);
 
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.items.length).to.be.greaterThan(0);
-
-            const cashBalance = result.items.find(i => i.accountOrGroup === 'Cash');
-            expect(cashBalance).to.exist;
+            expect(result).to.be.an('array');
+            expect(result.length).to.be.greaterThan(1);
+            // First row is headers, subsequent rows are data
+            expect(result[0]).to.be.an('array');
         });
 
-        it('should return balances for a group query', async function () {
-            const result = await runBkperJson<{
-                items: Array<{
-                    accountOrGroup: string;
-                    periodBalance: string;
-                    cumulativeBalance: string;
-                }>;
-            }>(['balance', 'get', '-b', bookId, '-q', 'group:Assets']);
+        it('should return a balance matrix for a group query', async function () {
+            const result = await runBkperJson<unknown[][]>([
+                'balance',
+                'get',
+                '-b',
+                bookId,
+                '-q',
+                'group:Assets',
+            ]);
 
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.items.length).to.be.greaterThan(0);
+            expect(result).to.be.an('array');
+            expect(result.length).to.be.greaterThan(1);
+            expect(result[0]).to.be.an('array');
         });
 
-        it('should include raw matrix when --raw is specified', async function () {
-            const result = await runBkperJson<{
-                items: Array<{
-                    accountOrGroup: string;
-                    periodBalance: string;
-                    cumulativeBalance: string;
-                }>;
-                matrix?: unknown[][];
-            }>(['balance', 'get', '-b', bookId, '-q', 'account:Cash', '--raw']);
+        it('should return an expanded matrix when --expanded is specified', async function () {
+            const result = await runBkperJson<unknown[][]>([
+                'balance',
+                'get',
+                '-b',
+                bookId,
+                '-q',
+                'group:Assets',
+                '--expanded',
+                '2',
+            ]);
 
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.matrix).to.be.an('array');
-        });
-
-        it('should include expanded matrix when --expanded is specified', async function () {
-            const result = await runBkperJson<{
-                items: Array<{
-                    accountOrGroup: string;
-                    periodBalance: string;
-                    cumulativeBalance: string;
-                }>;
-                matrix?: unknown[][];
-            }>(['balance', 'get', '-b', bookId, '-q', 'group:Assets', '--expanded', '2']);
-
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.matrix).to.be.an('array');
+            expect(result).to.be.an('array');
+            expect(result.length).to.be.greaterThan(1);
+            expect(result[0]).to.be.an('array');
         });
 
         it('should fail when missing required --query option', async function () {

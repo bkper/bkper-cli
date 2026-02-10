@@ -123,4 +123,73 @@ describe('CLI - book commands', function () {
             expect(result.properties).to.deep.include({ testkey: 'testValue' });
         });
     });
+
+    describe('book create', function () {
+        const createdBookIds: string[] = [];
+
+        after(async function () {
+            for (const id of createdBookIds) {
+                await deleteTestBook(id);
+            }
+        });
+
+        it('should create a book with just a name', async function () {
+            const name = uniqueTestName('create-basic');
+            const result = await runBkperJson<bkper.Book>(['book', 'create', '--name', name]);
+
+            expect(result).to.be.an('object');
+            expect(result.name).to.equal(name);
+            expect(result.id).to.be.a('string');
+            createdBookIds.push(result.id!);
+        });
+
+        it('should create a book with fraction digits and date pattern', async function () {
+            const name = uniqueTestName('create-options');
+            const result = await runBkperJson<bkper.Book>([
+                'book',
+                'create',
+                '--name',
+                name,
+                '--fraction-digits',
+                '4',
+                '--date-pattern',
+                'dd/MM/yyyy',
+                '--decimal-separator',
+                'COMMA',
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.name).to.equal(name);
+            expect(result.fractionDigits).to.equal(4);
+            expect(result.datePattern).to.equal('dd/MM/yyyy');
+            expect(result.decimalSeparator).to.equal('COMMA');
+            createdBookIds.push(result.id!);
+        });
+
+        it('should create a book with properties', async function () {
+            const name = uniqueTestName('create-props');
+            const result = await runBkperJson<bkper.Book>([
+                'book',
+                'create',
+                '--name',
+                name,
+                '-p',
+                'department=Engineering',
+                '-p',
+                'region=US',
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.name).to.equal(name);
+            expect(result.properties).to.deep.include({ department: 'Engineering' });
+            expect(result.properties).to.deep.include({ region: 'US' });
+            createdBookIds.push(result.id!);
+        });
+
+        it('should fail when missing required --name', async function () {
+            const result = await runBkper(['book', 'create']);
+
+            expect(result.exitCode).to.not.equal(0);
+        });
+    });
 });

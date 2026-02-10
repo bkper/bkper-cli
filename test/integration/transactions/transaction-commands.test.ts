@@ -65,86 +65,91 @@ describe('CLI - transaction commands', function () {
 
     describe('transaction create', function () {
         it('should create a single transaction', async function () {
-            const txData = JSON.stringify([
-                {
-                    date: '2025-01-15',
-                    amount: 100,
-                    description: 'Test sale',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-
-            const result = await runBkperJson<bkper.Transaction[]>([
+            const result = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-01-15',
+                '--amount',
+                '100',
+                '--description',
+                'Test sale',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
 
-            expect(result).to.be.an('array');
-            expect(result).to.have.length(1);
-            expect(result[0].amount).to.exist;
-            expect(result[0].description).to.equal('Test sale');
+            expect(result).to.be.an('object');
+            expect(result.amount).to.exist;
+            expect(result.description).to.equal('Test sale');
         });
 
-        it('should create multiple transactions in batch', async function () {
-            const txData = JSON.stringify([
-                {
-                    date: '2025-01-16',
-                    amount: 50,
-                    description: 'Batch tx 1',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-                {
-                    date: '2025-01-17',
-                    amount: 30,
-                    description: 'Batch tx 2',
-                    from: 'Cash',
-                    to: 'Expenses',
-                },
-            ]);
-
-            const result = await runBkperJson<bkper.Transaction[]>([
+        it('should create multiple transactions sequentially', async function () {
+            const result1 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-01-16',
+                '--amount',
+                '50',
+                '--description',
+                'Batch tx 1',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
 
-            expect(result).to.be.an('array');
-            expect(result).to.have.length(2);
+            const result2 = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--date',
+                '2025-01-17',
+                '--amount',
+                '30',
+                '--description',
+                'Batch tx 2',
+                '--from',
+                'Cash',
+                '--to',
+                'Expenses',
+            ]);
+
+            expect(result1).to.be.an('object');
+            expect(result1.description).to.equal('Batch tx 1');
+            expect(result2).to.be.an('object');
+            expect(result2.description).to.equal('Batch tx 2');
         });
 
         it('should create a transaction with properties', async function () {
-            const txData = JSON.stringify([
-                {
-                    date: '2025-01-18',
-                    amount: 75,
-                    description: 'With properties',
-                    from: 'Revenue',
-                    to: 'Cash',
-                    properties: { invoice: 'INV-001' },
-                },
-            ]);
-
-            const result = await runBkperJson<bkper.Transaction[]>([
+            const result = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-01-18',
+                '--amount',
+                '75',
+                '--description',
+                'With properties',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
+                '-p',
+                'invoice=INV-001',
             ]);
 
-            expect(result).to.be.an('array');
-            expect(result).to.have.length(1);
-            expect(result[0].properties).to.deep.include({ invoice: 'INV-001' });
+            expect(result).to.be.an('object');
+            expect(result.properties).to.deep.include({ invoice: 'INV-001' });
         });
     });
 
@@ -185,24 +190,23 @@ describe('CLI - transaction commands', function () {
     describe('transaction post', function () {
         it('should post a draft transaction', async function () {
             // Create a draft transaction
-            const txData = JSON.stringify([
-                {
-                    date: '2025-02-01',
-                    amount: 200,
-                    description: 'Draft to post',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-            const created = await runBkperJson<bkper.Transaction[]>([
+            const created = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-02-01',
+                '--amount',
+                '200',
+                '--description',
+                'Draft to post',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
-            const txId = created[0].id!;
+            const txId = created.id!;
 
             // Post the transaction
             const result = await runBkperJson<bkper.Transaction>([
@@ -222,24 +226,23 @@ describe('CLI - transaction commands', function () {
     describe('transaction check', function () {
         it('should check a posted transaction', async function () {
             // Create and post a transaction
-            const txData = JSON.stringify([
-                {
-                    date: '2025-02-02',
-                    amount: 150,
-                    description: 'To check',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-            const created = await runBkperJson<bkper.Transaction[]>([
+            const created = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-02-02',
+                '--amount',
+                '150',
+                '--description',
+                'To check',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
-            const txId = created[0].id!;
+            const txId = created.id!;
 
             await runBkperJson<bkper.Transaction>(['transaction', 'post', txId, '-b', bookId]);
 
@@ -261,24 +264,23 @@ describe('CLI - transaction commands', function () {
     describe('transaction trash', function () {
         it('should trash a transaction', async function () {
             // Create a transaction
-            const txData = JSON.stringify([
-                {
-                    date: '2025-02-03',
-                    amount: 80,
-                    description: 'To trash',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-            const created = await runBkperJson<bkper.Transaction[]>([
+            const created = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                txData,
+                '--date',
+                '2025-02-03',
+                '--amount',
+                '80',
+                '--description',
+                'To trash',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
-            const txId = created[0].id!;
+            const txId = created.id!;
 
             // Trash the transaction
             const result = await runBkperJson<bkper.Transaction>([
@@ -295,47 +297,128 @@ describe('CLI - transaction commands', function () {
         });
     });
 
+    describe('transaction update', function () {
+        it('should update a transaction description', async function () {
+            const created = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--date',
+                '2025-02-10',
+                '--amount',
+                '300',
+                '--description',
+                'Original description',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
+            ]);
+            const txId = created.id!;
+
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'update',
+                txId,
+                '-b',
+                bookId,
+                '--description',
+                'Updated description',
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.id).to.equal(txId);
+            expect(result.description).to.equal('Updated description');
+        });
+
+        it('should update a transaction amount', async function () {
+            const created = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--date',
+                '2025-02-11',
+                '--amount',
+                '400',
+                '--description',
+                'Amount to update',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
+            ]);
+            const txId = created.id!;
+
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'update',
+                txId,
+                '-b',
+                bookId,
+                '--amount',
+                '999',
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.id).to.equal(txId);
+            expect(result.amount).to.exist;
+        });
+
+        it('should fail for a non-existent transaction ID', async function () {
+            const result = await runBkper([
+                'transaction',
+                'update',
+                'nonexistent-id',
+                '-b',
+                bookId,
+                '--description',
+                'Should fail',
+            ]);
+
+            expect(result.exitCode).to.not.equal(0);
+        });
+    });
+
     describe('transaction merge', function () {
         it('should merge two transactions with matching amounts', async function () {
-            // Create two transactions with the same amount
-            const tx1Data = JSON.stringify([
-                {
-                    date: '2025-02-04',
-                    amount: 500,
-                    description: 'Merge source 1',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-            const tx2Data = JSON.stringify([
-                {
-                    date: '2025-02-04',
-                    amount: 500,
-                    description: 'Merge source 2',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-
-            const created1 = await runBkperJson<bkper.Transaction[]>([
+            const created1 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                tx1Data,
+                '--date',
+                '2025-02-04',
+                '--amount',
+                '500',
+                '--description',
+                'Merge source 1',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
-            const created2 = await runBkperJson<bkper.Transaction[]>([
+
+            const created2 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                tx2Data,
+                '--date',
+                '2025-02-04',
+                '--amount',
+                '500',
+                '--description',
+                'Merge source 2',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
 
-            const txId1 = created1[0].id!;
-            const txId2 = created2[0].id!;
+            const txId1 = created1.id!;
+            const txId2 = created2.id!;
 
             // Post both transactions before merging
             await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
@@ -353,44 +436,42 @@ describe('CLI - transaction commands', function () {
         });
 
         it('should fail to merge transactions with different amounts', async function () {
-            const tx1Data = JSON.stringify([
-                {
-                    date: '2025-02-05',
-                    amount: 100,
-                    description: 'Different amount 1',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-            const tx2Data = JSON.stringify([
-                {
-                    date: '2025-02-05',
-                    amount: 200,
-                    description: 'Different amount 2',
-                    from: 'Revenue',
-                    to: 'Cash',
-                },
-            ]);
-
-            const created1 = await runBkperJson<bkper.Transaction[]>([
+            const created1 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                tx1Data,
+                '--date',
+                '2025-02-05',
+                '--amount',
+                '100',
+                '--description',
+                'Different amount 1',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
-            const created2 = await runBkperJson<bkper.Transaction[]>([
+
+            const created2 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
                 '-b',
                 bookId,
-                '--transactions',
-                tx2Data,
+                '--date',
+                '2025-02-05',
+                '--amount',
+                '200',
+                '--description',
+                'Different amount 2',
+                '--from',
+                'Revenue',
+                '--to',
+                'Cash',
             ]);
 
-            const txId1 = created1[0].id!;
-            const txId2 = created2[0].id!;
+            const txId1 = created1.id!;
+            const txId2 = created2.id!;
 
             await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
             await runBkperJson(['transaction', 'post', txId2, '-b', bookId]);
@@ -408,8 +489,28 @@ describe('CLI - transaction commands', function () {
             expect(result.exitCode).to.not.equal(0);
         });
 
-        it('should fail when missing required --transactions option', async function () {
-            const result = await runBkper(['transaction', 'create', '-b', bookId]);
+        it('should fail when missing required --date option', async function () {
+            const result = await runBkper([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--amount',
+                '100',
+            ]);
+
+            expect(result.exitCode).to.not.equal(0);
+        });
+
+        it('should fail when missing required --amount option', async function () {
+            const result = await runBkper([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--date',
+                '2025-01-01',
+            ]);
 
             expect(result.exitCode).to.not.equal(0);
         });

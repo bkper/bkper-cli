@@ -102,29 +102,26 @@ async function apiRequest(
  * before returning, so subsequent CLI commands can use it immediately.
  */
 export async function createTestBook(name: string): Promise<string> {
-    const response = await apiRequest('POST', 'v5/books', { name });
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to create test book "${name}": ${response.status} ${text}`);
-    }
-    const book = (await response.json()) as { id: string };
+    const book = await runBkperJson<bkper.Book>(['book', 'create', '--name', name]);
+    const bookId = book.id!;
 
     // Wait for book to become accessible (datastore eventual consistency)
     const maxRetries = 10;
     const retryDelay = 500;
     for (let i = 0; i < maxRetries; i++) {
-        const check = await apiRequest('GET', `v5/books/${book.id}`);
-        if (check.ok) {
-            return book.id;
+        try {
+            await runBkperJson<bkper.Book>(['book', 'get', bookId]);
+            return bookId;
+        } catch {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
     }
 
     // Return the ID even if verification failed — let tests report the actual error
     console.warn(
-        `Warning: Book ${book.id} created but not yet accessible after ${maxRetries} retries`
+        `Warning: Book ${bookId} created but not yet accessible after ${maxRetries} retries`
     );
-    return book.id;
+    return bookId;
 }
 
 /**
@@ -196,7 +193,7 @@ export async function runBkperJson<T = unknown>(
     args: string[],
     envOverrides?: Record<string, string>
 ): Promise<T> {
-    const result = await runBkper(args, envOverrides);
+    const result = await runBkper(['--json', ...args], envOverrides);
 
     if (result.exitCode !== 0) {
         throw new Error(

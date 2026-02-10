@@ -11,6 +11,7 @@ export const TestConfig = {
     APP_ID: 'my-app',
     PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
     FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',
+    DEV_EVENTS_URL: 'http://localhost:8791/health',
     PREVIEW_WEB_URL: 'https://my-app-preview.bkper.app',
     PREVIEW_EVENTS_URL: 'https://my-app-preview.bkper.app/events',
     HTTP_TIMEOUT: 10000,
