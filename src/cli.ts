@@ -27,7 +27,7 @@ import {
     installApp,
     uninstallApp,
 } from './commands/apps/index.js';
-import { listBooks, getBook, updateBook } from './commands/books/index.js';
+import { listBooks, getBook, createBook, updateBook } from './commands/books/index.js';
 import {
     listAccounts,
     getAccount,
@@ -338,6 +338,38 @@ bookCommand
             renderItem(book.json(), isJson());
         } catch (err) {
             console.error('Error getting book:', err);
+            process.exit(1);
+        }
+    });
+
+bookCommand
+    .command('create')
+    .description('Create a new book')
+    .requiredOption('--name <name>', 'Book name')
+    .option('--fraction-digits <digits>', 'Number of decimal places (0-8)', parseInt)
+    .option(
+        '--date-pattern <pattern>',
+        'Date format pattern (dd/MM/yyyy, MM/dd/yyyy, or yyyy/MM/dd)'
+    )
+    .option('--decimal-separator <separator>', 'Decimal separator (DOT or COMMA)')
+    .option('--time-zone <timezone>', 'IANA time zone (e.g. America/New_York, UTC)')
+    .option('--period <period>', 'Period (MONTH, QUARTER, or YEAR)')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
+    .action(async options => {
+        try {
+            setupBkper();
+            const book = await createBook({
+                name: options.name,
+                fractionDigits: options.fractionDigits,
+                datePattern: options.datePattern,
+                decimalSeparator: options.decimalSeparator,
+                timeZone: options.timeZone,
+                period: options.period,
+                property: options.property,
+            });
+            renderItem(book.json(), isJson());
+        } catch (err) {
+            console.error('Error creating book:', err);
             process.exit(1);
         }
     });

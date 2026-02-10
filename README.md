@@ -85,6 +85,14 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 - `book list` - List all books
     - `-q, --query <query>` - Search query
 - `book get <bookId>` - Get a book's details
+- `book create` - Create a new book
+    - `--name <name>` - Book name (required)
+    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
+    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    - `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
+    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    - `-p, --property <key=value>` - Set a property (repeatable)
 - `book update <bookId>` - Update a book
     - `--name <name>` - Book name
     - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
@@ -227,6 +235,12 @@ bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 --from "Ban
 
 # Update a transaction
 bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
+
+# Create a new book with Brazilian settings
+bkper book create --name "My Company" --fraction-digits 2 --date-pattern "dd/MM/yyyy" --decimal-separator COMMA --time-zone "America/Sao_Paulo"
+
+# Create a book with custom properties
+bkper book create --name "Project X" -p "code=PX001" -p "department=Engineering"
 
 # Create and manage collections
 bkper collection create --name "My Collection"
