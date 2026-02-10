@@ -122,7 +122,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 10. Call Platform API
-    const env: Environment = options.preview ? 'preview' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'production';
     console.log(`Deploying ${type} handler to ${env}...`);
 
     // Build query params, mapping services to bindings for the API
@@ -166,7 +166,6 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
 
     console.log(`\nDeployed ${type} handler to ${env}`);
     console.log(`  URL: ${data.url}${type === 'events' ? '/events' : ''}`);
-    console.log(`  Namespace: ${data.namespace}`);
     console.log(`  Script: ${data.scriptName}`);
 }
 
@@ -263,7 +262,7 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
-    const env: Environment = options.preview ? 'preview' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'production';
     const type: HandlerType = options.events ? 'events' : 'web';
     console.log(`Removing ${type} handler from ${env}...`);
 

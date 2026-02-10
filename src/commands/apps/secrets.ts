@@ -88,7 +88,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
-    const env: Environment = options.preview ? 'preview' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'production';
 
     const { data, error } = await client.PUT('/api/apps/{appId}/secrets/{name}', {
         params: {
@@ -141,7 +141,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
     const client = createPlatformClient(token);
 
     // 4. Call Platform API
-    const env: Environment = options.preview ? 'preview' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'production';
 
     const { data, error } = await client.GET('/api/apps/{appId}/secrets', {
         params: {
@@ -201,7 +201,7 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
     const client = createPlatformClient(token);
 
     // 4. Call Platform API
-    const env: Environment = options.preview ? 'preview' : 'prod';
+    const env: Environment = options.preview ? 'preview' : 'production';
 
     const { data, error } = await client.DELETE('/api/apps/{appId}/secrets/{name}', {
         params: {

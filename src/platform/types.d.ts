@@ -60,7 +60,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'prod' | 'preview';
+                    env?: 'production' | 'preview';
                     /** @description Deployment type (web handler or events handler) */
                     type?: 'web' | 'events';
                 };
@@ -201,7 +201,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'prod' | 'preview';
+                    env?: 'production' | 'preview';
                     /** @description Deployment type (web handler or events handler) */
                     type?: 'web' | 'events';
                     /** @description Permanently delete all associated data */
@@ -292,7 +292,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'prod' | 'preview';
+                    env?: 'production' | 'preview';
                 };
                 header?: never;
                 path: {
@@ -365,7 +365,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'prod' | 'preview';
+                    env?: 'production' | 'preview';
                 };
                 header?: never;
                 path: {
@@ -438,7 +438,7 @@ export interface paths {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'prod' | 'preview';
+                    env?: 'production' | 'preview';
                 };
                 header?: never;
                 path: {
@@ -518,7 +518,7 @@ export interface components {
              */
             url: string;
             /** @enum {string} */
-            environment: 'prod' | 'preview';
+            environment: 'production' | 'preview';
             /** @enum {string} */
             type: 'web' | 'events';
             /** @example bkper-apps-prod */

@@ -38,7 +38,7 @@ export interface SyncResult {
 // =============================================================================
 
 export type HandlerType = 'web' | 'events';
-export type Environment = 'preview' | 'prod';
+export type Environment = 'preview' | 'production';
 
 // =============================================================================
 // Deployment Configuration
