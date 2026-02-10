@@ -1,6 +1,6 @@
 {
     "name": "bkper",
-    "version": "3.8.1",
+    "version": "4.0.0",
     "description": "Node.js command line client for Bkper",
     "bin": {
         "bkper": "./lib/cli.js"
