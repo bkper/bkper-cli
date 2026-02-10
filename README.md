@@ -78,14 +78,14 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 - `book get <bookId>` - Get a book's details
 - `book update <bookId>` - Update a book
     - `--name <name>` - Book name
-    - `--fraction-digits <digits>` - Number of decimal places
-    - `--date-pattern <pattern>` - Date format pattern
+    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
     - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
-    - `--time-zone <timezone>` - Time zone
-    - `--lock-date <date>` - Lock date
-    - `--closing-date <date>` - Closing date
+    - `--time-zone <timezone>` - IANA time zone identifier (e.g. `America/New_York`, `Europe/London`, `UTC`)
+    - `--lock-date <date>` - Lock date in ISO format (`yyyy-MM-dd`, e.g. `2024-01-31`)
+    - `--closing-date <date>` - Closing date in ISO format (`yyyy-MM-dd`)
     - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`)
+    - `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
 
 #### Accounts
 
@@ -122,11 +122,19 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 #### Transactions
 
 - `transaction list -b <bookId> -q <query>` - List transactions matching a query
-    - `-l, --limit <limit>` - Maximum number of results
+    - `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
     - `-c, --cursor <cursor>` - Pagination cursor
     - `-p, --properties` - Include custom properties in the output
 - `transaction create -b <bookId>` - Create transactions (batch)
-    - `--transactions <json>` - Transaction data as JSON array (required)
+    - `--transactions <json>` - JSON array of transaction objects (required). Each object has:
+        - `date` (string, required) - Date in the book's date pattern or ISO `yyyy-MM-dd`
+        - `amount` (string | number, required) - Transaction amount
+        - `description` (string) - Transaction description
+        - `from` (string) - Debit account name
+        - `to` (string) - Credit account name
+        - `properties` (object) - Key-value pairs, e.g. `{"ref": "INV-001"}`
+        - `urls` (string[]) - Attached URLs
+        - `remoteIds` (string[]) - External system IDs
 - `transaction post <id> -b <bookId>` - Post a draft transaction
 - `transaction check <id> -b <bookId>` - Check a transaction
 - `transaction trash <id> -b <bookId>` - Trash a transaction
@@ -135,7 +143,7 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 #### Balances
 
 - `balance get -b <bookId> -q <query>` - Get account balances
-    - `--expanded <level>` - Expand groups to specified depth
+    - `--expanded <level>` - Expand groups to specified depth (`0`+)
 
 ### Output Format
 

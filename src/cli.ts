@@ -304,14 +304,21 @@ bookCommand
     .command('update <bookId>')
     .description('Update a book')
     .option('--name <name>', 'Book name')
-    .option('--fraction-digits <digits>', 'Number of decimal places', parseInt)
-    .option('--date-pattern <pattern>', 'Date format pattern')
+    .option('--fraction-digits <digits>', 'Number of decimal places (0-8)', parseInt)
+    .option(
+        '--date-pattern <pattern>',
+        'Date format pattern (dd/MM/yyyy, MM/dd/yyyy, or yyyy/MM/dd)'
+    )
     .option('--decimal-separator <separator>', 'Decimal separator (DOT or COMMA)')
-    .option('--time-zone <timezone>', 'Time zone')
-    .option('--lock-date <date>', 'Lock date')
-    .option('--closing-date <date>', 'Closing date')
+    .option('--time-zone <timezone>', 'IANA time zone (e.g. America/New_York, UTC)')
+    .option('--lock-date <date>', 'Lock date in ISO format (yyyy-MM-dd)')
+    .option('--closing-date <date>', 'Closing date in ISO format (yyyy-MM-dd)')
     .option('--period <period>', 'Period (MONTH, QUARTER, or YEAR)')
-    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
+    .option(
+        '-p, --property <key=value>',
+        'Set a property (repeatable, empty value deletes)',
+        collectProperty
+    )
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
@@ -570,7 +577,7 @@ transactionCommand
     .description('List transactions in a book')
     .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('-q, --query <query>', 'Search query')
-    .option('-l, --limit <limit>', 'Maximum number of results', parseInt)
+    .option('-l, --limit <limit>', 'Maximum number of results (1-1000)', parseInt)
     .option('-c, --cursor <cursor>', 'Pagination cursor')
     .option('-p, --properties', 'Include custom properties')
     .action(async options => {
@@ -619,7 +626,10 @@ transactionCommand
     .command('create')
     .description('Create transactions (batch)')
     .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('--transactions <json>', 'Transaction data as JSON array')
+    .requiredOption(
+        '--transactions <json>',
+        'JSON array of {date, amount, description?, from?, to?, properties?, urls?, remoteIds?}'
+    )
     .action(async options => {
         try {
             setupBkper();
@@ -732,7 +742,7 @@ balanceCommand
     .description('Get balances report')
     .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('-q, --query <query>', 'Balances query')
-    .option('--expanded <level>', 'Expand groups to specified depth', parseInt)
+    .option('--expanded <level>', 'Expand groups to specified depth (0+)', parseInt)
     .action(async options => {
         try {
             setupBkper();
