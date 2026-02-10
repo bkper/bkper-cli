@@ -1,5 +1,6 @@
 import { createServer, build as viteBuild, ViteDevServer, Plugin } from 'vite';
 import path from 'path';
+import { exec } from 'child_process';
 import { createAuthMiddleware } from './auth-middleware.js';
 
 /**
@@ -10,6 +11,8 @@ export interface ClientServerOptions {
     port: number;
     /** Miniflare port for API proxy */
     serverPort: number;
+    /** Whether to open browser on startup */
+    open?: boolean;
 }
 
 /**
@@ -46,7 +49,7 @@ export async function createClientServer(
         root,
         server: {
             port: options.port,
-            host: '127.0.0.1', // Explicitly bind to IPv4 localhost
+            host: 'localhost',
             strictPort: false, // Allow fallback to next available port
             proxy: {
                 // Proxy API requests to Miniflare
@@ -64,6 +67,22 @@ export async function createClientServer(
     });
 
     await server.listen();
+
+    if (options.open) {
+        const url = getServerUrl(server);
+        const cmd =
+            process.platform === 'darwin'
+                ? 'open'
+                : process.platform === 'win32'
+                  ? 'start'
+                  : 'xdg-open';
+        exec(`${cmd} ${url}`, err => {
+            if (err) {
+                console.log(`\n  Open your browser at ${url}\n`);
+            }
+        });
+    }
+
     return server;
 }
 

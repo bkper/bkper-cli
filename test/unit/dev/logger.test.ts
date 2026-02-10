@@ -11,11 +11,7 @@ describe('Logger Module', function () {
 
     // Dynamic imports to allow module to be loaded after stubs are set up
     let createLogger: (prefix: LogPrefix) => Logger;
-    let logDevServerBanner: (options: {
-        clientUrl?: string;
-        serverUrl?: string;
-        eventsUrl?: string;
-    }) => void;
+    let logDevServerBanner: (options: { clientUrl?: string; tunnelUrl?: string }) => void;
     let logBuildResults: (results: {
         webClient?: { path: string; size: number };
         webServer?: { path: string; size: number };
@@ -145,8 +141,7 @@ describe('Logger Module', function () {
         it('should log banner with all URLs', function () {
             logDevServerBanner({
                 clientUrl: 'http://localhost:5173',
-                serverUrl: 'http://localhost:8787',
-                eventsUrl: 'https://my-app-preview.bkper.app/events',
+                tunnelUrl: 'https://my-tunnel.example.com',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -157,14 +152,14 @@ describe('Logger Module', function () {
                 .join('\n');
             expect(allOutput).to.include('Bkper App');
             expect(allOutput).to.include('http://localhost:5173');
-            expect(allOutput).to.include('http://localhost:8787');
-            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
+            expect(allOutput).to.include('Events:');
+            expect(allOutput).to.include('https://my-tunnel.example.com');
+            expect(allOutput).to.include('(tunneled)');
         });
 
         it('should handle missing clientUrl', function () {
             logDevServerBanner({
-                serverUrl: 'http://localhost:8787',
-                eventsUrl: 'https://my-app-preview.bkper.app/events',
+                tunnelUrl: 'https://my-tunnel.example.com',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -173,14 +168,15 @@ describe('Logger Module', function () {
                 .getCalls()
                 .map(call => call.args[0])
                 .join('\n');
-            expect(allOutput).to.include('http://localhost:8787');
-            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
+            expect(allOutput).to.include('Events:');
+            expect(allOutput).to.include('https://my-tunnel.example.com');
+            expect(allOutput).to.include('(tunneled)');
+            expect(allOutput).not.to.include('http://localhost');
         });
 
-        it('should handle missing serverUrl', function () {
+        it('should handle missing tunnelUrl', function () {
             logDevServerBanner({
                 clientUrl: 'http://localhost:5173',
-                eventsUrl: 'https://my-app-preview.bkper.app/events',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -190,13 +186,13 @@ describe('Logger Module', function () {
                 .map(call => call.args[0])
                 .join('\n');
             expect(allOutput).to.include('http://localhost:5173');
-            expect(allOutput).to.include('https://my-app-preview.bkper.app/events');
+            expect(allOutput).not.to.include('Events:');
+            expect(allOutput).not.to.include('(tunneled)');
         });
 
-        it('should handle missing eventsUrl', function () {
+        it('should handle tunnelUrl only', function () {
             logDevServerBanner({
-                clientUrl: 'http://localhost:5173',
-                serverUrl: 'http://localhost:8787',
+                tunnelUrl: 'https://my-tunnel.example.com',
             });
 
             expect(consoleLogStub.called).to.be.true;
@@ -205,8 +201,9 @@ describe('Logger Module', function () {
                 .getCalls()
                 .map(call => call.args[0])
                 .join('\n');
-            expect(allOutput).to.include('http://localhost:5173');
-            expect(allOutput).to.include('http://localhost:8787');
+            expect(allOutput).to.include('Events:');
+            expect(allOutput).to.include('https://my-tunnel.example.com');
+            expect(allOutput).to.include('(tunneled)');
         });
 
         it('should handle empty options', function () {

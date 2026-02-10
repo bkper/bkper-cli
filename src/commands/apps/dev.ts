@@ -29,6 +29,8 @@ export interface DevOptions {
     web?: boolean;
     /** Run only the events handler */
     events?: boolean;
+    /** Open browser on startup (default: true) */
+    open?: boolean;
 }
 
 /**
@@ -227,6 +229,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             vite = await createClientServer(deployConfig.web!.client, {
                 port: clientPort,
                 serverPort,
+                open: options.open !== false,
             });
         }
 
@@ -388,8 +391,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     // Display status
     logDevServerBanner({
         clientUrl: hasWeb && vite ? getServerUrl(vite) : undefined,
-        serverUrl: hasWeb ? `http://localhost:${serverPort}` : undefined,
-        eventsUrl: hasEvents ? `http://localhost:${eventsPort}/events` : undefined,
+        tunnelUrl: hasEvents && eventsTunnel ? eventsUrl : undefined,
     });
 
     process.removeAllListeners('SIGINT');

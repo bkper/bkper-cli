@@ -198,6 +198,7 @@ appCommand
     .option('--ep, --events-port <port>', 'Events handler port', '8791')
     .option('-w, --web', 'Run only the web handler')
     .option('-e, --events', 'Run only the events handler')
+    .option('--no-open', 'Do not open browser on startup')
     .action(async options => {
         try {
             setupBkper();
@@ -207,6 +208,7 @@ appCommand
                 eventsPort: parseInt(options.eventsPort, 10),
                 web: options.web,
                 events: options.events,
+                open: options.open,
             });
         } catch (err) {
             console.error('Error starting dev server:', err);

@@ -81,25 +81,17 @@ export function formatSize(bytes: number): string {
  * Logs startup banner for the dev server
  * @param options - URLs for client, server, and events endpoints
  */
-export function logDevServerBanner(options: {
-    clientUrl?: string;
-    serverUrl?: string;
-    eventsUrl?: string;
-}): void {
+export function logDevServerBanner(options: { clientUrl?: string; tunnelUrl?: string }): void {
     console.log('');
     console.log(`${icons.rocket} Bkper App Development Server`);
     console.log('');
 
     if (options.clientUrl) {
-        console.log(`   Web Client:   ${options.clientUrl}`);
+        console.log(`   ${options.clientUrl}`);
     }
 
-    if (options.serverUrl) {
-        console.log(`   Web Server:   ${options.serverUrl} (simulated)`);
-    }
-
-    if (options.eventsUrl) {
-        console.log(`   Events:       ${options.eventsUrl} (tunneled)`);
+    if (options.tunnelUrl) {
+        console.log(`   Events:  ${options.tunnelUrl} (tunneled)`);
     }
 
     console.log('');
