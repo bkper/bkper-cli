@@ -111,13 +111,12 @@ describe('CLI - book commands', function () {
         });
 
         it('should update properties', async function () {
-            const props = JSON.stringify({ testKey: 'testValue' });
             const result = await runBkperJson<bkper.Book>([
                 'book',
                 'update',
                 bookId,
-                '--properties',
-                props,
+                '-p',
+                'testKey=testValue',
             ]);
 
             expect(result).to.be.an('object');

@@ -50,7 +50,6 @@ describe('CLI - account commands', function () {
         });
 
         it('should create an account with properties', async function () {
-            const props = JSON.stringify({ code: '1001' });
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'create',
@@ -60,8 +59,8 @@ describe('CLI - account commands', function () {
                 'Bank',
                 '--type',
                 'ASSET',
-                '--properties',
-                props,
+                '-p',
+                'code=1001',
             ]);
 
             expect(result).to.be.an('object');
@@ -151,15 +150,14 @@ describe('CLI - account commands', function () {
         });
 
         it('should update account properties', async function () {
-            const props = JSON.stringify({ code: '1000' });
             const result = await runBkperJson<bkper.Account>([
                 'account',
                 'update',
                 'Cash Updated',
                 '-b',
                 bookId,
-                '--properties',
-                props,
+                '-p',
+                'code=1000',
             ]);
 
             expect(result).to.be.an('object');

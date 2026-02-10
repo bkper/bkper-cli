@@ -1,10 +1,11 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Group } from 'bkper-js';
+import { parsePropertyFlag } from '../../utils/properties.js';
 
 export interface UpdateGroupOptions {
     name?: string;
     hidden?: boolean;
-    properties?: Record<string, string>;
+    property?: string[];
 }
 
 export async function updateGroup(
@@ -21,7 +22,17 @@ export async function updateGroup(
 
     if (options.name !== undefined) group.setName(options.name);
     if (options.hidden !== undefined) group.setHidden(options.hidden);
-    if (options.properties !== undefined) group.setProperties(options.properties);
+
+    if (options.property) {
+        for (const raw of options.property) {
+            const [key, value] = parsePropertyFlag(raw);
+            if (value === '') {
+                group.deleteProperty(key);
+            } else {
+                group.setProperty(key, value);
+            }
+        }
+    }
 
     return group.update();
 }

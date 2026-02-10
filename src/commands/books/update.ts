@@ -1,5 +1,6 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, DecimalSeparator, Period } from 'bkper-js';
+import { parsePropertyFlag } from '../../utils/properties.js';
 
 export interface UpdateBookOptions {
     name?: string;
@@ -10,7 +11,7 @@ export interface UpdateBookOptions {
     lockDate?: string;
     closingDate?: string;
     period?: 'MONTH' | 'QUARTER' | 'YEAR';
-    properties?: Record<string, string>;
+    property?: string[];
 }
 
 export async function updateBook(bookId: string, options: UpdateBookOptions): Promise<Book> {
@@ -26,7 +27,17 @@ export async function updateBook(bookId: string, options: UpdateBookOptions): Pr
     if (options.lockDate !== undefined) book.setLockDate(options.lockDate);
     if (options.closingDate !== undefined) book.setClosingDate(options.closingDate);
     if (options.period !== undefined) book.setPeriod(options.period as Period);
-    if (options.properties !== undefined) book.setProperties(options.properties);
+
+    if (options.property) {
+        for (const raw of options.property) {
+            const [key, value] = parsePropertyFlag(raw);
+            if (value === '') {
+                book.deleteProperty(key);
+            } else {
+                book.setProperty(key, value);
+            }
+        }
+    }
 
     return book.update();
 }

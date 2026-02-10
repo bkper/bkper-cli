@@ -1,11 +1,12 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Group } from 'bkper-js';
+import { parsePropertyFlag } from '../../utils/properties.js';
 
 export interface CreateGroupOptions {
     name: string;
     parent?: string;
     hidden?: boolean;
-    properties?: Record<string, string>;
+    property?: string[];
 }
 
 export async function createGroup(bookId: string, options: CreateGroupOptions): Promise<Group> {
@@ -15,7 +16,17 @@ export async function createGroup(bookId: string, options: CreateGroupOptions): 
     const group = new Group(book).setName(options.name);
 
     if (options.hidden !== undefined) group.setHidden(options.hidden);
-    if (options.properties) group.setProperties(options.properties);
+
+    if (options.property) {
+        for (const raw of options.property) {
+            const [key, value] = parsePropertyFlag(raw);
+            if (value === '') {
+                group.deleteProperty(key);
+            } else {
+                group.setProperty(key, value);
+            }
+        }
+    }
 
     if (options.parent) {
         const parentGroup = await book.getGroup(options.parent);

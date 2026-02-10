@@ -85,7 +85,7 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     - `--lock-date <date>` - Lock date
     - `--closing-date <date>` - Closing date
     - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `--properties <json>` - Properties as JSON object
+    - `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`)
 
 #### Accounts
 
@@ -96,12 +96,12 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
     - `--description <description>` - Account description
     - `--groups <groups>` - Comma-separated group names
-    - `--properties <json>` - Properties as JSON object
+    - `-p, --property <key=value>` - Set a property (repeatable)
 - `account update <nameOrId> -b <bookId>` - Update an account
     - `--name <name>` - Account name
     - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
     - `--archived <true|false>` - Archive status
-    - `--properties <json>` - Properties as JSON object
+    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
 - `account delete <nameOrId> -b <bookId>` - Delete an account
 
 #### Groups
@@ -112,11 +112,11 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     - `--name <name>` - Group name (required)
     - `--parent <parent>` - Parent group name or ID
     - `--hidden` - Hide the group
-    - `--properties <json>` - Properties as JSON object
+    - `-p, --property <key=value>` - Set a property (repeatable)
 - `group update <nameOrId> -b <bookId>` - Update a group
     - `--name <name>` - Group name
     - `--hidden <true|false>` - Hide status
-    - `--properties <json>` - Properties as JSON object
+    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
 - `group delete <nameOrId> -b <bookId>` - Delete a group
 
 #### Transactions

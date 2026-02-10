@@ -1,11 +1,12 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Account, AccountType } from 'bkper-js';
+import { parsePropertyFlag } from '../../utils/properties.js';
 
 export interface UpdateAccountOptions {
     name?: string;
     type?: 'ASSET' | 'LIABILITY' | 'INCOMING' | 'OUTGOING';
     archived?: boolean;
-    properties?: Record<string, string>;
+    property?: string[];
 }
 
 export async function updateAccount(
@@ -23,7 +24,17 @@ export async function updateAccount(
     if (options.name !== undefined) account.setName(options.name);
     if (options.type !== undefined) account.setType(options.type as AccountType);
     if (options.archived !== undefined) account.setArchived(options.archived);
-    if (options.properties !== undefined) account.setProperties(options.properties);
+
+    if (options.property) {
+        for (const raw of options.property) {
+            const [key, value] = parsePropertyFlag(raw);
+            if (value === '') {
+                account.deleteProperty(key);
+            } else {
+                account.setProperty(key, value);
+            }
+        }
+    }
 
     return account.update();
 }

@@ -79,7 +79,6 @@ describe('CLI - group commands', function () {
         });
 
         it('should create a group with properties', async function () {
-            const props = JSON.stringify({ code: 'GRP-001' });
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
@@ -87,8 +86,8 @@ describe('CLI - group commands', function () {
                 bookId,
                 '--name',
                 'Expenses',
-                '--properties',
-                props,
+                '-p',
+                'code=GRP-001',
             ]);
 
             expect(result).to.be.an('object');
@@ -150,15 +149,14 @@ describe('CLI - group commands', function () {
         });
 
         it('should update group properties', async function () {
-            const props = JSON.stringify({ code: 'GRP-002' });
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'update',
                 'Operating Expenses',
                 '-b',
                 bookId,
-                '--properties',
-                props,
+                '-p',
+                'code=GRP-002',
             ]);
 
             expect(result).to.be.an('object');

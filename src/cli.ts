@@ -51,6 +51,10 @@ import {
 import { getBalancesMatrix } from './commands/balances/index.js';
 import { renderTable, renderItem } from './render/index.js';
 
+function collectProperty(value: string, previous: string[] | undefined): string[] {
+    return previous ? [...previous, value] : [value];
+}
+
 // Global --json option
 program.option('--json', 'Output as JSON');
 
@@ -307,7 +311,7 @@ bookCommand
     .option('--lock-date <date>', 'Lock date')
     .option('--closing-date <date>', 'Closing date')
     .option('--period <period>', 'Period (MONTH, QUARTER, or YEAR)')
-    .option('--properties <json>', 'Properties as JSON object')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async (bookId: string, options) => {
         try {
             setupBkper();
@@ -320,7 +324,7 @@ bookCommand
                 lockDate: options.lockDate,
                 closingDate: options.closingDate,
                 period: options.period,
-                properties: options.properties ? JSON.parse(options.properties) : undefined,
+                property: options.property,
             });
             renderItem(book.json(), isJson());
         } catch (err) {
@@ -386,7 +390,7 @@ accountCommand
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--description <description>', 'Account description')
     .option('--groups <groups>', 'Comma-separated group names')
-    .option('--properties <json>', 'Properties as JSON object')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
             setupBkper();
@@ -398,7 +402,7 @@ accountCommand
                 groups: options.groups
                     ? options.groups.split(',').map((g: string) => g.trim())
                     : undefined,
-                properties: options.properties ? JSON.parse(options.properties) : undefined,
+                property: options.property,
             });
             renderItem(account.json(), isJson());
         } catch (err) {
@@ -414,7 +418,7 @@ accountCommand
     .option('--name <name>', 'Account name')
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--archived <archived>', 'Archive status (true/false)')
-    .option('--properties <json>', 'Properties as JSON object')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async (idOrName: string, options) => {
         try {
             setupBkper();
@@ -423,7 +427,7 @@ accountCommand
                 name: options.name,
                 type: options.type,
                 archived: options.archived !== undefined ? options.archived === 'true' : undefined,
-                properties: options.properties ? JSON.parse(options.properties) : undefined,
+                property: options.property,
             });
             renderItem(account.json(), isJson());
         } catch (err) {
@@ -501,7 +505,7 @@ groupCommand
     .requiredOption('--name <name>', 'Group name')
     .option('--parent <parent>', 'Parent group name or ID')
     .option('--hidden', 'Hide the group')
-    .option('--properties <json>', 'Properties as JSON object')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
             setupBkper();
@@ -510,7 +514,7 @@ groupCommand
                 name: options.name,
                 parent: options.parent,
                 hidden: options.hidden,
-                properties: options.properties ? JSON.parse(options.properties) : undefined,
+                property: options.property,
             });
             renderItem(group.json(), isJson());
         } catch (err) {
@@ -525,7 +529,7 @@ groupCommand
     .requiredOption('-b, --book <bookId>', 'Book ID')
     .option('--name <name>', 'Group name')
     .option('--hidden <hidden>', 'Hide status (true/false)')
-    .option('--properties <json>', 'Properties as JSON object')
+    .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async (idOrName: string, options) => {
         try {
             setupBkper();
@@ -533,7 +537,7 @@ groupCommand
             const group = await updateGroup(bookId, idOrName, {
                 name: options.name,
                 hidden: options.hidden !== undefined ? options.hidden === 'true' : undefined,
-                properties: options.properties ? JSON.parse(options.properties) : undefined,
+                property: options.property,
             });
             renderItem(group.json(), isJson());
         } catch (err) {
