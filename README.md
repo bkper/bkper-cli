@@ -49,13 +49,22 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 - `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
 - `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
     - `--dev` - Deploy to development environment
-    - `--web` - Deploy web handler only
-    - `--events` - Deploy events handler only
+    - `--events` - Deploy events handler instead of web handler
 - `app status` - Show deployment status
 - `app undeploy` - Remove app from platform
     - `--dev` - Remove from development environment
-    - `--web` - Remove web handler only
-    - `--events` - Remove events handler only
+    - `--events` - Remove events handler instead of web handler
+    - `--delete-data` - Permanently delete all associated data (requires confirmation)
+    - `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
+- `app dev` - Run local development servers
+    - `--cp, --client-port <port>` - Client dev server port (default: `5173`)
+    - `--sp, --server-port <port>` - Server simulation port (default: `8787`)
+    - `--ep, --events-port <port>` - Events handler port (default: `8791`)
+    - `-w, --web` - Run only the web handler
+    - `-e, --events` - Run only the events handler
+- `app build` - Build app artifacts
+- `app install <appId> -b <bookId>` - Install an app on a book
+- `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
 
 > **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs
 > in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare.
@@ -125,16 +134,23 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     - `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
     - `-c, --cursor <cursor>` - Pagination cursor
     - `-p, --properties` - Include custom properties in the output
-- `transaction create -b <bookId>` - Create transactions (batch)
-    - `--transactions <json>` - JSON array of transaction objects (required). Each object has:
-        - `date` (string, required) - Date in the book's date pattern or ISO `yyyy-MM-dd`
-        - `amount` (string | number, required) - Transaction amount
-        - `description` (string) - Transaction description
-        - `from` (string) - Debit account name
-        - `to` (string) - Credit account name
-        - `properties` (object) - Key-value pairs, e.g. `{"ref": "INV-001"}`
-        - `urls` (string[]) - Attached URLs
-        - `remoteIds` (string[]) - External system IDs
+- `transaction create -b <bookId>` - Create a transaction
+    - `--date <date>` - Transaction date (required)
+    - `--amount <amount>` - Transaction amount (required)
+    - `--description <description>` - Transaction description
+    - `--from <from>` - Credit account (source)
+    - `--to <to>` - Debit account (destination)
+    - `--url <url>` - URL (repeatable)
+    - `--remote-id <remoteId>` - Remote ID (repeatable)
+    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+- `transaction update <transactionId> -b <bookId>` - Update a transaction
+    - `--date <date>` - Transaction date
+    - `--amount <amount>` - Transaction amount
+    - `--description <description>` - Transaction description
+    - `--from <from>` - Credit account (source)
+    - `--to <to>` - Debit account (destination)
+    - `--url <url>` - URL (repeatable, replaces all)
+    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
 - `transaction post <id> -b <bookId>` - Post a draft transaction
 - `transaction check <id> -b <bookId>` - Check a transaction
 - `transaction trash <id> -b <bookId>` - Trash a transaction
@@ -144,6 +160,20 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 
 - `balance get -b <bookId> -q <query>` - Get account balances
     - `--expanded <level>` - Expand groups to specified depth (`0`+)
+
+#### Collections
+
+- `collection list` - List all collections
+- `collection get <collectionId>` - Get a collection
+- `collection create` - Create a new collection
+    - `--name <name>` - Collection name (required)
+- `collection update <collectionId>` - Update a collection
+    - `--name <name>` - Collection name
+- `collection delete <collectionId>` - Delete a collection
+- `collection add-book <collectionId>` - Add books to a collection
+    - `-b, --book <bookId>` - Book ID (repeatable)
+- `collection remove-book <collectionId>` - Remove books from a collection
+    - `-b, --book <bookId>` - Book ID (repeatable)
 
 ### Output Format
 
@@ -187,6 +217,21 @@ bkper app status
 # Manage secrets
 bkper app secrets put API_KEY
 bkper app secrets list
+
+# Install/uninstall apps
+bkper app install my-app -b abc123
+bkper app uninstall my-app -b abc123
+
+# Create a transaction
+bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 --from "Bank Account" --to "Office Supplies" --description "Printer paper"
+
+# Update a transaction
+bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
+
+# Create and manage collections
+bkper collection create --name "My Collection"
+bkper collection add-book col_789 -b abc123 -b def456
+bkper collection list
 ```
 
 ## Apps Configuration
