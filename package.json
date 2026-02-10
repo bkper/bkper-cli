@@ -45,13 +45,11 @@
         "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
     },
     "dependencies": {
-        "bkper": "^3.8.0",
-        "bkper-js": "^2.28.0",
+        "bkper-js": "link:bkper-js",
         "chokidar": "^5.0.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",
-        "get-port": "^7.1.0",
         "google-auth-library": "^10.5.0",
         "miniflare": "^4",
         "open": "^10.1.0",
@@ -68,6 +66,7 @@
         "@types/sinon": "^21.0.0",
         "chai": "^4.3.0",
         "concurrently": "^8.2.2",
+        "get-port": "^7.1.0",
         "gts": "^3.0.3",
         "mocha": "^10.0.0",
         "nodemon": "^3.0.1",

@@ -49,7 +49,7 @@ export async function createClientServer(
         root,
         server: {
             port: options.port,
-            host: 'localhost',
+            host: '127.0.0.1',
             strictPort: false, // Allow fallback to next available port
             proxy: {
                 // Proxy API requests to Miniflare
