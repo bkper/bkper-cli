@@ -24,6 +24,8 @@ import {
     dev,
     build,
     DevOptions,
+    installApp,
+    uninstallApp,
 } from './commands/apps/index.js';
 import { listBooks, getBook, updateBook } from './commands/books/index.js';
 import {
@@ -42,13 +44,23 @@ import {
 } from './commands/groups/index.js';
 import {
     listTransactions,
-    createTransactions,
+    createTransaction,
+    updateTransaction,
     postTransaction,
     checkTransaction,
     trashTransaction,
     mergeTransactions,
 } from './commands/transactions/index.js';
 import { getBalancesMatrix } from './commands/balances/index.js';
+import {
+    listCollections,
+    getCollection,
+    createCollection,
+    updateCollection,
+    deleteCollection,
+    addBookToCollection,
+    removeBookFromCollection,
+} from './commands/collections/index.js';
 import { renderTable, renderItem } from './render/index.js';
 
 function collectProperty(value: string, previous: string[] | undefined): string[] {
@@ -253,6 +265,36 @@ secretsCommand
             await secretsDelete(name, options);
         } catch (err) {
             console.error('Error deleting secret:', err);
+            process.exit(1);
+        }
+    });
+
+appCommand
+    .command('install <appId>')
+    .description('Install an app into a book')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (appId: string, options) => {
+        try {
+            setupBkper();
+            const integration = await installApp(options.book, appId);
+            renderItem(integration.json(), isJson());
+        } catch (err) {
+            console.error('Error installing app:', err);
+            process.exit(1);
+        }
+    });
+
+appCommand
+    .command('uninstall <appId>')
+    .description('Uninstall an app from a book')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .action(async (appId: string, options) => {
+        try {
+            setupBkper();
+            const integration = await uninstallApp(options.book, appId);
+            renderItem(integration.json(), isJson());
+        } catch (err) {
+            console.error('Error uninstalling app:', err);
             process.exit(1);
         }
     });
@@ -624,34 +666,37 @@ transactionCommand
 
 transactionCommand
     .command('create')
-    .description('Create transactions (batch)')
+    .description('Create a transaction')
     .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption(
-        '--transactions <json>',
-        'JSON array of {date, amount, description?, from?, to?, properties?, urls?, remoteIds?}'
+    .requiredOption('--date <date>', 'Transaction date')
+    .requiredOption('--amount <amount>', 'Transaction amount')
+    .option('--description <description>', 'Transaction description')
+    .option('--from <from>', 'Credit account (source)')
+    .option('--to <to>', 'Debit account (destination)')
+    .option('--url <url>', 'URL (repeatable)', collectProperty)
+    .option('--remote-id <remoteId>', 'Remote ID (repeatable)', collectProperty)
+    .option(
+        '-p, --property <key=value>',
+        'Set a property (repeatable, empty value deletes)',
+        collectProperty
     )
     .action(async options => {
         try {
             setupBkper();
             const bookId = options.book;
-            const inputs = JSON.parse(options.transactions);
-            const transactions = await createTransactions(bookId, inputs);
-            if (isJson()) {
-                console.log(
-                    JSON.stringify(
-                        transactions.map(tx => tx.json()),
-                        null,
-                        2
-                    )
-                );
-            } else {
-                for (const tx of transactions) {
-                    renderItem(tx.json(), false);
-                    console.log('');
-                }
-            }
+            const transaction = await createTransaction(bookId, {
+                date: options.date,
+                amount: options.amount,
+                description: options.description,
+                from: options.from,
+                to: options.to,
+                url: options.url,
+                remoteId: options.remoteId,
+                property: options.property,
+            });
+            renderItem(transaction.json(), isJson());
         } catch (err) {
-            console.error('Error creating transactions:', err);
+            console.error('Error creating transaction:', err);
             process.exit(1);
         }
     });
@@ -668,6 +713,41 @@ transactionCommand
             renderItem(transaction.json(), isJson());
         } catch (err) {
             console.error('Error posting transaction:', err);
+            process.exit(1);
+        }
+    });
+
+transactionCommand
+    .command('update <transactionId>')
+    .description('Update a transaction')
+    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('--date <date>', 'Transaction date')
+    .option('--amount <amount>', 'Transaction amount')
+    .option('--description <description>', 'Transaction description')
+    .option('--from <from>', 'Credit account (source)')
+    .option('--to <to>', 'Debit account (destination)')
+    .option('--url <url>', 'URL (repeatable, replaces all)', collectProperty)
+    .option(
+        '-p, --property <key=value>',
+        'Set a property (repeatable, empty value deletes)',
+        collectProperty
+    )
+    .action(async (transactionId: string, options) => {
+        try {
+            setupBkper();
+            const bookId = options.book;
+            const transaction = await updateTransaction(bookId, transactionId, {
+                date: options.date,
+                amount: options.amount,
+                description: options.description,
+                from: options.from,
+                to: options.to,
+                url: options.url,
+                property: options.property,
+            });
+            renderItem(transaction.json(), isJson());
+        } catch (err) {
+            console.error('Error updating transaction:', err);
             process.exit(1);
         }
     });
@@ -754,6 +834,158 @@ balanceCommand
             renderTable(matrix, isJson());
         } catch (err) {
             console.error('Error getting balances:', err);
+            process.exit(1);
+        }
+    });
+
+// 'collection' command group
+const collectionCommand = program.command('collection').description('Manage Collections');
+
+collectionCommand
+    .command('list')
+    .description('List all collections')
+    .action(async () => {
+        try {
+            setupBkper();
+            const collections = await listCollections();
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        collections.map(c => c.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                if (collections.length === 0) {
+                    console.log('No collections found.');
+                    return;
+                }
+                const matrix: unknown[][] = [['ID', 'Name', 'Books']];
+                for (const col of collections) {
+                    const books = col.getBooks();
+                    matrix.push([col.getId() || '', col.getName() || '', books.length.toString()]);
+                }
+                renderTable(matrix, false);
+            }
+        } catch (err) {
+            console.error('Error listing collections:', err);
+            process.exit(1);
+        }
+    });
+
+collectionCommand
+    .command('get <collectionId>')
+    .description('Get a collection by ID')
+    .action(async (collectionId: string) => {
+        try {
+            setupBkper();
+            const collection = await getCollection(collectionId);
+            renderItem(collection.json(), isJson());
+        } catch (err) {
+            console.error('Error getting collection:', err);
+            process.exit(1);
+        }
+    });
+
+collectionCommand
+    .command('create')
+    .description('Create a new collection')
+    .requiredOption('--name <name>', 'Collection name')
+    .action(async options => {
+        try {
+            setupBkper();
+            const collection = await createCollection({ name: options.name });
+            renderItem(collection.json(), isJson());
+        } catch (err) {
+            console.error('Error creating collection:', err);
+            process.exit(1);
+        }
+    });
+
+collectionCommand
+    .command('update <collectionId>')
+    .description('Update a collection')
+    .option('--name <name>', 'Collection name')
+    .action(async (collectionId: string, options) => {
+        try {
+            setupBkper();
+            const collection = await updateCollection(collectionId, {
+                name: options.name,
+            });
+            renderItem(collection.json(), isJson());
+        } catch (err) {
+            console.error('Error updating collection:', err);
+            process.exit(1);
+        }
+    });
+
+collectionCommand
+    .command('delete <collectionId>')
+    .description('Delete a collection')
+    .action(async (collectionId: string) => {
+        try {
+            setupBkper();
+            await deleteCollection(collectionId);
+            console.log(`Collection ${collectionId} deleted.`);
+        } catch (err) {
+            console.error('Error deleting collection:', err);
+            process.exit(1);
+        }
+    });
+
+function collectBook(value: string, previous: string[] | undefined): string[] {
+    return previous ? [...previous, value] : [value];
+}
+
+collectionCommand
+    .command('add-book <collectionId>')
+    .description('Add books to a collection')
+    .requiredOption('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
+    .action(async (collectionId: string, options) => {
+        try {
+            setupBkper();
+            const books = await addBookToCollection(collectionId, options.book);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        books.map(b => b.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                console.log(`Added ${options.book.length} book(s) to collection ${collectionId}.`);
+            }
+        } catch (err) {
+            console.error('Error adding books to collection:', err);
+            process.exit(1);
+        }
+    });
+
+collectionCommand
+    .command('remove-book <collectionId>')
+    .description('Remove books from a collection')
+    .requiredOption('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
+    .action(async (collectionId: string, options) => {
+        try {
+            setupBkper();
+            const books = await removeBookFromCollection(collectionId, options.book);
+            if (isJson()) {
+                console.log(
+                    JSON.stringify(
+                        books.map(b => b.json()),
+                        null,
+                        2
+                    )
+                );
+            } else {
+                console.log(
+                    `Removed ${options.book.length} book(s) from collection ${collectionId}.`
+                );
+            }
+        } catch (err) {
+            console.error('Error removing books from collection:', err);
             process.exit(1);
         }
     });

@@ -38,3 +38,7 @@ export { initApp } from './init.js';
 
 // Secrets
 export { secretsDelete, secretsList, secretsPut } from './secrets.js';
+
+// Install/Uninstall
+export { installApp } from './install.js';
+export { uninstallApp } from './uninstall.js';
