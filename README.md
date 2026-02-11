@@ -1,58 +1,148 @@
-[Bkper REST API]: https://bkper.com/docs/#rest-api-enabling
+[bkper.yaml reference]: https://raw.githubusercontent.com/bkper/bkper-cli/main/docs/bkper-reference.yaml
+[Developer Docs]: https://bkper.com/docs
+[App Template]: https://github.com/bkper/bkper-app-template
+[Skills Repository]: https://github.com/bkper/skills
 
-A **command line** utility for managing [Bkper Apps](https://bkper.com/docs/) and interacting with Bkper data.
-
-The CLI provides atomic operations for app deployment and management, plus data commands for books, accounts, groups, transactions, and balances. Designed to work seamlessly with AI coding agents (Claude Code, OpenCode) that orchestrate the development workflow.
+A **command-line interface** for [Bkper](https://bkper.com), a financial accounting platform. Build and deploy Bkper apps, and manage your financial data -- books, accounts, transactions, and balances -- directly from the terminal.
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
-## Installation
+## Table of Contents
 
-### npm
+-   [Quick Start](#quick-start)
+-   [App Management](#app-management)
+-   [Data Management](#data-management)
+-   [Output Format](#output-format)
+-   [Library](#library)
+-   [Documentation](#documentation)
 
-```
-npm i -g bkper
-```
+---
 
-### yarn
+## Quick Start
 
-```
-yarn global add bkper
-```
+### Install
 
-### bun (recommended)
-
-```
+```bash
 bun add -g bkper
 ```
 
-## Development Model
+<details>
+<summary>Other package managers</summary>
 
-Bkper apps are developed with AI coding agents as the primary interface. The CLI provides **atomic, composable operations** that agents orchestrate:
+```bash
+# npm
+npm i -g bkper
 
--   **Typical developers**: Work with AI agents (Claude Code, OpenCode) that handle build, watch, and deploy decisions
--   **Advanced developers**: Use CLI directly with the same atomic commands
+# yarn
+yarn global add bkper
+```
 
-The CLI focuses on **platform operations** (deploy, sync, secrets) while build and development workflows are handled by standard tools (`bun run build`, `bun run dev`) orchestrated by agents or developers directly.
+</details>
 
-## Commands
+### Authenticate
 
-### Authentication
+```bash
+bkper login
+```
+
+### Create Your First App
+
+```bash
+bkper app init my-app
+cd my-app
+bkper app dev
+```
+
+When ready, deploy to production:
+
+```bash
+bkper app sync && bkper app deploy
+```
+
+> Run `bkper --help` or `bkper <command> --help` for built-in documentation on any command.
+
+---
+
+## App Management
+
+**Build, deploy, and manage Bkper apps.**
+
+### Development Workflow
+
+```bash
+# Scaffold a new app from the template
+bkper app init my-app
+
+# Start local development servers
+bkper app dev
+
+# Build artifacts
+bkper app build
+
+# Sync configuration and deploy to production
+bkper app sync && bkper app deploy
+
+# Deploy to development environment
+bkper app deploy --preview
+
+# Deploy only the events handler
+bkper app deploy --events
+
+# Check deployment status
+bkper app status
+```
+
+### Install Apps on Books
+
+```bash
+# Install an app on a book
+bkper app install my-app -b abc123
+
+# Uninstall an app from a book
+bkper app uninstall my-app -b abc123
+```
+
+### Secrets
+
+```bash
+# Store a secret (prompts for value)
+bkper app secrets put API_KEY
+
+# List all secrets
+bkper app secrets list
+
+# Delete a secret
+bkper app secrets delete API_KEY
+```
+
+### Configuration
+
+Apps are configured via a `bkper.yaml` file in the project root. See the complete reference with all available fields: **[bkper.yaml reference]**.
+
+**Environment variables:**
+
+-   `BKPER_API_KEY` -- Optional. If not set, uses the Bkper API proxy with a managed API key. Set it for direct API access with your own quotas. Follow [these steps](https://bkper.com/docs/#rest-api-enabling) to enable.
+
+<details>
+<summary>Command reference</summary>
+
+#### Authentication
 
 -   `login` - Authenticate with Bkper, storing credentials locally
 -   `logout` - Remove stored credentials
 
-### App Management
+#### App Lifecycle
 
 -   `app init <name>` - Scaffold a new app from the template
 -   `app list` - List all apps you have access to
--   `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
+-   `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
+-   `app build` - Build app artifacts
 -   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
-    -   `--dev` - Deploy to development environment
+    -   `-p, --preview` - Deploy to preview environment
     -   `--events` - Deploy events handler instead of web handler
 -   `app status` - Show deployment status
 -   `app undeploy` - Remove app from platform
-    -   `--dev` - Remove from development environment
+    -   `-p, --preview` - Remove from preview environment
     -   `--events` - Remove events handler instead of web handler
     -   `--delete-data` - Permanently delete all associated data (requires confirmation)
     -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
@@ -62,25 +152,59 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
     -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
     -   `-w, --web` - Run only the web handler
     -   `-e, --events` - Run only the events handler
--   `app build` - Build app artifacts
+    -   `--no-open` - Do not open browser on startup
+
+> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
+
+#### App Installation
+
 -   `app install <appId> -b <bookId>` - Install an app on a book
 -   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
 
-> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs
-> in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare.
-> For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
-
-### Secrets Management
+#### Secrets Management
 
 -   `app secrets put <name>` - Store a secret
+    -   `-p, --preview` - Set in preview environment
 -   `app secrets list` - List all secrets
+    -   `-p, --preview` - List from preview environment
 -   `app secrets delete <name>` - Delete a secret
+    -   `-p, --preview` - Delete from preview environment
 
-### Data Commands
+</details>
 
-All data commands that operate within a book use `-b, --book <bookId>` to specify the book context.
+---
 
-#### Books
+## Data Management
+
+**Interact with books, accounts, transactions, and balances.**
+
+All data commands that operate within a book use `-b, --book <bookId>` to specify the book context. Use `--json` for machine-readable output on any command.
+
+### Books
+
+Create and manage financial books with locale-specific settings.
+
+```bash
+# List all books
+bkper book list
+
+# Get book details
+bkper book get abc123
+
+# Create a book with Brazilian settings
+bkper book create --name "My Company" --fraction-digits 2 \
+  --date-pattern "dd/MM/yyyy" --decimal-separator COMMA \
+  --time-zone "America/Sao_Paulo"
+
+# Create a book with custom properties
+bkper book create --name "Project X" -p "code=PX001" -p "department=Engineering"
+
+# Update a book
+bkper book update abc123 --lock-date 2024-12-31
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `book list` - List all books
     -   `-q, --query <query>` - Search query
@@ -104,7 +228,34 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
     -   `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
 
-#### Accounts
+</details>
+
+### Accounts
+
+Manage your chart of accounts within a book.
+
+```bash
+# List all accounts
+bkper account list -b abc123
+
+# Get an account by name
+bkper account get "Bank Account" -b abc123
+
+# Create an asset account
+bkper account create -b abc123 --name "Bank Account" --type ASSET --groups "Current Assets"
+
+# Update an account
+bkper account update "Bank Account" -b abc123 --type LIABILITY
+
+# Archive an account
+bkper account update "Old Account" -b abc123 --archived true
+
+# Delete an account
+bkper account delete "Old Account" -b abc123
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `account list -b <bookId>` - List accounts in a book
 -   `account get <nameOrId> -b <bookId>` - Get an account
@@ -121,7 +272,31 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
 -   `account delete <nameOrId> -b <bookId>` - Delete an account
 
-#### Groups
+</details>
+
+### Groups
+
+Organize accounts into hierarchical groups for structured reporting.
+
+```bash
+# List all groups (shows hierarchy)
+bkper group list -b abc123
+
+# Create a group
+bkper group create -b abc123 --name "Current Assets"
+
+# Create a child group
+bkper group create -b abc123 --name "Cash" --parent "Current Assets"
+
+# Update a group
+bkper group update "Cash" -b abc123 --hidden true
+
+# Delete a group
+bkper group delete "Cash" -b abc123
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `group list -b <bookId>` - List groups in a book
 -   `group get <nameOrId> -b <bookId>` - Get a group
@@ -136,7 +311,41 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
     -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
 -   `group delete <nameOrId> -b <bookId>` - Delete a group
 
-#### Transactions
+</details>
+
+### Transactions
+
+Record, query, and manage financial transactions.
+
+```bash
+# Create a transaction
+bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
+  --from "Bank Account" --to "Office Supplies" --description "Printer paper"
+
+# List transactions with a query
+bkper transaction list -b abc123 -q "after:2025-01-01"
+
+# List with custom properties included
+bkper transaction list -b abc123 -q "account:Sales" -p
+
+# Update a transaction
+bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
+
+# Post a draft transaction
+bkper transaction post tx_456 -b abc123
+
+# Check (reconcile) a transaction
+bkper transaction check tx_456 -b abc123
+
+# Trash a transaction
+bkper transaction trash tx_456 -b abc123
+
+# Merge two duplicate transactions
+bkper transaction merge tx_123 tx_456 -b abc123
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `transaction list -b <bookId> -q <query>` - List transactions matching a query
     -   `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
@@ -164,12 +373,51 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 -   `transaction trash <id> -b <bookId>` - Trash a transaction
 -   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
-#### Balances
+</details>
+
+### Balances
+
+Query account balances and group totals.
+
+```bash
+# List balances for a query
+bkper balance list -b abc123 -q "period:2025-01"
+
+# Expand groups to see individual accounts
+bkper balance list -b abc123 -q "period:2025-01" --expanded 2
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `balance list -b <bookId> -q <query>` - List balances
     -   `--expanded <level>` - Expand groups to specified depth (`0`+)
 
-#### Collections
+</details>
+
+### Collections
+
+Organize books into collections.
+
+```bash
+# Create a collection
+bkper collection create --name "My Collection"
+
+# Add books to a collection
+bkper collection add-book col_789 -b abc123 -b def456
+
+# List all collections
+bkper collection list
+
+# Remove a book from a collection
+bkper collection remove-book col_789 -b abc123
+
+# Delete a collection
+bkper collection delete col_789
+```
+
+<details>
+<summary>Command reference</summary>
 
 -   `collection list` - List all collections
 -   `collection get <collectionId>` - Get a collection
@@ -183,7 +431,11 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 -   `collection remove-book <collectionId>` - Remove books from a collection
     -   `-b, --book <bookId>` - Book ID (repeatable)
 
-### Output Format
+</details>
+
+---
+
+## Output Format
 
 All commands output human-readable formatted tables by default. Use the `--json` global flag to get raw JSON output instead.
 
@@ -193,84 +445,9 @@ bkper book list
 
 # JSON output
 bkper book list --json
-
-# List accounts in a book
-bkper account list -b abc123
-
-# List transactions with properties
-bkper transaction list -b abc123 -q "after:2025-01-01" -p
 ```
 
-### Examples
-
-```bash
-# Authenticate
-bkper login
-
-# Create a new app
-bkper app init my-app
-
-# Deploy to production (run from app directory)
-bkper app deploy
-
-# Deploy to development environment
-bkper app deploy --dev
-
-# Deploy only the events handler to dev
-bkper app deploy --dev --events
-
-# Check deployment status
-bkper app status
-
-# Manage secrets
-bkper app secrets put API_KEY
-bkper app secrets list
-
-# Install/uninstall apps
-bkper app install my-app -b abc123
-bkper app uninstall my-app -b abc123
-
-# Create a transaction
-bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 --from "Bank Account" --to "Office Supplies" --description "Printer paper"
-
-# Update a transaction
-bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
-
-# Create a new book with Brazilian settings
-bkper book create --name "My Company" --fraction-digits 2 --date-pattern "dd/MM/yyyy" --decimal-separator COMMA --time-zone "America/Sao_Paulo"
-
-# Create a book with custom properties
-bkper book create --name "Project X" -p "code=PX001" -p "department=Engineering"
-
-# Create and manage collections
-bkper collection create --name "My Collection"
-bkper collection add-book col_789 -b abc123 -b def456
-bkper collection list
-```
-
-## Apps Configuration
-
-Apps are configured via a `bkper.yaml` file in the project root.
-
-### Environment Variables
-
-`BKPER_API_KEY` is optional. If not set, uses the Bkper API proxy with a managed API key.
-
-Set it for direct API access with your own quotas and attribution. Follow [these](https://bkper.com/docs/#rest-api-enabling) steps.
-
-### `bkper.yaml` Reference
-
-See the complete reference with all available fields and documentation:
-
-**[docs/bkper-reference.yaml](https://raw.githubusercontent.com/bkper/bkper-cli/main/docs/bkper-reference.yaml)**
-
-## Developer Tooling (Skills)
-
-The CLI automatically syncs AI agent skills from the [skills repository](https://github.com/bkper/skills). Skills provide procedural knowledge to AI coding assistants (Claude Code, OpenCode) when working on Bkper apps.
-
-Skills are synced when running:
-
--   `bkper app init <name>` - when creating a new app
+---
 
 ## Library
 
@@ -287,6 +464,6 @@ Bkper.setConfig({
 
 ## Documentation
 
--   [Developer Docs](https://bkper.com/docs)
--   [App Template](https://github.com/bkper/bkper-app-template)
--   [Skills Repository](https://github.com/bkper/skills)
+-   [Developer Docs]
+-   [App Template]
+-   [Skills Repository]
