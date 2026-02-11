@@ -1,1 +1,1 @@
-export { getBalancesMatrix, GetBalancesOptions } from './get.js';
+export { listBalancesMatrix, ListBalancesOptions } from './list.js';

@@ -51,7 +51,7 @@ import {
     trashTransaction,
     mergeTransactions,
 } from './commands/transactions/index.js';
-import { getBalancesMatrix } from './commands/balances/index.js';
+import { listBalancesMatrix } from './commands/balances/index.js';
 import {
     listCollections,
     getCollection,
@@ -852,8 +852,8 @@ transactionCommand
 const balanceCommand = program.command('balance').description('Manage Balances');
 
 balanceCommand
-    .command('get')
-    .description('Get balances report')
+    .command('list')
+    .description('List balances')
     .requiredOption('-b, --book <bookId>', 'Book ID')
     .requiredOption('-q, --query <query>', 'Balances query')
     .option('--expanded <level>', 'Expand groups to specified depth (0+)', parseInt)
@@ -861,13 +861,13 @@ balanceCommand
         try {
             setupBkper();
             const bookId = options.book;
-            const matrix = await getBalancesMatrix(bookId, {
+            const matrix = await listBalancesMatrix(bookId, {
                 query: options.query,
                 expanded: options.expanded,
             });
             renderTable(matrix, isJson());
         } catch (err) {
-            console.error('Error getting balances:', err);
+            console.error('Error listing balances:', err);
             process.exit(1);
         }
     });

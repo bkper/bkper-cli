@@ -97,11 +97,11 @@ describe('CLI - balance commands', function () {
         }
     });
 
-    describe('balance get', function () {
+    describe('balance list', function () {
         it('should return a balance matrix for an account query', async function () {
             const result = await runBkperJson<unknown[][]>([
                 'balance',
-                'get',
+                'list',
                 '-b',
                 bookId,
                 '-q',
@@ -117,7 +117,7 @@ describe('CLI - balance commands', function () {
         it('should return a balance matrix for a group query', async function () {
             const result = await runBkperJson<unknown[][]>([
                 'balance',
-                'get',
+                'list',
                 '-b',
                 bookId,
                 '-q',
@@ -132,7 +132,7 @@ describe('CLI - balance commands', function () {
         it('should return an expanded matrix when --expanded is specified', async function () {
             const result = await runBkperJson<unknown[][]>([
                 'balance',
-                'get',
+                'list',
                 '-b',
                 bookId,
                 '-q',
@@ -147,7 +147,7 @@ describe('CLI - balance commands', function () {
         });
 
         it('should fail when missing required --query option', async function () {
-            const result = await runBkper(['balance', 'get', '-b', bookId]);
+            const result = await runBkper(['balance', 'list', '-b', bookId]);
 
             expect(result.exitCode).to.not.equal(0);
         });

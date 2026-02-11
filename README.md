@@ -30,8 +30,8 @@ bun add -g bkper
 
 Bkper apps are developed with AI coding agents as the primary interface. The CLI provides **atomic, composable operations** that agents orchestrate:
 
-- **Typical developers**: Work with AI agents (Claude Code, OpenCode) that handle build, watch, and deploy decisions
-- **Advanced developers**: Use CLI directly with the same atomic commands
+-   **Typical developers**: Work with AI agents (Claude Code, OpenCode) that handle build, watch, and deploy decisions
+-   **Advanced developers**: Use CLI directly with the same atomic commands
 
 The CLI focuses on **platform operations** (deploy, sync, secrets) while build and development workflows are handled by standard tools (`bun run build`, `bun run dev`) orchestrated by agents or developers directly.
 
@@ -39,32 +39,32 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 
 ### Authentication
 
-- `login` - Authenticate with Bkper, storing credentials locally
-- `logout` - Remove stored credentials
+-   `login` - Authenticate with Bkper, storing credentials locally
+-   `logout` - Remove stored credentials
 
 ### App Management
 
-- `app init <name>` - Scaffold a new app from the template
-- `app list` - List all apps you have access to
-- `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
-- `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
-    - `--dev` - Deploy to development environment
-    - `--events` - Deploy events handler instead of web handler
-- `app status` - Show deployment status
-- `app undeploy` - Remove app from platform
-    - `--dev` - Remove from development environment
-    - `--events` - Remove events handler instead of web handler
-    - `--delete-data` - Permanently delete all associated data (requires confirmation)
-    - `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
-- `app dev` - Run local development servers
-    - `--cp, --client-port <port>` - Client dev server port (default: `5173`)
-    - `--sp, --server-port <port>` - Server simulation port (default: `8787`)
-    - `--ep, --events-port <port>` - Events handler port (default: `8791`)
-    - `-w, --web` - Run only the web handler
-    - `-e, --events` - Run only the events handler
-- `app build` - Build app artifacts
-- `app install <appId> -b <bookId>` - Install an app on a book
-- `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
+-   `app init <name>` - Scaffold a new app from the template
+-   `app list` - List all apps you have access to
+-   `app sync` - Sync `bkper.yaml` configuration (URLs, description) to Bkper API
+-   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
+    -   `--dev` - Deploy to development environment
+    -   `--events` - Deploy events handler instead of web handler
+-   `app status` - Show deployment status
+-   `app undeploy` - Remove app from platform
+    -   `--dev` - Remove from development environment
+    -   `--events` - Remove events handler instead of web handler
+    -   `--delete-data` - Permanently delete all associated data (requires confirmation)
+    -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
+-   `app dev` - Run local development servers
+    -   `--cp, --client-port <port>` - Client dev server port (default: `5173`)
+    -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
+    -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
+    -   `-w, --web` - Run only the web handler
+    -   `-e, --events` - Run only the events handler
+-   `app build` - Build app artifacts
+-   `app install <appId> -b <bookId>` - Install an app on a book
+-   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
 
 > **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs
 > in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare.
@@ -72,9 +72,9 @@ The CLI focuses on **platform operations** (deploy, sync, secrets) while build a
 
 ### Secrets Management
 
-- `app secrets put <name>` - Store a secret
-- `app secrets list` - List all secrets
-- `app secrets delete <name>` - Delete a secret
+-   `app secrets put <name>` - Store a secret
+-   `app secrets list` - List all secrets
+-   `app secrets delete <name>` - Delete a secret
 
 ### Data Commands
 
@@ -82,106 +82,106 @@ All data commands that operate within a book use `-b, --book <bookId>` to specif
 
 #### Books
 
-- `book list` - List all books
-    - `-q, --query <query>` - Search query
-- `book get <bookId>` - Get a book's details
-- `book create` - Create a new book
-    - `--name <name>` - Book name (required)
-    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
-    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
-    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
-    - `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
-    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `book update <bookId>` - Update a book
-    - `--name <name>` - Book name
-    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
-    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
-    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
-    - `--time-zone <timezone>` - IANA time zone identifier (e.g. `America/New_York`, `Europe/London`, `UTC`)
-    - `--lock-date <date>` - Lock date in ISO format (`yyyy-MM-dd`, e.g. `2024-01-31`)
-    - `--closing-date <date>` - Closing date in ISO format (`yyyy-MM-dd`)
-    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
+-   `book list` - List all books
+    -   `-q, --query <query>` - Search query
+-   `book get <bookId>` - Get a book's details
+-   `book create` - Create a new book
+    -   `--name <name>` - Book name (required)
+    -   `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    -   `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
+    -   `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    -   `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
+    -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `book update <bookId>` - Update a book
+    -   `--name <name>` - Book name
+    -   `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    -   `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
+    -   `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    -   `--time-zone <timezone>` - IANA time zone identifier (e.g. `America/New_York`, `Europe/London`, `UTC`)
+    -   `--lock-date <date>` - Lock date in ISO format (`yyyy-MM-dd`, e.g. `2024-01-31`)
+    -   `--closing-date <date>` - Closing date in ISO format (`yyyy-MM-dd`)
+    -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    -   `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
 
 #### Accounts
 
-- `account list -b <bookId>` - List accounts in a book
-- `account get <nameOrId> -b <bookId>` - Get an account
-- `account create -b <bookId>` - Create a new account
-    - `--name <name>` - Account name (required)
-    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
-    - `--description <description>` - Account description
-    - `--groups <groups>` - Comma-separated group names
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `account update <nameOrId> -b <bookId>` - Update an account
-    - `--name <name>` - Account name
-    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
-    - `--archived <true|false>` - Archive status
-    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
-- `account delete <nameOrId> -b <bookId>` - Delete an account
+-   `account list -b <bookId>` - List accounts in a book
+-   `account get <nameOrId> -b <bookId>` - Get an account
+-   `account create -b <bookId>` - Create a new account
+    -   `--name <name>` - Account name (required)
+    -   `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    -   `--description <description>` - Account description
+    -   `--groups <groups>` - Comma-separated group names
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `account update <nameOrId> -b <bookId>` - Update an account
+    -   `--name <name>` - Account name
+    -   `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    -   `--archived <true|false>` - Archive status
+    -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
+-   `account delete <nameOrId> -b <bookId>` - Delete an account
 
 #### Groups
 
-- `group list -b <bookId>` - List groups in a book
-- `group get <nameOrId> -b <bookId>` - Get a group
-- `group create -b <bookId>` - Create a new group
-    - `--name <name>` - Group name (required)
-    - `--parent <parent>` - Parent group name or ID
-    - `--hidden` - Hide the group
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `group update <nameOrId> -b <bookId>` - Update a group
-    - `--name <name>` - Group name
-    - `--hidden <true|false>` - Hide status
-    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
-- `group delete <nameOrId> -b <bookId>` - Delete a group
+-   `group list -b <bookId>` - List groups in a book
+-   `group get <nameOrId> -b <bookId>` - Get a group
+-   `group create -b <bookId>` - Create a new group
+    -   `--name <name>` - Group name (required)
+    -   `--parent <parent>` - Parent group name or ID
+    -   `--hidden` - Hide the group
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `group update <nameOrId> -b <bookId>` - Update a group
+    -   `--name <name>` - Group name
+    -   `--hidden <true|false>` - Hide status
+    -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
+-   `group delete <nameOrId> -b <bookId>` - Delete a group
 
 #### Transactions
 
-- `transaction list -b <bookId> -q <query>` - List transactions matching a query
-    - `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
-    - `-c, --cursor <cursor>` - Pagination cursor
-    - `-p, --properties` - Include custom properties in the output
-- `transaction create -b <bookId>` - Create a transaction
-    - `--date <date>` - Transaction date (required)
-    - `--amount <amount>` - Transaction amount (required)
-    - `--description <description>` - Transaction description
-    - `--from <from>` - Credit account (source)
-    - `--to <to>` - Debit account (destination)
-    - `--url <url>` - URL (repeatable)
-    - `--remote-id <remoteId>` - Remote ID (repeatable)
-    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
-- `transaction update <transactionId> -b <bookId>` - Update a transaction
-    - `--date <date>` - Transaction date
-    - `--amount <amount>` - Transaction amount
-    - `--description <description>` - Transaction description
-    - `--from <from>` - Credit account (source)
-    - `--to <to>` - Debit account (destination)
-    - `--url <url>` - URL (repeatable, replaces all)
-    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
-- `transaction post <id> -b <bookId>` - Post a draft transaction
-- `transaction check <id> -b <bookId>` - Check a transaction
-- `transaction trash <id> -b <bookId>` - Trash a transaction
-- `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
+-   `transaction list -b <bookId> -q <query>` - List transactions matching a query
+    -   `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
+    -   `-c, --cursor <cursor>` - Pagination cursor
+    -   `-p, --properties` - Include custom properties in the output
+-   `transaction create -b <bookId>` - Create a transaction
+    -   `--date <date>` - Transaction date (required)
+    -   `--amount <amount>` - Transaction amount (required)
+    -   `--description <description>` - Transaction description
+    -   `--from <from>` - Credit account (source)
+    -   `--to <to>` - Debit account (destination)
+    -   `--url <url>` - URL (repeatable)
+    -   `--remote-id <remoteId>` - Remote ID (repeatable)
+    -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+-   `transaction update <transactionId> -b <bookId>` - Update a transaction
+    -   `--date <date>` - Transaction date
+    -   `--amount <amount>` - Transaction amount
+    -   `--description <description>` - Transaction description
+    -   `--from <from>` - Credit account (source)
+    -   `--to <to>` - Debit account (destination)
+    -   `--url <url>` - URL (repeatable, replaces all)
+    -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+-   `transaction post <id> -b <bookId>` - Post a draft transaction
+-   `transaction check <id> -b <bookId>` - Check a transaction
+-   `transaction trash <id> -b <bookId>` - Trash a transaction
+-   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
 #### Balances
 
-- `balance get -b <bookId> -q <query>` - Get account balances
-    - `--expanded <level>` - Expand groups to specified depth (`0`+)
+-   `balance list -b <bookId> -q <query>` - List balances
+    -   `--expanded <level>` - Expand groups to specified depth (`0`+)
 
 #### Collections
 
-- `collection list` - List all collections
-- `collection get <collectionId>` - Get a collection
-- `collection create` - Create a new collection
-    - `--name <name>` - Collection name (required)
-- `collection update <collectionId>` - Update a collection
-    - `--name <name>` - Collection name
-- `collection delete <collectionId>` - Delete a collection
-- `collection add-book <collectionId>` - Add books to a collection
-    - `-b, --book <bookId>` - Book ID (repeatable)
-- `collection remove-book <collectionId>` - Remove books from a collection
-    - `-b, --book <bookId>` - Book ID (repeatable)
+-   `collection list` - List all collections
+-   `collection get <collectionId>` - Get a collection
+-   `collection create` - Create a new collection
+    -   `--name <name>` - Collection name (required)
+-   `collection update <collectionId>` - Update a collection
+    -   `--name <name>` - Collection name
+-   `collection delete <collectionId>` - Delete a collection
+-   `collection add-book <collectionId>` - Add books to a collection
+    -   `-b, --book <bookId>` - Book ID (repeatable)
+-   `collection remove-book <collectionId>` - Remove books from a collection
+    -   `-b, --book <bookId>` - Book ID (repeatable)
 
 ### Output Format
 
@@ -270,7 +270,7 @@ The CLI automatically syncs AI agent skills from the [skills repository](https:/
 
 Skills are synced when running:
 
-- `bkper app init <name>` - when creating a new app
+-   `bkper app init <name>` - when creating a new app
 
 ## Library
 
@@ -287,6 +287,6 @@ Bkper.setConfig({
 
 ## Documentation
 
-- [Developer Docs](https://bkper.com/docs)
-- [App Template](https://github.com/bkper/bkper-app-template)
-- [Skills Repository](https://github.com/bkper/skills)
+-   [Developer Docs](https://bkper.com/docs)
+-   [App Template](https://github.com/bkper/bkper-app-template)
+-   [Skills Repository](https://github.com/bkper/skills)

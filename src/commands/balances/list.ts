@@ -1,7 +1,7 @@
 import { BalanceType } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
 
-export interface GetBalancesOptions {
+export interface ListBalancesOptions {
     query: string;
     expanded?: number;
 }
@@ -14,9 +14,9 @@ export function resolveBalanceType(query: string): BalanceType {
     return query.includes('after:') ? BalanceType.PERIOD : BalanceType.CUMULATIVE;
 }
 
-export async function getBalancesMatrix(
+export async function listBalancesMatrix(
     bookId: string,
-    options: GetBalancesOptions
+    options: ListBalancesOptions
 ): Promise<unknown[][]> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);

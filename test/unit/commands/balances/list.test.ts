@@ -1,7 +1,7 @@
 import { expect } from '../../helpers/test-setup.js';
-import { resolveBalanceType } from '../../../../src/commands/balances/get.js';
+import { resolveBalanceType } from '../../../../src/commands/balances/list.js';
 
-describe('balances get', function () {
+describe('balances list', function () {
     describe('resolveBalanceType', function () {
         it('should return PERIOD when query contains after:', function () {
             expect(resolveBalanceType('group:"Assets" after:2023-01-01')).to.equal('PERIOD');
