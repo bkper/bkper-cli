@@ -61,6 +61,7 @@ import {
     removeBookFromCollection,
 } from './commands/collections/index.js';
 import { renderTable, renderItem } from './render/index.js';
+import { validateRequiredOptions, throwIfErrors } from './utils/validation.js';
 
 function collectProperty(value: string, previous: string[] | undefined): string[] {
     return previous ? [...previous, value] : [value];
@@ -273,9 +274,10 @@ secretsCommand
 appCommand
     .command('install <appId>')
     .description('Install an app into a book')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (appId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const integration = await installApp(options.book, appId);
             renderItem(integration.json(), isJson());
@@ -288,9 +290,10 @@ appCommand
 appCommand
     .command('uninstall <appId>')
     .description('Uninstall an app from a book')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (appId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const integration = await uninstallApp(options.book, appId);
             renderItem(integration.json(), isJson());
@@ -369,7 +372,7 @@ bookCommand
 bookCommand
     .command('create')
     .description('Create a new book')
-    .requiredOption('--name <name>', 'Book name')
+    .option('--name <name>', 'Book name')
     .option('--fraction-digits <digits>', 'Number of decimal places (0-8)', parseInt)
     .option(
         '--date-pattern <pattern>',
@@ -381,6 +384,7 @@ bookCommand
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
             setupBkper();
             const book = await createBook({
                 name: options.name,
@@ -444,9 +448,10 @@ const accountCommand = program.command('account').description('Manage Accounts')
 accountCommand
     .command('list')
     .description('List all accounts in a book')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async options => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const accounts = await listAccounts(bookId);
@@ -474,9 +479,10 @@ accountCommand
 accountCommand
     .command('get <idOrName>')
     .description('Get an account by ID or name')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const account = await getAccount(bookId, idOrName);
@@ -490,14 +496,20 @@ accountCommand
 accountCommand
     .command('create')
     .description('Create a new account')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('--name <name>', 'Account name')
+    .option('-b, --book <bookId>', 'Book ID')
+    .option('--name <name>', 'Account name')
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--description <description>', 'Account description')
     .option('--groups <groups>', 'Comma-separated group names')
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
+            throwIfErrors(
+                validateRequiredOptions(options, [
+                    { name: 'book', flag: '--book' },
+                    { name: 'name', flag: '--name' },
+                ])
+            );
             setupBkper();
             const bookId = options.book;
             const account = await createAccount(bookId, {
@@ -519,13 +531,14 @@ accountCommand
 accountCommand
     .command('update <idOrName>')
     .description('Update an account')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .option('--name <name>', 'Account name')
     .option('--type <type>', 'Account type (ASSET, LIABILITY, INCOMING, OUTGOING)')
     .option('--archived <archived>', 'Archive status (true/false)')
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const account = await updateAccount(bookId, idOrName, {
@@ -544,9 +557,10 @@ accountCommand
 accountCommand
     .command('delete <idOrName>')
     .description('Delete an account')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const account = await deleteAccount(bookId, idOrName);
@@ -563,9 +577,10 @@ const groupCommand = program.command('group').description('Manage Groups');
 groupCommand
     .command('list')
     .description('List all groups in a book')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async options => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const groups = await listGroups(bookId);
@@ -590,9 +605,10 @@ groupCommand
 groupCommand
     .command('get <idOrName>')
     .description('Get a group by ID or name')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const group = await getGroup(bookId, idOrName);
@@ -606,13 +622,19 @@ groupCommand
 groupCommand
     .command('create')
     .description('Create a new group')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('--name <name>', 'Group name')
+    .option('-b, --book <bookId>', 'Book ID')
+    .option('--name <name>', 'Group name')
     .option('--parent <parent>', 'Parent group name or ID')
     .option('--hidden', 'Hide the group')
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
+            throwIfErrors(
+                validateRequiredOptions(options, [
+                    { name: 'book', flag: '--book' },
+                    { name: 'name', flag: '--name' },
+                ])
+            );
             setupBkper();
             const bookId = options.book;
             const group = await createGroup(bookId, {
@@ -631,12 +653,13 @@ groupCommand
 groupCommand
     .command('update <idOrName>')
     .description('Update a group')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .option('--name <name>', 'Group name')
     .option('--hidden <hidden>', 'Hide status (true/false)')
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const group = await updateGroup(bookId, idOrName, {
@@ -654,9 +677,10 @@ groupCommand
 groupCommand
     .command('delete <idOrName>')
     .description('Delete a group')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (idOrName: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const group = await deleteGroup(bookId, idOrName);
@@ -673,13 +697,19 @@ const transactionCommand = program.command('transaction').description('Manage Tr
 transactionCommand
     .command('list')
     .description('List transactions in a book')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('-q, --query <query>', 'Search query')
+    .option('-b, --book <bookId>', 'Book ID')
+    .option('-q, --query <query>', 'Search query')
     .option('-l, --limit <limit>', 'Maximum number of results (1-1000)', parseInt)
     .option('-c, --cursor <cursor>', 'Pagination cursor')
     .option('-p, --properties', 'Include custom properties')
     .action(async options => {
         try {
+            throwIfErrors(
+                validateRequiredOptions(options, [
+                    { name: 'book', flag: '--book' },
+                    { name: 'query', flag: '--query' },
+                ])
+            );
             setupBkper();
             const bookId = options.book;
             const result = await listTransactions(bookId, {
@@ -723,9 +753,9 @@ transactionCommand
 transactionCommand
     .command('create')
     .description('Create a transaction')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('--date <date>', 'Transaction date')
-    .requiredOption('--amount <amount>', 'Transaction amount')
+    .option('-b, --book <bookId>', 'Book ID')
+    .option('--date <date>', 'Transaction date')
+    .option('--amount <amount>', 'Transaction amount')
     .option('--description <description>', 'Transaction description')
     .option('--from <from>', 'Credit account (source)')
     .option('--to <to>', 'Debit account (destination)')
@@ -738,6 +768,13 @@ transactionCommand
     )
     .action(async options => {
         try {
+            throwIfErrors(
+                validateRequiredOptions(options, [
+                    { name: 'book', flag: '--book' },
+                    { name: 'date', flag: '--date' },
+                    { name: 'amount', flag: '--amount' },
+                ])
+            );
             setupBkper();
             const bookId = options.book;
             const transaction = await createTransaction(bookId, {
@@ -760,9 +797,10 @@ transactionCommand
 transactionCommand
     .command('post <transactionId>')
     .description('Post a transaction')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (transactionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const transaction = await postTransaction(bookId, transactionId);
@@ -776,7 +814,7 @@ transactionCommand
 transactionCommand
     .command('update <transactionId>')
     .description('Update a transaction')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .option('--date <date>', 'Transaction date')
     .option('--amount <amount>', 'Transaction amount')
     .option('--description <description>', 'Transaction description')
@@ -790,6 +828,7 @@ transactionCommand
     )
     .action(async (transactionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const transaction = await updateTransaction(bookId, transactionId, {
@@ -811,9 +850,10 @@ transactionCommand
 transactionCommand
     .command('check <transactionId>')
     .description('Check a transaction')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (transactionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const transaction = await checkTransaction(bookId, transactionId);
@@ -827,9 +867,10 @@ transactionCommand
 transactionCommand
     .command('trash <transactionId>')
     .description('Trash a transaction')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (transactionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const transaction = await trashTransaction(bookId, transactionId);
@@ -843,9 +884,10 @@ transactionCommand
 transactionCommand
     .command('merge <transactionId1> <transactionId2>')
     .description('Merge two transactions')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
+    .option('-b, --book <bookId>', 'Book ID')
     .action(async (transactionId1: string, transactionId2: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const bookId = options.book;
             const result = await mergeTransactions(bookId, transactionId1, transactionId2);
@@ -876,11 +918,17 @@ const balanceCommand = program.command('balance').description('Manage Balances')
 balanceCommand
     .command('list')
     .description('List balances')
-    .requiredOption('-b, --book <bookId>', 'Book ID')
-    .requiredOption('-q, --query <query>', 'Balances query')
+    .option('-b, --book <bookId>', 'Book ID')
+    .option('-q, --query <query>', 'Balances query')
     .option('--expanded <level>', 'Expand groups to specified depth (0+)', parseInt)
     .action(async options => {
         try {
+            throwIfErrors(
+                validateRequiredOptions(options, [
+                    { name: 'book', flag: '--book' },
+                    { name: 'query', flag: '--query' },
+                ])
+            );
             setupBkper();
             const bookId = options.book;
             const matrix = await listBalancesMatrix(bookId, {
@@ -947,9 +995,10 @@ collectionCommand
 collectionCommand
     .command('create')
     .description('Create a new collection')
-    .requiredOption('--name <name>', 'Collection name')
+    .option('--name <name>', 'Collection name')
     .action(async options => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
             setupBkper();
             const collection = await createCollection({ name: options.name });
             renderItem(collection.json(), isJson());
@@ -997,9 +1046,10 @@ function collectBook(value: string, previous: string[] | undefined): string[] {
 collectionCommand
     .command('add-book <collectionId>')
     .description('Add books to a collection')
-    .requiredOption('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
+    .option('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
     .action(async (collectionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const books = await addBookToCollection(collectionId, options.book);
             if (isJson()) {
@@ -1022,9 +1072,10 @@ collectionCommand
 collectionCommand
     .command('remove-book <collectionId>')
     .description('Remove books from a collection')
-    .requiredOption('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
+    .option('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
     .action(async (collectionId: string, options) => {
         try {
+            throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const books = await removeBookFromCollection(collectionId, options.book);
             if (isJson()) {

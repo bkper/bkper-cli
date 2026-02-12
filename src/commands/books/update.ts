@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, DecimalSeparator, Period } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import { throwIfErrors } from '../../utils/validation.js';
 
 export interface UpdateBookOptions {
     name?: string;
@@ -18,6 +19,8 @@ export async function updateBook(bookId: string, options: UpdateBookOptions): Pr
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
+    const errors: string[] = [];
+
     if (options.name !== undefined) book.setName(options.name);
     if (options.fractionDigits !== undefined) book.setFractionDigits(options.fractionDigits);
     if (options.datePattern !== undefined) book.setDatePattern(options.datePattern);
@@ -30,14 +33,20 @@ export async function updateBook(bookId: string, options: UpdateBookOptions): Pr
 
     if (options.property) {
         for (const raw of options.property) {
-            const [key, value] = parsePropertyFlag(raw);
-            if (value === '') {
-                book.deleteProperty(key);
-            } else {
-                book.setProperty(key, value);
+            try {
+                const [key, value] = parsePropertyFlag(raw);
+                if (value === '') {
+                    book.deleteProperty(key);
+                } else {
+                    book.setProperty(key, value);
+                }
+            } catch (err: unknown) {
+                errors.push((err as Error).message);
             }
         }
     }
+
+    throwIfErrors(errors);
 
     return book.update();
 }

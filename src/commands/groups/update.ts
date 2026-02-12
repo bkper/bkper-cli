@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Group } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import { throwIfErrors } from '../../utils/validation.js';
 
 export interface UpdateGroupOptions {
     name?: string;
@@ -20,19 +21,27 @@ export async function updateGroup(
         throw new Error(`Group not found: ${groupIdOrName}`);
     }
 
+    const errors: string[] = [];
+
     if (options.name !== undefined) group.setName(options.name);
     if (options.hidden !== undefined) group.setHidden(options.hidden);
 
     if (options.property) {
         for (const raw of options.property) {
-            const [key, value] = parsePropertyFlag(raw);
-            if (value === '') {
-                group.deleteProperty(key);
-            } else {
-                group.setProperty(key, value);
+            try {
+                const [key, value] = parsePropertyFlag(raw);
+                if (value === '') {
+                    group.deleteProperty(key);
+                } else {
+                    group.setProperty(key, value);
+                }
+            } catch (err: unknown) {
+                errors.push((err as Error).message);
             }
         }
     }
+
+    throwIfErrors(errors);
 
     return group.update();
 }

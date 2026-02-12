@@ -1,5 +1,6 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
+import { ValidationError } from '../../../../src/utils/validation.js';
 
 // Import after mock setup
 const { updateTransaction } = await import('../../../../src/commands/transactions/update.js');
@@ -169,5 +170,57 @@ describe('CLI - transaction update Command', function () {
         expect(mockTransaction._description).to.equal('Only this');
         expect(mockTransaction._date).to.be.undefined;
         expect(mockTransaction._amount).to.be.undefined;
+    });
+
+    it('should throw when credit account (from) not found', async function () {
+        mockBook.getAccount = async () => null;
+
+        try {
+            await updateTransaction('book-123', 'tx-123', {
+                from: 'NonExistent',
+            });
+            expect.fail('Should have thrown');
+        } catch (err: unknown) {
+            expect(err).to.be.instanceOf(ValidationError);
+            expect((err as ValidationError).errors).to.include(
+                'Credit account (--from) not found: NonExistent'
+            );
+        }
+    });
+
+    it('should report all not-found accounts at once', async function () {
+        mockBook.getAccount = async () => null;
+
+        try {
+            await updateTransaction('book-123', 'tx-123', {
+                from: 'BadSource',
+                to: 'BadDest',
+            });
+            expect.fail('Should have thrown');
+        } catch (err: unknown) {
+            expect(err).to.be.instanceOf(ValidationError);
+            const ve = err as ValidationError;
+            expect(ve.errors).to.have.length(2);
+            expect(ve.errors[0]).to.include('BadSource');
+            expect(ve.errors[1]).to.include('BadDest');
+        }
+    });
+
+    it('should report not-found accounts and invalid properties together', async function () {
+        mockBook.getAccount = async () => null;
+
+        try {
+            await updateTransaction('book-123', 'tx-123', {
+                to: 'Missing',
+                property: ['noequalssign'],
+            });
+            expect.fail('Should have thrown');
+        } catch (err: unknown) {
+            expect(err).to.be.instanceOf(ValidationError);
+            const ve = err as ValidationError;
+            expect(ve.errors).to.have.length(2);
+            expect(ve.errors[0]).to.include('Missing');
+            expect(ve.errors[1]).to.include('Invalid property format');
+        }
     });
 });

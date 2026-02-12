@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Transaction } from 'bkper-js';
 import { TransactionMergeOperation } from '../../domain/transaction/merge-operation.js';
+import { throwIfErrors } from '../../utils/validation.js';
 
 export interface MergeResult {
     mergedTransaction: Transaction;
@@ -21,14 +22,17 @@ export async function mergeTransactions(
         book.getTransaction(transactionId2),
     ]);
 
+    const errors: string[] = [];
     if (!tx1) {
-        throw new Error(`Transaction not found: ${transactionId1}`);
+        errors.push(`Transaction not found: ${transactionId1}`);
     }
     if (!tx2) {
-        throw new Error(`Transaction not found: ${transactionId2}`);
+        errors.push(`Transaction not found: ${transactionId2}`);
     }
+    throwIfErrors(errors);
 
-    const mergeOp = new TransactionMergeOperation(book, tx1, tx2);
+    // After validation, tx1 and tx2 are guaranteed to be defined
+    const mergeOp = new TransactionMergeOperation(book, tx1!, tx2!);
 
     if (mergeOp.record) {
         throw new Error(`Cannot merge: amounts differ. ${mergeOp.record}`);

@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import { throwIfErrors } from '../../utils/validation.js';
 
 export interface UpdateTransactionOptions {
     date?: string;
@@ -25,18 +26,28 @@ export async function updateTransaction(
         throw new Error(`Transaction not found: ${transactionId}`);
     }
 
+    const errors: string[] = [];
+
     if (options.date !== undefined) transaction.setDate(options.date);
     if (options.amount !== undefined) transaction.setAmount(options.amount);
     if (options.description !== undefined) transaction.setDescription(options.description);
 
     if (options.from !== undefined) {
         const creditAccount = await book.getAccount(options.from);
-        if (creditAccount) transaction.setCreditAccount(creditAccount);
+        if (creditAccount) {
+            transaction.setCreditAccount(creditAccount);
+        } else {
+            errors.push(`Credit account (--from) not found: ${options.from}`);
+        }
     }
 
     if (options.to !== undefined) {
         const debitAccount = await book.getAccount(options.to);
-        if (debitAccount) transaction.setDebitAccount(debitAccount);
+        if (debitAccount) {
+            transaction.setDebitAccount(debitAccount);
+        } else {
+            errors.push(`Debit account (--to) not found: ${options.to}`);
+        }
     }
 
     if (options.url !== undefined) {
@@ -45,14 +56,20 @@ export async function updateTransaction(
 
     if (options.property) {
         for (const raw of options.property) {
-            const [key, value] = parsePropertyFlag(raw);
-            if (value === '') {
-                transaction.deleteProperty(key);
-            } else {
-                transaction.setProperty(key, value);
+            try {
+                const [key, value] = parsePropertyFlag(raw);
+                if (value === '') {
+                    transaction.deleteProperty(key);
+                } else {
+                    transaction.setProperty(key, value);
+                }
+            } catch (err: unknown) {
+                errors.push((err as Error).message);
             }
         }
     }
+
+    throwIfErrors(errors);
 
     return transaction.update();
 }
