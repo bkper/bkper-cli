@@ -41,6 +41,11 @@ export function setupBkper() {
     Bkper.setConfig({
         apiKeyProvider: apiKey ? async () => apiKey : undefined,
         oauthTokenProvider: () => getOAuthToken(),
+        requestHeadersProvider: async () => {
+            return {
+                'bkper-agent-id': 'bkper-cli',
+            };
+        },
         //@ts-ignore
         apiBaseUrl,
     });
