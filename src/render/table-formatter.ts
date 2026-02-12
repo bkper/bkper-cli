@@ -1,9 +1,17 @@
 /**
  * Maximum width for any single cell value.
  * Values exceeding this width are truncated with an ellipsis (…).
- * Header cells are never truncated.
+ * Header cells and ID columns are never truncated.
  */
 const MAX_CELL_WIDTH = 40;
+
+/**
+ * Checks whether a column header indicates an ID column.
+ * ID columns should never be truncated so users can copy-paste values into subsequent commands.
+ */
+function isIdColumn(header: string): boolean {
+    return header === 'ID' || header.endsWith(' Id') || header.endsWith('Id');
+}
 
 /**
  * Truncates a string to maxWidth, appending '…' if it exceeds the limit.
@@ -34,12 +42,24 @@ export function formatTable(matrix: unknown[][]): string {
 
     const COL_GAP = '  ';
 
+    // Determine which columns are ID columns (never truncated)
+    const headerRow = matrix[0];
+    const noTruncateCols = new Set<number>();
+    for (let i = 0; i < headerRow.length; i++) {
+        const header = headerRow[i] == null ? '' : String(headerRow[i]);
+        if (isIdColumn(header)) {
+            noTruncateCols.add(i);
+        }
+    }
+
     // Convert all cells to strings
     const rows = matrix.map((row, rowIndex) =>
-        row.map(cell => {
+        row.map((cell, colIndex) => {
             const str = cell == null ? '' : String(cell);
-            // Don't truncate header row
-            return rowIndex === 0 ? str : truncateCell(str, MAX_CELL_WIDTH);
+            // Don't truncate header row or ID columns
+            return rowIndex === 0 || noTruncateCols.has(colIndex)
+                ? str
+                : truncateCell(str, MAX_CELL_WIDTH);
         })
     );
 

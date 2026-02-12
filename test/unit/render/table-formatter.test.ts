@@ -191,6 +191,67 @@ describe('table-formatter', function () {
                 expect(lines[0]).to.equal(longHeader);
                 expect(lines[0]).to.have.length(50);
             });
+
+            it('should never truncate cells in ID columns (header "ID")', function () {
+                const longId = 'X'.repeat(60);
+                const matrix = [
+                    ['ID', 'Name'],
+                    [longId, 'Test'],
+                ];
+
+                const result = formatTable(matrix);
+                const lines = result.split('\n');
+
+                expect(lines[2]).to.contain(longId);
+            });
+
+            it('should never truncate cells in columns with header ending in " Id"', function () {
+                const longId = 'abc123def456ghi789jkl012mno345pqr678stu901vwx234yz';
+                const matrix = [
+                    ['Book Id', 'Name'],
+                    [longId, 'My Book'],
+                ];
+
+                const result = formatTable(matrix);
+                const lines = result.split('\n');
+
+                expect(lines[2]).to.contain(longId);
+            });
+
+            it('should never truncate cells in Transaction Id or Account Id columns', function () {
+                const longTxId = 'T'.repeat(50);
+                const longAccId = 'A'.repeat(50);
+                const matrix = [
+                    ['Transaction Id', 'Account Id', 'Description'],
+                    [longTxId, longAccId, 'D'.repeat(50)],
+                ];
+
+                const result = formatTable(matrix);
+                const lines = result.split('\n');
+
+                // ID columns should not be truncated
+                expect(lines[2]).to.contain(longTxId);
+                expect(lines[2]).to.contain(longAccId);
+                // Non-ID column should still be truncated
+                expect(lines[2]).to.contain('…');
+            });
+
+            it('should still truncate non-ID columns even when ID columns are present', function () {
+                const longName = 'N'.repeat(50);
+                const matrix = [
+                    ['ID', 'Name'],
+                    ['short-id', longName],
+                ];
+
+                const result = formatTable(matrix);
+                const lines = result.split('\n');
+
+                expect(lines[2]).to.contain('short-id');
+                // Name column should be truncated
+                const nameCell = lines[2].split(/\s{2,}/)[1];
+                expect(nameCell).to.have.length(40);
+                expect(nameCell.endsWith('…')).to.be.true;
+            });
         });
     });
 

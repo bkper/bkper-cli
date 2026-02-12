@@ -4,7 +4,6 @@ import 'dotenv/config'; // Must be first to load env vars before other imports
 
 import { program } from 'commander';
 import {
-    BooksDataTableBuilder,
     AccountsDataTableBuilder,
     GroupsDataTableBuilder,
     TransactionsDataTableBuilder,
@@ -321,7 +320,30 @@ bookCommand
                     )
                 );
             } else {
-                const matrix = new BooksDataTableBuilder(books).ids(true).build();
+                if (books.length === 0) {
+                    console.log('No results found.');
+                    return;
+                }
+                books.sort((a, b) => {
+                    const collA = a.getCollection()?.getName();
+                    const collB = b.getCollection()?.getName();
+                    if (collA && !collB) return -1;
+                    if (!collA && collB) return 1;
+                    let ret = (collA || '').localeCompare(collB || '');
+                    if (ret === 0) {
+                        ret = (a.getName() || '').localeCompare(b.getName() || '');
+                    }
+                    return ret;
+                });
+                const matrix: unknown[][] = [['Book Id', 'Name', 'Owner', 'Collection']];
+                for (const book of books) {
+                    matrix.push([
+                        book.getId() || '',
+                        book.getName() || '',
+                        book.getOwnerName() || '',
+                        book.getCollection()?.getName() || '',
+                    ]);
+                }
                 renderTable(matrix, false);
             }
         } catch (err) {
