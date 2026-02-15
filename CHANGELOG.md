@@ -5,8 +5,10 @@
 ### **February 2026**
 
 -   **CLI**
+    -   Added `--format` flag with `table`, `json`, and `csv` output modes — replaces the `--json` flag
+    -   CSV output follows RFC 4180 — raw values, all metadata, no truncation, ideal for spreadsheets and data pipelines
+    -   Batch operations via stdin — pipe JSON or CSV data into create commands for bulk processing
     -   Table-formatted output is now the default for all commands
-    -   Added `--json` global flag to output raw JSON instead of formatted tables
     -   Added `-b, --book` option for scoping commands to a specific [Book](https://bkper.com/docs)
     -   Added `-p, --properties` repeatable flag for setting custom properties as `key=value` pairs
     -   [Transaction](https://bkper.com/docs) tables show formatted dates and values with IDs
@@ -14,6 +16,7 @@
     -   Single-item commands display as indented key-value pairs
     -   Removed MCP server — now maintained as a separate project
 -   **Data Management**
+    -   Added batch create for [Account](https://bkper.com/docs)s, [Group](https://bkper.com/docs)s, and [Transaction](https://bkper.com/docs)s — accepts JSON arrays or CSV via stdin
     -   Added [Book](https://bkper.com/docs) create command
     -   Added [Collection](https://bkper.com/docs) commands: create, list, get, update, delete, add-book, remove-book
     -   Added [Transaction](https://bkper.com/docs) update command
