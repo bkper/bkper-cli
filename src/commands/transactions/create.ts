@@ -74,6 +74,5 @@ export async function createTransaction(
 
     throwIfErrors(errors);
 
-    const results = await book.batchCreateTransactions([tx]);
-    return results[0];
+    return tx.create();
 }
