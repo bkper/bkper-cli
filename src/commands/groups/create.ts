@@ -3,6 +3,7 @@ import { Group } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/** Options for creating a new group in a book. */
 export interface CreateGroupOptions {
     name: string;
     parent?: string;
@@ -10,6 +11,13 @@ export interface CreateGroupOptions {
     property?: string[];
 }
 
+/**
+ * Creates a new group in the specified book.
+ *
+ * @param bookId - The ID of the book to create the group in
+ * @param options - Group creation options including name, parent, and properties
+ * @returns The newly created Group
+ */
 export async function createGroup(bookId: string, options: CreateGroupOptions): Promise<Group> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);

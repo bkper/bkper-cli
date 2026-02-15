@@ -1,3 +1,9 @@
+/**
+ * Reads all content from stdin if piped input is available.
+ * Returns null if stdin is a TTY (no piped input) or if the input is empty.
+ *
+ * @returns The trimmed stdin content, or null if no input is available
+ */
 export async function readStdin(): Promise<string | null> {
     if (process.stdin.isTTY) {
         return null;

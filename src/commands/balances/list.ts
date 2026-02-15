@@ -2,6 +2,9 @@ import { BalanceType } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
 import type { OutputFormat } from '../../render/output.js';
 
+/**
+ * Options for listing account balances from a book.
+ */
 export interface ListBalancesOptions {
     query: string;
     expanded?: number;
@@ -16,6 +19,13 @@ export function resolveBalanceType(query: string): BalanceType {
     return query.includes('after:') ? BalanceType.PERIOD : BalanceType.CUMULATIVE;
 }
 
+/**
+ * Fetches balances from a book and returns them as a data table matrix.
+ *
+ * @param bookId - The ID of the book to query balances from
+ * @param options - Query and formatting options
+ * @returns A 2D array with headers and balance data rows
+ */
 export async function listBalancesMatrix(
     bookId: string,
     options: ListBalancesOptions

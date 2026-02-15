@@ -3,6 +3,9 @@ import { Book, DecimalSeparator, Period } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Options for creating a new Bkper book.
+ */
 export interface CreateBookOptions {
     name: string;
     fractionDigits?: number;
@@ -13,6 +16,12 @@ export interface CreateBookOptions {
     property?: string[];
 }
 
+/**
+ * Creates a new Bkper book with the specified options.
+ *
+ * @param options - Configuration for the new book
+ * @returns The newly created Book instance
+ */
 export async function createBook(options: CreateBookOptions): Promise<Book> {
     const bkper = getBkperInstance();
     const book = new Book({ name: options.name }, bkper.getConfig());

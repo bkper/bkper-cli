@@ -1,3 +1,10 @@
+/**
+ * Parses CSV content into an array of records using the first row as headers.
+ * Handles quoted fields, escaped quotes, and CRLF/LF line endings.
+ *
+ * @param content - Raw CSV string to parse
+ * @returns Array of records keyed by header names
+ */
 export function parseCsv(content: string): Record<string, string>[] {
     const rows = parseRows(content);
     if (rows.length === 0) {

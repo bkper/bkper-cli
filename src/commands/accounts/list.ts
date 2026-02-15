@@ -2,6 +2,12 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Account, AccountsDataTableBuilder } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
 
+/**
+ * Retrieves all accounts from the specified book.
+ *
+ * @param bookId - The target book ID
+ * @returns Array of accounts, or empty array if none exist
+ */
 export async function listAccounts(bookId: string): Promise<Account[]> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);

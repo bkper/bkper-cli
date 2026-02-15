@@ -2,6 +2,9 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, Transaction, Account, TransactionList } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
 
+/**
+ * Options for querying transactions from a book.
+ */
 export interface ListTransactionsOptions {
     query: string;
     limit?: number;
@@ -9,6 +12,9 @@ export interface ListTransactionsOptions {
     properties?: boolean;
 }
 
+/**
+ * Result of a transaction listing query, including the book context and pagination cursor.
+ */
 export interface ListTransactionsResult {
     book: Book;
     items: Transaction[];
@@ -16,6 +22,13 @@ export interface ListTransactionsResult {
     cursor?: string;
 }
 
+/**
+ * Queries transactions from a book using the provided search options.
+ *
+ * @param bookId - The book ID to query
+ * @param options - Query parameters including search string, limit, and cursor
+ * @returns The matching transactions with book context and pagination cursor
+ */
 export async function listTransactions(
     bookId: string,
     options: ListTransactionsOptions

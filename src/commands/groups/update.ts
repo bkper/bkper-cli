@@ -3,12 +3,21 @@ import { Group } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/** Options for updating an existing group in a book. */
 export interface UpdateGroupOptions {
     name?: string;
     hidden?: boolean;
     property?: string[];
 }
 
+/**
+ * Updates an existing group in the specified book.
+ *
+ * @param bookId - The ID of the book containing the group
+ * @param groupIdOrName - The ID or name of the group to update
+ * @param options - Fields to update on the group
+ * @returns The updated Group
+ */
 export async function updateGroup(
     bookId: string,
     groupIdOrName: string,

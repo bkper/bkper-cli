@@ -2,6 +2,12 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Group, GroupsDataTableBuilder } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
 
+/**
+ * Retrieves all groups from the specified book.
+ *
+ * @param bookId - The ID of the book to list groups from
+ * @returns Array of groups in the book, or an empty array if none exist
+ */
 export async function listGroups(bookId: string): Promise<Group[]> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);

@@ -3,6 +3,14 @@ import { Account, AccountType } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Options for updating an existing account.
+ *
+ * @property name - New account name
+ * @property type - New account type classification
+ * @property archived - Whether to archive or unarchive the account
+ * @property property - Custom properties in "key=value" format; empty value deletes the property
+ */
 export interface UpdateAccountOptions {
     name?: string;
     type?: 'ASSET' | 'LIABILITY' | 'INCOMING' | 'OUTGOING';
@@ -10,6 +18,16 @@ export interface UpdateAccountOptions {
     property?: string[];
 }
 
+/**
+ * Updates an existing account in the specified book.
+ * Applies only the provided options, leaving other fields unchanged.
+ *
+ * @param bookId - The target book ID
+ * @param accountIdOrName - Account ID or name to update
+ * @param options - Fields to update on the account
+ * @returns The updated account
+ * @throws Error if the account is not found
+ */
 export async function updateAccount(
     bookId: string,
     accountIdOrName: string,

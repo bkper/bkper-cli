@@ -1,6 +1,14 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Book } from 'bkper-js';
 
+/**
+ * Removes one or more books from a collection.
+ *
+ * @param collectionId - The ID of the collection to remove books from
+ * @param bookIds - Array of book IDs to remove
+ * @returns The books that were removed from the collection
+ * @throws Error if the collection is not found
+ */
 export async function removeBookFromCollection(
     collectionId: string,
     bookIds: string[]

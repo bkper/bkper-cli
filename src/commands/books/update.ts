@@ -3,6 +3,9 @@ import { Book, DecimalSeparator, Period } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Options for updating an existing Bkper book.
+ */
 export interface UpdateBookOptions {
     name?: string;
     fractionDigits?: number;
@@ -15,6 +18,14 @@ export interface UpdateBookOptions {
     property?: string[];
 }
 
+/**
+ * Updates an existing Bkper book with the specified options.
+ * Properties with empty values are deleted from the book.
+ *
+ * @param bookId - The unique identifier of the book to update
+ * @param options - Fields to update on the book
+ * @returns The updated Book instance
+ */
 export async function updateBook(bookId: string, options: UpdateBookOptions): Promise<Book> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);

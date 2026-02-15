@@ -2,6 +2,12 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, BooksDataTableBuilder } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
 
+/**
+ * Lists books matching an optional query string.
+ *
+ * @param query - Optional search query to filter books
+ * @returns Array of matching Book instances
+ */
 export async function listBooks(query?: string): Promise<Book[]> {
     const bkper = getBkperInstance();
     return bkper.getBooks(query);

@@ -50,6 +50,10 @@ try {
     // Credentials will be null if not found - no need to log during module loading
 }
 
+/**
+ * Initiates the OAuth login flow. If already logged in, notifies the user
+ * and refreshes the token.
+ */
 export async function login() {
     if (storedCredentials) {
         console.log('Bkper already logged in.');
@@ -57,6 +61,9 @@ export async function login() {
     await getOAuthToken();
 }
 
+/**
+ * Logs out by removing stored OAuth credentials from disk.
+ */
 export function logout() {
     if (fs.existsSync(storedCredentialsPath)) {
         fs.rmSync(storedCredentialsPath);
@@ -64,6 +71,11 @@ export function logout() {
     console.log('Bkper logged out.');
 }
 
+/**
+ * Checks whether the user has stored OAuth credentials.
+ *
+ * @returns true if credentials are present, false otherwise
+ */
 export function isLoggedIn() {
     return storedCredentials != null;
 }

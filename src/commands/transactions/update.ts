@@ -3,6 +3,9 @@ import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Options for updating an existing transaction. All fields are optional.
+ */
 export interface UpdateTransactionOptions {
     date?: string;
     amount?: string | number;
@@ -13,6 +16,14 @@ export interface UpdateTransactionOptions {
     property?: string[];
 }
 
+/**
+ * Updates an existing transaction with the provided fields.
+ *
+ * @param bookId - The book ID containing the transaction
+ * @param transactionId - The ID of the transaction to update
+ * @param options - Fields to update (only provided fields are changed)
+ * @returns The updated transaction
+ */
 export async function updateTransaction(
     bookId: string,
     transactionId: string,

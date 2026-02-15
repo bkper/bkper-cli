@@ -3,12 +3,24 @@ import { Transaction } from 'bkper-js';
 import { TransactionMergeOperation } from '../../domain/transaction/merge-operation.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Result of merging two transactions.
+ */
 export interface MergeResult {
     mergedTransaction: Transaction;
     revertedTransactionId: string;
     auditRecord: string | null;
 }
 
+/**
+ * Merges two transactions by updating one and trashing the other.
+ * Fails if the transaction amounts differ.
+ *
+ * @param bookId - The book ID containing both transactions
+ * @param transactionId1 - The ID of the first transaction
+ * @param transactionId2 - The ID of the second transaction
+ * @returns The merge result with the updated transaction and reverted ID
+ */
 export async function mergeTransactions(
     bookId: string,
     transactionId1: string,

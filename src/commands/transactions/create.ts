@@ -3,6 +3,9 @@ import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
+/**
+ * Options for creating a new transaction in a book.
+ */
 export interface CreateTransactionOptions {
     date: string;
     amount: string | number;
@@ -14,6 +17,13 @@ export interface CreateTransactionOptions {
     property?: string[];
 }
 
+/**
+ * Creates a new transaction in the specified book.
+ *
+ * @param bookId - The target book ID
+ * @param options - Transaction fields (date, amount, accounts, properties, etc.)
+ * @returns The created transaction
+ */
 export async function createTransaction(
     bookId: string,
     options: CreateTransactionOptions

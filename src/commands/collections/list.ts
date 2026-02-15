@@ -2,6 +2,11 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Collection } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
 
+/**
+ * Fetches all collections for the authenticated user.
+ *
+ * @returns Array of all collections
+ */
 export async function listCollections(): Promise<Collection[]> {
     const bkper = getBkperInstance();
     const collections = await bkper.getCollections();
