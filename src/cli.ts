@@ -3,11 +3,10 @@
 import 'dotenv/config'; // Must be first to load env vars before other imports
 
 import { program } from 'commander';
-import { AccountsDataTableBuilder, GroupsDataTableBuilder, BooksDataTableBuilder } from 'bkper-js';
 import { login, logout } from './auth/local-auth-service.js';
 import { setupBkper } from './bkper-factory.js';
 import {
-    listApps,
+    listAppsFormatted,
     syncApp,
     deployApp,
     undeployApp,
@@ -22,33 +21,36 @@ import {
     installApp,
     uninstallApp,
 } from './commands/apps/index.js';
-import { listBooks, getBook, createBook, updateBook } from './commands/books/index.js';
+import { listBooksFormatted, getBook, createBook, updateBook } from './commands/books/index.js';
 import {
-    listAccounts,
+    listAccountsFormatted,
     getAccount,
     createAccount,
     updateAccount,
     deleteAccount,
+    batchCreateAccounts,
 } from './commands/accounts/index.js';
 import {
-    listGroups,
+    listGroupsFormatted,
     getGroup,
     createGroup,
     updateGroup,
     deleteGroup,
+    batchCreateGroups,
 } from './commands/groups/index.js';
 import {
-    listTransactions,
+    listTransactionsFormatted,
     createTransaction,
     updateTransaction,
     postTransaction,
     checkTransaction,
     trashTransaction,
     mergeTransactions,
+    batchCreateTransactions,
 } from './commands/transactions/index.js';
 import { listBalancesMatrix } from './commands/balances/index.js';
 import {
-    listCollections,
+    listCollectionsFormatted,
     getCollection,
     createCollection,
     updateCollection,
@@ -56,12 +58,16 @@ import {
     addBookToCollection,
     removeBookFromCollection,
 } from './commands/collections/index.js';
-import { renderTable, renderItem } from './render/index.js';
+import { renderListResult, renderTable, renderItem } from './render/index.js';
 import type { OutputFormat } from './render/output.js';
 import { validateRequiredOptions, throwIfErrors } from './utils/validation.js';
 import { parseStdinItems } from './input/index.js';
 
 function collectProperty(value: string, previous: string[] | undefined): string[] {
+    return previous ? [...previous, value] : [value];
+}
+
+function collectBook(value: string, previous: string[] | undefined): string[] {
     return previous ? [...previous, value] : [value];
 }
 
@@ -85,6 +91,10 @@ function getFormat(): OutputFormat {
     return 'table';
 }
 
+// =============================================================================
+// Auth
+// =============================================================================
+
 program
     .command('login')
     .description('Login Bkper')
@@ -99,7 +109,10 @@ program
         logout();
     });
 
-// 'app' command group (singular, modern pattern)
+// =============================================================================
+// App
+// =============================================================================
+
 const appCommand = program.command('app').description('Manage Bkper Apps');
 
 appCommand
@@ -120,25 +133,8 @@ appCommand
     .action(async () => {
         try {
             setupBkper();
-            const format = getFormat();
-            const apps = await listApps();
-
-            if (format === 'json') {
-                console.log(JSON.stringify(apps, null, 2));
-                return;
-            }
-
-            if (apps.length === 0) {
-                console.log('No results found.');
-                return;
-            }
-
-            const matrix: unknown[][] = [['ID', 'Name', 'Published']];
-            for (const app of apps) {
-                matrix.push([app.id || '', app.name || '', app.published ? 'Yes' : 'No']);
-            }
-
-            renderTable(matrix, format);
+            const result = await listAppsFormatted(getFormat());
+            renderListResult(result, getFormat());
         } catch (err) {
             console.error('Error listing apps:', err);
             process.exit(1);
@@ -201,7 +197,6 @@ appCommand
         }
     });
 
-// Development server command
 appCommand
     .command('dev')
     .description('Start the development server')
@@ -228,7 +223,6 @@ appCommand
         }
     });
 
-// Build command
 appCommand
     .command('build')
     .description('Build all configured handlers for deployment')
@@ -241,7 +235,6 @@ appCommand
         }
     });
 
-// Secrets subcommand
 const secretsCommand = appCommand.command('secrets').description('Manage app secrets');
 
 secretsCommand
@@ -315,7 +308,10 @@ appCommand
         }
     });
 
-// 'book' command group
+// =============================================================================
+// Book
+// =============================================================================
+
 const bookCommand = program.command('book').description('Manage Books');
 
 bookCommand
@@ -326,39 +322,8 @@ bookCommand
         try {
             setupBkper();
             const format = getFormat();
-            const books = await listBooks(options.query);
-            if (format === 'json') {
-                console.log(
-                    JSON.stringify(
-                        books.map(b => b.json()),
-                        null,
-                        2
-                    )
-                );
-            } else {
-                if (books.length === 0) {
-                    console.log('No results found.');
-                    return;
-                }
-                books.sort((a, b) => {
-                    const collA = a.getCollection()?.getName();
-                    const collB = b.getCollection()?.getName();
-                    if (collA && !collB) return -1;
-                    if (!collA && collB) return 1;
-                    let ret = (collA || '').localeCompare(collB || '');
-                    if (ret === 0) {
-                        ret = (a.getName() || '').localeCompare(b.getName() || '');
-                    }
-                    return ret;
-                });
-
-                const builder = new BooksDataTableBuilder(books).ids(true);
-                if (format === 'csv') {
-                    builder.properties(true).hiddenProperties(true);
-                }
-                const matrix = builder.build();
-                renderTable(matrix, format);
-            }
+            const result = await listBooksFormatted(options.query, format);
+            renderListResult(result, format);
         } catch (err) {
             console.error('Error listing books:', err);
             process.exit(1);
@@ -452,7 +417,10 @@ bookCommand
         }
     });
 
-// 'account' command group
+// =============================================================================
+// Account
+// =============================================================================
+
 const accountCommand = program.command('account').description('Manage Accounts');
 
 accountCommand
@@ -464,24 +432,8 @@ accountCommand
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const format = getFormat();
-            const bookId = options.book;
-            const accounts = await listAccounts(bookId);
-            if (format === 'json') {
-                console.log(
-                    JSON.stringify(
-                        accounts.map(a => a.json()),
-                        null,
-                        2
-                    )
-                );
-            } else {
-                const builder = new AccountsDataTableBuilder(accounts).ids(true).groups(true);
-                if (format === 'csv') {
-                    builder.properties(true).hiddenProperties(true);
-                }
-                const matrix = await builder.build();
-                renderTable(matrix, format);
-            }
+            const result = await listAccountsFormatted(options.book, format);
+            renderListResult(result, format);
         } catch (err) {
             console.error('Error listing accounts:', err);
             process.exit(1);
@@ -496,8 +448,7 @@ accountCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const account = await getAccount(bookId, idOrName);
+            const account = await getAccount(options.book, idOrName);
             renderItem(account.json(), getFormat());
         } catch (err) {
             console.error('Error getting account:', err);
@@ -516,77 +467,13 @@ accountCommand
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
-            const format = getFormat();
-
-            // Check for stdin input
             const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
 
             if (stdinData && stdinData.items.length > 0) {
-                // Batch mode: create multiple accounts from stdin
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 setupBkper();
-                const { getBkperInstance } = await import('./bkper-factory.js');
-                const { Account, AccountType } = await import('bkper-js');
-                const { parsePropertyFlag } = await import('./utils/properties.js');
-                const bkper = getBkperInstance();
-                const book = await bkper.getBook(options.book);
-
-                const CHUNK_SIZE = 100;
-                const items = stdinData.items;
-
-                for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-                    const chunk = items.slice(i, i + CHUNK_SIZE);
-                    const accounts: Array<InstanceType<typeof Account>> = [];
-
-                    for (const item of chunk) {
-                        const account = new Account(book);
-                        if (item.name) account.setName(item.name);
-                        if (item.type) {
-                            const accountType = AccountType[item.type as keyof typeof AccountType];
-                            if (accountType !== undefined) account.setType(accountType);
-                        }
-
-                        // Set properties from stdin fields (excluding known fields)
-                        const knownFields = new Set(['name', 'type', 'description', 'groups']);
-                        for (const [key, value] of Object.entries(item)) {
-                            if (!knownFields.has(key) && value !== '') {
-                                account.setProperty(key, value);
-                            }
-                        }
-
-                        // CLI --property flags override stdin
-                        if (options.property) {
-                            for (const raw of options.property) {
-                                const [key, value] = parsePropertyFlag(raw);
-                                if (value === '') {
-                                    account.deleteProperty(key);
-                                } else {
-                                    account.setProperty(key, value);
-                                }
-                            }
-                        }
-
-                        if (item.groups) {
-                            for (const groupName of item.groups
-                                .split(',')
-                                .map((g: string) => g.trim())) {
-                                const group = await book.getGroup(groupName);
-                                if (group) {
-                                    account.addGroup(group);
-                                }
-                            }
-                        }
-
-                        accounts.push(account);
-                    }
-
-                    const results = await book.batchCreateAccounts(accounts);
-                    for (const result of results) {
-                        console.log(JSON.stringify(result.json()));
-                    }
-                }
+                await batchCreateAccounts(options.book, stdinData.items, options.property);
             } else {
-                // Single account mode
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -594,8 +481,7 @@ accountCommand
                     ])
                 );
                 setupBkper();
-                const bookId = options.book;
-                const account = await createAccount(bookId, {
+                const account = await createAccount(options.book, {
                     name: options.name,
                     type: options.type,
                     description: options.description,
@@ -604,7 +490,7 @@ accountCommand
                         : undefined,
                     property: options.property,
                 });
-                renderItem(account.json(), format);
+                renderItem(account.json(), getFormat());
             }
         } catch (err) {
             console.error('Error creating account:', err);
@@ -624,8 +510,7 @@ accountCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const account = await updateAccount(bookId, idOrName, {
+            const account = await updateAccount(options.book, idOrName, {
                 name: options.name,
                 type: options.type,
                 archived: options.archived !== undefined ? options.archived === 'true' : undefined,
@@ -646,8 +531,7 @@ accountCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const account = await deleteAccount(bookId, idOrName);
+            const account = await deleteAccount(options.book, idOrName);
             renderItem(account.json(), getFormat());
         } catch (err) {
             console.error('Error deleting account:', err);
@@ -655,7 +539,10 @@ accountCommand
         }
     });
 
-// 'group' command group
+// =============================================================================
+// Group
+// =============================================================================
+
 const groupCommand = program.command('group').description('Manage Groups');
 
 groupCommand
@@ -667,24 +554,8 @@ groupCommand
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const format = getFormat();
-            const bookId = options.book;
-            const groups = await listGroups(bookId);
-            if (format === 'json') {
-                console.log(
-                    JSON.stringify(
-                        groups.map(g => g.json()),
-                        null,
-                        2
-                    )
-                );
-            } else {
-                const builder = new GroupsDataTableBuilder(groups).ids(true).tree(true);
-                if (format === 'csv') {
-                    builder.properties(true).hiddenProperties(true);
-                }
-                const matrix = builder.build();
-                renderTable(matrix, format);
-            }
+            const result = await listGroupsFormatted(options.book, format);
+            renderListResult(result, format);
         } catch (err) {
             console.error('Error listing groups:', err);
             process.exit(1);
@@ -699,8 +570,7 @@ groupCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const group = await getGroup(bookId, idOrName);
+            const group = await getGroup(options.book, idOrName);
             renderItem(group.json(), getFormat());
         } catch (err) {
             console.error('Error getting group:', err);
@@ -718,70 +588,13 @@ groupCommand
     .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
     .action(async options => {
         try {
-            const format = getFormat();
-
-            // Check for stdin input
             const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
 
             if (stdinData && stdinData.items.length > 0) {
-                // Batch mode: create multiple groups from stdin
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 setupBkper();
-                const { getBkperInstance } = await import('./bkper-factory.js');
-                const { Group } = await import('bkper-js');
-                const { parsePropertyFlag } = await import('./utils/properties.js');
-                const bkper = getBkperInstance();
-                const book = await bkper.getBook(options.book);
-
-                const CHUNK_SIZE = 100;
-                const items = stdinData.items;
-
-                for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-                    const chunk = items.slice(i, i + CHUNK_SIZE);
-                    const groups: InstanceType<typeof Group>[] = [];
-
-                    for (const item of chunk) {
-                        const group = new Group(book);
-                        if (item.name) group.setName(item.name);
-                        if (item.hidden !== undefined) group.setHidden(item.hidden === 'true');
-
-                        // Set properties from stdin fields (excluding known fields)
-                        const knownFields = new Set(['name', 'parent', 'hidden']);
-                        for (const [key, value] of Object.entries(item)) {
-                            if (!knownFields.has(key) && value !== '') {
-                                group.setProperty(key, value);
-                            }
-                        }
-
-                        // CLI --property flags override stdin
-                        if (options.property) {
-                            for (const raw of options.property) {
-                                const [key, value] = parsePropertyFlag(raw);
-                                if (value === '') {
-                                    group.deleteProperty(key);
-                                } else {
-                                    group.setProperty(key, value);
-                                }
-                            }
-                        }
-
-                        if (item.parent) {
-                            const parentGroup = await book.getGroup(item.parent);
-                            if (parentGroup) {
-                                group.setParent(parentGroup);
-                            }
-                        }
-
-                        groups.push(group);
-                    }
-
-                    const results = await book.batchCreateGroups(groups);
-                    for (const result of results) {
-                        console.log(JSON.stringify(result.json()));
-                    }
-                }
+                await batchCreateGroups(options.book, stdinData.items, options.property);
             } else {
-                // Single group mode
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -789,14 +602,13 @@ groupCommand
                     ])
                 );
                 setupBkper();
-                const bookId = options.book;
-                const group = await createGroup(bookId, {
+                const group = await createGroup(options.book, {
                     name: options.name,
                     parent: options.parent,
                     hidden: options.hidden,
                     property: options.property,
                 });
-                renderItem(group.json(), format);
+                renderItem(group.json(), getFormat());
             }
         } catch (err) {
             console.error('Error creating group:', err);
@@ -815,8 +627,7 @@ groupCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const group = await updateGroup(bookId, idOrName, {
+            const group = await updateGroup(options.book, idOrName, {
                 name: options.name,
                 hidden: options.hidden !== undefined ? options.hidden === 'true' : undefined,
                 property: options.property,
@@ -836,8 +647,7 @@ groupCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const group = await deleteGroup(bookId, idOrName);
+            const group = await deleteGroup(options.book, idOrName);
             renderItem(group.json(), getFormat());
         } catch (err) {
             console.error('Error deleting group:', err);
@@ -845,7 +655,10 @@ groupCommand
         }
     });
 
-// 'transaction' command group
+// =============================================================================
+// Transaction
+// =============================================================================
+
 const transactionCommand = program.command('transaction').description('Manage Transactions');
 
 transactionCommand
@@ -866,45 +679,17 @@ transactionCommand
             );
             setupBkper();
             const format = getFormat();
-            const bookId = options.book;
-            const result = await listTransactions(bookId, {
-                query: options.query,
-                limit: options.limit,
-                cursor: options.cursor,
-            });
-            if (format === 'json') {
-                console.log(
-                    JSON.stringify(
-                        {
-                            items: result.items.map(tx => tx.json()),
-                            cursor: result.cursor,
-                        },
-                        null,
-                        2
-                    )
-                );
-            } else {
-                const builder = result.book
-                    .createTransactionsDataTable(result.items, result.account)
-                    .ids(true);
-
-                if (format === 'csv') {
-                    // CSV: raw values, all metadata for machine consumption
-                    builder.properties(true).hiddenProperties(true).urls(true).recordedAt(true);
-                } else {
-                    // Table: human-readable formatted values
-                    builder.formatDates(true).formatValues(true).recordedAt(false);
-                    if (options.properties) {
-                        builder.properties(true);
-                    }
-                }
-
-                const matrix = await builder.build();
-                renderTable(matrix, format);
-                if (result.cursor && format === 'table') {
-                    console.log(`\nNext cursor: ${result.cursor}`);
-                }
-            }
+            const result = await listTransactionsFormatted(
+                options.book,
+                {
+                    query: options.query,
+                    limit: options.limit,
+                    cursor: options.cursor,
+                    properties: options.properties,
+                },
+                format
+            );
+            renderListResult(result, format);
         } catch (err) {
             console.error('Error listing transactions:', err);
             process.exit(1);
@@ -929,96 +714,13 @@ transactionCommand
     )
     .action(async options => {
         try {
-            const format = getFormat();
-
-            // Check for stdin input
             const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
 
             if (stdinData && stdinData.items.length > 0) {
-                // Batch mode: create multiple transactions from stdin
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 setupBkper();
-                const { getBkperInstance } = await import('./bkper-factory.js');
-                const { Transaction } = await import('bkper-js');
-                const { parsePropertyFlag } = await import('./utils/properties.js');
-                const bkper = getBkperInstance();
-                const book = await bkper.getBook(options.book);
-
-                const CHUNK_SIZE = 100;
-                const items = stdinData.items;
-
-                for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-                    const chunk = items.slice(i, i + CHUNK_SIZE);
-                    const transactions: InstanceType<typeof Transaction>[] = [];
-
-                    for (const item of chunk) {
-                        const tx = new Transaction(book);
-                        if (item.date) tx.setDate(item.date);
-                        if (item.amount) tx.setAmount(item.amount);
-                        if (item.description) tx.setDescription(item.description);
-
-                        if (item.from) {
-                            const creditAccount = await book.getAccount(item.from);
-                            if (creditAccount) tx.setCreditAccount(creditAccount);
-                        }
-                        if (item.to) {
-                            const debitAccount = await book.getAccount(item.to);
-                            if (debitAccount) tx.setDebitAccount(debitAccount);
-                        }
-
-                        if (item.url) {
-                            for (const u of item.url.split(',').map((s: string) => s.trim())) {
-                                if (u) tx.addUrl(u);
-                            }
-                        }
-
-                        if (item.remoteId || item['remote-id'] || item['Remote Id']) {
-                            const rid = item.remoteId || item['remote-id'] || item['Remote Id'];
-                            for (const r of rid.split(',').map((s: string) => s.trim())) {
-                                if (r) tx.addRemoteId(r);
-                            }
-                        }
-
-                        // Set properties from stdin fields (excluding known fields)
-                        const knownFields = new Set([
-                            'date',
-                            'amount',
-                            'description',
-                            'from',
-                            'to',
-                            'url',
-                            'remoteId',
-                            'remote-id',
-                            'Remote Id',
-                        ]);
-                        for (const [key, value] of Object.entries(item)) {
-                            if (!knownFields.has(key) && value !== '') {
-                                tx.setProperty(key, value);
-                            }
-                        }
-
-                        // CLI --property flags override stdin
-                        if (options.property) {
-                            for (const raw of options.property) {
-                                const [key, value] = parsePropertyFlag(raw);
-                                if (value === '') {
-                                    tx.deleteProperty(key);
-                                } else {
-                                    tx.setProperty(key, value);
-                                }
-                            }
-                        }
-
-                        transactions.push(tx);
-                    }
-
-                    const results = await book.batchCreateTransactions(transactions);
-                    for (const result of results) {
-                        console.log(JSON.stringify(result.json()));
-                    }
-                }
+                await batchCreateTransactions(options.book, stdinData.items, options.property);
             } else {
-                // Single transaction mode
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -1027,8 +729,7 @@ transactionCommand
                     ])
                 );
                 setupBkper();
-                const bookId = options.book;
-                const transaction = await createTransaction(bookId, {
+                const transaction = await createTransaction(options.book, {
                     date: options.date,
                     amount: options.amount,
                     description: options.description,
@@ -1038,7 +739,7 @@ transactionCommand
                     remoteId: options.remoteId,
                     property: options.property,
                 });
-                renderItem(transaction.json(), format);
+                renderItem(transaction.json(), getFormat());
             }
         } catch (err) {
             console.error('Error creating transaction:', err);
@@ -1054,8 +755,7 @@ transactionCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const transaction = await postTransaction(bookId, transactionId);
+            const transaction = await postTransaction(options.book, transactionId);
             renderItem(transaction.json(), getFormat());
         } catch (err) {
             console.error('Error posting transaction:', err);
@@ -1082,8 +782,7 @@ transactionCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const transaction = await updateTransaction(bookId, transactionId, {
+            const transaction = await updateTransaction(options.book, transactionId, {
                 date: options.date,
                 amount: options.amount,
                 description: options.description,
@@ -1107,8 +806,7 @@ transactionCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const transaction = await checkTransaction(bookId, transactionId);
+            const transaction = await checkTransaction(options.book, transactionId);
             renderItem(transaction.json(), getFormat());
         } catch (err) {
             console.error('Error checking transaction:', err);
@@ -1124,8 +822,7 @@ transactionCommand
         try {
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
-            const bookId = options.book;
-            const transaction = await trashTransaction(bookId, transactionId);
+            const transaction = await trashTransaction(options.book, transactionId);
             renderItem(transaction.json(), getFormat());
         } catch (err) {
             console.error('Error trashing transaction:', err);
@@ -1142,8 +839,7 @@ transactionCommand
             throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
             setupBkper();
             const format = getFormat();
-            const bookId = options.book;
-            const result = await mergeTransactions(bookId, transactionId1, transactionId2);
+            const result = await mergeTransactions(options.book, transactionId1, transactionId2);
             if (format === 'json' || format === 'csv') {
                 console.log(
                     JSON.stringify(
@@ -1165,7 +861,10 @@ transactionCommand
         }
     });
 
-// 'balance' command group
+// =============================================================================
+// Balance
+// =============================================================================
+
 const balanceCommand = program.command('balance').description('Manage Balances');
 
 balanceCommand
@@ -1184,8 +883,7 @@ balanceCommand
             );
             setupBkper();
             const format = getFormat();
-            const bookId = options.book;
-            const matrix = await listBalancesMatrix(bookId, {
+            const matrix = await listBalancesMatrix(options.book, {
                 query: options.query,
                 expanded: options.expanded,
                 format,
@@ -1197,7 +895,10 @@ balanceCommand
         }
     });
 
-// 'collection' command group
+// =============================================================================
+// Collection
+// =============================================================================
+
 const collectionCommand = program.command('collection').description('Manage Collections');
 
 collectionCommand
@@ -1207,27 +908,8 @@ collectionCommand
         try {
             setupBkper();
             const format = getFormat();
-            const collections = await listCollections();
-            if (format === 'json') {
-                console.log(
-                    JSON.stringify(
-                        collections.map(c => c.json()),
-                        null,
-                        2
-                    )
-                );
-            } else {
-                if (collections.length === 0) {
-                    console.log('No collections found.');
-                    return;
-                }
-                const matrix: unknown[][] = [['ID', 'Name', 'Books']];
-                for (const col of collections) {
-                    const books = col.getBooks();
-                    matrix.push([col.getId() || '', col.getName() || '', books.length.toString()]);
-                }
-                renderTable(matrix, format);
-            }
+            const result = await listCollectionsFormatted(format);
+            renderListResult(result, format);
         } catch (err) {
             console.error('Error listing collections:', err);
             process.exit(1);
@@ -1294,10 +976,6 @@ collectionCommand
             process.exit(1);
         }
     });
-
-function collectBook(value: string, previous: string[] | undefined): string[] {
-    return previous ? [...previous, value] : [value];
-}
 
 collectionCommand
     .command('add-book <collectionId>')

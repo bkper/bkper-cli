@@ -1,4 +1,4 @@
-export { listCollections } from './list.js';
+export { listCollections, listCollectionsFormatted } from './list.js';
 export { getCollection } from './get.js';
 export { createCollection, CreateCollectionOptions } from './create.js';
 export { updateCollection, UpdateCollectionOptions } from './update.js';

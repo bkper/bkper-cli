@@ -19,7 +19,7 @@ export type { DevOptions } from './dev.js';
 // =============================================================================
 
 // List
-export { listApps } from './list.js';
+export { listApps, listAppsFormatted } from './list.js';
 
 // Sync (CRUD)
 export { createApp, syncApp, updateApp } from './sync.js';
