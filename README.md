@@ -178,7 +178,7 @@ Apps are configured via a `bkper.yaml` file in the project root. See the complet
 
 **Interact with books, accounts, transactions, and balances.**
 
-All data commands that operate within a book use `-b, --book <bookId>` to specify the book context. Use `--json` for machine-readable output on any command.
+All data commands that operate within a book use `-b, --book <bookId>` to specify the book context. Use `--format` to control output (see [Output Format](#output-format)).
 
 ### Books
 
@@ -437,15 +437,63 @@ bkper collection delete col_789
 
 ## Output Format
 
-All commands output human-readable formatted tables by default. Use the `--json` global flag to get raw JSON output instead.
+All commands support three output formats via the `--format` global flag:
+
+| Format | Flag                       | Best for                                |
+| ------ | -------------------------- | --------------------------------------- |
+| Table  | `--format table` (default) | Human reading in the terminal           |
+| JSON   | `--format json`            | Programmatic access, single-item detail |
+| CSV    | `--format csv`             | Spreadsheets, AI agents, data pipelines |
 
 ```bash
 # Table output (default)
-bkper book list
+bkper account list -b abc123
 
 # JSON output
-bkper book list --json
+bkper account list -b abc123 --format json
+
+# CSV output -- raw data, no truncation, RFC 4180
+bkper account list -b abc123 --format csv
 ```
+
+### CSV output details
+
+CSV output is designed for machine consumption:
+
+-   **RFC 4180 compliant** -- proper quoting, CRLF line endings, no truncation
+-   **All metadata included** -- IDs, properties, hidden properties, URLs, and timestamps are enabled
+-   **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
+-   **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
+
+### AI agent guidance
+
+When using the CLI from an AI agent, LLM, or automated script:
+
+-   **Use `--format csv` for list commands.** CSV is dramatically more token-efficient than JSON for tabular data -- typically 3-5x fewer tokens for the same information.
+-   **Use `--format json` for single-item commands** (`get`, `create`, `update`) where you need structured field access.
+-   **Pipe data in via stdin** for batch operations (see below).
+
+### Stdin input (batch operations)
+
+Write commands (`account create`, `group create`, `transaction create`) accept data piped via stdin for batch operations. The format is auto-detected (JSON or CSV).
+
+```bash
+# Create accounts from JSON
+echo '[{"name":"Cash","type":"ASSET"},{"name":"Revenue","type":"INCOMING"}]' | \
+  bkper account create -b abc123
+
+# Create transactions from CSV
+cat transactions.csv | bkper transaction create -b abc123
+
+# Pipe from a script
+python export_bank.py | bkper transaction create -b abc123
+```
+
+**JSON input:** a single object `{}` or an array `[{}, {}]`. Field names map to CLI options (`date`, `amount`, `description`, `from`, `to`, `name`, `type`, etc.). Unknown fields become custom properties.
+
+**CSV input:** first row is headers mapping to field names. Unknown columns become custom properties.
+
+**Batch output:** results are streamed as NDJSON (one JSON object per line), printed as each batch completes.
 
 ---
 

@@ -21,7 +21,7 @@ describe('output', function () {
                 ['Expenses', 'OUTGOING'],
             ];
 
-            renderTable(matrix, false);
+            renderTable(matrix, 'table');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.contain('Name');
@@ -31,13 +31,13 @@ describe('output', function () {
             expect(output).to.match(/_+/);
         });
 
-        it('should output JSON when json flag is true', function () {
+        it('should output JSON when format is json', function () {
             const matrix = [
                 ['Name', 'Type'],
                 ['Revenue', 'INCOMING'],
             ];
 
-            renderTable(matrix, true);
+            renderTable(matrix, 'json');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             const parsed = JSON.parse(output);
@@ -46,10 +46,27 @@ describe('output', function () {
             expect(parsed[0]).to.deep.equal(['Name', 'Type']);
         });
 
+        it('should output CSV when format is csv', function () {
+            const matrix = [
+                ['Name', 'Type'],
+                ['Revenue', 'INCOMING'],
+                ['Expenses', 'OUTGOING'],
+            ];
+
+            renderTable(matrix, 'csv');
+
+            const output = consoleLogStub.firstCall.args[0] as string;
+            const lines = output.split('\r\n');
+            expect(lines).to.have.length(3);
+            expect(lines[0]).to.equal('Name,Type');
+            expect(lines[1]).to.equal('Revenue,INCOMING');
+            expect(lines[2]).to.equal('Expenses,OUTGOING');
+        });
+
         it('should render a single-row headerless matrix as table', function () {
             const matrix = [['Total Equity', '-1753687.09']];
 
-            renderTable(matrix, false);
+            renderTable(matrix, 'table');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.contain('Total Equity');
@@ -57,18 +74,25 @@ describe('output', function () {
         });
 
         it('should print "No results found." for empty matrix', function () {
-            renderTable([], false);
+            renderTable([], 'table');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.equal('No results found.');
         });
 
-        it('should output empty JSON array when json flag is true and no data', function () {
-            renderTable([], true);
+        it('should output empty JSON array when format is json and no data', function () {
+            renderTable([], 'json');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             const parsed = JSON.parse(output);
             expect(parsed).to.deep.equal([]);
+        });
+
+        it('should output "No results found." when format is csv and no data', function () {
+            renderTable([], 'csv');
+
+            const output = consoleLogStub.firstCall.args[0] as string;
+            expect(output).to.equal('No results found.');
         });
     });
 
@@ -76,7 +100,7 @@ describe('output', function () {
         it('should output key-value pairs by default', function () {
             const item = { name: 'Checking', type: 'ASSET' };
 
-            renderItem(item, false);
+            renderItem(item, 'table');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.contain('name:');
@@ -85,10 +109,20 @@ describe('output', function () {
             expect(output).to.contain('ASSET');
         });
 
-        it('should output JSON when json flag is true', function () {
+        it('should output JSON when format is json', function () {
             const item = { name: 'Checking', type: 'ASSET' };
 
-            renderItem(item, true);
+            renderItem(item, 'json');
+
+            const output = consoleLogStub.firstCall.args[0] as string;
+            const parsed = JSON.parse(output);
+            expect(parsed).to.deep.equal({ name: 'Checking', type: 'ASSET' });
+        });
+
+        it('should output JSON when format is csv (single-item fallback)', function () {
+            const item = { name: 'Checking', type: 'ASSET' };
+
+            renderItem(item, 'csv');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             const parsed = JSON.parse(output);
@@ -96,7 +130,7 @@ describe('output', function () {
         });
 
         it('should handle empty item in table mode', function () {
-            renderItem({}, false);
+            renderItem({}, 'table');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.equal('No results found.');

@@ -1,9 +1,11 @@
 import { BalanceType } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
+import type { OutputFormat } from '../../render/output.js';
 
 export interface ListBalancesOptions {
     query: string;
     expanded?: number;
+    format?: OutputFormat;
 }
 
 /**
@@ -24,7 +26,15 @@ export async function listBalancesMatrix(
     const balanceType = resolveBalanceType(options.query);
 
     const report = await book.getBalancesReport(options.query);
-    const builder = report.createDataTable().formatValues(true).formatDates(true).type(balanceType);
+    const builder = report.createDataTable().type(balanceType);
+
+    if (options.format === 'csv') {
+        // CSV: raw values for machine consumption, all metadata
+        builder.properties(true).hiddenProperties(true);
+    } else {
+        // Table/JSON: human-readable formatted values
+        builder.formatValues(true).formatDates(true);
+    }
 
     if (options.expanded) {
         builder.expanded(options.expanded);

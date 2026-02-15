@@ -182,6 +182,13 @@ export function runBkper(
                 });
             }
         );
+
+        // Close stdin immediately so CLI commands that check for piped input
+        // (account create, group create, transaction create) don't hang
+        // waiting for data that will never come.
+        if (child.stdin) {
+            child.stdin.end();
+        }
     });
 }
 
@@ -214,6 +221,51 @@ export async function runBkperJson<T = unknown>(
                 `  stderr: ${result.stderr}`
         );
     }
+}
+
+/**
+ * Run a bkper CLI command with stdin data piped in.
+ *
+ * Spawns `node lib/cli.js` with the given args and pipes stdinData
+ * to the child process's stdin. Returns stdout, stderr, and exit code.
+ */
+export function runBkperWithStdin(
+    args: string[],
+    stdinData: string,
+    envOverrides?: Record<string, string>
+): Promise<CliResult> {
+    const apiUrl = getApiUrl();
+
+    return new Promise((resolve, reject) => {
+        const child = execFile(
+            'node',
+            [CLI_PATH, ...args],
+            {
+                cwd: path.resolve(import.meta.dirname, '../../..'),
+                env: {
+                    ...process.env,
+                    BKPER_API_URL: apiUrl,
+                    ...envOverrides,
+                },
+                timeout: 30000,
+                maxBuffer: 1024 * 1024,
+            },
+            (error, stdout, stderr) => {
+                resolve({
+                    stdout: stdout || '',
+                    stderr: stderr || '',
+                    exitCode:
+                        error?.code != null ? (typeof error.code === 'number' ? error.code : 1) : 0,
+                });
+            }
+        );
+
+        // Write stdin data and close the stream
+        if (child.stdin) {
+            child.stdin.write(stdinData);
+            child.stdin.end();
+        }
+    });
 }
 
 /**
