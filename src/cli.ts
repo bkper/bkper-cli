@@ -11,6 +11,11 @@ import { registerGroupCommands } from './commands/groups/register.js';
 import { registerTransactionCommands } from './commands/transactions/register.js';
 import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
+import { registerUpgradeCommand } from './commands/upgrade.js';
+import { VERSION, autoUpgrade } from './upgrade/index.js';
+
+// Version
+program.version(VERSION, '-v, --version');
 
 // Global output format options
 program.option('--format <format>', 'Output format: table, json, or csv', 'table');
@@ -39,5 +44,13 @@ registerGroupCommands(program);
 registerTransactionCommands(program);
 registerBalanceCommands(program);
 registerCollectionCommands(program);
+
+// Upgrade command
+registerUpgradeCommand(program);
+
+// Trigger silent auto-upgrade in the background (non-blocking, never fails)
+if (!process.env.BKPER_DISABLE_AUTOUPDATE) {
+    autoUpgrade().catch(() => {});
+}
 
 program.parse(process.argv);
