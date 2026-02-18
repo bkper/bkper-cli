@@ -25,6 +25,11 @@ export interface ListTransactionsResult {
 /**
  * Queries transactions from a book using the provided search options.
  *
+ * Fetches the book with accounts pre-loaded in a single API call, so that
+ * account name resolution during table building (getCreditAccountName,
+ * getDebitAccountName) resolves from the in-memory cache instead of making
+ * individual API calls per transaction.
+ *
  * @param bookId - The book ID to query
  * @param options - Query parameters including search string, limit, and cursor
  * @returns The matching transactions with book context and pagination cursor
@@ -34,7 +39,7 @@ export async function listTransactions(
     options: ListTransactionsOptions
 ): Promise<ListTransactionsResult> {
     const bkper = getBkperInstance();
-    const book = await bkper.getBook(bookId);
+    const book = await bkper.getBook(bookId, true);
     const result = await book.listTransactions(options.query, options.limit, options.cursor);
     const items = result.getItems();
     const account = await result.getAccount();

@@ -10,7 +10,7 @@ import type { OutputFormat, ListResult } from '../../render/output.js';
  */
 export async function listAccounts(bookId: string): Promise<Account[]> {
     const bkper = getBkperInstance();
-    const book = await bkper.getBook(bookId);
+    const book = await bkper.getBook(bookId, true, true);
     const accounts = await book.getAccounts();
     return accounts || [];
 }
