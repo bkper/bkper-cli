@@ -1,12 +1,32 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Account, AccountType } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import type { StdinValue } from '../../input/index.js';
 
 const CHUNK_SIZE = 100;
 
 /**
+ * Resolves a StdinValue that may be a string[] or comma-separated string into a string array.
+ */
+function resolveArray(value: StdinValue): string[] {
+    if (Array.isArray(value)) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+    return [];
+}
+
+/**
  * Creates multiple accounts from stdin items using the batch API.
  * Outputs NDJSON (one JSON object per line) as each chunk completes.
+ *
+ * Stdin field names follow the Bkper API format:
+ *   name, type, groups
  *
  * @param bookId - Target book ID
  * @param items - Parsed stdin items (field-value maps)
@@ -14,7 +34,7 @@ const CHUNK_SIZE = 100;
  */
 export async function batchCreateAccounts(
     bookId: string,
-    items: Record<string, string>[],
+    items: Record<string, StdinValue>[],
     propertyOverrides?: string[]
 ): Promise<void> {
     const bkper = getBkperInstance();
@@ -26,17 +46,17 @@ export async function batchCreateAccounts(
 
         for (const item of chunk) {
             const account = new Account(book);
-            if (item.name) account.setName(item.name);
+            if (item.name) account.setName(String(item.name));
             if (item.type) {
-                const accountType = AccountType[item.type as keyof typeof AccountType];
+                const accountType = AccountType[String(item.type) as keyof typeof AccountType];
                 if (accountType !== undefined) account.setType(accountType);
             }
 
             // Set properties from stdin fields (excluding known fields)
-            const knownFields = new Set(['name', 'type', 'description', 'groups']);
+            const knownFields = new Set(['name', 'type', 'groups']);
             for (const [key, value] of Object.entries(item)) {
                 if (!knownFields.has(key) && value !== '') {
-                    account.setProperty(key, value);
+                    account.setProperty(key, String(value));
                 }
             }
 
@@ -53,7 +73,7 @@ export async function batchCreateAccounts(
             }
 
             if (item.groups) {
-                for (const groupName of item.groups.split(',').map((g: string) => g.trim())) {
+                for (const groupName of resolveArray(item.groups)) {
                     const group = await book.getGroup(groupName);
                     if (group) {
                         account.addGroup(group);

@@ -85,7 +85,15 @@ describe('CLI - group batch-create Command', function () {
         expect(group.getProperty('region')).to.equal('EU');
     });
 
-    it('should set hidden status when provided', async function () {
+    it('should set hidden status when provided as boolean', async function () {
+        await batchCreateGroups('book-123', [{ name: 'Internal', hidden: true }]);
+
+        expect(batchCalls).to.have.length(1);
+        const group = batchCalls[0][0];
+        expect(group.isHidden()).to.be.true;
+    });
+
+    it('should set hidden status when provided as string', async function () {
         await batchCreateGroups('book-123', [{ name: 'Internal', hidden: 'true' }]);
 
         expect(batchCalls).to.have.length(1);

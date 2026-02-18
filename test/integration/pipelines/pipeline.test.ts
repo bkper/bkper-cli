@@ -50,7 +50,7 @@ describe('CLI - pipeline (end-to-end)', function () {
 
         // Step 2: Create transactions via stdin (CSV)
         const txCsv = [
-            'date,amount,description,from,to',
+            'date,amount,description,creditAccount,debitAccount',
             '2025-04-01,1000,Monthly sale,Pipeline Revenue,Pipeline Cash',
             '2025-04-02,200,Office supplies,Pipeline Cash,Pipeline Expenses',
             '2025-04-03,500,Consulting fee,Pipeline Revenue,Pipeline Cash',

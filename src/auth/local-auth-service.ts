@@ -65,9 +65,7 @@ export async function login() {
  * Logs out by removing stored OAuth credentials from disk.
  */
 export function logout() {
-    if (fs.existsSync(storedCredentialsPath)) {
-        fs.rmSync(storedCredentialsPath);
-    }
+    clearCredentials();
     console.log('Bkper logged out.');
 }
 
@@ -228,9 +226,20 @@ export async function getOAuthToken(): Promise<string> {
         }
     });
 
-    const token = await localAuth.getAccessToken();
-
-    return token.token || '';
+    try {
+        const token = await localAuth.getAccessToken();
+        return token.token || '';
+    } catch (err) {
+        // If token refresh fails (e.g., credentials from a different OAuth client,
+        // revoked tokens, or expired refresh token), clear stale credentials
+        // and re-authenticate
+        clearCredentials();
+        console.log('Session expired. Re-authenticating...');
+        localAuth = await authenticateLocal();
+        storeCredentials(localAuth.credentials);
+        const token = await localAuth.getAccessToken();
+        return token.token || '';
+    }
 }
 
 function storeCredentials(credentials: Credentials) {
@@ -238,4 +247,15 @@ function storeCredentials(credentials: Credentials) {
     // Ensure config directory exists before writing
     fs.mkdirSync(configDir, { recursive: true });
     fs.writeFileSync(storedCredentialsPath, JSON.stringify(credentials, null, 4), 'utf8');
+}
+
+/**
+ * Clears stored credentials from memory and disk.
+ * Used when credentials become invalid (e.g., revoked, expired, or from a different OAuth client).
+ */
+function clearCredentials() {
+    storedCredentials = undefined!;
+    if (fs.existsSync(storedCredentialsPath)) {
+        fs.rmSync(storedCredentialsPath);
+    }
 }

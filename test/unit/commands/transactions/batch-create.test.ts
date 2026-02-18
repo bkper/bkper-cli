@@ -103,7 +103,7 @@ describe('CLI - transaction batch-create Command', function () {
 
     it('should set credit and debit accounts', async function () {
         await batchCreateTransactions('book-123', [
-            { date: '2024-01-15', amount: '100', from: 'Cash', to: 'Expenses' },
+            { date: '2024-01-15', amount: '100', creditAccount: 'Cash', debitAccount: 'Expenses' },
         ]);
 
         expect(batchCalls).to.have.length(1);

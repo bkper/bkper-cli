@@ -71,15 +71,15 @@ describe('CLI - transaction stdin', function () {
                     date: '2025-03-01',
                     amount: '100',
                     description: 'Stdin JSON tx 1',
-                    from: 'Revenue',
-                    to: 'Cash',
+                    creditAccount: 'Revenue',
+                    debitAccount: 'Cash',
                 },
                 {
                     date: '2025-03-02',
                     amount: '200',
                     description: 'Stdin JSON tx 2',
-                    from: 'Cash',
-                    to: 'Expenses',
+                    creditAccount: 'Cash',
+                    debitAccount: 'Expenses',
                 },
             ]);
 
@@ -104,8 +104,8 @@ describe('CLI - transaction stdin', function () {
                 date: '2025-03-03',
                 amount: '50',
                 description: 'Stdin single JSON tx',
-                from: 'Revenue',
-                to: 'Cash',
+                creditAccount: 'Revenue',
+                debitAccount: 'Cash',
             });
 
             const result = await runBkperWithStdin(
@@ -125,7 +125,7 @@ describe('CLI - transaction stdin', function () {
     describe('CSV stdin', function () {
         it('should create transactions from CSV', async function () {
             const csvInput = [
-                'date,amount,description,from,to',
+                'date,amount,description,creditAccount,debitAccount',
                 '2025-03-10,300,CSV tx 1,Revenue,Cash',
                 '2025-03-11,400,CSV tx 2,Cash,Expenses',
             ].join('\n');
@@ -147,7 +147,7 @@ describe('CLI - transaction stdin', function () {
 
         it('should handle CSV with quoted fields', async function () {
             const csvInput = [
-                'date,amount,description,from,to',
+                'date,amount,description,creditAccount,debitAccount',
                 '2025-03-12,150,"Quoted, description",Revenue,Cash',
             ].join('\n');
 
@@ -172,8 +172,8 @@ describe('CLI - transaction stdin', function () {
                     date: '2025-03-20',
                     amount: '75',
                     description: 'With props',
-                    from: 'Revenue',
-                    to: 'Cash',
+                    creditAccount: 'Revenue',
+                    debitAccount: 'Cash',
                     invoice: 'INV-100',
                 },
             ]);

@@ -489,11 +489,69 @@ cat transactions.csv | bkper transaction create -b abc123
 python export_bank.py | bkper transaction create -b abc123
 ```
 
-**JSON input:** a single object `{}` or an array `[{}, {}]`. Field names map to CLI options (`date`, `amount`, `description`, `from`, `to`, `name`, `type`, etc.). Unknown fields become custom properties.
+Field names follow the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) format. Any unrecognized field is stored as a custom property.
 
-**CSV input:** first row is headers mapping to field names. Unknown columns become custom properties.
+#### Transaction fields
 
-**Batch output:** results are streamed as NDJSON (one JSON object per line), printed as each batch completes.
+| Field           | Type     | Required | Description                             |
+| --------------- | -------- | -------- | --------------------------------------- |
+| `date`          | string   | yes      | ISO date (`YYYY-MM-DD`)                 |
+| `amount`        | string   | yes      | Numeric value                           |
+| `description`   | string   | no       | Transaction description                 |
+| `creditAccount` | string   | no       | Source account (name or ID)             |
+| `debitAccount`  | string   | no       | Destination account (name or ID)        |
+| `urls`          | string[] | no       | Array of URLs                           |
+| `remoteIds`     | string[] | no       | Array of remote IDs (for deduplication) |
+| _anything else_ | string   | no       | Stored as a custom property             |
+
+```bash
+# JSON -- field names match the API, arrays are native JSON arrays
+echo '[{
+  "date": "2025-01-15",
+  "amount": "100.50",
+  "creditAccount": "Bank Account",
+  "debitAccount": "Office Supplies",
+  "description": "Printer paper",
+  "urls": ["https://receipt.example.com/123"],
+  "remoteIds": ["BANK-TXN-456"],
+  "invoice": "INV-001"
+}]' | bkper transaction create -b abc123
+
+# CSV -- use comma-separated values for array fields
+# date,amount,creditAccount,debitAccount,description,urls,remoteIds,invoice
+# 2025-01-15,100.50,Bank Account,Office Supplies,Printer paper,https://receipt.example.com/123,BANK-TXN-456,INV-001
+```
+
+#### Account fields
+
+| Field           | Type     | Required | Description                                  |
+| --------------- | -------- | -------- | -------------------------------------------- |
+| `name`          | string   | yes      | Account name                                 |
+| `type`          | string   | no       | `ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING` |
+| `groups`        | string[] | no       | Array of group names                         |
+| _anything else_ | string   | no       | Stored as a custom property                  |
+
+#### Group fields
+
+| Field           | Type    | Required | Description                 |
+| --------------- | ------- | -------- | --------------------------- |
+| `name`          | string  | yes      | Group name                  |
+| `parent`        | string  | no       | Parent group name or ID     |
+| `hidden`        | boolean | no       | Whether to hide the group   |
+| _anything else_ | string  | no       | Stored as a custom property |
+
+#### JSON vs CSV
+
+**JSON input** preserves native types -- use real arrays (`["a","b"]`) and booleans (`true`). A single object `{}` or an array `[{}, {}]`.
+
+**CSV input** is flat strings -- use comma-separated values within a cell for array fields (e.g., `url1,url2` in a `urls` column). First row is headers.
+
+**Batch output:** results are streamed as NDJSON (one JSON object per line), printed as each batch completes:
+
+```
+{"id":"tx-abc","date":"2025-01-15","amount":"100.50","creditAccount":{...},...}
+{"id":"tx-def","date":"2025-01-16","amount":"200.00","creditAccount":{...},...}
+```
 
 ---
 

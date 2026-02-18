@@ -1,12 +1,32 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import type { StdinValue } from '../../input/index.js';
 
 const CHUNK_SIZE = 100;
 
 /**
+ * Resolves a StdinValue that may be a string[] or comma-separated string into a string array.
+ */
+function resolveArray(value: StdinValue): string[] {
+    if (Array.isArray(value)) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        return value
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+    return [];
+}
+
+/**
  * Creates multiple transactions from stdin items using the batch API.
  * Outputs NDJSON (one JSON object per line) as each chunk completes.
+ *
+ * Stdin field names follow the Bkper API format:
+ *   date, amount, description, creditAccount, debitAccount, urls, remoteIds
  *
  * @param bookId - Target book ID
  * @param items - Parsed stdin items (field-value maps)
@@ -14,7 +34,7 @@ const CHUNK_SIZE = 100;
  */
 export async function batchCreateTransactions(
     bookId: string,
-    items: Record<string, string>[],
+    items: Record<string, StdinValue>[],
     propertyOverrides?: string[]
 ): Promise<void> {
     const bkper = getBkperInstance();
@@ -26,29 +46,28 @@ export async function batchCreateTransactions(
 
         for (const item of chunk) {
             const tx = new Transaction(book);
-            if (item.date) tx.setDate(item.date);
-            if (item.amount) tx.setAmount(item.amount);
-            if (item.description) tx.setDescription(item.description);
+            if (item.date) tx.setDate(String(item.date));
+            if (item.amount) tx.setAmount(String(item.amount));
+            if (item.description) tx.setDescription(String(item.description));
 
-            if (item.from) {
-                const creditAccount = await book.getAccount(item.from);
+            if (item.creditAccount) {
+                const creditAccount = await book.getAccount(String(item.creditAccount));
                 if (creditAccount) tx.setCreditAccount(creditAccount);
             }
-            if (item.to) {
-                const debitAccount = await book.getAccount(item.to);
+            if (item.debitAccount) {
+                const debitAccount = await book.getAccount(String(item.debitAccount));
                 if (debitAccount) tx.setDebitAccount(debitAccount);
             }
 
-            if (item.url) {
-                for (const u of item.url.split(',').map((s: string) => s.trim())) {
-                    if (u) tx.addUrl(u);
+            if (item.urls) {
+                for (const u of resolveArray(item.urls)) {
+                    tx.addUrl(u);
                 }
             }
 
-            if (item.remoteId || item['remote-id'] || item['Remote Id']) {
-                const rid = item.remoteId || item['remote-id'] || item['Remote Id'];
-                for (const r of rid.split(',').map((s: string) => s.trim())) {
-                    if (r) tx.addRemoteId(r);
+            if (item.remoteIds) {
+                for (const r of resolveArray(item.remoteIds)) {
+                    tx.addRemoteId(r);
                 }
             }
 
@@ -57,16 +76,14 @@ export async function batchCreateTransactions(
                 'date',
                 'amount',
                 'description',
-                'from',
-                'to',
-                'url',
-                'remoteId',
-                'remote-id',
-                'Remote Id',
+                'creditAccount',
+                'debitAccount',
+                'urls',
+                'remoteIds',
             ]);
             for (const [key, value] of Object.entries(item)) {
                 if (!knownFields.has(key) && value !== '') {
-                    tx.setProperty(key, value);
+                    tx.setProperty(key, String(value));
                 }
             }
 
