@@ -64,23 +64,6 @@ describe('CLI - group stdin', function () {
         });
     });
 
-    describe('CSV stdin', function () {
-        it('should create groups from CSV', async function () {
-            const csvInput = ['name', 'CSV Group X', 'CSV Group Y'].join('\n');
-
-            const result = await runBkperWithStdin(['group', 'create', '-b', bookId], csvInput);
-
-            expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const grp1 = JSON.parse(lines[0]);
-            const grp2 = JSON.parse(lines[1]);
-            expect(grp1.name).to.equal('CSV Group X');
-            expect(grp2.name).to.equal('CSV Group Y');
-        });
-    });
-
     describe('verification', function () {
         it('should list all created groups', async function () {
             const result = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookId]);
@@ -89,8 +72,6 @@ describe('CLI - group stdin', function () {
             expect(names).to.include('Stdin Group A');
             expect(names).to.include('Stdin Group B');
             expect(names).to.include('Stdin Group C');
-            expect(names).to.include('CSV Group X');
-            expect(names).to.include('CSV Group Y');
         });
     });
 });

@@ -70,8 +70,8 @@ describe('CLI - account batch-create Command', function () {
         expect(batchCalls[1]).to.have.length(50);
     });
 
-    it('should set properties from stdin fields', async function () {
-        await batchCreateAccounts('book-123', [{ name: 'Test', color: 'blue' }]);
+    it('should set properties from stdin payload', async function () {
+        await batchCreateAccounts('book-123', [{ name: 'Test', properties: { color: 'blue' } }]);
 
         expect(batchCalls).to.have.length(1);
         const account = batchCalls[0][0];

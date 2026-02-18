@@ -71,15 +71,15 @@ describe('CLI - transaction stdin', function () {
                     date: '2025-03-01',
                     amount: '100',
                     description: 'Stdin JSON tx 1',
-                    creditAccount: 'Revenue',
-                    debitAccount: 'Cash',
+                    creditAccount: { name: 'Revenue' },
+                    debitAccount: { name: 'Cash' },
                 },
                 {
                     date: '2025-03-02',
                     amount: '200',
                     description: 'Stdin JSON tx 2',
-                    creditAccount: 'Cash',
-                    debitAccount: 'Expenses',
+                    creditAccount: { name: 'Cash' },
+                    debitAccount: { name: 'Expenses' },
                 },
             ]);
 
@@ -104,8 +104,8 @@ describe('CLI - transaction stdin', function () {
                 date: '2025-03-03',
                 amount: '50',
                 description: 'Stdin single JSON tx',
-                creditAccount: 'Revenue',
-                debitAccount: 'Cash',
+                creditAccount: { name: 'Revenue' },
+                debitAccount: { name: 'Cash' },
             });
 
             const result = await runBkperWithStdin(
@@ -122,49 +122,6 @@ describe('CLI - transaction stdin', function () {
         });
     });
 
-    describe('CSV stdin', function () {
-        it('should create transactions from CSV', async function () {
-            const csvInput = [
-                'date,amount,description,creditAccount,debitAccount',
-                '2025-03-10,300,CSV tx 1,Revenue,Cash',
-                '2025-03-11,400,CSV tx 2,Cash,Expenses',
-            ].join('\n');
-
-            const result = await runBkperWithStdin(
-                ['transaction', 'create', '-b', bookId],
-                csvInput
-            );
-
-            expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const tx1 = JSON.parse(lines[0]);
-            const tx2 = JSON.parse(lines[1]);
-            expect(tx1.description).to.equal('CSV tx 1');
-            expect(tx2.description).to.equal('CSV tx 2');
-        });
-
-        it('should handle CSV with quoted fields', async function () {
-            const csvInput = [
-                'date,amount,description,creditAccount,debitAccount',
-                '2025-03-12,150,"Quoted, description",Revenue,Cash',
-            ].join('\n');
-
-            const result = await runBkperWithStdin(
-                ['transaction', 'create', '-b', bookId],
-                csvInput
-            );
-
-            expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(1);
-
-            const tx = JSON.parse(lines[0]);
-            expect(tx.description).to.equal('Quoted, description');
-        });
-    });
-
     describe('stdin with properties', function () {
         it('should create transactions with custom properties from JSON', async function () {
             const jsonInput = JSON.stringify([
@@ -172,9 +129,9 @@ describe('CLI - transaction stdin', function () {
                     date: '2025-03-20',
                     amount: '75',
                     description: 'With props',
-                    creditAccount: 'Revenue',
-                    debitAccount: 'Cash',
-                    invoice: 'INV-100',
+                    creditAccount: { name: 'Revenue' },
+                    debitAccount: { name: 'Cash' },
+                    properties: { invoice: 'INV-100' },
                 },
             ]);
 
@@ -187,7 +144,6 @@ describe('CLI - transaction stdin', function () {
             const lines = result.stdout.trim().split('\n').filter(Boolean);
             const tx = JSON.parse(lines[0]);
             expect(tx.description).to.equal('With props');
-            // The 'invoice' field should be mapped as a custom property
             expect(tx.properties).to.deep.include({ invoice: 'INV-100' });
         });
     });

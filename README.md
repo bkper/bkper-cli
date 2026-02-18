@@ -475,76 +475,39 @@ When using the CLI from an AI agent, LLM, or automated script:
 
 ### Stdin input (batch operations)
 
-Write commands (`account create`, `group create`, `transaction create`) accept data piped via stdin for batch operations. The format is auto-detected (JSON or CSV).
+Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin for batch operations. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
 
 ```bash
-# Create accounts from JSON
+# Create transactions
+echo '[{
+  "date": "2025-01-15",
+  "amount": "100.50",
+  "creditAccount": {"name": "Bank Account"},
+  "debitAccount": {"name": "Office Supplies"},
+  "description": "Printer paper",
+  "properties": {"invoice": "INV-001"}
+}]' | bkper transaction create -b abc123
+
+# Create accounts
 echo '[{"name":"Cash","type":"ASSET"},{"name":"Revenue","type":"INCOMING"}]' | \
   bkper account create -b abc123
 
-# Create transactions from CSV
-cat transactions.csv | bkper transaction create -b abc123
+# Create groups
+echo '[{"name":"Fixed Costs","hidden":true}]' | \
+  bkper group create -b abc123
 
 # Pipe from a script
 python export_bank.py | bkper transaction create -b abc123
 ```
 
-Field names follow the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) format. Any unrecognized field is stored as a custom property.
+The input follows the exact `bkper.Transaction`, `bkper.Account`, or `bkper.Group` type from the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts). Custom properties go inside the `properties` object.
 
-#### Transaction fields
-
-| Field           | Type     | Required | Description                             |
-| --------------- | -------- | -------- | --------------------------------------- |
-| `date`          | string   | yes      | ISO date (`YYYY-MM-DD`)                 |
-| `amount`        | string   | yes      | Numeric value                           |
-| `description`   | string   | no       | Transaction description                 |
-| `creditAccount` | string   | no       | Source account (name or ID)             |
-| `debitAccount`  | string   | no       | Destination account (name or ID)        |
-| `urls`          | string[] | no       | Array of URLs                           |
-| `remoteIds`     | string[] | no       | Array of remote IDs (for deduplication) |
-| _anything else_ | string   | no       | Stored as a custom property             |
+The `--property` CLI flag can override or delete properties from the stdin payload:
 
 ```bash
-# JSON -- field names match the API, arrays are native JSON arrays
-echo '[{
-  "date": "2025-01-15",
-  "amount": "100.50",
-  "creditAccount": "Bank Account",
-  "debitAccount": "Office Supplies",
-  "description": "Printer paper",
-  "urls": ["https://receipt.example.com/123"],
-  "remoteIds": ["BANK-TXN-456"],
-  "invoice": "INV-001"
-}]' | bkper transaction create -b abc123
-
-# CSV -- use comma-separated values for array fields
-# date,amount,creditAccount,debitAccount,description,urls,remoteIds,invoice
-# 2025-01-15,100.50,Bank Account,Office Supplies,Printer paper,https://receipt.example.com/123,BANK-TXN-456,INV-001
+echo '[{"name":"Cash","type":"ASSET"}]' | \
+  bkper account create -b abc123 -p "region=LATAM"
 ```
-
-#### Account fields
-
-| Field           | Type     | Required | Description                                  |
-| --------------- | -------- | -------- | -------------------------------------------- |
-| `name`          | string   | yes      | Account name                                 |
-| `type`          | string   | no       | `ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING` |
-| `groups`        | string[] | no       | Array of group names                         |
-| _anything else_ | string   | no       | Stored as a custom property                  |
-
-#### Group fields
-
-| Field           | Type    | Required | Description                 |
-| --------------- | ------- | -------- | --------------------------- |
-| `name`          | string  | yes      | Group name                  |
-| `parent`        | string  | no       | Parent group name or ID     |
-| `hidden`        | boolean | no       | Whether to hide the group   |
-| _anything else_ | string  | no       | Stored as a custom property |
-
-#### JSON vs CSV
-
-**JSON input** preserves native types -- use real arrays (`["a","b"]`) and booleans (`true`). A single object `{}` or an array `[{}, {}]`.
-
-**CSV input** is flat strings -- use comma-separated values within a cell for array fields (e.g., `url1,url2` in a `urls` column). First row is headers.
 
 **Batch output:** results are streamed as NDJSON (one JSON object per line), printed as each batch completes:
 
@@ -552,6 +515,44 @@ echo '[{
 {"id":"tx-abc","date":"2025-01-15","amount":"100.50","creditAccount":{...},...}
 {"id":"tx-def","date":"2025-01-16","amount":"200.00","creditAccount":{...},...}
 ```
+
+#### Writable fields reference
+
+Only the fields below are meaningful when creating resources via stdin. Read-only fields (`id`, `createdAt`, `updatedAt`, etc.) are ignored.
+
+**Transaction** (`bkper.Transaction`)
+
+| Field           | Type                               | Notes                                         |
+| --------------- | ---------------------------------- | --------------------------------------------- |
+| `date`          | `string`                           | ISO format `yyyy-MM-dd`                       |
+| `amount`        | `string`                           | Decimal format `####.##` (string, not number) |
+| `creditAccount` | `{"name":"..."}` or `{"id":"..."}` | Reference to an existing account              |
+| `debitAccount`  | `{"name":"..."}` or `{"id":"..."}` | Reference to an existing account              |
+| `description`   | `string`                           | Free-text description                         |
+| `urls`          | `string[]`                         | Attached URLs (e.g. receipts)                 |
+| `remoteIds`     | `string[]`                         | External IDs to prevent duplicates            |
+| `properties`    | `{"key": "value", ...}`            | Custom key/value properties                   |
+
+**Account** (`bkper.Account`)
+
+| Field        | Type                    | Notes                                              |
+| ------------ | ----------------------- | -------------------------------------------------- |
+| `name`       | `string`                | Account name (required)                            |
+| `type`       | `string`                | `ASSET`, `LIABILITY`, `INCOMING`, or `OUTGOING`    |
+| `credit`     | `boolean`               | Credit nature (`true`) or debit (`false`)          |
+| `archived`   | `boolean`               | Archive the account on creation                    |
+| `permanent`  | `boolean`               | Permanent accounts (e.g. bank accounts, customers) |
+| `groups`     | `[{"name":"..."}, ...]` | Groups to assign by name or id                     |
+| `properties` | `{"key": "value", ...}` | Custom key/value properties                        |
+
+**Group** (`bkper.Group`)
+
+| Field        | Type                               | Notes                            |
+| ------------ | ---------------------------------- | -------------------------------- |
+| `name`       | `string`                           | Group name (required)            |
+| `hidden`     | `boolean`                          | Hide from transactions main menu |
+| `parent`     | `{"name":"..."}` or `{"id":"..."}` | Parent group for nesting         |
+| `properties` | `{"key": "value", ...}`            | Custom key/value properties      |
 
 ---
 

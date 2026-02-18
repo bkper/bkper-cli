@@ -48,15 +48,32 @@ describe('CLI - pipeline (end-to-end)', function () {
         const acctLines = acctResult.stdout.trim().split('\n').filter(Boolean);
         expect(acctLines.length).to.equal(3);
 
-        // Step 2: Create transactions via stdin (CSV)
-        const txCsv = [
-            'date,amount,description,creditAccount,debitAccount',
-            '2025-04-01,1000,Monthly sale,Pipeline Revenue,Pipeline Cash',
-            '2025-04-02,200,Office supplies,Pipeline Cash,Pipeline Expenses',
-            '2025-04-03,500,Consulting fee,Pipeline Revenue,Pipeline Cash',
-        ].join('\n');
+        // Step 2: Create transactions via stdin (JSON)
+        const txJson = JSON.stringify([
+            {
+                date: '2025-04-01',
+                amount: '1000',
+                description: 'Monthly sale',
+                creditAccount: { name: 'Pipeline Revenue' },
+                debitAccount: { name: 'Pipeline Cash' },
+            },
+            {
+                date: '2025-04-02',
+                amount: '200',
+                description: 'Office supplies',
+                creditAccount: { name: 'Pipeline Cash' },
+                debitAccount: { name: 'Pipeline Expenses' },
+            },
+            {
+                date: '2025-04-03',
+                amount: '500',
+                description: 'Consulting fee',
+                creditAccount: { name: 'Pipeline Revenue' },
+                debitAccount: { name: 'Pipeline Cash' },
+            },
+        ]);
 
-        const txResult = await runBkperWithStdin(['transaction', 'create', '-b', bookId], txCsv);
+        const txResult = await runBkperWithStdin(['transaction', 'create', '-b', bookId], txJson);
         expect(txResult.exitCode).to.equal(0);
 
         const txLines = txResult.stdout.trim().split('\n').filter(Boolean);
@@ -92,7 +109,7 @@ describe('CLI - pipeline (end-to-end)', function () {
         expect(amounts).to.include('500');
     });
 
-    it('should handle mixed format workflow: create via JSON, list as CSV', async function () {
+    it('should handle JSON stdin creation and CSV output listing', async function () {
         // Create a group via JSON stdin
         const groupResult = await runBkperWithStdin(
             ['group', 'create', '-b', bookId],

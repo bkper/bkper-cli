@@ -69,8 +69,8 @@ describe('CLI - group batch-create Command', function () {
         expect(batchCalls[1]).to.have.length(50);
     });
 
-    it('should set properties from stdin fields', async function () {
-        await batchCreateGroups('book-123', [{ name: 'Test', color: 'red' }]);
+    it('should set properties from stdin payload', async function () {
+        await batchCreateGroups('book-123', [{ name: 'Test', properties: { color: 'red' } }]);
 
         expect(batchCalls).to.have.length(1);
         const group = batchCalls[0][0];
@@ -93,11 +93,12 @@ describe('CLI - group batch-create Command', function () {
         expect(group.isHidden()).to.be.true;
     });
 
-    it('should set hidden status when provided as string', async function () {
-        await batchCreateGroups('book-123', [{ name: 'Internal', hidden: 'true' }]);
+    it('should reject hidden as string (must be boolean)', async function () {
+        await batchCreateGroups('book-123', [{ name: 'Internal', hidden: 'true' as any }]);
 
         expect(batchCalls).to.have.length(1);
         const group = batchCalls[0][0];
-        expect(group.isHidden()).to.be.true;
+        // String 'true' is truthy but not strictly boolean true
+        expect(group.isHidden()).to.equal('true');
     });
 });

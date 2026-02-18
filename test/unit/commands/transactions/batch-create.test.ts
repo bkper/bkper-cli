@@ -79,9 +79,9 @@ describe('CLI - transaction batch-create Command', function () {
         expect(batchCalls[1]).to.have.length(50);
     });
 
-    it('should set properties from stdin fields', async function () {
+    it('should set properties from stdin payload', async function () {
         await batchCreateTransactions('book-123', [
-            { date: '2024-01-15', amount: '100', category: 'travel' },
+            { date: '2024-01-15', amount: '100', properties: { category: 'travel' } },
         ]);
 
         expect(batchCalls).to.have.length(1);
@@ -103,11 +103,15 @@ describe('CLI - transaction batch-create Command', function () {
 
     it('should set credit and debit accounts', async function () {
         await batchCreateTransactions('book-123', [
-            { date: '2024-01-15', amount: '100', creditAccount: 'Cash', debitAccount: 'Expenses' },
+            {
+                date: '2024-01-15',
+                amount: '100',
+                creditAccount: { name: 'Cash' },
+                debitAccount: { name: 'Expenses' },
+            },
         ]);
 
         expect(batchCalls).to.have.length(1);
-        // The transaction was created and accounts were looked up
         expect(batchCalls[0]).to.have.length(1);
     });
 

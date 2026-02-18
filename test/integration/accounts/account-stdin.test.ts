@@ -68,23 +68,6 @@ describe('CLI - account stdin', function () {
         });
     });
 
-    describe('CSV stdin', function () {
-        it('should create accounts from CSV', async function () {
-            const csvInput = ['name,type', 'CSV Bank,ASSET', 'CSV Sales,INCOMING'].join('\n');
-
-            const result = await runBkperWithStdin(['account', 'create', '-b', bookId], csvInput);
-
-            expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const acct1 = JSON.parse(lines[0]);
-            const acct2 = JSON.parse(lines[1]);
-            expect(acct1.name).to.equal('CSV Bank');
-            expect(acct2.name).to.equal('CSV Sales');
-        });
-    });
-
     describe('verification', function () {
         it('should list all created accounts', async function () {
             const result = await runBkperJson<bkper.Account[]>(['account', 'list', '-b', bookId]);
@@ -93,8 +76,6 @@ describe('CLI - account stdin', function () {
             expect(names).to.include('Stdin Cash');
             expect(names).to.include('Stdin Revenue');
             expect(names).to.include('Stdin Expenses');
-            expect(names).to.include('CSV Bank');
-            expect(names).to.include('CSV Sales');
         });
     });
 });
