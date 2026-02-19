@@ -7,29 +7,18 @@ A **command-line interface** for [Bkper](https://bkper.com), a financial account
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
-## Table of Contents
-
--   [Quick Start](#quick-start)
--   [App Management](#app-management)
--   [Data Management](#data-management)
--   [Output Format](#output-format)
--   [Library](#library)
--   [Documentation](#documentation)
-
----
-
 ## Quick Start
+
+### Prerequisites
+
+-   [Node.js](https://nodejs.org/) >= 18
 
 ### Install
 
 ```bash
+# bun
 bun add -g bkper
-```
 
-<details>
-<summary>Other package managers</summary>
-
-```bash
 # npm
 npm i -g bkper
 
@@ -37,140 +26,27 @@ npm i -g bkper
 yarn global add bkper
 ```
 
-</details>
-
 ### Authenticate
 
 ```bash
 bkper login
 ```
 
-### Create Your First App
+### Try It
 
 ```bash
-bkper app init my-app
-cd my-app
-bkper app dev
+bkper book list
 ```
 
-When ready, deploy to production:
+Pick a book and create your first transaction:
 
 ```bash
-bkper app sync && bkper app deploy
+bkper transaction create -b <bookId> --description "Office supplies"
 ```
 
 > Run `bkper --help` or `bkper <command> --help` for built-in documentation on any command.
-
----
-
-## App Management
-
-**Build, deploy, and manage Bkper apps.**
-
-### Development Workflow
-
-```bash
-# Scaffold a new app from the template
-bkper app init my-app
-
-# Start local development servers
-bkper app dev
-
-# Build artifacts
-bkper app build
-
-# Sync configuration and deploy to production
-bkper app sync && bkper app deploy
-
-# Deploy to development environment
-bkper app deploy --preview
-
-# Deploy only the events handler
-bkper app deploy --events
-
-# Check deployment status
-bkper app status
-```
-
-### Install Apps on Books
-
-```bash
-# Install an app on a book
-bkper app install my-app -b abc123
-
-# Uninstall an app from a book
-bkper app uninstall my-app -b abc123
-```
-
-### Secrets
-
-```bash
-# Store a secret (prompts for value)
-bkper app secrets put API_KEY
-
-# List all secrets
-bkper app secrets list
-
-# Delete a secret
-bkper app secrets delete API_KEY
-```
-
-### Configuration
-
-Apps are configured via a `bkper.yaml` file in the project root. See the complete reference with all available fields: **[bkper.yaml reference]**.
-
-**Environment variables:**
-
--   `BKPER_API_KEY` -- Optional. If not set, uses the Bkper API proxy with a managed API key. Set it for direct API access with your own quotas. Follow [these steps](https://bkper.com/docs/#rest-api-enabling) to enable.
-
-<details>
-<summary>Command reference</summary>
-
-#### Authentication
-
--   `login` - Authenticate with Bkper, storing credentials locally
--   `logout` - Remove stored credentials
-
-#### App Lifecycle
-
--   `app init <name>` - Scaffold a new app from the template
--   `app list` - List all apps you have access to
--   `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
--   `app build` - Build app artifacts
--   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
-    -   `-p, --preview` - Deploy to preview environment
-    -   `--events` - Deploy events handler instead of web handler
--   `app status` - Show deployment status
--   `app undeploy` - Remove app from platform
-    -   `-p, --preview` - Remove from preview environment
-    -   `--events` - Remove events handler instead of web handler
-    -   `--delete-data` - Permanently delete all associated data (requires confirmation)
-    -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
--   `app dev` - Run local development servers
-    -   `--cp, --client-port <port>` - Client dev server port (default: `5173`)
-    -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
-    -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
-    -   `-w, --web` - Run only the web handler
-    -   `-e, --events` - Run only the events handler
-    -   `--no-open` - Do not open browser on startup
-
-> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
-
-#### App Installation
-
--   `app install <appId> -b <bookId>` - Install an app on a book
--   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
-
-#### Secrets Management
-
--   `app secrets put <name>` - Store a secret
-    -   `-p, --preview` - Set in preview environment
--   `app secrets list` - List all secrets
-    -   `-p, --preview` - List from preview environment
--   `app secrets delete <name>` - Delete a secret
-    -   `-p, --preview` - Delete from preview environment
-
-</details>
+>
+> To build and deploy Bkper Apps, see [App Management](#app-management).
 
 ---
 
@@ -178,7 +54,7 @@ Apps are configured via a `bkper.yaml` file in the project root. See the complet
 
 **Interact with books, accounts, transactions, and balances.**
 
-All data commands that operate within a book use `-b, --book <bookId>` to specify the book context. Use `--format` to control output (see [Output Format](#output-format)).
+All data commands that operate within a book use `-b, --book <bookId>` to specify the book context.
 
 ### Books
 
@@ -318,7 +194,10 @@ bkper group delete "Cash" -b abc123
 Record, query, and manage financial transactions.
 
 ```bash
-# Create a transaction
+# Create a draft transaction
+bkper transaction create -b abc123 --description "Office supplies"
+
+# Create a complete transaction
 bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
 
@@ -350,8 +229,8 @@ bkper transaction merge tx_123 tx_456 -b abc123
 -   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results)
     -   `-p, --properties` - Include custom properties in the output
 -   `transaction create -b <bookId>` - Create a transaction
-    -   `--date <date>` - Transaction date (required)
-    -   `--amount <amount>` - Transaction amount (required)
+    -   `--date <date>` - Transaction date
+    -   `--amount <amount>` - Transaction amount
     -   `--description <description>` - Transaction description
     -   `--from <from>` - Credit account (source)
     -   `--to <to>` - Debit account (destination)
@@ -432,17 +311,15 @@ bkper collection delete col_789
 
 </details>
 
----
+### Output Format
 
-## Output Format
+All commands support three output formats via the `--format` global flag (`--json` is a shorthand for `--format json`):
 
-All commands support three output formats via the `--format` global flag:
-
-| Format | Flag                       | Best for                                |
-| ------ | -------------------------- | --------------------------------------- |
-| Table  | `--format table` (default) | Human reading in the terminal           |
-| JSON   | `--format json`            | Programmatic access, single-item detail |
-| CSV    | `--format csv`             | Spreadsheets, AI agents, data pipelines |
+| Format | Flag                        | Best for                                |
+| ------ | --------------------------- | --------------------------------------- |
+| Table  | `--format table` (default)  | Human reading in the terminal           |
+| JSON   | `--format json` or `--json` | Programmatic access, single-item detail |
+| CSV    | `--format csv`              | Spreadsheets, AI agents, data pipelines |
 
 ```bash
 # Table output (default)
@@ -455,16 +332,14 @@ bkper account list -b abc123 --format json
 bkper account list -b abc123 --format csv
 ```
 
-### CSV output details
-
-CSV output is designed for machine consumption:
+**CSV output details:**
 
 -   **RFC 4180 compliant** -- proper quoting, CRLF line endings, no truncation
 -   **All metadata included** -- IDs, properties, hidden properties, URLs, and timestamps are enabled
 -   **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
 -   **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
 
-### AI agent guidance
+**AI agent guidance:**
 
 When using the CLI from an AI agent, LLM, or automated script:
 
@@ -472,7 +347,7 @@ When using the CLI from an AI agent, LLM, or automated script:
 -   **Use `--format json` for single-item commands** (`get`, `create`, `update`) where you need structured field access.
 -   **Pipe data in via stdin** for batch operations (see below).
 
-### Stdin input (batch operations)
+### Batch Operations & Piping
 
 Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin for batch operations. The `transaction update` command also accepts stdin for batch updates. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
 
@@ -515,7 +390,7 @@ bkper account create -b abc123 < accounts.json
 # Output: [{"id":"acc-abc","name":"Cash",...}, {"id":"acc-def","name":"Revenue",...}]
 ```
 
-### Piping between commands
+**Piping between commands:**
 
 All JSON output is designed to be piped directly as stdin to other commands. The output of any list or batch create command can feed directly into a create or update command:
 
@@ -550,7 +425,8 @@ bkper transaction list -b $BOOK -q "is:checked after:2025-01-01" --format json |
   bkper transaction update -b $BOOK --update-checked -p "migrated=true"
 ```
 
-#### Writable fields reference
+<details>
+<summary>Writable fields reference</summary>
 
 Only the fields below are meaningful when creating or updating resources via stdin. For batch updates, items must include an `id` field. Other read-only fields (`createdAt`, `updatedAt`, etc.) are ignored.
 
@@ -588,6 +464,119 @@ Only the fields below are meaningful when creating or updating resources via std
 | `hidden`     | `boolean`                          | Hide from transactions main menu |
 | `parent`     | `{"name":"..."}` or `{"id":"..."}` | Parent group for nesting         |
 | `properties` | `{"key": "value", ...}`            | Custom key/value properties      |
+
+</details>
+
+---
+
+## App Management
+
+**Build, deploy, and manage Bkper apps.**
+
+### Development Workflow
+
+```bash
+# Scaffold a new app from the template
+bkper app init my-app
+
+# Start local development servers
+bkper app dev
+
+# Build artifacts
+bkper app build
+
+# Sync configuration and deploy to production
+bkper app sync && bkper app deploy
+
+# Deploy to development environment
+bkper app deploy --preview
+
+# Deploy only the events handler
+bkper app deploy --events
+
+# Check deployment status
+bkper app status
+```
+
+### Install Apps on Books
+
+```bash
+# Install an app on a book
+bkper app install my-app -b abc123
+
+# Uninstall an app from a book
+bkper app uninstall my-app -b abc123
+```
+
+### Secrets
+
+```bash
+# Store a secret (prompts for value)
+bkper app secrets put API_KEY
+
+# List all secrets
+bkper app secrets list
+
+# Delete a secret
+bkper app secrets delete API_KEY
+```
+
+### Configuration
+
+Apps are configured via a `bkper.yaml` file in the project root. See the complete reference with all available fields: **[bkper.yaml reference]**.
+
+**Environment variables:**
+
+-   `BKPER_API_KEY` -- Optional. If not set, uses the Bkper API proxy with a managed API key. Set it for direct API access with your own quotas. Follow [these steps](https://bkper.com/docs/#rest-api-enabling) to enable.
+
+<details>
+<summary>Command reference</summary>
+
+#### Authentication
+
+-   `login` - Authenticate with Bkper, storing credentials locally
+-   `logout` - Remove stored credentials
+
+#### App Lifecycle
+
+-   `app init <name>` - Scaffold a new app from the template
+-   `app list` - List all apps you have access to
+-   `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
+-   `app build` - Build app artifacts
+-   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
+    -   `-p, --preview` - Deploy to preview environment
+    -   `--events` - Deploy events handler instead of web handler
+-   `app status` - Show deployment status
+-   `app undeploy` - Remove app from platform
+    -   `-p, --preview` - Remove from preview environment
+    -   `--events` - Remove events handler instead of web handler
+    -   `--delete-data` - Permanently delete all associated data (requires confirmation)
+    -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
+-   `app dev` - Run local development servers
+    -   `--cp, --client-port <port>` - Client dev server port (default: `5173`)
+    -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
+    -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
+    -   `-w, --web` - Run only the web handler
+    -   `-e, --events` - Run only the events handler
+    -   `--no-open` - Do not open browser on startup
+
+> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
+
+#### App Installation
+
+-   `app install <appId> -b <bookId>` - Install an app on a book
+-   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
+
+#### Secrets Management
+
+-   `app secrets put <name>` - Store a secret
+    -   `-p, --preview` - Set in preview environment
+-   `app secrets list` - List all secrets
+    -   `-p, --preview` - List from preview environment
+-   `app secrets delete <name>` - Delete a secret
+    -   `-p, --preview` - Delete from preview environment
+
+</details>
 
 ---
 
