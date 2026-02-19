@@ -60,13 +60,12 @@ describe('CLI - group batch-create Command', function () {
         expect(parsed[1]).to.have.property('name');
     });
 
-    it('should chunk items at 100', async function () {
+    it('should send all items in a single batch call', async function () {
         const items = Array.from({ length: 150 }, (_, i) => ({ name: `Group-${i}` }));
         await batchCreateGroups('book-123', items);
 
-        expect(batchCalls).to.have.length(2);
-        expect(batchCalls[0]).to.have.length(100);
-        expect(batchCalls[1]).to.have.length(50);
+        expect(batchCalls).to.have.length(1);
+        expect(batchCalls[0]).to.have.length(150);
     });
 
     it('should set properties from stdin payload', async function () {

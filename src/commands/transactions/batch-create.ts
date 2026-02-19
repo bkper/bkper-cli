@@ -2,8 +2,6 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 
-const CHUNK_SIZE = 100;
-
 /**
  * Creates multiple transactions from stdin items using the batch API.
  * Outputs a flat JSON array of all created transactions.
@@ -22,35 +20,28 @@ export async function batchCreateTransactions(
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
-    const allResults: bkper.Transaction[] = [];
+    const transactions: Transaction[] = [];
 
-    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-        const chunk = items.slice(i, i + CHUNK_SIZE);
-        const transactions: Transaction[] = [];
+    for (const item of items) {
+        const tx = new Transaction(book, item as bkper.Transaction);
 
-        for (const item of chunk) {
-            const tx = new Transaction(book, item as bkper.Transaction);
-
-            // CLI --property flags override stdin properties
-            if (propertyOverrides) {
-                for (const raw of propertyOverrides) {
-                    const [key, value] = parsePropertyFlag(raw);
-                    if (value === '') {
-                        tx.deleteProperty(key);
-                    } else {
-                        tx.setProperty(key, value);
-                    }
+        // CLI --property flags override stdin properties
+        if (propertyOverrides) {
+            for (const raw of propertyOverrides) {
+                const [key, value] = parsePropertyFlag(raw);
+                if (value === '') {
+                    tx.deleteProperty(key);
+                } else {
+                    tx.setProperty(key, value);
                 }
             }
-
-            transactions.push(tx);
         }
 
-        const results = await book.batchCreateTransactions(transactions);
-        for (const result of results) {
-            allResults.push(result.json());
-        }
+        transactions.push(tx);
     }
+
+    const results = await book.batchCreateTransactions(transactions);
+    const allResults = results.map(result => result.json());
 
     console.log(JSON.stringify(allResults, null, 2));
 }

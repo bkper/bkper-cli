@@ -2,8 +2,6 @@ import { getBkperInstance } from '../../bkper-factory.js';
 import { Account } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 
-const CHUNK_SIZE = 100;
-
 /**
  * Creates multiple accounts from stdin items using the batch API.
  * Outputs a flat JSON array of all created accounts.
@@ -22,35 +20,28 @@ export async function batchCreateAccounts(
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
-    const allResults: bkper.Account[] = [];
+    const accounts: Account[] = [];
 
-    for (let i = 0; i < items.length; i += CHUNK_SIZE) {
-        const chunk = items.slice(i, i + CHUNK_SIZE);
-        const accounts: Account[] = [];
+    for (const item of items) {
+        const account = new Account(book, item as bkper.Account);
 
-        for (const item of chunk) {
-            const account = new Account(book, item as bkper.Account);
-
-            // CLI --property flags override stdin properties
-            if (propertyOverrides) {
-                for (const raw of propertyOverrides) {
-                    const [key, value] = parsePropertyFlag(raw);
-                    if (value === '') {
-                        account.deleteProperty(key);
-                    } else {
-                        account.setProperty(key, value);
-                    }
+        // CLI --property flags override stdin properties
+        if (propertyOverrides) {
+            for (const raw of propertyOverrides) {
+                const [key, value] = parsePropertyFlag(raw);
+                if (value === '') {
+                    account.deleteProperty(key);
+                } else {
+                    account.setProperty(key, value);
                 }
             }
-
-            accounts.push(account);
         }
 
-        const results = await book.batchCreateAccounts(accounts);
-        for (const result of results) {
-            allResults.push(result.json());
-        }
+        accounts.push(account);
     }
+
+    const results = await book.batchCreateAccounts(accounts);
+    const allResults = results.map(result => result.json());
 
     console.log(JSON.stringify(allResults, null, 2));
 }
