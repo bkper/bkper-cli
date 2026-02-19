@@ -142,4 +142,90 @@ describe('CLI - transaction stdin', function () {
             expect(parsed[0].properties).to.deep.include({ invoice: 'INV-100' });
         });
     });
+
+    describe('batch update via stdin', function () {
+        it('should update transactions from JSON array', async function () {
+            // Create transactions first
+            const createResult = await runBkperWithStdin(
+                ['transaction', 'create', '-b', bookId],
+                JSON.stringify([
+                    {
+                        date: '2025-04-01',
+                        amount: '300',
+                        description: 'To be updated 1',
+                        creditAccount: { name: 'Revenue' },
+                        debitAccount: { name: 'Cash' },
+                    },
+                    {
+                        date: '2025-04-02',
+                        amount: '400',
+                        description: 'To be updated 2',
+                        creditAccount: { name: 'Cash' },
+                        debitAccount: { name: 'Expenses' },
+                    },
+                ])
+            );
+            expect(createResult.exitCode).to.equal(0);
+            const created = JSON.parse(createResult.stdout);
+            expect(created).to.be.an('array').with.length(2);
+
+            // Modify descriptions and pipe to update
+            const updatedInput = created.map((tx: bkper.Transaction) => ({
+                ...tx,
+                description: tx.description + ' UPDATED',
+            }));
+
+            const updateResult = await runBkperWithStdin(
+                ['transaction', 'update', '-b', bookId],
+                JSON.stringify(updatedInput)
+            );
+            expect(updateResult.exitCode).to.equal(0);
+            const updated = JSON.parse(updateResult.stdout);
+            expect(updated).to.be.an('array');
+            expect(updated.length).to.be.greaterThanOrEqual(2);
+            const descriptions = updated.map((t: bkper.Transaction) => t.description);
+            expect(descriptions).to.include('To be updated 1 UPDATED');
+            expect(descriptions).to.include('To be updated 2 UPDATED');
+        });
+
+        it('should handle empty array stdin gracefully for update', async function () {
+            const result = await runBkperWithStdin(['transaction', 'update', '-b', bookId], '[]');
+            expect(result.exitCode).to.equal(0);
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(0);
+        });
+
+        it('should update transactions with property overrides', async function () {
+            // Create a transaction
+            const createResult = await runBkperWithStdin(
+                ['transaction', 'create', '-b', bookId],
+                JSON.stringify([
+                    {
+                        date: '2025-04-10',
+                        amount: '150',
+                        description: 'Props override test',
+                        creditAccount: { name: 'Revenue' },
+                        debitAccount: { name: 'Cash' },
+                    },
+                ])
+            );
+            expect(createResult.exitCode).to.equal(0);
+            const created = JSON.parse(createResult.stdout);
+
+            // Update with property override
+            const updateResult = await runBkperWithStdin(
+                ['transaction', 'update', '-b', bookId, '-p', 'status=reviewed'],
+                JSON.stringify(created)
+            );
+            expect(updateResult.exitCode).to.equal(0);
+            const updated = JSON.parse(updateResult.stdout);
+            expect(updated).to.be.an('array');
+            expect(updated.length).to.be.greaterThanOrEqual(1);
+            const propsTarget = updated.find(
+                (t: bkper.Transaction) => t.description === 'Props override test'
+            );
+            expect(propsTarget).to.exist;
+            expect(propsTarget.properties).to.deep.include({ status: 'reviewed' });
+        });
+    });
 });

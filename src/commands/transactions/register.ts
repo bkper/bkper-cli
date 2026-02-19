@@ -13,6 +13,7 @@ import {
     trashTransaction,
     mergeTransactions,
     batchCreateTransactions,
+    batchUpdateTransactions,
 } from './index.js';
 
 export function registerTransactionCommands(program: Command): void {
@@ -107,8 +108,8 @@ export function registerTransactionCommands(program: Command): void {
         );
 
     transactionCommand
-        .command('update <transactionId>')
-        .description('Update a transaction')
+        .command('update [transactionId]')
+        .description('Update a transaction (or batch update via stdin)')
         .option('-b, --book <bookId>', 'Book ID')
         .option('--date <date>', 'Transaction date')
         .option('--amount <amount>', 'Transaction amount')
@@ -116,24 +117,46 @@ export function registerTransactionCommands(program: Command): void {
         .option('--from <from>', 'Credit account (source)')
         .option('--to <to>', 'Debit account (destination)')
         .option('--url <url>', 'URL (repeatable, replaces all)', collectProperty)
+        .option('--update-checked', 'Also update checked transactions')
         .option(
             '-p, --property <key=value>',
             'Set a property (repeatable, empty value deletes)',
             collectProperty
         )
-        .action((transactionId: string, options) =>
+        .action((transactionId: string | undefined, options) =>
             withAction('updating transaction', async format => {
-                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const transaction = await updateTransaction(options.book, transactionId, {
-                    date: options.date,
-                    amount: options.amount,
-                    description: options.description,
-                    from: options.from,
-                    to: options.to,
-                    url: options.url,
-                    property: options.property,
-                });
-                renderItem(transaction.json(), format);
+                const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
+
+                if (stdinData && stdinData.items.length > 0) {
+                    throwIfErrors(
+                        validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
+                    );
+                    await batchUpdateTransactions(
+                        options.book,
+                        stdinData.items,
+                        options.property,
+                        options.updateChecked
+                    );
+                } else if (stdinData && stdinData.items.length === 0) {
+                    console.log(JSON.stringify([], null, 2));
+                } else {
+                    if (!transactionId) {
+                        throw new Error('Transaction ID is required when not using stdin');
+                    }
+                    throwIfErrors(
+                        validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
+                    );
+                    const transaction = await updateTransaction(options.book, transactionId, {
+                        date: options.date,
+                        amount: options.amount,
+                        description: options.description,
+                        from: options.from,
+                        to: options.to,
+                        url: options.url,
+                        property: options.property,
+                    });
+                    renderItem(transaction.json(), format);
+                }
             })()
         );
 

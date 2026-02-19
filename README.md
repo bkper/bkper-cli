@@ -358,13 +358,14 @@ bkper transaction merge tx_123 tx_456 -b abc123
     -   `--url <url>` - URL (repeatable)
     -   `--remote-id <remoteId>` - Remote ID (repeatable)
     -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
--   `transaction update <transactionId> -b <bookId>` - Update a transaction
+-   `transaction update [transactionId] -b <bookId>` - Update a transaction (or batch update via stdin)
     -   `--date <date>` - Transaction date
     -   `--amount <amount>` - Transaction amount
     -   `--description <description>` - Transaction description
     -   `--from <from>` - Credit account (source)
     -   `--to <to>` - Debit account (destination)
     -   `--url <url>` - URL (repeatable, replaces all)
+    -   `--update-checked` - Also update checked transactions
     -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
 -   `transaction post <id> -b <bookId>` - Post a draft transaction
 -   `transaction check <id> -b <bookId>` - Check a transaction
@@ -473,7 +474,7 @@ When using the CLI from an AI agent, LLM, or automated script:
 
 ### Stdin input (batch operations)
 
-Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin for batch operations. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
+Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin for batch operations. The `transaction update` command also accepts stdin for batch updates. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
 
 ```bash
 # Create transactions
@@ -516,7 +517,7 @@ bkper account create -b abc123 < accounts.json
 
 ### Piping between commands
 
-All JSON output is designed to be piped directly as stdin to other commands. The output of any list or batch create command can feed directly into a create command:
+All JSON output is designed to be piped directly as stdin to other commands. The output of any list or batch create command can feed directly into a create or update command:
 
 ```bash
 # Copy all accounts from one book to another
@@ -534,16 +535,30 @@ bkper group list -b $SOURCE --format json | bkper group create -b $DEST
 bkper account list -b $SOURCE --format json | bkper account create -b $DEST
 bkper transaction list -b $SOURCE -q "after:2025-01-01" --format json | \
   bkper transaction create -b $DEST
+
+# Batch update: list transactions, modify, and pipe back to update
+bkper transaction list -b $BOOK -q "after:2025-01-01" --format json | \
+  jq '[.[] | .description = "Updated: " + .description]' | \
+  bkper transaction update -b $BOOK
+
+# Batch update: add a property to all matching transactions
+bkper transaction list -b $BOOK -q "account:Expenses" --format json | \
+  bkper transaction update -b $BOOK -p "reviewed=true"
+
+# Batch update checked transactions
+bkper transaction list -b $BOOK -q "is:checked after:2025-01-01" --format json | \
+  bkper transaction update -b $BOOK --update-checked -p "migrated=true"
 ```
 
 #### Writable fields reference
 
-Only the fields below are meaningful when creating resources via stdin. Read-only fields (`id`, `createdAt`, `updatedAt`, etc.) are ignored.
+Only the fields below are meaningful when creating or updating resources via stdin. For batch updates, items must include an `id` field. Other read-only fields (`createdAt`, `updatedAt`, etc.) are ignored.
 
 **Transaction** (`bkper.Transaction`)
 
 | Field           | Type                               | Notes                                         |
 | --------------- | ---------------------------------- | --------------------------------------------- |
+| `id`            | `string`                           | Required for batch updates, ignored on create |
 | `date`          | `string`                           | ISO format `yyyy-MM-dd`                       |
 | `amount`        | `string`                           | Decimal format `####.##` (string, not number) |
 | `creditAccount` | `{"name":"..."}` or `{"id":"..."}` | Reference to an existing account              |

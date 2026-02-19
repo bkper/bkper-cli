@@ -384,6 +384,111 @@ describe('CLI - pipeline (end-to-end)', function () {
     });
 
     // ----------------------------------------------------------------
+    // Transactions: batch update round-trip piping
+    // ----------------------------------------------------------------
+
+    describe('transactions batch update round-trip', function () {
+        it('should pipe transaction list output to update and verify changes', async function () {
+            // Seed transactions in book A
+            const seedResult = await runBkperWithStdin(
+                ['transaction', 'create', '-b', bookA],
+                JSON.stringify([
+                    {
+                        date: '2025-11-01',
+                        amount: '800',
+                        description: 'Update pipe tx 1',
+                        creditAccount: { name: 'Pipe Revenue' },
+                        debitAccount: { name: 'Pipe Cash' },
+                    },
+                    {
+                        date: '2025-11-02',
+                        amount: '600',
+                        description: 'Update pipe tx 2',
+                        creditAccount: { name: 'Pipe Cash' },
+                        debitAccount: { name: 'Pipe Expenses' },
+                    },
+                ])
+            );
+            expect(seedResult.exitCode).to.equal(0);
+
+            // List transactions from book A as JSON
+            const listResult = await runBkper([
+                '--format',
+                'json',
+                'transaction',
+                'list',
+                '-b',
+                bookA,
+                '-q',
+                'after:2025-10-31 before:2025-11-03',
+            ]);
+            expect(listResult.exitCode).to.equal(0);
+            const listedTx = JSON.parse(listResult.stdout);
+            expect(listedTx).to.be.an('array');
+            expect(listedTx.length).to.be.greaterThanOrEqual(2);
+
+            // Modify descriptions and pipe back to update
+            const modified = listedTx.map((tx: bkper.Transaction) => ({
+                ...tx,
+                description: tx.description + ' [reviewed]',
+            }));
+
+            const updateResult = await runBkperWithStdin(
+                ['transaction', 'update', '-b', bookA],
+                JSON.stringify(modified)
+            );
+            expect(updateResult.exitCode).to.equal(0);
+            const updated = JSON.parse(updateResult.stdout);
+            expect(updated).to.be.an('array');
+            expect(updated.length).to.be.greaterThanOrEqual(2);
+
+            // Verify changes persisted
+            const verifyResult = await runBkper([
+                '--format',
+                'json',
+                'transaction',
+                'list',
+                '-b',
+                bookA,
+                '-q',
+                'after:2025-10-31 before:2025-11-03',
+            ]);
+            expect(verifyResult.exitCode).to.equal(0);
+            const verifiedTx = JSON.parse(verifyResult.stdout);
+            const descriptions = verifiedTx.map((t: bkper.Transaction) => t.description);
+            expect(descriptions).to.include('Update pipe tx 1 [reviewed]');
+            expect(descriptions).to.include('Update pipe tx 2 [reviewed]');
+        });
+
+        it('should output batch transaction update as a flat JSON array', async function () {
+            // Create a transaction
+            const createResult = await runBkperWithStdin(
+                ['transaction', 'create', '-b', bookA],
+                JSON.stringify([
+                    {
+                        date: '2025-11-10',
+                        amount: '999',
+                        description: 'Fmt update tx',
+                        creditAccount: { name: 'Pipe Revenue' },
+                        debitAccount: { name: 'Pipe Cash' },
+                    },
+                ])
+            );
+            expect(createResult.exitCode).to.equal(0);
+            const created = JSON.parse(createResult.stdout);
+
+            // Update and check output format
+            const updateResult = await runBkperWithStdin(
+                ['transaction', 'update', '-b', bookA],
+                JSON.stringify(created)
+            );
+            expect(updateResult.exitCode).to.equal(0);
+            const parsed = JSON.parse(updateResult.stdout);
+            expect(parsed).to.be.an('array');
+        });
+    });
+
+    // ----------------------------------------------------------------
     // Stdin wrapper: { items: [...] } backward compatibility
     // ----------------------------------------------------------------
 
