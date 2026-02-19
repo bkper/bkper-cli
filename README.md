@@ -41,7 +41,7 @@ bkper book list
 Pick a book and create your first transaction:
 
 ```bash
-bkper transaction create -b <bookId> --description "Office supplies"
+bkper transaction create -b <bookId> --description "Office supplies 123.78"
 ```
 
 > Run `bkper --help` or `bkper <command> --help` for built-in documentation on any command.
@@ -313,13 +313,13 @@ bkper collection delete col_789
 
 ### Output Format
 
-All commands support three output formats via the `--format` global flag (`--json` is a shorthand for `--format json`):
+All commands support three output formats via the `--format` global flag:
 
-| Format | Flag                        | Best for                                |
-| ------ | --------------------------- | --------------------------------------- |
-| Table  | `--format table` (default)  | Human reading in the terminal           |
-| JSON   | `--format json` or `--json` | Programmatic access, single-item detail |
-| CSV    | `--format csv`              | Spreadsheets, AI agents, data pipelines |
+| Format | Flag                       | Best for                                |
+| ------ | -------------------------- | --------------------------------------- |
+| Table  | `--format table` (default) | Human reading in the terminal           |
+| JSON   | `--format json`            | Programmatic access, single-item detail |
+| CSV    | `--format csv`             | Spreadsheets, AI agents, data pipelines |
 
 ```bash
 # Table output (default)
