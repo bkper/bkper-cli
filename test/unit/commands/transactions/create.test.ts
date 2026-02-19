@@ -1,12 +1,22 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
 import { ValidationError } from '../../../../src/utils/validation.js';
+import { Transaction } from 'bkper-js';
 
 // Import after mock setup
 const { createTransaction } = await import('../../../../src/commands/transactions/create.js');
 
 describe('CLI - transaction create Command', function () {
     let mockBook: any;
+    let originalCreate: typeof Transaction.prototype.create;
+
+    before(function () {
+        originalCreate = Transaction.prototype.create;
+    });
+
+    afterEach(function () {
+        Transaction.prototype.create = originalCreate;
+    });
 
     beforeEach(function () {
         setupTestEnvironment();
@@ -29,6 +39,21 @@ describe('CLI - transaction create Command', function () {
             setConfig: () => {},
             getBook: async () => mockBook,
         });
+    });
+
+    it('should create a transaction with description only', async function () {
+        let createCalled = false;
+        Transaction.prototype.create = async function () {
+            createCalled = true;
+            return this;
+        };
+
+        const result = await createTransaction('book-123', {
+            description: 'Office supplies',
+        });
+
+        expect(createCalled).to.be.true;
+        expect(result).to.exist;
     });
 
     it('should throw when credit account (from) not found', async function () {

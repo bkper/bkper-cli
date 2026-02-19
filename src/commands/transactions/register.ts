@@ -74,11 +74,7 @@ export function registerTransactionCommands(program: Command): void {
                     console.log(JSON.stringify([], null, 2));
                 } else {
                     throwIfErrors(
-                        validateRequiredOptions(options, [
-                            { name: 'book', flag: '--book' },
-                            { name: 'date', flag: '--date' },
-                            { name: 'amount', flag: '--amount' },
-                        ])
+                        validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
                     );
                     const transaction = await createTransaction(options.book, {
                         date: options.date,

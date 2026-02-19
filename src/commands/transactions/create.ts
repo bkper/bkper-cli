@@ -7,8 +7,8 @@ import { throwIfErrors } from '../../utils/validation.js';
  * Options for creating a new transaction in a book.
  */
 export interface CreateTransactionOptions {
-    date: string;
-    amount: string | number;
+    date?: string;
+    amount?: string | number;
     description?: string;
     from?: string;
     to?: string;
@@ -33,8 +33,10 @@ export async function createTransaction(
 
     const errors: string[] = [];
 
-    const tx = new Transaction(book).setDate(options.date).setAmount(options.amount);
+    const tx = new Transaction(book);
 
+    if (options.date) tx.setDate(options.date);
+    if (options.amount) tx.setAmount(options.amount);
     if (options.description) tx.setDescription(options.description);
 
     if (options.from) {
