@@ -41,13 +41,10 @@ describe('CLI - group stdin', function () {
             const result = await runBkperWithStdin(['group', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const grp1 = JSON.parse(lines[0]);
-            const grp2 = JSON.parse(lines[1]);
-            expect(grp1.name).to.equal('Stdin Group A');
-            expect(grp2.name).to.equal('Stdin Group B');
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(2);
+            expect(parsed[0].name).to.equal('Stdin Group A');
+            expect(parsed[1].name).to.equal('Stdin Group B');
         });
 
         it('should create a single group from JSON object', async function () {
@@ -56,11 +53,9 @@ describe('CLI - group stdin', function () {
             const result = await runBkperWithStdin(['group', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(1);
-
-            const grp = JSON.parse(lines[0]);
-            expect(grp.name).to.equal('Stdin Group C');
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(1);
+            expect(parsed[0].name).to.equal('Stdin Group C');
         });
     });
 

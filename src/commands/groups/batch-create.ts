@@ -6,7 +6,7 @@ const CHUNK_SIZE = 100;
 
 /**
  * Creates multiple groups from stdin items using the batch API.
- * Outputs NDJSON (one JSON object per line) as each chunk completes.
+ * Outputs a flat JSON array of all created groups.
  *
  * Stdin items must follow the bkper.Group format exactly.
  *
@@ -21,6 +21,8 @@ export async function batchCreateGroups(
 ): Promise<void> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
+
+    const allResults: bkper.Group[] = [];
 
     for (let i = 0; i < items.length; i += CHUNK_SIZE) {
         const chunk = items.slice(i, i + CHUNK_SIZE);
@@ -46,7 +48,9 @@ export async function batchCreateGroups(
 
         const results = await book.batchCreateGroups(groups);
         for (const result of results) {
-            console.log(JSON.stringify(result.json()));
+            allResults.push(result.json());
         }
     }
+
+    console.log(JSON.stringify(allResults, null, 2));
 }

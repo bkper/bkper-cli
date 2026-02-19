@@ -170,7 +170,7 @@ export function runBkper(
                     BKPER_API_URL: apiUrl,
                     ...envOverrides,
                 },
-                timeout: 30000,
+                timeout: 60000,
                 maxBuffer: 1024 * 1024,
             },
             (error, stdout, stderr) => {
@@ -247,7 +247,7 @@ export function runBkperWithStdin(
                     BKPER_API_URL: apiUrl,
                     ...envOverrides,
                 },
-                timeout: 30000,
+                timeout: 60000,
                 maxBuffer: 1024 * 1024,
             },
             (error, stdout, stderr) => {

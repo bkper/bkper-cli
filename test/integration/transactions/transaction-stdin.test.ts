@@ -89,14 +89,11 @@ describe('CLI - transaction stdin', function () {
             );
 
             expect(result.exitCode).to.equal(0);
-            // Output should be NDJSON (one JSON object per line)
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const tx1 = JSON.parse(lines[0]);
-            const tx2 = JSON.parse(lines[1]);
-            expect(tx1.description).to.equal('Stdin JSON tx 1');
-            expect(tx2.description).to.equal('Stdin JSON tx 2');
+            // Output should be a flat JSON array
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(2);
+            expect(parsed[0].description).to.equal('Stdin JSON tx 1');
+            expect(parsed[1].description).to.equal('Stdin JSON tx 2');
         });
 
         it('should create a single transaction from JSON object', async function () {
@@ -114,11 +111,9 @@ describe('CLI - transaction stdin', function () {
             );
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(1);
-
-            const tx = JSON.parse(lines[0]);
-            expect(tx.description).to.equal('Stdin single JSON tx');
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(1);
+            expect(parsed[0].description).to.equal('Stdin single JSON tx');
         });
     });
 
@@ -141,10 +136,10 @@ describe('CLI - transaction stdin', function () {
             );
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            const tx = JSON.parse(lines[0]);
-            expect(tx.description).to.equal('With props');
-            expect(tx.properties).to.deep.include({ invoice: 'INV-100' });
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(1);
+            expect(parsed[0].description).to.equal('With props');
+            expect(parsed[0].properties).to.deep.include({ invoice: 'INV-100' });
         });
     });
 });

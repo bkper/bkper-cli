@@ -7,23 +7,21 @@ import type { OutputFormat, ListResult } from '../../render/output.js';
  */
 export interface ListTransactionsOptions {
     query: string;
-    limit?: number;
-    cursor?: string;
     properties?: boolean;
 }
 
 /**
- * Result of a transaction listing query, including the book context and pagination cursor.
+ * Result of a transaction listing query, including the book context.
  */
 export interface ListTransactionsResult {
     book: Book;
     items: Transaction[];
     account?: Account;
-    cursor?: string;
 }
 
 /**
- * Queries transactions from a book using the provided search options.
+ * Queries transactions from a book, automatically paginating through all
+ * results until no more pages remain.
  *
  * Fetches the book with accounts pre-loaded in a single API call, so that
  * account name resolution during table building (getCreditAccountName,
@@ -31,8 +29,8 @@ export interface ListTransactionsResult {
  * individual API calls per transaction.
  *
  * @param bookId - The book ID to query
- * @param options - Query parameters including search string, limit, and cursor
- * @returns The matching transactions with book context and pagination cursor
+ * @param options - Query parameters including search string
+ * @returns All matching transactions with book context
  */
 export async function listTransactions(
     bookId: string,
@@ -40,20 +38,39 @@ export async function listTransactions(
 ): Promise<ListTransactionsResult> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId, true);
-    const result = await book.listTransactions(options.query, options.limit, options.cursor);
-    const items = result.getItems();
-    const account = await result.getAccount();
+
+    const allItems: Transaction[] = [];
+    let account: Account | undefined;
+    let cursor: string | undefined;
+
+    do {
+        const result = await book.listTransactions(options.query, undefined, cursor);
+        const items = result.getItems();
+        if (items && items.length > 0) {
+            allItems.push(...items);
+        }
+        // Capture the account from the first page (it's the same across pages)
+        if (account === undefined) {
+            account = await result.getAccount();
+        }
+        const nextCursor = result.getCursor();
+        // Stop when no cursor, no items returned, or cursor hasn't changed
+        if (!nextCursor || !items || items.length === 0 || nextCursor === cursor) {
+            break;
+        }
+        cursor = nextCursor;
+    } while (true);
+
     return {
         book,
-        items: items || [],
+        items: allItems,
         account,
-        cursor: result.getCursor(),
     };
 }
 
 /**
  * Lists transactions and returns a ListResult ready for rendering.
- * Absorbs TransactionsDataTableBuilder config, JSON wrapping, and cursor footer.
+ * Absorbs TransactionsDataTableBuilder config and JSON mapping.
  */
 export async function listTransactionsFormatted(
     bookId: string,
@@ -63,13 +80,7 @@ export async function listTransactionsFormatted(
     const result = await listTransactions(bookId, options);
 
     if (format === 'json') {
-        return {
-            kind: 'json',
-            data: {
-                items: result.items.map(tx => tx.json()),
-                cursor: result.cursor,
-            },
-        };
+        return { kind: 'json', data: result.items.map(tx => tx.json()) };
     }
 
     const builder = result.book.createTransactionsDataTable(result.items, result.account).ids(true);
@@ -84,6 +95,5 @@ export async function listTransactionsFormatted(
     }
 
     const matrix = await builder.build();
-    const footer = result.cursor ? `\nNext cursor: ${result.cursor}` : undefined;
-    return { kind: 'matrix', matrix, footer };
+    return { kind: 'matrix', matrix };
 }

@@ -6,7 +6,7 @@ const CHUNK_SIZE = 100;
 
 /**
  * Creates multiple transactions from stdin items using the batch API.
- * Outputs NDJSON (one JSON object per line) as each chunk completes.
+ * Outputs a flat JSON array of all created transactions.
  *
  * Stdin items must follow the bkper.Transaction format exactly.
  *
@@ -21,6 +21,8 @@ export async function batchCreateTransactions(
 ): Promise<void> {
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
+
+    const allResults: bkper.Transaction[] = [];
 
     for (let i = 0; i < items.length; i += CHUNK_SIZE) {
         const chunk = items.slice(i, i + CHUNK_SIZE);
@@ -46,7 +48,9 @@ export async function batchCreateTransactions(
 
         const results = await book.batchCreateTransactions(transactions);
         for (const result of results) {
-            console.log(JSON.stringify(result.json()));
+            allResults.push(result.json());
         }
     }
+
+    console.log(JSON.stringify(allResults, null, 2));
 }

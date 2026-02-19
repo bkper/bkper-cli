@@ -10,7 +10,7 @@ import {
 } from '../helpers/api-helpers.js';
 
 describe('CLI - transaction commands', function () {
-    this.timeout(30000);
+    this.timeout(120000);
 
     let bookId: string;
 
@@ -155,7 +155,7 @@ describe('CLI - transaction commands', function () {
 
     describe('transaction list', function () {
         it('should list transactions with a query', async function () {
-            const result = await runBkperJson<{ items: bkper.Transaction[]; cursor?: string }>([
+            const result = await runBkperJson<bkper.Transaction[]>([
                 'transaction',
                 'list',
                 '-b',
@@ -164,26 +164,8 @@ describe('CLI - transaction commands', function () {
                 'after:01/01/2025',
             ]);
 
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.items.length).to.be.greaterThan(0);
-        });
-
-        it('should respect the limit option', async function () {
-            const result = await runBkperJson<{ items: bkper.Transaction[]; cursor?: string }>([
-                'transaction',
-                'list',
-                '-b',
-                bookId,
-                '-q',
-                'after:01/01/2025',
-                '-l',
-                '1',
-            ]);
-
-            expect(result).to.be.an('object');
-            expect(result.items).to.be.an('array');
-            expect(result.items).to.have.length.at.most(1);
+            expect(result).to.be.an('array');
+            expect(result.length).to.be.greaterThan(0);
         });
     });
 

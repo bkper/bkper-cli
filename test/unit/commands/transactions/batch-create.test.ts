@@ -54,17 +54,17 @@ describe('CLI - transaction batch-create Command', function () {
         expect(batchCalls[0]).to.have.length(1);
     });
 
-    it('should output NDJSON for each created transaction', async function () {
+    it('should output flat JSON array for created transactions', async function () {
         await batchCreateTransactions('book-123', [
             { date: '2024-01-15', amount: '100' },
             { date: '2024-01-16', amount: '200' },
         ]);
 
-        expect(consoleOutput).to.have.length(2);
-        const parsed0 = JSON.parse(consoleOutput[0]);
-        const parsed1 = JSON.parse(consoleOutput[1]);
-        expect(parsed0).to.have.property('id');
-        expect(parsed1).to.have.property('id');
+        expect(consoleOutput).to.have.length(1);
+        const parsed = JSON.parse(consoleOutput[0]);
+        expect(parsed).to.be.an('array').with.length(2);
+        expect(parsed[0]).to.have.property('id');
+        expect(parsed[1]).to.have.property('id');
     });
 
     it('should chunk items at 100', async function () {

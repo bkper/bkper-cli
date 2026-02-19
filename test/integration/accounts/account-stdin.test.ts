@@ -41,13 +41,10 @@ describe('CLI - account stdin', function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(2);
-
-            const acct1 = JSON.parse(lines[0]);
-            const acct2 = JSON.parse(lines[1]);
-            expect(acct1.name).to.equal('Stdin Cash');
-            expect(acct2.name).to.equal('Stdin Revenue');
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(2);
+            expect(parsed[0].name).to.equal('Stdin Cash');
+            expect(parsed[1].name).to.equal('Stdin Revenue');
         });
 
         it('should create a single account from JSON object', async function () {
@@ -59,12 +56,10 @@ describe('CLI - account stdin', function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split('\n').filter(Boolean);
-            expect(lines.length).to.equal(1);
-
-            const acct = JSON.parse(lines[0]);
-            expect(acct.name).to.equal('Stdin Expenses');
-            expect(acct.type).to.equal('OUTGOING');
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(1);
+            expect(parsed[0].name).to.equal('Stdin Expenses');
+            expect(parsed[0].type).to.equal('OUTGOING');
         });
     });
 

@@ -347,9 +347,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 <details>
 <summary>Command reference</summary>
 
--   `transaction list -b <bookId> -q <query>` - List transactions matching a query
-    -   `-l, --limit <limit>` - Maximum number of results (`1`-`1000`, default `100`)
-    -   `-c, --cursor <cursor>` - Pagination cursor
+-   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results)
     -   `-p, --properties` - Include custom properties in the output
 -   `transaction create -b <bookId>` - Create a transaction
     -   `--date <date>` - Transaction date (required)
@@ -509,11 +507,33 @@ echo '[{"name":"Cash","type":"ASSET"}]' | \
   bkper account create -b abc123 -p "region=LATAM"
 ```
 
-**Batch output:** results are streamed as NDJSON (one JSON object per line), printed as each batch completes:
+**Batch output:** results are output as a flat JSON array, matching the same format as list commands:
 
+```bash
+bkper account create -b abc123 < accounts.json
+# Output: [{"id":"acc-abc","name":"Cash",...}, {"id":"acc-def","name":"Revenue",...}]
 ```
-{"id":"tx-abc","date":"2025-01-15","amount":"100.50","creditAccount":{...},...}
-{"id":"tx-def","date":"2025-01-16","amount":"200.00","creditAccount":{...},...}
+
+### Piping between commands
+
+All JSON output is designed to be piped directly as stdin to other commands. The output of any list or batch create command can feed directly into a create command:
+
+```bash
+# Copy all accounts from one book to another
+bkper account list -b $BOOK_A --format json | bkper account create -b $BOOK_B
+
+# Copy all groups from one book to another
+bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
+
+# Copy transactions matching a query
+bkper transaction list -b $BOOK_A -q "after:2025-01-01" --format json | \
+  bkper transaction create -b $BOOK_B
+
+# Clone a full chart of accounts: groups, then accounts, then transactions
+bkper group list -b $SOURCE --format json | bkper group create -b $DEST
+bkper account list -b $SOURCE --format json | bkper account create -b $DEST
+bkper transaction list -b $SOURCE -q "after:2025-01-01" --format json | \
+  bkper transaction create -b $DEST
 ```
 
 #### Writable fields reference

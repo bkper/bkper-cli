@@ -12,7 +12,12 @@ export interface StdinItems {
 /**
  * Reads and parses JSON input from stdin.
  *
- * Accepts a single JSON object or a JSON array of objects.
+ * Accepts:
+ * - A JSON array of objects: `[{...}, {...}]`
+ * - A single JSON object: `{...}` (treated as a one-element array)
+ * - A wrapper object with an `items` array: `{ "items": [{...}, {...}] }`
+ *   (the `items` array is extracted automatically, enabling round-trip piping)
+ *
  * Returns null if no piped input is available.
  *
  * @returns Parsed items, or null if stdin is not piped
@@ -30,7 +35,13 @@ export async function parseStdinItems(): Promise<StdinItems | null> {
     if (Array.isArray(parsed)) {
         items = parsed as Record<string, unknown>[];
     } else if (typeof parsed === 'object' && parsed !== null) {
-        items = [parsed as Record<string, unknown>];
+        const obj = parsed as Record<string, unknown>;
+        // Unwrap { items: [...] } wrapper objects (e.g. from list command output)
+        if (Array.isArray(obj.items)) {
+            items = obj.items as Record<string, unknown>[];
+        } else {
+            items = [obj];
+        }
     } else {
         throw new Error('JSON input must be an object or an array of objects');
     }

@@ -54,12 +54,54 @@ describe('CLI - transaction list Command', function () {
         expect(result.items).to.deep.equal([]);
     });
 
-    it('should return cursor for pagination', async function () {
+    it('should auto-paginate across multiple pages', async function () {
+        let callCount = 0;
+
+        mockBook = {
+            listTransactions: async (_q?: string, _l?: number, cursor?: string) => {
+                callCount++;
+                if (callCount === 1) {
+                    // First page: return items + cursor
+                    return {
+                        getItems: () => [
+                            { getId: () => 'tx-1', json: () => ({ id: 'tx-1', amount: '100' }) },
+                            { getId: () => 'tx-2', json: () => ({ id: 'tx-2', amount: '200' }) },
+                        ],
+                        getAccount: async () => null,
+                        getCursor: () => 'page-2-cursor',
+                    };
+                } else {
+                    // Second page: return items + no cursor (last page)
+                    return {
+                        getItems: () => [
+                            { getId: () => 'tx-3', json: () => ({ id: 'tx-3', amount: '300' }) },
+                        ],
+                        getAccount: async () => null,
+                        getCursor: () => undefined,
+                    };
+                }
+            },
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        const result = await listTransactions('book-123', { query: 'some query' });
+        expect(callCount).to.equal(2);
+        expect(result.items).to.have.length(3);
+        expect(result.items[0].getId()).to.equal('tx-1');
+        expect(result.items[1].getId()).to.equal('tx-2');
+        expect(result.items[2].getId()).to.equal('tx-3');
+    });
+
+    it('should not have cursor in the result', async function () {
         mockBook = {
             listTransactions: async () => ({
                 getItems: () => [],
                 getAccount: async () => null,
-                getCursor: () => 'next-page-cursor',
+                getCursor: () => undefined,
             }),
         };
 
@@ -69,7 +111,7 @@ describe('CLI - transaction list Command', function () {
         });
 
         const result = await listTransactions('book-123', { query: 'some query' });
-        expect(result.cursor).to.equal('next-page-cursor');
+        expect(result).to.not.have.property('cursor');
     });
 
     it('should return account when available', async function () {
@@ -94,40 +136,6 @@ describe('CLI - transaction list Command', function () {
         const result = await listTransactions('book-123', { query: 'account:Checking' });
         expect(result.account).to.exist;
         expect(result.account!.getName()).to.equal('Checking');
-    });
-
-    it('should pass limit and cursor to listTransactions', async function () {
-        let capturedQuery: string | undefined;
-        let capturedLimit: number | undefined;
-        let capturedCursor: string | undefined;
-
-        mockBook = {
-            listTransactions: async (q?: string, l?: number, c?: string) => {
-                capturedQuery = q;
-                capturedLimit = l;
-                capturedCursor = c;
-                return {
-                    getItems: () => [],
-                    getAccount: async () => null,
-                    getCursor: () => undefined,
-                };
-            },
-        };
-
-        setMockBkper({
-            setConfig: () => {},
-            getBook: async () => mockBook,
-        });
-
-        await listTransactions('book-123', {
-            query: 'test query',
-            limit: 50,
-            cursor: 'page-2',
-        });
-
-        expect(capturedQuery).to.equal('test query');
-        expect(capturedLimit).to.equal(50);
-        expect(capturedCursor).to.equal('page-2');
     });
 
     it('should return the book in the result', async function () {

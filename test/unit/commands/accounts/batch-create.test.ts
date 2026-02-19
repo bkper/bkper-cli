@@ -51,14 +51,14 @@ describe('CLI - account batch-create Command', function () {
         expect(batchCalls[0][0].getName()).to.equal('Checking');
     });
 
-    it('should output NDJSON for each created account', async function () {
+    it('should output flat JSON array for created accounts', async function () {
         await batchCreateAccounts('book-123', [{ name: 'Checking' }, { name: 'Savings' }]);
 
-        expect(consoleOutput).to.have.length(2);
-        const parsed0 = JSON.parse(consoleOutput[0]);
-        const parsed1 = JSON.parse(consoleOutput[1]);
-        expect(parsed0).to.have.property('name');
-        expect(parsed1).to.have.property('name');
+        expect(consoleOutput).to.have.length(1);
+        const parsed = JSON.parse(consoleOutput[0]);
+        expect(parsed).to.be.an('array').with.length(2);
+        expect(parsed[0]).to.have.property('name');
+        expect(parsed[1]).to.have.property('name');
     });
 
     it('should chunk items at 100', async function () {

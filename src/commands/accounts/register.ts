@@ -58,6 +58,8 @@ export function registerAccountCommands(program: Command): void {
                         validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
                     );
                     await batchCreateAccounts(options.book, stdinData.items, options.property);
+                } else if (stdinData && stdinData.items.length === 0) {
+                    console.log(JSON.stringify([], null, 2));
                 } else {
                     throwIfErrors(
                         validateRequiredOptions(options, [

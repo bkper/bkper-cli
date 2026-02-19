@@ -57,6 +57,8 @@ export function registerGroupCommands(program: Command): void {
                         validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
                     );
                     await batchCreateGroups(options.book, stdinData.items, options.property);
+                } else if (stdinData && stdinData.items.length === 0) {
+                    console.log(JSON.stringify([], null, 2));
                 } else {
                     throwIfErrors(
                         validateRequiredOptions(options, [

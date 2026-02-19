@@ -23,8 +23,6 @@ export function registerTransactionCommands(program: Command): void {
         .description('List transactions in a book')
         .option('-b, --book <bookId>', 'Book ID')
         .option('-q, --query <query>', 'Search query')
-        .option('-l, --limit <limit>', 'Maximum number of results (1-1000)', parseInt)
-        .option('-c, --cursor <cursor>', 'Pagination cursor')
         .option('-p, --properties', 'Include custom properties')
         .action(options =>
             withAction('listing transactions', async format => {
@@ -38,8 +36,6 @@ export function registerTransactionCommands(program: Command): void {
                     options.book,
                     {
                         query: options.query,
-                        limit: options.limit,
-                        cursor: options.cursor,
                         properties: options.properties,
                     },
                     format
@@ -73,6 +69,8 @@ export function registerTransactionCommands(program: Command): void {
                         validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
                     );
                     await batchCreateTransactions(options.book, stdinData.items, options.property);
+                } else if (stdinData && stdinData.items.length === 0) {
+                    console.log(JSON.stringify([], null, 2));
                 } else {
                     throwIfErrors(
                         validateRequiredOptions(options, [
