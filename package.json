@@ -45,7 +45,7 @@
         "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
     },
     "dependencies": {
-        "bkper-js": "^2.29.1",
+        "bkper-js": "^2.29.2",
         "chokidar": "^5.0.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
@@ -59,7 +59,7 @@
         "yaml": "^2.5.1"
     },
     "devDependencies": {
-        "@bkper/bkper-api-types": "^5.35.0",
+        "@bkper/bkper-api-types": "^5.36.0",
         "@types/chai": "^4.3.0",
         "@types/mocha": "^10.0.0",
         "@types/node": "^22.5.1",
