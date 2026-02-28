@@ -3,7 +3,7 @@
 import 'dotenv/config'; // Must be first to load env vars before other imports
 
 import { program } from 'commander';
-import { login, logout } from './auth/local-auth-service.js';
+import { registerAuthCommands } from './commands/auth/register.js';
 import { registerAppCommands } from './commands/apps/register.js';
 import { registerBookCommands } from './commands/books/register.js';
 import { registerAccountCommands } from './commands/accounts/register.js';
@@ -22,19 +22,7 @@ program.option('--format <format>', 'Output format: table, json, or csv', 'table
 program.option('--json', 'Output as JSON (alias for --format json)');
 
 // Auth commands
-program
-    .command('login')
-    .description('Login Bkper')
-    .action(async () => {
-        await login();
-    });
-
-program
-    .command('logout')
-    .description('Logout Bkper')
-    .action(() => {
-        logout();
-    });
+registerAuthCommands(program);
 
 // Resource commands
 registerAppCommands(program);
