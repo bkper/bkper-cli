@@ -32,6 +32,19 @@ yarn global add bkper
 bkper auth login
 ```
 
+### Access Token
+
+Use the access token for direct API calls from any tool:
+
+```bash
+# Print the current access token
+TOKEN=$(bkper auth token)
+
+# Use it with curl, httpie, or any HTTP client
+curl -s -H "Authorization: Bearer $TOKEN" \
+  https://api.bkper.app/v5/books | jq '.items[].name'
+```
+
 ### Try It
 
 ```bash
