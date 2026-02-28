@@ -117,16 +117,11 @@ try {
 src/
 ├── auth/           # Authentication services
 ├── commands/       # CLI command implementations
+│   └── auth/       # Auth commands (login, logout, token)
 ├── domain/         # Domain-specific operations (reusable business logic)
 │   └── transaction/ # Transaction merge operation
 ├── render/         # Output formatting (table, key-value, JSON)
 └── cli.ts          # Main CLI entry point
-
-test/
-├── unit/           # Unit tests
-├── integration/    # Integration tests
-├── fixtures/       # Test data
-└── helpers/        # Test utilities
 ```
 
 ## Common Operations
