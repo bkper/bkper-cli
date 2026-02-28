@@ -1,4 +1,4 @@
-[bkper.yaml reference]: https://raw.githubusercontent.com/bkper/bkper-cli/main/docs/bkper-reference.yaml
+[bkper.yaml reference]: #bkperyaml-reference
 [Developer Docs]: https://bkper.com/docs
 [App Template]: https://github.com/bkper/bkper-app-template
 [Skills Repository]: https://github.com/bkper/skills
@@ -523,7 +523,201 @@ bkper app secrets delete API_KEY
 
 ### Configuration
 
-Apps are configured via a `bkper.yaml` file in the project root. See the complete reference with all available fields: **[bkper.yaml reference]**.
+Apps are configured via a `bkper.yaml` file in the project root. See the complete **[bkper.yaml reference]** below.
+
+<details>
+<summary>bkper.yaml reference</summary>
+
+```yaml
+# =============================================================================
+# bkper.yaml Reference
+# =============================================================================
+# This file documents all available configuration options for Bkper Apps.
+# Copy the fields you need to your app's bkper.yaml file.
+#
+# For a minimal working template, see:
+# https://github.com/bkper/bkper-app-template
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# APP IDENTITY
+# -----------------------------------------------------------------------------
+# The app id is permanent and cannot be changed after creation.
+# Use lowercase letters, numbers, and hyphens only.
+id: my-app
+
+# Display name shown in the Bkper UI
+name: My App
+
+# Brief description of what the app does
+description: A Bkper app that does something useful
+
+# -----------------------------------------------------------------------------
+# BRANDING
+# -----------------------------------------------------------------------------
+# App logo for light mode (SVG recommended, PNG/JPG supported)
+logoUrl: https://example.com/logo.svg
+
+# App logo for dark mode (required for proper theming)
+logoUrlDark: https://example.com/logo-dark.svg
+
+# App website or documentation URL
+website: https://example.com
+
+# -----------------------------------------------------------------------------
+# OWNERSHIP
+# -----------------------------------------------------------------------------
+# Developer/company name
+ownerName: Your Name
+
+# Owner's logo/avatar URL
+ownerLogoUrl: https://example.com/owner-logo.png
+
+# Owner's website
+ownerWebsite: https://yoursite.com
+
+# Source code repository URL
+repoUrl: https://github.com/you/my-app
+
+# Whether the repository is private
+repoPrivate: true
+
+# Mark as deprecated (hides from app listings, existing installs continue working)
+deprecated: false
+
+# -----------------------------------------------------------------------------
+# ACCESS CONTROL
+# -----------------------------------------------------------------------------
+# Who can update the app configuration and deploy new versions.
+# Comma-separated list of Bkper usernames (not emails).
+# Supports domain wildcards for registered custom domains: *@yourdomain.com
+developers: victor, aldo, *@bkper.com
+
+# Who can install and use the app.
+# Same format as developers. Leave empty for public apps.
+users: maria, *@acme.com
+
+# -----------------------------------------------------------------------------
+# MENU INTEGRATION (optional)
+# -----------------------------------------------------------------------------
+# When configured, adds a menu item to Bkper's "More" menu.
+# Clicking opens a popup with the specified URL.
+
+# Production menu URL (supports variable substitution)
+menuUrl: https://${id}.bkper.app?bookId=${book.id}
+
+# Development menu URL (used when developer runs the app)
+menuUrlDev: http://localhost:8787?bookId=${book.id}
+
+# Custom menu text (defaults to app name if not specified)
+menuText: Open My App
+
+# Popup dimensions in pixels
+menuPopupWidth: 500
+menuPopupHeight: 300
+
+# -----------------------------------------------------------------------------
+# Menu URL Variables
+# -----------------------------------------------------------------------------
+# The following variables can be used in menuUrl and menuUrlDev:
+#
+# ${book.id}                - Current book ID
+# ${book.properties.xxx}    - Book property value (replace xxx with property key)
+# ${account.id}             - Selected account ID (in account context)
+# ${account.properties.xxx} - Account property value
+# ${group.id}               - Selected group ID (in group context)
+# ${group.properties.xxx}   - Group property value
+# ${transactions.ids}       - Comma-separated selected transaction IDs
+# ${transactions.query}     - Current search query
+# -----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
+# EVENT HANDLING (optional)
+# -----------------------------------------------------------------------------
+# When configured, Bkper calls your webhook URL when subscribed events occur.
+
+# Production webhook URL
+webhookUrl: https://${id}.bkper.app/events
+
+# Development webhook URL (auto-updated by bkper app dev)
+webhookUrlDev: https://<random>.trycloudflare.com/events
+
+# API version for event payloads
+apiVersion: v5
+
+# Events to subscribe to (remove events you don't need)
+events:
+    - TRANSACTION_POSTED
+    - TRANSACTION_CHECKED
+    - TRANSACTION_UNCHECKED
+    - TRANSACTION_UPDATED
+    - TRANSACTION_DELETED
+    - TRANSACTION_RESTORED
+    - ACCOUNT_CREATED
+    - ACCOUNT_UPDATED
+    - ACCOUNT_DELETED
+    - GROUP_CREATED
+    - GROUP_UPDATED
+    - GROUP_DELETED
+    - FILE_CREATED
+    - BOOK_UPDATED
+
+# -----------------------------------------------------------------------------
+# FILE PATTERNS (optional)
+# -----------------------------------------------------------------------------
+# For file processing apps. When a file matching these patterns is uploaded,
+# a FILE_CREATED event is triggered with the file content.
+filePatterns:
+    - '*.ofx'
+    - '*.csv'
+
+# -----------------------------------------------------------------------------
+# PROPERTIES SCHEMA (optional)
+# -----------------------------------------------------------------------------
+# Defines autocomplete suggestions for custom properties in the Bkper UI.
+# Helps users discover and use the correct property keys/values for your app.
+propertiesSchema:
+    book:
+        keys:
+            - my_app_enabled
+            - my_app_config
+        values:
+            - 'true'
+            - 'false'
+    group:
+        keys:
+            - my_app_category
+        values:
+            - category_a
+            - category_b
+    account:
+        keys:
+            - my_app_sync_id
+    transaction:
+        keys:
+            - my_app_reference
+
+# -----------------------------------------------------------------------------
+# DEPLOYMENT CONFIGURATION (optional)
+# -----------------------------------------------------------------------------
+# For apps deployed to Bkper's Workers for Platforms infrastructure.
+deployment:
+    # Web handler (serves UI and API)
+    web:
+        bundle: packages/web/server/dist
+        # assets: packages/web/client/dist  # Static assets (when supported)
+
+    # Events handler (processes webhooks)
+    events:
+        bundle: packages/events/dist
+
+    # Platform services available to your app (one per type, auto-provisioned)
+    # See: https://developers.cloudflare.com/kv/
+    services:
+        - KV # Key-value storage
+```
+
+</details>
 
 **Environment variables:**
 
@@ -542,7 +736,7 @@ Apps are configured via a `bkper.yaml` file in the project root. See the complet
 
 -   `app init <name>` - Scaffold a new app from the template
 -   `app list` - List all apps you have access to
--   `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
+-   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration (URLs, description) to Bkper API
 -   `app build` - Build app artifacts
 -   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
     -   `-p, --preview` - Deploy to preview environment
