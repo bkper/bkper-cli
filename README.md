@@ -660,20 +660,45 @@ apiVersion: v5
 
 # Events to subscribe to (remove events you don't need)
 events:
+    # Transaction
+    - TRANSACTION_CREATED
     - TRANSACTION_POSTED
     - TRANSACTION_CHECKED
     - TRANSACTION_UNCHECKED
     - TRANSACTION_UPDATED
     - TRANSACTION_DELETED
     - TRANSACTION_RESTORED
+    # Account
     - ACCOUNT_CREATED
     - ACCOUNT_UPDATED
     - ACCOUNT_DELETED
+    # Group
     - GROUP_CREATED
     - GROUP_UPDATED
     - GROUP_DELETED
+    # File
     - FILE_CREATED
+    - FILE_UPDATED
+    # Query
+    - QUERY_CREATED
+    - QUERY_UPDATED
+    - QUERY_DELETED
+    # Comment
+    - COMMENT_CREATED
+    - COMMENT_DELETED
+    # Collaborator
+    - COLLABORATOR_ADDED
+    - COLLABORATOR_UPDATED
+    - COLLABORATOR_REMOVED
+    # Integration
+    - INTEGRATION_CREATED
+    - INTEGRATION_UPDATED
+    - INTEGRATION_DELETED
+    # Book
+    - BOOK_CREATED
     - BOOK_UPDATED
+    - BOOK_DELETED
+    - BOOK_AUDITED
 
 # -----------------------------------------------------------------------------
 # FILE PATTERNS (optional)
