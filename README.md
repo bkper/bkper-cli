@@ -11,7 +11,7 @@ A **command-line interface** for [Bkper](https://bkper.com), a financial account
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 18
+-   [Node.js](https://nodejs.org/) >= 18
 
 ### Install (choose one)
 
@@ -29,7 +29,7 @@ yarn global add bkper
 ### Authenticate
 
 ```bash
-bkper login
+bkper auth login
 ```
 
 ### Try It
@@ -82,27 +82,27 @@ bkper book update abc123 --lock-date 2024-12-31
 <details>
 <summary>Command reference</summary>
 
-- `book list` - List all books
-    - `-q, --query <query>` - Search query
-- `book get <bookId>` - Get a book's details
-- `book create` - Create a new book
-    - `--name <name>` - Book name (required)
-    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
-    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
-    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
-    - `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
-    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `book update <bookId>` - Update a book
-    - `--name <name>` - Book name
-    - `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
-    - `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
-    - `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
-    - `--time-zone <timezone>` - IANA time zone identifier (e.g. `America/New_York`, `Europe/London`, `UTC`)
-    - `--lock-date <date>` - Lock date in ISO format (`yyyy-MM-dd`, e.g. `2024-01-31`)
-    - `--closing-date <date>` - Closing date in ISO format (`yyyy-MM-dd`)
-    - `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
-    - `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
+-   `book list` - List all books
+    -   `-q, --query <query>` - Search query
+-   `book get <bookId>` - Get a book's details
+-   `book create` - Create a new book
+    -   `--name <name>` - Book name (required)
+    -   `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    -   `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
+    -   `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    -   `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
+    -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `book update <bookId>` - Update a book
+    -   `--name <name>` - Book name
+    -   `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)
+    -   `--date-pattern <pattern>` - Date format pattern (`dd/MM/yyyy`, `MM/dd/yyyy`, or `yyyy/MM/dd`)
+    -   `--decimal-separator <separator>` - Decimal separator (`DOT` or `COMMA`)
+    -   `--time-zone <timezone>` - IANA time zone identifier (e.g. `America/New_York`, `Europe/London`, `UTC`)
+    -   `--lock-date <date>` - Lock date in ISO format (`yyyy-MM-dd`, e.g. `2024-01-31`)
+    -   `--closing-date <date>` - Closing date in ISO format (`yyyy-MM-dd`)
+    -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
+    -   `-p, --property <key=value>` - Set a property (repeatable, e.g. `-p code=1010 -p branch=NYC`; empty value deletes the property)
 
 </details>
 
@@ -133,20 +133,20 @@ bkper account delete "Old Account" -b abc123
 <details>
 <summary>Command reference</summary>
 
-- `account list -b <bookId>` - List accounts in a book
-- `account get <nameOrId> -b <bookId>` - Get an account
-- `account create -b <bookId>` - Create a new account
-    - `--name <name>` - Account name (required)
-    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
-    - `--description <description>` - Account description
-    - `--groups <groups>` - Comma-separated group names
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `account update <nameOrId> -b <bookId>` - Update an account
-    - `--name <name>` - Account name
-    - `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
-    - `--archived <true|false>` - Archive status
-    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
-- `account delete <nameOrId> -b <bookId>` - Delete an account
+-   `account list -b <bookId>` - List accounts in a book
+-   `account get <nameOrId> -b <bookId>` - Get an account
+-   `account create -b <bookId>` - Create a new account
+    -   `--name <name>` - Account name (required)
+    -   `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    -   `--description <description>` - Account description
+    -   `--groups <groups>` - Comma-separated group names
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `account update <nameOrId> -b <bookId>` - Update an account
+    -   `--name <name>` - Account name
+    -   `--type <type>` - Account type (`ASSET`, `LIABILITY`, `INCOMING`, `OUTGOING`)
+    -   `--archived <true|false>` - Archive status
+    -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
+-   `account delete <nameOrId> -b <bookId>` - Delete an account
 
 </details>
 
@@ -174,18 +174,18 @@ bkper group delete "Cash" -b abc123
 <details>
 <summary>Command reference</summary>
 
-- `group list -b <bookId>` - List groups in a book
-- `group get <nameOrId> -b <bookId>` - Get a group
-- `group create -b <bookId>` - Create a new group
-    - `--name <name>` - Group name (required)
-    - `--parent <parent>` - Parent group name or ID
-    - `--hidden` - Hide the group
-    - `-p, --property <key=value>` - Set a property (repeatable)
-- `group update <nameOrId> -b <bookId>` - Update a group
-    - `--name <name>` - Group name
-    - `--hidden <true|false>` - Hide status
-    - `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
-- `group delete <nameOrId> -b <bookId>` - Delete a group
+-   `group list -b <bookId>` - List groups in a book
+-   `group get <nameOrId> -b <bookId>` - Get a group
+-   `group create -b <bookId>` - Create a new group
+    -   `--name <name>` - Group name (required)
+    -   `--parent <parent>` - Parent group name or ID
+    -   `--hidden` - Hide the group
+    -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `group update <nameOrId> -b <bookId>` - Update a group
+    -   `--name <name>` - Group name
+    -   `--hidden <true|false>` - Hide status
+    -   `-p, --property <key=value>` - Set a property (repeatable, merges with existing)
+-   `group delete <nameOrId> -b <bookId>` - Delete a group
 
 </details>
 
@@ -226,30 +226,30 @@ bkper transaction merge tx_123 tx_456 -b abc123
 <details>
 <summary>Command reference</summary>
 
-- `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results)
-    - `-p, --properties` - Include custom properties in the output
-- `transaction create -b <bookId>` - Create a transaction
-    - `--date <date>` - Transaction date
-    - `--amount <amount>` - Transaction amount
-    - `--description <description>` - Transaction description
-    - `--from <from>` - Credit account (source)
-    - `--to <to>` - Debit account (destination)
-    - `--url <url>` - URL (repeatable)
-    - `--remote-id <remoteId>` - Remote ID (repeatable)
-    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
-- `transaction update [transactionId] -b <bookId>` - Update a transaction (or batch update via stdin)
-    - `--date <date>` - Transaction date
-    - `--amount <amount>` - Transaction amount
-    - `--description <description>` - Transaction description
-    - `--from <from>` - Credit account (source)
-    - `--to <to>` - Debit account (destination)
-    - `--url <url>` - URL (repeatable, replaces all)
-    - `--update-checked` - Also update checked transactions
-    - `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
-- `transaction post <id> -b <bookId>` - Post a draft transaction
-- `transaction check <id> -b <bookId>` - Check a transaction
-- `transaction trash <id> -b <bookId>` - Trash a transaction
-- `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
+-   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results)
+    -   `-p, --properties` - Include custom properties in the output
+-   `transaction create -b <bookId>` - Create a transaction
+    -   `--date <date>` - Transaction date
+    -   `--amount <amount>` - Transaction amount
+    -   `--description <description>` - Transaction description
+    -   `--from <from>` - Credit account (source)
+    -   `--to <to>` - Debit account (destination)
+    -   `--url <url>` - URL (repeatable)
+    -   `--remote-id <remoteId>` - Remote ID (repeatable)
+    -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+-   `transaction update [transactionId] -b <bookId>` - Update a transaction (or batch update via stdin)
+    -   `--date <date>` - Transaction date
+    -   `--amount <amount>` - Transaction amount
+    -   `--description <description>` - Transaction description
+    -   `--from <from>` - Credit account (source)
+    -   `--to <to>` - Debit account (destination)
+    -   `--url <url>` - URL (repeatable, replaces all)
+    -   `--update-checked` - Also update checked transactions
+    -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+-   `transaction post <id> -b <bookId>` - Post a draft transaction
+-   `transaction check <id> -b <bookId>` - Check a transaction
+-   `transaction trash <id> -b <bookId>` - Trash a transaction
+-   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
 </details>
 
@@ -268,8 +268,8 @@ bkper balance list -b abc123 -q "period:2025-01" --expanded 2
 <details>
 <summary>Command reference</summary>
 
-- `balance list -b <bookId> -q <query>` - List balances
-    - `--expanded <level>` - Expand groups to specified depth (`0`+)
+-   `balance list -b <bookId> -q <query>` - List balances
+    -   `--expanded <level>` - Expand groups to specified depth (`0`+)
 
 </details>
 
@@ -297,17 +297,17 @@ bkper collection delete col_789
 <details>
 <summary>Command reference</summary>
 
-- `collection list` - List all collections
-- `collection get <collectionId>` - Get a collection
-- `collection create` - Create a new collection
-    - `--name <name>` - Collection name (required)
-- `collection update <collectionId>` - Update a collection
-    - `--name <name>` - Collection name
-- `collection delete <collectionId>` - Delete a collection
-- `collection add-book <collectionId>` - Add books to a collection
-    - `-b, --book <bookId>` - Book ID (repeatable)
-- `collection remove-book <collectionId>` - Remove books from a collection
-    - `-b, --book <bookId>` - Book ID (repeatable)
+-   `collection list` - List all collections
+-   `collection get <collectionId>` - Get a collection
+-   `collection create` - Create a new collection
+    -   `--name <name>` - Collection name (required)
+-   `collection update <collectionId>` - Update a collection
+    -   `--name <name>` - Collection name
+-   `collection delete <collectionId>` - Delete a collection
+-   `collection add-book <collectionId>` - Add books to a collection
+    -   `-b, --book <bookId>` - Book ID (repeatable)
+-   `collection remove-book <collectionId>` - Remove books from a collection
+    -   `-b, --book <bookId>` - Book ID (repeatable)
 
 </details>
 
@@ -334,18 +334,18 @@ bkper account list -b abc123 --format csv
 
 **CSV output details:**
 
-- **RFC 4180 compliant** -- proper quoting, CRLF line endings, no truncation
-- **All metadata included** -- IDs, properties, hidden properties, URLs, and timestamps are enabled
-- **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
-- **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
+-   **RFC 4180 compliant** -- proper quoting, CRLF line endings, no truncation
+-   **All metadata included** -- IDs, properties, hidden properties, URLs, and timestamps are enabled
+-   **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
+-   **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
 
 **AI agent guidance:**
 
 When using the CLI from an AI agent, LLM, or automated script:
 
-- **Use `--format csv` for list commands.** CSV is dramatically more token-efficient than JSON for tabular data -- typically 3-5x fewer tokens for the same information.
-- **Use `--format json` for single-item commands** (`get`, `create`, `update`) where you need structured field access.
-- **Pipe data in via stdin** for batch operations (see below).
+-   **Use `--format csv` for list commands.** CSV is dramatically more token-efficient than JSON for tabular data -- typically 3-5x fewer tokens for the same information.
+-   **Use `--format json` for single-item commands** (`get`, `create`, `update`) where you need structured field access.
+-   **Pipe data in via stdin** for batch operations (see below).
 
 ### Batch Operations & Piping
 
@@ -527,54 +527,55 @@ Apps are configured via a `bkper.yaml` file in the project root. See the complet
 
 **Environment variables:**
 
-- `BKPER_API_KEY` -- Optional. If not set, uses the Bkper API proxy with a managed API key. Set it for direct API access with your own quotas. Follow [these steps](https://bkper.com/docs/#rest-api-enabling) to enable.
+-   `BKPER_API_KEY` -- Optional. If not set, uses the Bkper API proxy with a managed API key. Set it for direct API access with your own quotas. Follow [these steps](https://bkper.com/docs/#rest-api-enabling) to enable.
 
 <details>
 <summary>Command reference</summary>
 
 #### Authentication
 
-- `login` - Authenticate with Bkper, storing credentials locally
-- `logout` - Remove stored credentials
+-   `auth login` - Authenticate with Bkper, storing credentials locally
+-   `auth logout` - Remove stored credentials
+-   `auth token` - Print the current OAuth access token to stdout
 
 #### App Lifecycle
 
-- `app init <name>` - Scaffold a new app from the template
-- `app list` - List all apps you have access to
-- `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
-- `app build` - Build app artifacts
-- `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
-    - `-p, --preview` - Deploy to preview environment
-    - `--events` - Deploy events handler instead of web handler
-- `app status` - Show deployment status
-- `app undeploy` - Remove app from platform
-    - `-p, --preview` - Remove from preview environment
-    - `--events` - Remove events handler instead of web handler
-    - `--delete-data` - Permanently delete all associated data (requires confirmation)
-    - `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
-- `app dev` - Run local development servers
-    - `--cp, --client-port <port>` - Client dev server port (default: `5173`)
-    - `--sp, --server-port <port>` - Server simulation port (default: `8787`)
-    - `--ep, --events-port <port>` - Events handler port (default: `8791`)
-    - `-w, --web` - Run only the web handler
-    - `-e, --events` - Run only the events handler
-    - `--no-open` - Do not open browser on startup
+-   `app init <name>` - Scaffold a new app from the template
+-   `app list` - List all apps you have access to
+-   `app sync` - Sync [bkper.yaml reference] configuration (URLs, description) to Bkper API
+-   `app build` - Build app artifacts
+-   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
+    -   `-p, --preview` - Deploy to preview environment
+    -   `--events` - Deploy events handler instead of web handler
+-   `app status` - Show deployment status
+-   `app undeploy` - Remove app from platform
+    -   `-p, --preview` - Remove from preview environment
+    -   `--events` - Remove events handler instead of web handler
+    -   `--delete-data` - Permanently delete all associated data (requires confirmation)
+    -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
+-   `app dev` - Run local development servers
+    -   `--cp, --client-port <port>` - Client dev server port (default: `5173`)
+    -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
+    -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
+    -   `-w, --web` - Run only the web handler
+    -   `-e, --events` - Run only the events handler
+    -   `--no-open` - Do not open browser on startup
 
 > **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
 
 #### App Installation
 
-- `app install <appId> -b <bookId>` - Install an app on a book
-- `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
+-   `app install <appId> -b <bookId>` - Install an app on a book
+-   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
 
 #### Secrets Management
 
-- `app secrets put <name>` - Store a secret
-    - `-p, --preview` - Set in preview environment
-- `app secrets list` - List all secrets
-    - `-p, --preview` - List from preview environment
-- `app secrets delete <name>` - Delete a secret
-    - `-p, --preview` - Delete from preview environment
+-   `app secrets put <name>` - Store a secret
+    -   `-p, --preview` - Set in preview environment
+-   `app secrets list` - List all secrets
+    -   `-p, --preview` - List from preview environment
+-   `app secrets delete <name>` - Delete a secret
+    -   `-p, --preview` - Delete from preview environment
 
 </details>
 
@@ -595,6 +596,6 @@ Bkper.setConfig({
 
 ## Documentation
 
-- [Developer Docs]
-- [App Template]
-- [Skills Repository]
+-   [Developer Docs]
+-   [App Template]
+-   [Skills Repository]
