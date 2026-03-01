@@ -5,7 +5,7 @@
     "": {
       "name": "bkper",
       "dependencies": {
-        "bkper-js": "^2.29.2",
+        "bkper-js": "^2.29.4",
         "chokidar": "^5.0.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
@@ -353,7 +353,7 @@
 
     "binary-extensions": ["binary-extensions@2.3.0", "", {}, "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw=="],
 
-    "bkper-js": ["bkper-js@2.29.2", "", { "dependencies": { "@bkper/bkper-api-types": "^5.36.0", "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" } }, "sha512-0Wx0O1TcRx9wJMnsbkNaP2AwR0cuh71GhGM/XOHi+CQ6iuI4myy/b4NYrym1JGXzhr6AD9MN2MmyHE7ZYHC4Wg=="],
+    "bkper-js": ["bkper-js@2.29.4", "", { "dependencies": { "@bkper/bkper-api-types": "^5.36.0", "big.js": "^6.0.3", "dayjs": "^1.10.3", "luxon": "^1.25.0", "uuid": "^11.0.3" } }, "sha512-//Ft27RsFpPtQ4KhoxbYIzK3gyxM8D6Va2Mx/ytZin5G+k8HQ7aMH4lDq+03IoWNGaU/+dhkx2eUeyqpZMYRpw=="],
 
     "brace-expansion": ["brace-expansion@2.0.2", "", { "dependencies": { "balanced-match": "^1.0.0" } }, "sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ=="],
 

@@ -45,7 +45,7 @@
         "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
     },
     "dependencies": {
-        "bkper-js": "^2.29.2",
+        "bkper-js": "^2.29.4",
         "chokidar": "^5.0.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
