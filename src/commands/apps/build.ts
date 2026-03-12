@@ -1,43 +1,23 @@
 import { buildWorkerToFile } from '../../dev/esbuild.js';
-import { buildClient } from '../../dev/vite.js';
 import { ensureTypesUpToDate } from '../../dev/types.js';
 import { createLogger, formatSize } from '../../dev/logger.js';
 import { buildSharedIfPresent } from '../../dev/shared.js';
 import { preflightDependencies } from '../../dev/preflight.js';
 import { loadSourceDeploymentConfig } from './config.js';
-import { statSync, existsSync, mkdirSync, readdirSync } from 'fs';
+import { statSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
 /**
- * Gets the total size of a directory in bytes
+ * Builds all configured worker handlers for deployment.
  *
- * @param dirPath - Path to the directory
- * @returns Total size in bytes
- */
-function getDirSize(dirPath: string): number {
-    if (!existsSync(dirPath)) return 0;
-
-    let totalSize = 0;
-    const files = readdirSync(dirPath, { withFileTypes: true, recursive: true });
-
-    for (const file of files) {
-        if (file.isFile()) {
-            const filePath = path.join(file.parentPath || dirPath, file.name);
-            totalSize += statSync(filePath).size;
-        }
-    }
-
-    return totalSize;
-}
-
-/**
- * Builds all configured handlers for deployment
- *
- * - Ensures types are up to date
- * - Builds web client (Vite) if configured
- * - Builds web server (esbuild) if configured
- * - Builds events handler (esbuild) if configured
+ * - Ensures types are up to date (generates env.d.ts)
+ * - Builds shared package if present
+ * - Builds web server worker (esbuild) if configured
+ * - Builds events handler worker (esbuild) if configured
  * - Reports build results with file sizes
+ *
+ * Note: Client build (Vite) is the template's responsibility.
+ * Use `vite build` or the template's build script for the client.
  */
 export async function build(): Promise<void> {
     const typesLogger = createLogger('types');
@@ -71,10 +51,7 @@ export async function build(): Promise<void> {
         projectRoot
     );
 
-    const clientRoot = deployConfig.web?.client
-        ? path.resolve(projectRoot, deployConfig.web.client)
-        : undefined;
-    const preflight = preflightDependencies(projectRoot, clientRoot);
+    const preflight = preflightDependencies(projectRoot);
     if (!preflight.ok) {
         console.error(preflight.message);
         process.exit(1);
@@ -100,25 +77,12 @@ export async function build(): Promise<void> {
     const hasWeb = !!deployConfig.web?.main;
     const hasEvents = !!deployConfig.events?.main;
 
-    console.log('\n📦 Building Bkper App...\n');
+    console.log('\n\uD83D\uDCE6 Building Bkper App...\n');
 
     const results: {
-        webClient?: { path: string; size: number };
         webServer?: { path: string; size: number };
         events?: { path: string; size: number };
     } = {};
-
-    // Build web client (Vite)
-    if (hasWeb && deployConfig.web?.client && clientRoot) {
-        buildLogger.info('Building web client...');
-
-        const clientOutDir = path.resolve(projectRoot, 'dist/web/client');
-        await buildClient(clientRoot, { outDir: clientOutDir });
-
-        const clientSize = getDirSize(clientOutDir);
-        results.webClient = { path: 'dist/web/client/', size: clientSize };
-        console.log(`   ✓ Web client    → dist/web/client/    (${formatSize(clientSize)})`);
-    }
 
     // Build web server (esbuild)
     if (hasWeb) {
@@ -137,7 +101,9 @@ export async function build(): Promise<void> {
 
         const serverSize = statSync(serverOutFile).size;
         results.webServer = { path: 'dist/web/server/', size: serverSize };
-        console.log(`   ✓ Web server    → dist/web/server/    (${formatSize(serverSize)})`);
+        console.log(
+            `   \u2713 Web server    \u2192 dist/web/server/    (${formatSize(serverSize)})`
+        );
     }
 
     // Build events handler (esbuild)
@@ -157,8 +123,10 @@ export async function build(): Promise<void> {
 
         const eventsSize = statSync(eventsOutFile).size;
         results.events = { path: 'dist/events/', size: eventsSize };
-        console.log(`   ✓ Events        → dist/events/        (${formatSize(eventsSize)})`);
+        console.log(
+            `   \u2713 Events        \u2192 dist/events/        (${formatSize(eventsSize)})`
+        );
     }
 
-    console.log('\n✅ Build complete\n');
+    console.log('\n\u2705 Build complete\n');
 }

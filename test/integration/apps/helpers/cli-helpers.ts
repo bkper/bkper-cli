@@ -31,7 +31,11 @@ export function getPlatformUrl(): string {
 /**
  * Run a CLI command and wait for completion
  */
-export async function runCli(args: string[], cwd: string, envOverrides?: Record<string, string>): Promise<void> {
+export async function runCli(
+    args: string[],
+    cwd: string,
+    envOverrides?: Record<string, string>
+): Promise<void> {
     const platformUrl = dynamicPlatformUrl || TestConfig.PLATFORM_URL;
     await runCommand('node', [CLI_PATH, ...args], cwd, {
         BKPER_PLATFORM_URL: envOverrides?.BKPER_PLATFORM_URL || platformUrl,
@@ -43,7 +47,11 @@ export async function runCli(args: string[], cwd: string, envOverrides?: Record<
 /**
  * Start a CLI command and return the process (for long-running commands like dev)
  */
-export function startCli(args: string[], cwd: string, envOverrides?: Record<string, string>): ChildProcess {
+export function startCli(
+    args: string[],
+    cwd: string,
+    envOverrides?: Record<string, string>
+): ChildProcess {
     const platformUrl = dynamicPlatformUrl || TestConfig.PLATFORM_URL;
     const child = spawn('node', [CLI_PATH, ...args], {
         cwd,
@@ -155,7 +163,6 @@ export function sleep(ms: number): Promise<void> {
  */
 export function assertArtifacts(rootDir: string): void {
     expect(fs.existsSync(path.join(rootDir, 'dist/web/server/index.js'))).to.be.true;
-    expect(fs.existsSync(path.join(rootDir, 'dist/web/client/index.html'))).to.be.true;
     expect(fs.existsSync(path.join(rootDir, 'dist/events/index.js'))).to.be.true;
 }
 

@@ -79,16 +79,12 @@ export function formatSize(bytes: number): string {
 
 /**
  * Logs startup banner for the dev server
- * @param options - URLs for client, server, and events endpoints
+ * @param options - URLs for tunnel endpoint
  */
-export function logDevServerBanner(options: { clientUrl?: string; tunnelUrl?: string }): void {
+export function logDevServerBanner(options: { tunnelUrl?: string }): void {
     console.log('');
     console.log(`${icons.rocket} Bkper App Development Server`);
     console.log('');
-
-    if (options.clientUrl) {
-        console.log(`   ${options.clientUrl}`);
-    }
 
     if (options.tunnelUrl) {
         console.log(`   Events:  ${options.tunnelUrl} (tunneled)`);
@@ -104,21 +100,12 @@ export function logDevServerBanner(options: { clientUrl?: string; tunnelUrl?: st
  * @param results - Build output paths and sizes
  */
 export function logBuildResults(results: {
-    webClient?: { path: string; size: number };
     webServer?: { path: string; size: number };
     events?: { path: string; size: number };
 }): void {
     console.log('');
     console.log(`${icons.package} Building Bkper App...`);
     console.log('');
-
-    if (results.webClient) {
-        console.log(
-            `   \u2713 Web client    \u2192 ${results.webClient.path.padEnd(20)} (${formatSize(
-                results.webClient.size
-            )})`
-        );
-    }
 
     if (results.webServer) {
         console.log(

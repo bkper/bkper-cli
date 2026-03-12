@@ -32,7 +32,11 @@ describe('Integration: app rebuild after clean', function () {
         await runCommand('bun', ['install'], appDir);
 
         // Recompile shared types
-        await runCommand('bun', ['x', 'tsc', '-p', 'tsconfig.json'], path.join(appDir, 'packages/shared'));
+        await runCommand(
+            'bun',
+            ['x', 'tsc', '-p', 'tsconfig.json'],
+            path.join(appDir, 'packages/shared')
+        );
 
         // Rebuild
         await runCli(['app', 'build'], appDir);
@@ -50,17 +54,13 @@ describe('Integration: app rebuild after clean', function () {
 
         // Just verify structure is complete
         const serverExists = fs.existsSync(path.join(appDir, 'dist/web/server/index.js'));
-        const clientExists = fs.existsSync(path.join(appDir, 'dist/web/client/index.html'));
         const eventsExists = fs.existsSync(path.join(appDir, 'dist/events/index.js'));
 
-        if (!serverExists || !clientExists || !eventsExists) {
+        if (!serverExists || !eventsExists) {
             throw new Error(
                 'Rebuild did not create all expected artifacts. ' +
                     'Server: ' +
                     serverExists +
-                    ', ' +
-                    'Client: ' +
-                    clientExists +
                     ', ' +
                     'Events: ' +
                     eventsExists

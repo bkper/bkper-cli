@@ -85,7 +85,8 @@ describe('CLI - apps build command', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
+                .true;
         });
 
         it('should exit with error when no config file exists', async function () {
@@ -98,7 +99,8 @@ describe('CLI - apps build command', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be.true;
+            expect(consoleErrors.some(e => e.includes('No deployment configuration found'))).to.be
+                .true;
         });
     });
 
@@ -134,37 +136,6 @@ deployment:
             expect(exitCode).to.equal(1);
             expect(consoleErrors.some(e => e.includes('Missing dependencies'))).to.be.true;
         });
-
-        it('should exit with error when client deps are missing', async function () {
-            fs.writeFileSync(
-                path.join(tempDir, 'package.json'),
-                JSON.stringify({ name: 'test-app', private: true }, null, 2)
-            );
-            fs.mkdirSync(path.join(tempDir, 'node_modules'), { recursive: true });
-
-            setupProjectStructure(tempDir, {
-                configType: 'web-with-client',
-                createSourceFiles: true,
-                createViteProject: true,
-            });
-
-            const clientDir = path.join(tempDir, 'src/client');
-            fs.writeFileSync(
-                path.join(clientDir, 'package.json'),
-                JSON.stringify({ name: 'client', private: true, dependencies: { lit: '^3.3.2' } }, null, 2)
-            );
-
-            process.chdir(tempDir);
-
-            try {
-                await build();
-            } catch (e: unknown) {
-                expect((e as Error).message).to.include('process.exit');
-            }
-
-            expect(exitCode).to.equal(1);
-            expect(consoleErrors.some(e => e.includes('Missing client dependencies'))).to.be.true;
-        });
     });
 
     describe('build - types generation', function () {
@@ -186,38 +157,6 @@ deployment:
             expect(envDts).to.include('export interface Env');
             expect(envDts).to.include('KV: KVNamespace');
             expect(envDts).to.include('API_KEY: string');
-        });
-    });
-
-    describe('build - web client', function () {
-        it('should build web client when configured', async function () {
-            // Create Vite project structure
-            setupProjectStructure(tempDir, {
-                configType: 'web-with-client',
-                createSourceFiles: true,
-                createViteProject: true,
-            });
-            process.chdir(tempDir);
-
-            await build();
-
-            // Verify web client was built
-            expect(fs.existsSync(path.join(tempDir, 'dist/web/client/index.html'))).to.be.true;
-            expect(consoleOutput.some(o => o.includes('Web client'))).to.be.true;
-        });
-
-        it('should skip client build when only server is configured', async function () {
-            setupProjectStructure(tempDir, {
-                configType: 'web-server-only',
-                createSourceFiles: true,
-            });
-            process.chdir(tempDir);
-
-            await build();
-
-            // Verify server was built but client directory doesn't exist
-            expect(fs.existsSync(path.join(tempDir, 'dist/web/server/index.js'))).to.be.true;
-            expect(fs.existsSync(path.join(tempDir, 'dist/web/client'))).to.be.false;
         });
     });
 
@@ -273,7 +212,6 @@ deployment:
             setupProjectStructure(tempDir, {
                 configType: 'full',
                 createSourceFiles: true,
-                createViteProject: true,
             });
             process.chdir(tempDir);
 
@@ -282,9 +220,8 @@ deployment:
 
             await build();
 
-            // Verify all directories were created
+            // Verify worker directories were created (client is now built by Vite, not CLI)
             expect(fs.existsSync(path.join(tempDir, 'dist/web/server'))).to.be.true;
-            expect(fs.existsSync(path.join(tempDir, 'dist/web/client'))).to.be.true;
             expect(fs.existsSync(path.join(tempDir, 'dist/events'))).to.be.true;
         });
     });
@@ -312,15 +249,13 @@ deployment:
             setupProjectStructure(tempDir, {
                 configType: 'full',
                 createSourceFiles: true,
-                createViteProject: true,
             });
             process.chdir(tempDir);
 
             await build();
 
-            // Verify all outputs exist
+            // Verify worker outputs exist (client is now built by Vite, not CLI)
             expect(fs.existsSync(path.join(tempDir, 'dist/web/server/index.js'))).to.be.true;
-            expect(fs.existsSync(path.join(tempDir, 'dist/web/client/index.html'))).to.be.true;
             expect(fs.existsSync(path.join(tempDir, 'dist/events/index.js'))).to.be.true;
 
             // Verify completion message
@@ -349,12 +284,16 @@ deployment:
 /**
  * Configuration types for test projects
  */
-type ConfigType = 'full' | 'web-with-client' | 'web-server-only' | 'events-only' | 'events-with-services';
+type ConfigType =
+    | 'full'
+    | 'web-with-client'
+    | 'web-server-only'
+    | 'events-only'
+    | 'events-with-services';
 
 interface SetupOptions {
     configType: ConfigType;
     createSourceFiles?: boolean;
-    createViteProject?: boolean;
     createSharedPackage?: boolean;
 }
 
@@ -362,10 +301,13 @@ interface SetupOptions {
  * Helper to setup a project structure for testing
  */
 function setupProjectStructure(tempDir: string, options: SetupOptions): void {
-    const { configType, createSourceFiles, createViteProject, createSharedPackage } = options;
+    const { configType, createSourceFiles, createSharedPackage } = options;
 
     // Create package.json (required by preflight)
-    fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'test-app', private: true }, null, 2));
+    fs.writeFileSync(
+        path.join(tempDir, 'package.json'),
+        JSON.stringify({ name: 'test-app', private: true }, null, 2)
+    );
 
     // Create node_modules (required by preflight)
     const nodeModulesPath = path.join(tempDir, 'node_modules');
@@ -438,30 +380,14 @@ deployment:
             fs.writeFileSync(path.join(tempDir, 'src/server/index.ts'), workerCode);
         }
 
-        if (configType === 'full' || configType === 'events-only' || configType === 'events-with-services') {
+        if (
+            configType === 'full' ||
+            configType === 'events-only' ||
+            configType === 'events-with-services'
+        ) {
             fs.mkdirSync(path.join(tempDir, 'src/events'), { recursive: true });
             fs.writeFileSync(path.join(tempDir, 'src/events/index.ts'), workerCode);
         }
-    }
-
-    if (createViteProject && (configType === 'full' || configType === 'web-with-client')) {
-        // Create minimal Vite project structure
-        fs.mkdirSync(path.join(tempDir, 'src/client/src'), { recursive: true });
-        fs.writeFileSync(
-            path.join(tempDir, 'src/client/index.html'),
-            `<!DOCTYPE html>
-<html>
-<head><title>Test</title></head>
-<body>
-<div id="app"></div>
-<script type="module" src="/src/main.ts"></script>
-</body>
-</html>`
-        );
-        fs.writeFileSync(
-            path.join(tempDir, 'src/client/src/main.ts'),
-            `document.getElementById('app')!.innerHTML = '<h1>Hello</h1>';`
-        );
     }
 
     if (createSharedPackage) {

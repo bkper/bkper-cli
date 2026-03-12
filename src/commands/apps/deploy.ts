@@ -5,7 +5,6 @@ import { getOAuthToken, isLoggedIn } from '../../auth/local-auth-service.js';
 import { createPlatformClient } from '../../platform/client.js';
 import { createAssetManifest, readAssetFiles } from './bundler.js';
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from './config.js';
-import { build } from './build.js';
 import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } from './types.js';
 
 // =============================================================================
@@ -49,15 +48,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 5. Build app before deploy
-    try {
-        await build();
-    } catch (error) {
-        console.error(`Build failed: ${error instanceof Error ? error.message : String(error)}`);
-        process.exit(1);
-    }
-
-    // 6. Resolve build outputs
+    // 5. Resolve build outputs
     let resolvedPaths: { bundleDir: string; bundlePath: string; assetsDir?: string };
     try {
         resolvedPaths = resolveSourceDeployPaths(type, deploymentConfig);
@@ -67,16 +58,11 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     }
     const { bundleDir, bundlePath, assetsDir } = resolvedPaths;
 
-    // 7. Validate bundle outputs exist
-    if (!fs.existsSync(bundleDir)) {
-        console.error(`Error: Bundle directory not found: ${bundleDir}`);
-        console.error('Please ensure the build completed successfully');
-        process.exit(1);
-    }
-
-    if (!fs.existsSync(bundlePath)) {
-        console.error(`Error: Bundle file not found: ${bundlePath}`);
-        console.error('Expected index.js in the bundle directory');
+    // 6. Validate bundle outputs exist
+    if (!fs.existsSync(bundleDir) || !fs.existsSync(bundlePath)) {
+        console.error(
+            "No build output found. Run your project's build script first (e.g. `npm run build`)."
+        );
         process.exit(1);
     }
 

@@ -84,3 +84,49 @@ export async function buildWorkerToFile(entryPoint: string, outfile: string): Pr
         sourcemap: true,
     });
 }
+
+/**
+ * Handle returned by watchWorker for cleanup.
+ */
+export interface WatchHandle {
+    dispose: () => Promise<void>;
+}
+
+/**
+ * Watches a Worker entry point using esbuild's incremental build context.
+ * Replaces chokidar for server and events file watching — esbuild tracks
+ * the full dependency graph automatically, so any imported file change
+ * triggers a rebuild.
+ *
+ * The `onRebuild` callback receives the bundled code string on each
+ * successful rebuild. Feed this directly to `updateWorkerCode()`.
+ *
+ * @param entryPoint - Path to TypeScript Worker entry file
+ * @param onRebuild - Callback invoked with bundled code after each successful rebuild
+ * @returns Handle with dispose() to stop watching
+ */
+export async function watchWorker(
+    entryPoint: string,
+    onRebuild: (code: string) => void
+): Promise<WatchHandle> {
+    const ctx = await esbuild.context({
+        ...getBaseConfig(entryPoint),
+        write: false,
+        sourcemap: 'inline',
+        plugins: [
+            workersExternalsPlugin,
+            {
+                name: 'notify-rebuild',
+                setup(build) {
+                    build.onEnd(result => {
+                        if (result.errors.length === 0 && result.outputFiles?.[0]) {
+                            onRebuild(result.outputFiles[0].text);
+                        }
+                    });
+                },
+            },
+        ],
+    });
+    await ctx.watch();
+    return { dispose: () => ctx.dispose() };
+}

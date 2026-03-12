@@ -1,4 +1,4 @@
-import type { Connect } from 'vite';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isLoggedIn, getOAuthToken } from '../auth/local-auth-service.js';
 
 /**
@@ -41,7 +41,6 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
  * Extracts user ID (email) from Google OAuth credentials.
  * The id_token is a JWT containing the user's email in the 'email' claim.
  *
- * @param accessToken - OAuth access token (not used for extraction, but triggers refresh)
  * @returns User ID (email) or 'unknown' if extraction fails
  */
 async function extractUserId(): Promise<string> {
@@ -67,7 +66,7 @@ async function extractUserId(): Promise<string> {
 }
 
 /**
- * Creates Vite middleware that handles /auth/refresh requests.
+ * Creates a Connect-compatible middleware that handles /auth/refresh requests.
  *
  * This middleware intercepts POST /auth/refresh requests and returns
  * an access token from the CLI's stored credentials, allowing web
@@ -79,9 +78,13 @@ async function extractUserId(): Promise<string> {
  * - 401: { error: string } - when not logged in
  * - 500: { error: string } - on unexpected errors
  *
- * @returns Vite/Connect middleware function
+ * @returns Connect-compatible middleware function (req, res, next)
  */
-export function createAuthMiddleware(): Connect.NextHandleFunction {
+export function createBkperAuthMiddleware(): (
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: () => void
+) => void {
     return async (req, res, next) => {
         // Only handle POST /auth/refresh
         if (req.url !== '/auth/refresh' || req.method !== 'POST') {
@@ -121,3 +124,6 @@ export function createAuthMiddleware(): Connect.NextHandleFunction {
         }
     };
 }
+
+// Keep backward-compatible alias
+export const createAuthMiddleware = createBkperAuthMiddleware;

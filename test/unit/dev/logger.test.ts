@@ -11,9 +11,8 @@ describe('Logger Module', function () {
 
     // Dynamic imports to allow module to be loaded after stubs are set up
     let createLogger: (prefix: LogPrefix) => Logger;
-    let logDevServerBanner: (options: { clientUrl?: string; tunnelUrl?: string }) => void;
+    let logDevServerBanner: (options: { tunnelUrl?: string }) => void;
     let logBuildResults: (results: {
-        webClient?: { path: string; size: number };
         webServer?: { path: string; size: number };
         events?: { path: string; size: number };
     }) => void;
@@ -138,9 +137,8 @@ describe('Logger Module', function () {
     });
 
     describe('logDevServerBanner', function () {
-        it('should log banner with all URLs', function () {
+        it('should log banner with tunnel URL', function () {
             logDevServerBanner({
-                clientUrl: 'http://localhost:5173',
                 tunnelUrl: 'https://my-tunnel.example.com',
             });
 
@@ -151,33 +149,13 @@ describe('Logger Module', function () {
                 .map(call => call.args[0])
                 .join('\n');
             expect(allOutput).to.include('Bkper App');
-            expect(allOutput).to.include('http://localhost:5173');
             expect(allOutput).to.include('Events:');
             expect(allOutput).to.include('https://my-tunnel.example.com');
             expect(allOutput).to.include('(tunneled)');
-        });
-
-        it('should handle missing clientUrl', function () {
-            logDevServerBanner({
-                tunnelUrl: 'https://my-tunnel.example.com',
-            });
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Events:');
-            expect(allOutput).to.include('https://my-tunnel.example.com');
-            expect(allOutput).to.include('(tunneled)');
-            expect(allOutput).not.to.include('http://localhost');
         });
 
         it('should handle missing tunnelUrl', function () {
-            logDevServerBanner({
-                clientUrl: 'http://localhost:5173',
-            });
+            logDevServerBanner({});
 
             expect(consoleLogStub.called).to.be.true;
 
@@ -185,25 +163,9 @@ describe('Logger Module', function () {
                 .getCalls()
                 .map(call => call.args[0])
                 .join('\n');
-            expect(allOutput).to.include('http://localhost:5173');
+            expect(allOutput).to.include('Bkper App');
             expect(allOutput).not.to.include('Events:');
             expect(allOutput).not.to.include('(tunneled)');
-        });
-
-        it('should handle tunnelUrl only', function () {
-            logDevServerBanner({
-                tunnelUrl: 'https://my-tunnel.example.com',
-            });
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Events:');
-            expect(allOutput).to.include('https://my-tunnel.example.com');
-            expect(allOutput).to.include('(tunneled)');
         });
 
         it('should handle empty options', function () {
@@ -222,7 +184,6 @@ describe('Logger Module', function () {
     describe('logBuildResults', function () {
         it('should log all build results with sizes', function () {
             logBuildResults({
-                webClient: { path: 'dist/web/client/', size: 148480 },
                 webServer: { path: 'dist/web/server/', size: 23552 },
                 events: { path: 'dist/events/', size: 18432 },
             });
@@ -233,23 +194,8 @@ describe('Logger Module', function () {
                 .getCalls()
                 .map(call => call.args[0])
                 .join('\n');
-            expect(allOutput).to.include('dist/web/client/');
             expect(allOutput).to.include('dist/web/server/');
             expect(allOutput).to.include('dist/events/');
-        });
-
-        it('should handle partial results - only webClient', function () {
-            logBuildResults({
-                webClient: { path: 'dist/web/client/', size: 148480 },
-            });
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('dist/web/client/');
         });
 
         it('should handle partial results - only webServer', function () {
@@ -294,7 +240,7 @@ describe('Logger Module', function () {
 
         it('should format file sizes correctly', function () {
             logBuildResults({
-                webClient: { path: 'dist/web/client/', size: 148480 },
+                webServer: { path: 'dist/web/server/', size: 148480 },
             });
 
             const allOutput = consoleLogStub

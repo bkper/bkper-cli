@@ -45,18 +45,6 @@ describe('Integration: app build', function () {
         expect(fs.statSync(serverPath).size).to.be.greaterThan(0);
     });
 
-    it('should create client-side bundle', async function () {
-        this.timeout(5000);
-
-        if (!appDir) {
-            appDir = await stateManager.getApp('built');
-        }
-
-        const clientPath = path.join(appDir, 'dist/web/client/index.html');
-        expect(fs.existsSync(clientPath)).to.be.true;
-        expect(fs.statSync(clientPath).size).to.be.greaterThan(0);
-    });
-
     it('should create events worker bundle', async function () {
         this.timeout(5000);
 

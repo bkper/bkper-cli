@@ -1,4 +1,4 @@
-import { Miniflare, Log, LogLevel } from 'miniflare';
+import type { Miniflare, Log } from 'miniflare';
 import { buildWorker } from './esbuild.js';
 
 export interface WorkerServerOptions {
@@ -32,6 +32,19 @@ interface BaseConfig {
 const instanceConfigs = new WeakMap<Miniflare, BaseConfig>();
 
 /**
+ * Dynamically imports miniflare, exiting with a helpful message if not installed.
+ */
+async function loadMiniflare(): Promise<typeof import('miniflare')> {
+    try {
+        return await import('miniflare');
+    } catch {
+        console.error('miniflare is required for local development.');
+        console.error('Install it as a devDependency (e.g. npm install -D miniflare).');
+        process.exit(1);
+    }
+}
+
+/**
  * Creates and starts a Miniflare instance for local Worker development
  *
  * @param entryPoint - Path to TypeScript Worker entry file
@@ -42,6 +55,8 @@ export async function createWorkerServer(
     entryPoint: string,
     options: WorkerServerOptions
 ): Promise<Miniflare> {
+    const { Miniflare: MiniflareClass, Log: LogClass, LogLevel } = await loadMiniflare();
+
     // Build the Worker code from TypeScript
     const script = await buildWorker(entryPoint);
 
@@ -55,7 +70,7 @@ export async function createWorkerServer(
         compatibilityFlags: ['nodejs_compat'],
 
         // Logging
-        log: new Log(LogLevel.INFO),
+        log: new LogClass(LogLevel.INFO),
 
         // Live reload (inject script into HTML responses)
         liveReload: true,
@@ -74,7 +89,7 @@ export async function createWorkerServer(
         bindings: options.vars,
     };
 
-    const mf = new Miniflare({
+    const mf = new MiniflareClass({
         ...baseConfig,
         // Use modules array format instead of script string
         // This allows Miniflare to properly handle dynamic imports of external modules
@@ -97,15 +112,25 @@ export async function createWorkerServer(
 }
 
 /**
- * Reloads a Worker with new code (hot reload)
- * Rebuilds the entry point and updates Miniflare
+ * Reloads a Worker with new code (hot reload).
+ * Rebuilds the entry point and updates Miniflare.
  *
  * @param mf - Existing Miniflare instance
  * @param entryPoint - Path to TypeScript Worker entry file
  */
 export async function reloadWorker(mf: Miniflare, entryPoint: string): Promise<void> {
     const script = await buildWorker(entryPoint);
+    await updateWorkerCode(mf, script);
+}
 
+/**
+ * Updates a Worker with pre-built code (used by esbuild watch mode).
+ * Skips the build step — expects code that's already bundled.
+ *
+ * @param mf - Existing Miniflare instance
+ * @param code - Pre-built JavaScript code string
+ */
+export async function updateWorkerCode(mf: Miniflare, code: string): Promise<void> {
     // Retrieve the stored base config
     const baseConfig = instanceConfigs.get(mf);
     if (!baseConfig) {
@@ -115,7 +140,7 @@ export async function reloadWorker(mf: Miniflare, entryPoint: string): Promise<v
                 {
                     type: 'ESModule',
                     path: 'index.js',
-                    contents: script,
+                    contents: code,
                 },
             ],
         });
@@ -129,7 +154,7 @@ export async function reloadWorker(mf: Miniflare, entryPoint: string): Promise<v
             {
                 type: 'ESModule',
                 path: 'index.js',
-                contents: script,
+                contents: code,
             },
         ],
     });

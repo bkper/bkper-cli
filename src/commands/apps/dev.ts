@@ -1,10 +1,14 @@
-import { Miniflare } from 'miniflare';
-import { ViteDevServer } from 'vite';
-import { watch } from 'chokidar';
+import type { Miniflare } from 'miniflare';
+import { watch as fsWatch, type FSWatcher } from 'node:fs';
 import path from 'path';
 import fs from 'fs';
-import { createWorkerServer, reloadWorker, stopWorkerServer } from '../../dev/miniflare.js';
-import { createClientServer, stopClientServer, getServerUrl } from '../../dev/vite.js';
+import {
+    createWorkerServer,
+    reloadWorker,
+    updateWorkerCode,
+    stopWorkerServer,
+} from '../../dev/miniflare.js';
+import { watchWorker, type WatchHandle } from '../../dev/esbuild.js';
 import { ensureTypesUpToDate, loadDevVars } from '../../dev/types.js';
 import { createLogger, logDevServerBanner } from '../../dev/logger.js';
 import { buildSharedIfPresent } from '../../dev/shared.js';
@@ -19,8 +23,6 @@ import { runCleanupStep } from '../../dev/cleanup.js';
  * Options for the dev command
  */
 export interface DevOptions {
-    /** Client dev server port (default: 5173) */
-    clientPort?: number;
     /** Server simulation port (default: 8787) */
     serverPort?: number;
     /** Events handler port (default: 8791) */
@@ -29,16 +31,14 @@ export interface DevOptions {
     web?: boolean;
     /** Run only the events handler */
     events?: boolean;
-    /** Open browser on startup (default: true) */
-    open?: boolean;
 }
 
 /**
- * Starts the full development environment.
- * Auto-detects what's configured and runs it:
+ * Starts the platform development environment.
+ * Runs the worker runtime (Miniflare), esbuild watch, tunnel, and webhookUrlDev.
  *
- * - If web is configured: starts Vite + Miniflare
- * - If events is configured: runs locally with tunnel
+ * Client tooling (Vite) is the template's responsibility — run it separately
+ * via `vite dev` or the template's `npm run dev` script (which uses concurrently).
  *
  * @param options - Dev command options
  */
@@ -94,10 +94,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         process.cwd()
     );
 
-    const clientRoot = deployConfig.web?.client
-        ? path.resolve(process.cwd(), deployConfig.web.client)
-        : undefined;
-    const preflight = preflightDependencies(process.cwd(), clientRoot);
+    const preflight = preflightDependencies(process.cwd());
     if (!preflight.ok) {
         console.error(preflight.message);
         process.exit(1);
@@ -123,15 +120,16 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     // Load dev vars (secrets for local development)
     const devVars = loadDevVars(process.cwd(), deployConfig.secrets || []);
 
-    const clientPort = options.clientPort || 5173;
     const serverPort = options.serverPort || 8787;
     const eventsPort = options.eventsPort || 8791;
 
     let mf: Miniflare | null = null;
     let eventsMf: Miniflare | null = null;
-    let vite: ViteDevServer | null = null;
     let eventsTunnel: TunnelHandle | null = null;
     let eventsUrl: string | undefined;
+    let serverWatchHandle: WatchHandle | null = null;
+    let eventsWatchHandle: WatchHandle | null = null;
+    let sharedWatcher: FSWatcher | null = null;
 
     // Handle graceful shutdown
     let cleaningUp = false;
@@ -152,10 +150,24 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         await Promise.allSettled(
             [
                 runCleanupStep({
-                    label: 'vite',
+                    label: 'server-watch',
                     timeoutMs: 5000,
                     action: async () => {
-                        if (vite) await stopClientServer(vite);
+                        if (serverWatchHandle) await serverWatchHandle.dispose();
+                    },
+                }),
+                runCleanupStep({
+                    label: 'events-watch',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (eventsWatchHandle) await eventsWatchHandle.dispose();
+                    },
+                }),
+                runCleanupStep({
+                    label: 'shared-watch',
+                    timeoutMs: 5000,
+                    action: async () => {
+                        if (sharedWatcher) sharedWatcher.close();
                     },
                 }),
                 runCleanupStep({
@@ -213,7 +225,70 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     });
     process.stdin.resume();
 
-    // Start web server (Miniflare)
+    // Shared package watching (fs.watch with debounce)
+    const sharedDir = path.join(process.cwd(), 'packages/shared/src');
+    let sharedBuildInProgress = false;
+    let sharedBuildPending = false;
+    let sharedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const rebuildShared = async (): Promise<void> => {
+        if (sharedBuildInProgress) {
+            sharedBuildPending = true;
+            return;
+        }
+
+        sharedBuildInProgress = true;
+        try {
+            sharedLogger.info('Rebuilding shared package...');
+            const result = await buildSharedIfPresent(process.cwd());
+            if (!result.success) {
+                sharedLogger.error('Shared package build failed');
+                if (result.diagnostics) {
+                    for (const diagnostic of result.diagnostics) {
+                        sharedLogger.error(diagnostic);
+                    }
+                }
+                return;
+            }
+
+            if (result.built) {
+                sharedLogger.success('Shared package rebuilt');
+            }
+
+            if (hasWeb && mf) {
+                serverLogger.info('Reloading server after shared update...');
+                await reloadWorker(mf, deployConfig.web!.main);
+                serverLogger.success('Server reloaded');
+            }
+
+            if (hasEvents && eventsMf) {
+                eventsLogger.info('Reloading events after shared update...');
+                await reloadWorker(eventsMf, deployConfig.events!.main);
+                eventsLogger.success('Events reloaded');
+            }
+        } catch (err) {
+            sharedLogger.error(`Shared rebuild failed: ${err}`);
+        } finally {
+            sharedBuildInProgress = false;
+            if (sharedBuildPending) {
+                sharedBuildPending = false;
+                setTimeout(rebuildShared, 100);
+            }
+        }
+    };
+
+    if (fs.existsSync(sharedDir)) {
+        sharedWatcher = fsWatch(sharedDir, { recursive: true }, (_event, filename) => {
+            if (filename && filename.includes('node_modules')) return;
+            sharedLogger.info(`Change detected: ${filename}`);
+            if (sharedDebounceTimer) {
+                clearTimeout(sharedDebounceTimer);
+            }
+            sharedDebounceTimer = setTimeout(rebuildShared, 200);
+        });
+    }
+
+    // Start web server (Miniflare) with esbuild watch
     if (hasWeb) {
         serverLogger.info('Starting server...');
         mf = await createWorkerServer(deployConfig.web!.main, {
@@ -224,88 +299,11 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             persist: true,
         });
 
-        // Start web client (Vite)
-        if (deployConfig.web!.client) {
-            vite = await createClientServer(deployConfig.web!.client, {
-                port: clientPort,
-                serverPort,
-                open: options.open !== false,
-            });
-        }
-
-        const sharedDir = path.join(process.cwd(), 'packages/shared/src');
-        let sharedBuildInProgress = false;
-        let sharedBuildPending = false;
-        let sharedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-        const rebuildShared = async (): Promise<void> => {
-            if (sharedBuildInProgress) {
-                sharedBuildPending = true;
-                return;
-            }
-
-            sharedBuildInProgress = true;
+        // Watch server files via esbuild (replaces chokidar)
+        serverWatchHandle = await watchWorker(deployConfig.web!.main, async code => {
+            serverLogger.info('Rebuilding server...');
             try {
-                sharedLogger.info('Rebuilding shared package...');
-                const result = await buildSharedIfPresent(process.cwd());
-                if (!result.success) {
-                    sharedLogger.error('Shared package build failed');
-                    if (result.diagnostics) {
-                        for (const diagnostic of result.diagnostics) {
-                            sharedLogger.error(diagnostic);
-                        }
-                    }
-                    return;
-                }
-
-                if (result.built) {
-                    sharedLogger.success('Shared package rebuilt');
-                }
-
-                if (hasWeb && mf) {
-                    serverLogger.info('Reloading server after shared update...');
-                    await reloadWorker(mf, deployConfig.web!.main);
-                    serverLogger.success('Server reloaded');
-                }
-
-                if (hasEvents && eventsMf) {
-                    eventsLogger.info('Reloading events after shared update...');
-                    await reloadWorker(eventsMf, deployConfig.events!.main);
-                    eventsLogger.success('Events reloaded');
-                }
-            } catch (err) {
-                sharedLogger.error(`Shared rebuild failed: ${err}`);
-            } finally {
-                sharedBuildInProgress = false;
-                if (sharedBuildPending) {
-                    sharedBuildPending = false;
-                    setTimeout(rebuildShared, 100);
-                }
-            }
-        };
-
-        if (fs.existsSync(sharedDir)) {
-            watch(sharedDir, {
-                ignoreInitial: true,
-                ignored: /node_modules/,
-            }).on('change', file => {
-                sharedLogger.info(`Change detected: ${path.basename(file)}`);
-                if (sharedDebounceTimer) {
-                    clearTimeout(sharedDebounceTimer);
-                }
-                sharedDebounceTimer = setTimeout(rebuildShared, 200);
-            });
-        }
-
-        // Watch server files for hot reload
-        const serverDir = path.dirname(deployConfig.web!.main);
-        watch(serverDir, {
-            ignoreInitial: true,
-            ignored: /node_modules/,
-        }).on('change', async file => {
-            serverLogger.info(`${path.basename(file)} changed, reloading...`);
-            try {
-                await reloadWorker(mf!, deployConfig.web!.main);
+                await updateWorkerCode(mf!, code);
                 serverLogger.success('Server reloaded');
             } catch (err) {
                 serverLogger.error(`Reload failed: ${err}`);
@@ -313,7 +311,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         });
     }
 
-    // Watch events files for local reload
+    // Start events server (Miniflare) with esbuild watch
     if (hasEvents) {
         eventsLogger.info('Starting events server...');
         eventsMf = await createWorkerServer(deployConfig.events!.main, {
@@ -323,6 +321,17 @@ export async function dev(options: DevOptions = {}): Promise<void> {
             compatibilityDate: deployConfig.compatibilityDate,
             persist: true,
             persistPath: './.mf/kv-events',
+        });
+
+        // Watch events files via esbuild (replaces chokidar)
+        eventsWatchHandle = await watchWorker(deployConfig.events!.main, async code => {
+            eventsLogger.info('Rebuilding events...');
+            try {
+                await updateWorkerCode(eventsMf!, code);
+                eventsLogger.success('Events reloaded');
+            } catch (err) {
+                eventsLogger.error(`Events reload failed: ${err}`);
+            }
         });
 
         try {
@@ -349,48 +358,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                 }
             }
         }
-
-        const eventsDir = path.dirname(deployConfig.events!.main);
-        let eventsReloadInProgress = false;
-        let eventsReloadPending = false;
-        let eventsDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-        const reloadEvents = async (): Promise<void> => {
-            if (!eventsMf) return;
-            if (eventsReloadInProgress) {
-                eventsReloadPending = true;
-                return;
-            }
-
-            eventsReloadInProgress = true;
-            try {
-                eventsLogger.info('Reloading events...');
-                await reloadWorker(eventsMf, deployConfig.events!.main);
-                eventsLogger.success('Events reloaded');
-            } catch (err) {
-                eventsLogger.error(`Events reload failed: ${err}`);
-            } finally {
-                eventsReloadInProgress = false;
-                if (eventsReloadPending) {
-                    eventsReloadPending = false;
-                    setTimeout(reloadEvents, 100);
-                }
-            }
-        };
-
-        watch(eventsDir, {
-            ignoreInitial: true,
-            ignored: /node_modules/,
-        }).on('change', file => {
-            eventsLogger.info(`Change detected: ${path.basename(file)}`);
-            if (eventsDebounceTimer) clearTimeout(eventsDebounceTimer);
-            eventsDebounceTimer = setTimeout(reloadEvents, 200);
-        });
     }
 
     // Display status
     logDevServerBanner({
-        clientUrl: hasWeb && vite ? getServerUrl(vite) : undefined,
         tunnelUrl: hasEvents && eventsTunnel ? eventsUrl : undefined,
     });
 

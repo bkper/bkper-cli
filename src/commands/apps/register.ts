@@ -103,25 +103,21 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('dev')
-        .description('Start the development server')
-        .option('--cp, --client-port <port>', 'Client dev server port', '5173')
+        .description('Start the worker runtime for local development')
         .option('--sp, --server-port <port>', 'Server simulation port', '8787')
         .option('--ep, --events-port <port>', 'Events handler port', '8791')
         .option('-w, --web', 'Run only the web handler')
         .option('-e, --events', 'Run only the events handler')
-        .option('--no-open', 'Do not open browser on startup')
         .action(options =>
             withAction(
                 'starting dev server',
                 async () => {
                     setupBkper();
                     await dev({
-                        clientPort: parseInt(options.clientPort, 10),
                         serverPort: parseInt(options.serverPort, 10),
                         eventsPort: parseInt(options.eventsPort, 10),
                         web: options.web,
                         events: options.events,
-                        open: options.open,
                     });
                 },
                 { skipSetup: true }
@@ -130,7 +126,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('build')
-        .description('Build all configured handlers for deployment')
+        .description('Build worker bundles for deployment')
         .action(
             withAction(
                 'building app',

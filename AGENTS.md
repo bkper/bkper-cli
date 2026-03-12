@@ -21,6 +21,8 @@ bun run build
 bun run dev
 ```
 
+> **Note:** The CLI builds worker bundles only (`bkper app build`). Client tooling (Vite) is owned by the app template and configured via `vite.config.ts`. The template's `npm run dev` runs both Vite and `bkper app dev` concurrently, and `npm run build` runs both `vite build` and `bkper app build`.
+
 ## Test Commands
 
 ```bash
