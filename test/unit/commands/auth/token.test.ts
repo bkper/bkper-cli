@@ -63,20 +63,65 @@ describe('CLI - auth token Command', function () {
         expect(stdoutWriteStub.called).to.be.false;
     });
 
-    it('should output raw token without trailing newline', async function () {
+    it('should output raw token without trailing newline when piped (non-TTY)', async function () {
         isLoggedInStub.returns(true);
         getOAuthTokenStub.resolves('ya29.raw-token');
+
+        // Simulate non-TTY (piped) environment
+        const originalIsTTY = process.stdout.isTTY;
+        Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
 
         if (!isLoggedInStub()) {
             console.error('Error: Not logged in. Run: bkper auth login');
             process.exit(1);
         }
         const accessToken = await getOAuthTokenStub();
-        process.stdout.write(accessToken);
+        if (process.stdout.isTTY) {
+            console.log(accessToken);
+        } else {
+            process.stdout.write(accessToken);
+        }
 
         // process.stdout.write does not append a newline (unlike console.log)
         const output = stdoutWriteStub.firstCall.args[0];
         expect(output).to.equal('ya29.raw-token');
         expect(output).to.not.include('\n');
+
+        Object.defineProperty(process.stdout, 'isTTY', {
+            value: originalIsTTY,
+            configurable: true,
+        });
+    });
+
+    it('should output token with trailing newline when interactive (TTY)', async function () {
+        isLoggedInStub.returns(true);
+        getOAuthTokenStub.resolves('ya29.tty-token');
+
+        const consoleLogStub = sinon.stub(console, 'log');
+
+        // Simulate TTY environment
+        const originalIsTTY = process.stdout.isTTY;
+        Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+
+        if (!isLoggedInStub()) {
+            console.error('Error: Not logged in. Run: bkper auth login');
+            process.exit(1);
+        }
+        const accessToken = await getOAuthTokenStub();
+        if (process.stdout.isTTY) {
+            console.log(accessToken);
+        } else {
+            process.stdout.write(accessToken);
+        }
+
+        expect(consoleLogStub.calledOnce).to.be.true;
+        expect(consoleLogStub.calledWith('ya29.tty-token')).to.be.true;
+        expect(stdoutWriteStub.called).to.be.false;
+
+        consoleLogStub.restore();
+        Object.defineProperty(process.stdout, 'isTTY', {
+            value: originalIsTTY,
+            configurable: true,
+        });
     });
 });
