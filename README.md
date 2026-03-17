@@ -2,8 +2,14 @@
 [Developer Docs]: https://bkper.com/docs
 [App Template]: https://github.com/bkper/bkper-app-template
 [Skills Repository]: https://github.com/bkper/skills
+[Pi]: https://pi.dev/
 
-A **command-line interface** for [Bkper](https://bkper.com), a financial accounting platform. Build and deploy Bkper apps, and manage your financial data -- books, accounts, transactions, and balances -- directly from the terminal.
+A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
+
+-   **Interactive mode** — run `bkper` with no arguments to open the agent TUI
+-   **Command mode** — run `bkper <command>` for explicit CLI workflows, scripts, and automation
+
+With one tool, you can build and deploy Bkper apps, and manage financial data -- books, accounts, transactions, and balances.
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
@@ -37,22 +43,15 @@ yarn global add bkper
 bkper auth login
 ```
 
-### Access Token
-
-Use the access token for direct API calls from any tool:
+### Start using bkper
 
 ```bash
-# Print the current access token
-TOKEN=$(bkper auth token)
-
-# Use it with curl, httpie, or any HTTP client
-curl -s -H "Authorization: Bearer $TOKEN" \
-  https://api.bkper.app/v5/books | jq '.items[].name'
+# Interactive mode (agent TUI)
+bkper
 ```
 
-### Try It
-
 ```bash
+# Command mode (explicit command)
 bkper book list
 ```
 
@@ -66,20 +65,43 @@ bkper transaction create -b <bookId> --description "Office supplies 123.78"
 >
 > To build and deploy Bkper Apps, see [App Management](#app-management).
 
-## Agent & Skills
+### Access Token
 
-Run `bkper` with no arguments in an interactive terminal to start the agent TUI.
+Use the access token for direct API calls from any tool:
 
-On each agent startup, bkper performs background maintenance checks (non-blocking):
+```bash
+# Print the current access token
+TOKEN=$(bkper auth token)
+
+# Use it with curl, httpie, or any HTTP client
+curl -s -H "Authorization: Bearer $TOKEN" \
+  https://api.bkper.app/v5/books | jq '.items[].name'
+```
+
+## Interactive Mode (powered by Pi)
+
+When you run `bkper` with no arguments in an interactive terminal, bkper starts the embedded agent TUI.
+
+Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
+
+-   Pi provides the core agent runtime and TUI
+-   bkper adds Bkper-specific domain context, skills distribution defaults, and startup maintenance behavior
+
+### Startup maintenance (non-blocking)
+
+On each agent startup, bkper performs background checks:
 
 -   CLI auto-update check (same behavior as command mode)
 -   Bkper skills sync check from [Skills Repository]
 
-Bkper skills are synced to:
+### Skills
 
--   `~/.agents/skills` (global)
+Bkper skills are synced globally to:
 
-You can trigger a manual sync at any time:
+-   `~/.agents/skills`
+-   state file: `~/.agents/skills/.bkper-skills.yaml`
+
+Trigger a manual sync at any time:
 
 ```bash
 bkper skills sync
@@ -88,6 +110,8 @@ bkper skills sync
 Skills are agent-agnostic and can be reused by other tools that support `.agents/skills`.
 
 Pi-specific extensions are loaded from Pi extension folders (for example `.pi/extensions` and `~/.pi/agent/extensions`).
+
+<!-- Suggested showcase media: add a short terminal GIF here (bkper -> "Bkper Agent ready." -> one prompt). -->
 
 ---
 
