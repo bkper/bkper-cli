@@ -2,6 +2,21 @@
 
 ## 2026
 
+### **March 2026**
+
+-   **Agent Experience**
+    -   Running `bkper` with no arguments now starts the embedded agent TUI (interactive terminals)
+    -   Added startup maintenance for agent mode with background checks
+-   **Skills Distribution**
+    -   Skills sync moved to agent startup flow (decoupled from `app init`)
+    -   Added top-level `skills sync` command: `bkper skills sync`
+    -   Standardized skills location to `~/.agents/skills`
+    -   Skills sync state is now colocated at `~/.agents/skills/.bkper-skills.yaml`
+-   **App Development**
+    -   `app init` no longer performs global skills synchronization
+-   **Documentation**
+    -   Updated README with Agent & Skills behavior, paths, and manual sync guidance
+
 ### **February 2026**
 
 -   **CLI**
