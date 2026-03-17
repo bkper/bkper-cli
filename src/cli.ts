@@ -13,6 +13,7 @@ import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
 import { registerSkillsCommands } from './commands/skills-command.js';
+import { registerAgentCommands } from './commands/agent-command.js';
 import { VERSION, autoUpgrade } from './upgrade/index.js';
 import { shouldStartAgentMode } from './agent/cli-dispatch.js';
 import { runAgentMode } from './agent/run-agent-mode.js';
@@ -46,6 +47,9 @@ async function main(): Promise<void> {
 
     // Skills command
     registerSkillsCommands(program);
+
+    // Agent bridge command
+    registerAgentCommands(program);
 
     // Upgrade command
     registerUpgradeCommand(program);

@@ -94,6 +94,27 @@ On each agent startup, bkper performs background checks:
 -   CLI auto-update check (same behavior as command mode)
 -   Bkper skills sync check from [Skills Repository]
 
+### Pi passthrough
+
+Use Pi CLI features directly through bkper:
+
+```bash
+bkper agent -- <pi-args>
+```
+
+Examples:
+
+```bash
+bkper agent -- -p "Summarize this repository"
+bkper agent -- --model openai/gpt-4o -c
+bkper agent -- install <pi-package-source>
+```
+
+`bkper agent` keeps Bkper defaults (including Bkper system prompt) unless you explicitly pass `--system-prompt`.
+
+For all available passthrough flags and commands, see the Pi CLI reference:
+https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#cli-reference
+
 ### Skills
 
 Bkper skills are synced globally to:
@@ -825,6 +846,10 @@ deployment:
 -   `auth login` - Authenticate with Bkper, storing credentials locally
 -   `auth logout` - Remove stored credentials
 -   `auth token` - Print the current OAuth access token to stdout
+
+#### Agent Bridge (Pi passthrough)
+
+-   `agent -- <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 
 #### Skills
 

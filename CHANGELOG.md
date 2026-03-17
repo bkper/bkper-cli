@@ -12,6 +12,8 @@
     -   Added top-level `skills sync` command: `bkper skills sync`
     -   Standardized skills location to `~/.agents/skills`
     -   Skills sync state is now colocated at `~/.agents/skills/.bkper-skills.yaml`
+-   **Pi Bridge**
+    -   Added `bkper agent -- <pi-args...>` passthrough command to run Pi CLI features with Bkper defaults
 -   **App Development**
     -   `app init` no longer performs global skills synchronization
 -   **Documentation**
