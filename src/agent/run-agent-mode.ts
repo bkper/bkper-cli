@@ -3,6 +3,7 @@ import {
     DefaultResourceLoader,
     InteractiveMode,
     type CreateAgentSessionOptions,
+    type ExtensionAPI,
 } from '@mariozechner/pi-coding-agent';
 import { BKPER_AGENT_SYSTEM_PROMPT } from './system-prompt.js';
 
@@ -32,6 +33,13 @@ function createDefaultDependencies(): AgentModeDependencies {
             new DefaultResourceLoader({
                 systemPromptOverride: () => BKPER_AGENT_SYSTEM_PROMPT,
                 appendSystemPromptOverride: () => [],
+                extensionFactories: [
+                    (pi: ExtensionAPI) => {
+                        pi.on('session_start', async (_event, ctx) => {
+                            ctx.ui.notify('Bkper Agent ready.', 'info');
+                        });
+                    },
+                ],
             }),
         createSession: async ({ resourceLoader }) =>
             createAgentSession({
