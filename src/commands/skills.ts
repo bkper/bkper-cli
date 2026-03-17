@@ -3,10 +3,6 @@ import os from 'os';
 import path from 'path';
 import * as YAML from 'yaml';
 
-// =============================================================================
-// Types
-// =============================================================================
-
 interface GitHubFile {
     name: string;
     path: string;
@@ -22,31 +18,25 @@ interface SkillsState {
     commit: string;
 }
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const SKILLS_REPO = 'bkper/skills';
 const SKILLS_BASE_PATH = 'skills';
 const GITHUB_API_BASE = 'https://api.github.com';
 const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com';
 
-// Global paths
-const SKILLS_DIR = path.join(os.homedir(), '.claude', 'skills');
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'bkper');
-const SKILLS_STATE_FILE = path.join(CONFIG_DIR, 'skills.yaml');
+export function getSkillsDirectory(homeDir: string = os.homedir()): string {
+    return path.join(homeDir, '.agents', 'skills');
+}
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
+export function getSkillsStateFile(homeDir: string = os.homedir()): string {
+    return path.join(getSkillsDirectory(homeDir), '.bkper-skills.yaml');
+}
 
-/**
- * Gets the current local commit SHA from ~/.config/bkper/skills.yaml
- */
 function getLocalCommit(): string | null {
+    const skillsStateFile = getSkillsStateFile();
+
     try {
-        if (fs.existsSync(SKILLS_STATE_FILE)) {
-            const content = fs.readFileSync(SKILLS_STATE_FILE, 'utf8');
+        if (fs.existsSync(skillsStateFile)) {
+            const content = fs.readFileSync(skillsStateFile, 'utf8');
             const state: SkillsState = YAML.parse(content);
             return state.commit || null;
         }
@@ -56,18 +46,13 @@ function getLocalCommit(): string | null {
     return null;
 }
 
-/**
- * Saves the current commit SHA to ~/.config/bkper/skills.yaml
- */
 function saveLocalCommit(commit: string): void {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    const skillsStateFile = getSkillsStateFile();
+    fs.mkdirSync(path.dirname(skillsStateFile), { recursive: true });
     const state: SkillsState = { commit };
-    fs.writeFileSync(SKILLS_STATE_FILE, YAML.stringify(state), 'utf8');
+    fs.writeFileSync(skillsStateFile, YAML.stringify(state), 'utf8');
 }
 
-/**
- * Fetches the latest commit SHA that touched the skills/ folder.
- */
 async function fetchLatestCommit(): Promise<string> {
     const url = `${GITHUB_API_BASE}/repos/${SKILLS_REPO}/commits?path=${SKILLS_BASE_PATH}&per_page=1`;
 
@@ -90,9 +75,6 @@ async function fetchLatestCommit(): Promise<string> {
     return commits[0].sha;
 }
 
-/**
- * Fetches the list of files in a GitHub directory.
- */
 async function fetchGitHubDirectory(repo: string, dirPath: string): Promise<GitHubFile[]> {
     const url = `${GITHUB_API_BASE}/repos/${repo}/contents/${dirPath}`;
 
@@ -110,9 +92,6 @@ async function fetchGitHubDirectory(repo: string, dirPath: string): Promise<GitH
     return response.json() as Promise<GitHubFile[]>;
 }
 
-/**
- * Downloads a file from GitHub raw content.
- */
 async function downloadGitHubFile(repo: string, filePath: string): Promise<string> {
     const url = `${GITHUB_RAW_BASE}/${repo}/main/${filePath}`;
 
@@ -129,9 +108,6 @@ async function downloadGitHubFile(repo: string, filePath: string): Promise<strin
     return response.text();
 }
 
-/**
- * Recursively downloads a skill directory from GitHub.
- */
 async function downloadSkillDirectory(skillName: string, targetDir: string): Promise<void> {
     const skillPath = `${SKILLS_BASE_PATH}/${skillName}`;
     const files = await fetchGitHubDirectory(SKILLS_REPO, skillPath);
@@ -141,7 +117,6 @@ async function downloadSkillDirectory(skillName: string, targetDir: string): Pro
 
         if (file.type === 'dir') {
             fs.mkdirSync(localPath, { recursive: true });
-            // Recursively download subdirectory
             const subFiles = await fetchGitHubDirectory(SKILLS_REPO, file.path);
             for (const subFile of subFiles) {
                 if (subFile.type === 'file' && subFile.download_url) {
@@ -156,54 +131,38 @@ async function downloadSkillDirectory(skillName: string, targetDir: string): Pro
     }
 }
 
-/**
- * Removes all bkper-* skill directories from the global skills folder.
- */
-function clearBkperSkills(): void {
-    if (!fs.existsSync(SKILLS_DIR)) {
+function clearBkperSkills(skillsDir: string): void {
+    if (!fs.existsSync(skillsDir)) {
         return;
     }
 
-    const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
+    const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
     for (const entry of entries) {
         if (entry.isDirectory() && entry.name.startsWith('bkper-')) {
-            fs.rmSync(path.join(SKILLS_DIR, entry.name), { recursive: true });
+            fs.rmSync(path.join(skillsDir, entry.name), { recursive: true });
         }
     }
 }
 
-/**
- * Gets the list of available skills from GitHub.
- */
 async function fetchAvailableSkills(): Promise<string[]> {
     const files = await fetchGitHubDirectory(SKILLS_REPO, SKILLS_BASE_PATH);
     return files.filter(f => f.type === 'dir' && f.name.startsWith('bkper-')).map(f => f.name);
 }
 
-/**
- * Gets the list of installed bkper-* skills from ~/.claude/skills/
- */
-function getInstalledBkperSkills(): string[] {
-    if (!fs.existsSync(SKILLS_DIR)) {
+function getInstalledBkperSkills(skillsDir: string): string[] {
+    if (!fs.existsSync(skillsDir)) {
         return [];
     }
 
-    const entries = fs.readdirSync(SKILLS_DIR, { withFileTypes: true });
+    const entries = fs.readdirSync(skillsDir, { withFileTypes: true });
     return entries
         .filter(entry => entry.isDirectory() && entry.name.startsWith('bkper-'))
         .map(entry => entry.name);
 }
 
-/**
- * Returns a short version of the commit SHA for display.
- */
 function shortSha(sha: string): string {
     return sha.substring(0, 7);
 }
-
-// =============================================================================
-// Public API
-// =============================================================================
 
 export interface UpdateSkillsResult {
     updated: string[];
@@ -212,23 +171,18 @@ export interface UpdateSkillsResult {
     commit?: string;
 }
 
-/**
- * Updates global Bkper skills in ~/.claude/skills/
- *
- * Fetches the latest commit SHA that touched the skills/ folder and compares
- * with ~/.config/bkper/skills.yaml. If commits differ, downloads all
- * bkper-* skills.
- *
- * @returns Result indicating what was updated
- */
-export async function updateSkills(): Promise<UpdateSkillsResult> {
+export interface UpdateSkillsOptions {
+    silent?: boolean;
+}
+
+export async function updateSkills(options: UpdateSkillsOptions = {}): Promise<UpdateSkillsResult> {
+    const skillsDir = getSkillsDirectory();
+
     try {
-        // 1. Fetch latest commit that touched skills/
         const remoteCommit = await fetchLatestCommit();
         const localCommit = getLocalCommit();
 
-        // 2. Check if update is needed (commit differs OR skills are missing)
-        const installedSkills = getInstalledBkperSkills();
+        const installedSkills = getInstalledBkperSkills(skillsDir);
         const skillsExist = installedSkills.length > 0;
 
         if (remoteCommit === localCommit && skillsExist) {
@@ -240,7 +194,6 @@ export async function updateSkills(): Promise<UpdateSkillsResult> {
             };
         }
 
-        // 3. Get list of available skills
         const availableSkills = await fetchAvailableSkills();
 
         if (availableSkills.length === 0) {
@@ -251,31 +204,27 @@ export async function updateSkills(): Promise<UpdateSkillsResult> {
             };
         }
 
-        // 4. Clear existing bkper-* skills
-        clearBkperSkills();
+        clearBkperSkills(skillsDir);
+        fs.mkdirSync(skillsDir, { recursive: true });
 
-        // 5. Create skills directory
-        fs.mkdirSync(SKILLS_DIR, { recursive: true });
-
-        // 6. Download all skills
         const updated: string[] = [];
         for (const skillName of availableSkills) {
-            const skillTargetDir = path.join(SKILLS_DIR, skillName);
+            const skillTargetDir = path.join(skillsDir, skillName);
             fs.mkdirSync(skillTargetDir, { recursive: true });
 
             try {
                 await downloadSkillDirectory(skillName, skillTargetDir);
                 updated.push(skillName);
             } catch (err) {
-                // Log but continue with other skills
-                console.error(
-                    `  Warning: Failed to download skill '${skillName}':`,
-                    err instanceof Error ? err.message : err
-                );
+                if (!options.silent) {
+                    console.error(
+                        `  Warning: Failed to download skill '${skillName}':`,
+                        err instanceof Error ? err.message : err
+                    );
+                }
             }
         }
 
-        // 7. Save new commit
         saveLocalCommit(remoteCommit);
 
         return {
@@ -284,7 +233,6 @@ export async function updateSkills(): Promise<UpdateSkillsResult> {
             commit: remoteCommit,
         };
     } catch (err) {
-        // Network error or other failure - silently continue
         return {
             updated: [],
             skipped: true,

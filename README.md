@@ -66,6 +66,29 @@ bkper transaction create -b <bookId> --description "Office supplies 123.78"
 >
 > To build and deploy Bkper Apps, see [App Management](#app-management).
 
+## Agent & Skills
+
+Run `bkper` with no arguments in an interactive terminal to start the agent TUI.
+
+On each agent startup, bkper performs background maintenance checks (non-blocking):
+
+-   CLI auto-update check (same behavior as command mode)
+-   Bkper skills sync check from [Skills Repository]
+
+Bkper skills are synced to:
+
+-   `~/.agents/skills` (global)
+
+You can trigger a manual sync at any time:
+
+```bash
+bkper skills sync
+```
+
+Skills are agent-agnostic and can be reused by other tools that support `.agents/skills`.
+
+Pi-specific extensions are loaded from Pi extension folders (for example `.pi/extensions` and `~/.pi/agent/extensions`).
+
 ---
 
 ## Data Management
@@ -778,6 +801,10 @@ deployment:
 -   `auth login` - Authenticate with Bkper, storing credentials locally
 -   `auth logout` - Remove stored credentials
 -   `auth token` - Print the current OAuth access token to stdout
+
+#### Skills
+
+-   `skills sync` - Sync Bkper skills to `~/.agents/skills`
 
 #### App Lifecycle
 

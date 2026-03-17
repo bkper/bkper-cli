@@ -12,33 +12,53 @@ import { registerTransactionCommands } from './commands/transactions/register.js
 import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
+import { registerSkillsCommands } from './commands/skills-command.js';
 import { VERSION, autoUpgrade } from './upgrade/index.js';
+import { shouldStartAgentMode } from './agent/cli-dispatch.js';
+import { runAgentMode } from './agent/run-agent-mode.js';
+import { runStartupMaintenance } from './agent/startup-maintenance.js';
 
-// Version
-program.version(VERSION, '-v, --version');
+async function main(): Promise<void> {
+    if (shouldStartAgentMode(process.argv)) {
+        runStartupMaintenance();
+        await runAgentMode();
+        return;
+    }
 
-// Global output format options
-program.option('--format <format>', 'Output format: table, json, or csv', 'table');
-program.option('--json', 'Output as JSON (alias for --format json)');
+    // Version
+    program.version(VERSION, '-v, --version');
 
-// Auth commands
-registerAuthCommands(program);
+    // Global output format options
+    program.option('--format <format>', 'Output format: table, json, or csv', 'table');
+    program.option('--json', 'Output as JSON (alias for --format json)');
 
-// Resource commands
-registerAppCommands(program);
-registerBookCommands(program);
-registerAccountCommands(program);
-registerGroupCommands(program);
-registerTransactionCommands(program);
-registerBalanceCommands(program);
-registerCollectionCommands(program);
+    // Auth commands
+    registerAuthCommands(program);
 
-// Upgrade command
-registerUpgradeCommand(program);
+    // Resource commands
+    registerAppCommands(program);
+    registerBookCommands(program);
+    registerAccountCommands(program);
+    registerGroupCommands(program);
+    registerTransactionCommands(program);
+    registerBalanceCommands(program);
+    registerCollectionCommands(program);
 
-// Trigger silent auto-upgrade in the background (non-blocking, never fails)
-if (!process.env.BKPER_DISABLE_AUTOUPDATE) {
-    autoUpgrade().catch(() => {});
+    // Skills command
+    registerSkillsCommands(program);
+
+    // Upgrade command
+    registerUpgradeCommand(program);
+
+    // Trigger silent auto-upgrade in the background (non-blocking, never fails)
+    if (!process.env.BKPER_DISABLE_AUTOUPDATE) {
+        autoUpgrade().catch(() => {});
+    }
+
+    program.parse(process.argv);
 }
 
-program.parse(process.argv);
+main().catch(err => {
+    console.error(err);
+    process.exit(1);
+});

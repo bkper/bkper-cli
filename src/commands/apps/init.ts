@@ -4,7 +4,6 @@ import path from 'path';
 import { Readable } from 'stream';
 import * as tar from 'tar';
 import * as YAML from 'yaml';
-import { updateSkills } from '../skills.js';
 
 // =============================================================================
 // Constants
@@ -241,20 +240,7 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 6. Sync global skills
-    try {
-        const result = await updateSkills();
-        if (result.updated.length > 0) {
-            console.log(`  Synced skills (${result.updated.join(', ')})`);
-        } else if (result.skipped && result.commit) {
-            console.log(`  Skills up to date (${result.commit.substring(0, 7)})`);
-        }
-    } catch (err) {
-        // Skills sync is non-fatal, just warn
-        console.log('  Warning: Could not sync skills:', err instanceof Error ? err.message : err);
-    }
-
-    // 7. Install dependencies
+    // 6. Install dependencies
     console.log('  Installing dependencies...');
     try {
         await runCommand('bun', ['install'], targetDir);
@@ -263,7 +249,7 @@ export async function initApp(name: string): Promise<void> {
         console.log('  Warning: Could not install dependencies. Run "bun install" manually.');
     }
 
-    // 8. Print success message
+    // 7. Print success message
     console.log(`
 Done! To get started:
 
