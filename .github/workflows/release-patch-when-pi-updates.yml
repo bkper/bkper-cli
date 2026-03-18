@@ -28,19 +28,19 @@ jobs:
             const repo = context.repo.repo;
             const commitSha = context.sha;
 
-            const { data: pulls } = await github.request(
-              'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
-              {
-                owner,
-                repo,
-                commit_sha: commitSha,
-                mediaType: {
-                  previews: ['groot'],
-                },
-              }
-            );
+            const { data: pulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: 'closed',
+              base: 'main',
+              sort: 'updated',
+              direction: 'desc',
+              per_page: 100,
+            });
 
-            const mergedPr = pulls.find(pr => pr.merged_at && pr.base?.ref === 'main');
+            const mergedPr = pulls.find(
+              pr => pr.merged_at && pr.merge_commit_sha === commitSha
+            );
 
             if (!mergedPr) {
               core.info('No merged PR associated with this commit. Skipping release.');
