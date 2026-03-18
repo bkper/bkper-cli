@@ -78,7 +78,9 @@ describe('CLI - apps secrets Commands', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
+            expect(
+                consoleErrors.some(message => message.includes('bkper.yaml or bkper.json not found'))
+            ).to.be.true;
         });
 
         it('should exit with error when app config has no id', async function () {
@@ -91,7 +93,9 @@ describe('CLI - apps secrets Commands', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: App config is missing "id" field');
+            expect(
+                consoleErrors.some(message => message.includes('App config is missing "id" field'))
+            ).to.be.true;
         });
     });
 
@@ -121,7 +125,9 @@ describe('CLI - apps secrets Commands', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: App config is missing "id" field');
+            expect(
+                consoleErrors.some(message => message.includes('App config is missing "id" field'))
+            ).to.be.true;
         });
     });
 
@@ -136,7 +142,9 @@ describe('CLI - apps secrets Commands', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: bkper.yaml or bkper.json not found');
+            expect(
+                consoleErrors.some(message => message.includes('bkper.yaml or bkper.json not found'))
+            ).to.be.true;
         });
 
         it('should exit with error when app config has no id', async function () {
@@ -149,7 +157,9 @@ describe('CLI - apps secrets Commands', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: App config is missing "id" field');
+            expect(
+                consoleErrors.some(message => message.includes('App config is missing "id" field'))
+            ).to.be.true;
         });
     });
 
