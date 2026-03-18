@@ -83,7 +83,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org/
 
       - name: Install dependencies
         if: steps.release_level.outputs.level != 'none'
@@ -98,6 +97,22 @@ jobs:
         run: |
           bun run build
           bun run test:unit
+
+      - name: Upgrade npm
+        if: steps.release_level.outputs.level != 'none'
+        run: npm install -g npm@latest
+
+      - name: Print tool versions
+        if: steps.release_level.outputs.level != 'none'
+        run: |
+          node -v
+          npm -v
+
+      - name: Ensure tokenless OIDC publishing context
+        if: steps.release_level.outputs.level != 'none'
+        run: |
+          rm -f .npmrc ~/.npmrc || true
+          unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
       - name: Bump version and create local release commit/tag
         if: steps.release_level.outputs.level != 'none'
@@ -118,7 +133,7 @@ jobs:
 
       - name: Publish to npm (Trusted Publishers)
         if: steps.release_level.outputs.level != 'none'
-        run: npm publish --access public --provenance
+        run: npm publish --access public --provenance --verbose
 
       - name: Push release commit and tag
         if: steps.release_level.outputs.level != 'none'
