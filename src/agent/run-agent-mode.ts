@@ -56,6 +56,8 @@ function createDefaultDependencies(): AgentModeDependencies {
 export async function runAgentMode(
     dependencies: AgentModeDependencies = createDefaultDependencies()
 ): Promise<void> {
+    process.env.PI_SKIP_VERSION_CHECK ??= '1';
+
     const resourceLoader = dependencies.createResourceLoader();
     await resourceLoader.reload();
 

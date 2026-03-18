@@ -44,4 +44,60 @@ describe('runAgentMode', function () {
 
         expect(calls).to.deep.equal(['reload', 'createSession', 'run']);
     });
+
+    it('should set PI_SKIP_VERSION_CHECK by default for embedded agent mode', async function () {
+        const previous = process.env.PI_SKIP_VERSION_CHECK;
+        delete process.env.PI_SKIP_VERSION_CHECK;
+
+        const deps: AgentModeDependencies = {
+            createResourceLoader: () => ({
+                reload: async () => {},
+            }),
+            createSession: async () => ({
+                session: {},
+            }),
+            createInteractiveMode: () => ({
+                run: async () => {},
+            }),
+        };
+
+        try {
+            await runAgentMode(deps);
+            expect(process.env.PI_SKIP_VERSION_CHECK).to.equal('1');
+        } finally {
+            if (previous === undefined) {
+                delete process.env.PI_SKIP_VERSION_CHECK;
+            } else {
+                process.env.PI_SKIP_VERSION_CHECK = previous;
+            }
+        }
+    });
+
+    it('should keep user-defined PI_SKIP_VERSION_CHECK value', async function () {
+        const previous = process.env.PI_SKIP_VERSION_CHECK;
+        process.env.PI_SKIP_VERSION_CHECK = '0';
+
+        const deps: AgentModeDependencies = {
+            createResourceLoader: () => ({
+                reload: async () => {},
+            }),
+            createSession: async () => ({
+                session: {},
+            }),
+            createInteractiveMode: () => ({
+                run: async () => {},
+            }),
+        };
+
+        try {
+            await runAgentMode(deps);
+            expect(process.env.PI_SKIP_VERSION_CHECK).to.equal('0');
+        } finally {
+            if (previous === undefined) {
+                delete process.env.PI_SKIP_VERSION_CHECK;
+            } else {
+                process.env.PI_SKIP_VERSION_CHECK = previous;
+            }
+        }
+    });
 });

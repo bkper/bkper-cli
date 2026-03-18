@@ -1,0 +1,48 @@
+name: Dependabot release labels
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Ensure release labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "release:patch" --color 0e8a16 --description "Publish patch version" || true
+          gh label create "release:minor" --color 1d76db --description "Publish minor version" || true
+          gh label create "release:major" --color b60205 --description "Publish major version" || true
+          gh label create "release:none" --color 6e7781 --description "Do not publish" || true
+
+      - name: Apply semver release label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+        run: |
+          set -euo pipefail
+
+          case "$UPDATE_TYPE" in
+            version-update:semver-major) LABEL="release:major" ;;
+            version-update:semver-minor) LABEL="release:minor" ;;
+            version-update:semver-patch) LABEL="release:patch" ;;
+            *) LABEL="release:none" ;;
+          esac
+
+          gh pr edit "$PR_URL" --add-label "$LABEL"
+          echo "Applied label: $LABEL"

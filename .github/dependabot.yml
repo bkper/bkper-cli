@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "UTC"
+    allow:
+      - dependency-name: "@mariozechner/pi-coding-agent"
+    commit-message:
+      prefix: "build(deps)"
+    open-pull-requests-limit: 5
