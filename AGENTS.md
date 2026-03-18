@@ -134,3 +134,41 @@ src/
 2. Implement logic in `src/commands/`
 3. Add tests in `test/unit/commands/`
 4. Run `bun run build` to compile
+
+## Agent Workflow Guardrails
+
+These rules are mandatory for coding agents working on this repository.
+
+### Branch and PR workflow
+
+-   Start from latest `main` and use a short-lived feature branch.
+-   Keep PRs small, scoped, and single-purpose.
+-   Do not bundle unrelated refactors with feature/fix work.
+
+### Release labels (critical)
+
+-   Default label for regular work: `release:none`.
+-   Use `release:patch`, `release:minor`, or `release:major` only when explicitly requested.
+-   `deps:pi` is reserved for Pi dependency update PRs.
+-   Only PRs labeled with `deps:pi` are eligible for automated publish.
+
+### Pi dependency automation policy
+
+-   Dependabot tracks `@mariozechner/pi-coding-agent`.
+-   Pi patch updates can be auto-merged if checks pass.
+-   Pi update PRs receive `deps:pi` + release semver labels.
+
+### Pre-merge quality gate
+
+Before requesting merge, always run:
+
+```bash
+bun run build
+bun run test:unit
+```
+
+### Publishing policy
+
+-   Never publish manually from local environment unless explicitly instructed.
+-   Publishing is performed by CI on `main` push, with Trusted Publisher (OIDC).
+-   If publish fails, fix root cause and re-run through PR/merge flow; do not bypass with ad-hoc changes.
