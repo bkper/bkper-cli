@@ -18,6 +18,8 @@
     -   `app init` no longer performs global skills synchronization
 -   **Documentation**
     -   Updated README with Agent & Skills behavior, paths, and manual sync guidance
+-   **Automation**
+    -   Added GitHub workflows for CI, Dependabot labeling/automerge, and label-driven releases
 
 ### **February 2026**
 
