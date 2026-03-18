@@ -7,15 +7,8 @@
 -   **Agent Experience**
     -   Running `bkper` with no arguments now starts the embedded agent TUI (interactive terminals)
     -   Added startup maintenance for agent mode with background checks
--   **Skills Distribution**
-    -   Skills sync moved to agent startup flow (decoupled from `app init`)
-    -   Added top-level `skills sync` command: `bkper skills sync`
-    -   Standardized skills location to `~/.agents/skills`
-    -   Skills sync state is now colocated at `~/.agents/skills/.bkper-skills.yaml`
 -   **Pi Bridge**
     -   Added `bkper agent -- <pi-args...>` passthrough command to run Pi CLI features with Bkper defaults
--   **App Development**
-    -   `app init` no longer performs global skills synchronization
 
 ### **February 2026**
 

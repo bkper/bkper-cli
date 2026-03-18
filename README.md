@@ -1,7 +1,6 @@
 [bkper.yaml reference]: #bkperyaml-reference
 [Developer Docs]: https://bkper.com/docs
 [App Template]: https://github.com/bkper/bkper-app-template
-[Skills Repository]: https://github.com/bkper/skills
 [Pi]: https://pi.dev/
 
 A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
@@ -85,14 +84,11 @@ When you run `bkper` with no arguments in an interactive terminal, bkper starts 
 Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
 
 -   Pi provides the core agent runtime and TUI
--   bkper adds Bkper-specific domain context, skills distribution defaults, and startup maintenance behavior
+-   bkper adds Bkper-specific domain context and startup maintenance behavior
 
 ### Startup maintenance (non-blocking)
 
-On each agent startup, bkper performs background checks:
-
--   CLI auto-update check (same behavior as command mode)
--   Bkper skills sync check from [Skills Repository]
+On each agent startup, bkper performs a background CLI auto-update check (same behavior as command mode).
 
 ### Pi passthrough
 
@@ -114,21 +110,6 @@ bkper agent -- install <pi-package-source>
 
 For all available passthrough flags and commands, see the Pi CLI reference:
 https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#cli-reference
-
-### Skills
-
-Bkper skills are synced globally to:
-
--   `~/.agents/skills`
--   state file: `~/.agents/skills/.bkper-skills.yaml`
-
-Trigger a manual sync at any time:
-
-```bash
-bkper skills sync
-```
-
-Skills are agent-agnostic and can be reused by other tools that support `.agents/skills`.
 
 Pi-specific extensions are loaded from Pi extension folders (for example `.pi/extensions` and `~/.pi/agent/extensions`).
 
@@ -851,10 +832,6 @@ deployment:
 
 -   `agent -- <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 
-#### Skills
-
--   `skills sync` - Sync Bkper skills to `~/.agents/skills`
-
 #### App Lifecycle
 
 -   `app init <name>` - Scaffold a new app from the template
@@ -913,4 +890,3 @@ Bkper.setConfig({
 
 -   [Developer Docs]
 -   [App Template]
--   [Skills Repository]
