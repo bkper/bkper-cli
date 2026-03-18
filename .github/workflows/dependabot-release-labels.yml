@@ -28,21 +28,29 @@ jobs:
           gh label create "release:minor" --color 1d76db --description "Publish minor version" || true
           gh label create "release:major" --color b60205 --description "Publish major version" || true
           gh label create "release:none" --color 6e7781 --description "Do not publish" || true
+          gh label create "deps:pi" --color 5319e7 --description "Pi dependency update" || true
 
-      - name: Apply semver release label
+      - name: Apply Pi dependency and semver labels
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
           UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
         run: |
           set -euo pipefail
 
+          if [[ "$DEPENDENCY_NAMES" != *"@mariozechner/pi-coding-agent"* ]]; then
+            gh pr edit "$PR_URL" --add-label "release:none"
+            echo "Non-Pi dependency update. Applied label: release:none"
+            exit 0
+          fi
+
           case "$UPDATE_TYPE" in
-            version-update:semver-major) LABEL="release:major" ;;
-            version-update:semver-minor) LABEL="release:minor" ;;
-            version-update:semver-patch) LABEL="release:patch" ;;
-            *) LABEL="release:none" ;;
+            version-update:semver-major) RELEASE_LABEL="release:major" ;;
+            version-update:semver-minor) RELEASE_LABEL="release:minor" ;;
+            version-update:semver-patch) RELEASE_LABEL="release:patch" ;;
+            *) RELEASE_LABEL="release:none" ;;
           esac
 
-          gh pr edit "$PR_URL" --add-label "$LABEL"
-          echo "Applied label: $LABEL"
+          gh pr edit "$PR_URL" --add-label "deps:pi" --add-label "$RELEASE_LABEL"
+          echo "Applied labels: deps:pi, $RELEASE_LABEL"

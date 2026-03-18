@@ -49,7 +49,13 @@ jobs:
             }
 
             const labels = (mergedPr.labels ?? []).map(label => label.name);
-            let level = 'patch';
+            let level = 'none';
+
+            if (!labels.includes('deps:pi')) {
+              core.info('Merged PR is not a Pi dependency update (missing deps:pi label). Skipping release.');
+              core.setOutput('level', level);
+              return;
+            }
 
             if (labels.includes('release:none')) level = 'none';
             else if (labels.includes('release:major')) level = 'major';
