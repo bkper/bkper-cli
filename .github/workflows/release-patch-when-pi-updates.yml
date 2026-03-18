@@ -69,6 +69,10 @@ jobs:
         if: steps.release_level.outputs.level != 'none'
         run: bun install --frozen-lockfile
 
+      - name: Install optional peer required for type-checking
+        if: steps.release_level.outputs.level != 'none'
+        run: npm install miniflare@^4 --no-save
+
       - name: Build and unit test
         if: steps.release_level.outputs.level != 'none'
         run: |
