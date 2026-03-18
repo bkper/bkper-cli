@@ -1,0 +1,101 @@
+name: Release on merged PR
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+  id-token: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine release level from PR labels
+        id: release_level
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+          LEVEL="patch"
+
+          if [[ "$LABELS" == *"release:none"* ]]; then
+            LEVEL="none"
+          elif [[ "$LABELS" == *"release:major"* ]]; then
+            LEVEL="major"
+          elif [[ "$LABELS" == *"release:minor"* ]]; then
+            LEVEL="minor"
+          elif [[ "$LABELS" == *"release:patch"* ]]; then
+            LEVEL="patch"
+          fi
+
+          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
+          echo "Selected release level: $LEVEL"
+
+      - name: Skip release (release:none)
+        if: steps.release_level.outputs.level == 'none'
+        run: echo "Skipping release due to release:none label"
+
+      - name: Checkout main
+        if: steps.release_level.outputs.level != 'none'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Bun
+        if: steps.release_level.outputs.level != 'none'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node
+        if: steps.release_level.outputs.level != 'none'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install dependencies
+        if: steps.release_level.outputs.level != 'none'
+        run: bun install --frozen-lockfile
+
+      - name: Install optional peer required for type-checking
+        if: steps.release_level.outputs.level != 'none'
+        run: npm install miniflare@^4 --no-save
+
+      - name: Build and unit test
+        if: steps.release_level.outputs.level != 'none'
+        run: |
+          bun run build
+          bun run test:unit
+
+      - name: Bump version, commit and tag
+        if: steps.release_level.outputs.level != 'none'
+        env:
+          RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          npm --no-git-tag-version --ignore-scripts version "$RELEASE_LEVEL"
+
+          VERSION="v$(node -p "require('./package.json').version")"
+          git add package.json
+          git commit -m "chore(release): ${VERSION} [skip ci]"
+          git tag "${VERSION}"
+          git push origin main --follow-tags
+
+      - name: Publish to npm (Trusted Publishers)
+        if: steps.release_level.outputs.level != 'none'
+        run: npm publish --access public --provenance
