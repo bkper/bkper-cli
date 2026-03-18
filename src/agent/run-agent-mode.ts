@@ -5,7 +5,7 @@ import {
     type CreateAgentSessionOptions,
     type ExtensionAPI,
 } from '@mariozechner/pi-coding-agent';
-import { BKPER_AGENT_SYSTEM_PROMPT } from './system-prompt.js';
+import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
 type ReloadableResourceLoader = {
     reload(): Promise<void>;
@@ -31,7 +31,7 @@ function createDefaultDependencies(): AgentModeDependencies {
     return {
         createResourceLoader: () =>
             new DefaultResourceLoader({
-                systemPromptOverride: () => BKPER_AGENT_SYSTEM_PROMPT,
+                systemPromptOverride: () => getBkperAgentSystemPrompt(),
                 appendSystemPromptOverride: () => [],
                 extensionFactories: [
                     (pi: ExtensionAPI) => {

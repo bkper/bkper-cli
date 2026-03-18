@@ -268,8 +268,11 @@ bkper transaction create -b abc123 --description "Office supplies"
 bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
 
-# List transactions with a query
-bkper transaction list -b abc123 -q "after:2025-01-01"
+# List transactions for a full year (on:YYYY)
+bkper transaction list -b abc123 -q "on:2025"
+
+# List transactions for a month (on:YYYY-MM)
+bkper transaction list -b abc123 -q "on:2025-01"
 
 # List with custom properties included
 bkper transaction list -b abc123 -q "account:Sales" -p
@@ -325,11 +328,11 @@ bkper transaction merge tx_123 tx_456 -b abc123
 Query account balances and group totals.
 
 ```bash
-# List balances for a query
-bkper balance list -b abc123 -q "period:2025-01"
+# List balances for a specific date (point-in-time)
+bkper balance list -b abc123 -q "on:2025-12-31"
 
-# Expand groups to see individual accounts
-bkper balance list -b abc123 -q "period:2025-01" --expanded 2
+# Monthly balance evolution of one account during 2025
+bkper balance list -b abc123 -q "account:'<accountName>' after:2025-01-01 before:2026-01-01 by:m" --expanded 2
 ```
 
 <details>
@@ -339,6 +342,28 @@ bkper balance list -b abc123 -q "period:2025-01" --expanded 2
     -   `--expanded <level>` - Expand groups to specified depth (`0`+)
 
 </details>
+
+### Query semantics (transactions and balances)
+
+Use the same query language across Bkper web app, CLI, and Google Sheets integrations.
+
+-   `on:` supports different granularities:
+    -   `on:2025` → full year
+    -   `on:2025-01` → full month
+    -   `on:2025-01-31` → specific day
+-   `after:` is **inclusive** and `before:` is **exclusive**.
+    -   Full year 2025: `after:2025-01-01 before:2026-01-01`
+-   For point-in-time statements (typically permanent accounts `ASSET`/`LIABILITY`), prefer `on:` or `before:`.
+-   For activity statements over a period (typically non-permanent accounts `INCOMING`/`OUTGOING`), prefer `after:` + `before:`.
+-   For statement-level analysis, prefer filtering by the report root group. Root names vary by book.
+
+```bash
+# Balance Sheet snapshot (point-in-time)
+bkper balance list -b abc123 -q "group:'<balanceSheetRootGroup>' before:2026-01-01"
+
+# P&L activity over 2025
+bkper balance list -b abc123 -q "group:'<profitAndLossRootGroup>' after:2025-01-01 before:2026-01-01"
+```
 
 ### Collections
 
@@ -382,11 +407,11 @@ bkper collection delete col_789
 
 All commands support three output formats via the `--format` global flag:
 
-| Format | Flag                       | Best for                                |
-| ------ | -------------------------- | --------------------------------------- |
-| Table  | `--format table` (default) | Human reading in the terminal           |
-| JSON   | `--format json`            | Programmatic access, single-item detail |
-| CSV    | `--format csv`             | Spreadsheets, AI agents, data pipelines |
+| Format | Flag                       | Best for                                    |
+| ------ | -------------------------- | ------------------------------------------- |
+| Table  | `--format table` (default) | Human reading in the terminal               |
+| JSON   | `--format json`            | Programmatic access, single-item detail     |
+| CSV    | `--format csv`             | LLM consumption, spreadsheets, list reports |
 
 ```bash
 # Table output (default)
@@ -406,13 +431,20 @@ bkper account list -b abc123 --format csv
 -   **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
 -   **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
 
-**AI agent guidance:**
+**LLM-first output guidance (important):**
 
-When using the CLI from an AI agent, LLM, or automated script:
+When command output will be loaded into an LLM context (chat, prompt, memory, or agent reasoning), prefer:
 
--   **Use `--format csv` for list commands.** CSV is dramatically more token-efficient than JSON for tabular data -- typically 3-5x fewer tokens for the same information.
--   **Use `--format json` for single-item commands** (`get`, `create`, `update`) where you need structured field access.
--   **Pipe data in via stdin** for batch operations (see below).
+-   **`--format csv` for list commands** (`balance list`, `transaction list`, `account list`, etc.).
+-   **`--format json` for single-item commands** (`get`, `create`, `update`) and CLI-to-CLI pipelines.
+
+CSV is significantly more token-efficient than JSON for tabular data, and for wide balance outputs it can reduce token usage by up to **95%**.
+
+**Quick rule:**
+
+-   **LLM consumption of lists/reports** → CSV
+-   **Programmatic processing / pipelines** → JSON
+-   **Human terminal reading** → Table
 
 ### Batch Operations & Piping
 

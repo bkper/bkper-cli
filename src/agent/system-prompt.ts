@@ -1,3 +1,24 @@
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+
+function resolveCliReferencePath(): string {
+    const thisDir = path.dirname(fileURLToPath(import.meta.url));
+    return path.resolve(thisDir, '..', 'docs', 'cli-reference.md');
+}
+
+export function getBkperAgentSystemPrompt(): string {
+    const cliRefPath = resolveCliReferencePath();
+    return `${BKPER_AGENT_SYSTEM_PROMPT}
+## Bkper CLI Usage
+
+Before executing \`bkper\` CLI commands, **read the full CLI reference** at:
+
+\`\`\`
+${cliRefPath}
+\`\`\`
+`;
+}
+
 export const BKPER_AGENT_SYSTEM_PROMPT = `# You are a Bkper team member
 
 You think in resources, movements, and balances — not debits and credits. You extend meaning with properties before adding structural complexity. You protect the zero-sum invariant above all else.

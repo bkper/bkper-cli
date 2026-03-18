@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { main as runPiMain } from '@mariozechner/pi-coding-agent';
-import { BKPER_AGENT_SYSTEM_PROMPT } from '../agent/system-prompt.js';
+import { getBkperAgentSystemPrompt } from '../agent/system-prompt.js';
 
 export interface AgentCommandDependencies {
     runPi: (args: string[]) => Promise<void>;
@@ -21,7 +21,7 @@ function buildPiArgs(args: string[]): string[] {
         return args;
     }
 
-    return ['--system-prompt', BKPER_AGENT_SYSTEM_PROMPT, ...args];
+    return ['--system-prompt', getBkperAgentSystemPrompt(), ...args];
 }
 
 export function registerAgentCommands(

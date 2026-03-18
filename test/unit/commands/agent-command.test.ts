@@ -2,7 +2,7 @@ import { expect } from '../helpers/test-setup.js';
 import sinon from 'sinon';
 import { Command } from 'commander';
 import { registerAgentCommands } from '../../../src/commands/agent-command.js';
-import { BKPER_AGENT_SYSTEM_PROMPT } from '../../../src/agent/system-prompt.js';
+import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
 describe('CLI - agent command', function () {
     it('should forward pi args and inject bkper system prompt by default', async function () {
@@ -16,7 +16,7 @@ describe('CLI - agent command', function () {
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal([
             '--system-prompt',
-            BKPER_AGENT_SYSTEM_PROMPT,
+            getBkperAgentSystemPrompt(),
             '-p',
             'hello',
         ]);
