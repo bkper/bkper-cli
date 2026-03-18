@@ -1,8 +1,8 @@
-name: Release on merged PR
+name: Release on main push
 
 on:
-  pull_request_target:
-    types: [closed]
+  push:
+    branches: [main]
 
 permissions:
   contents: write
@@ -15,31 +15,51 @@ concurrency:
 
 jobs:
   release:
-    if: github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Determine release level from PR labels
+      - name: Determine release level from merged PR labels
         id: release_level
-        shell: bash
-        run: |
-          set -euo pipefail
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const commitSha = context.sha;
 
-          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
-          LEVEL="patch"
+            const { data: pulls } = await github.request(
+              'GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls',
+              {
+                owner,
+                repo,
+                commit_sha: commitSha,
+                mediaType: {
+                  previews: ['groot'],
+                },
+              }
+            );
 
-          if [[ "$LABELS" == *"release:none"* ]]; then
-            LEVEL="none"
-          elif [[ "$LABELS" == *"release:major"* ]]; then
-            LEVEL="major"
-          elif [[ "$LABELS" == *"release:minor"* ]]; then
-            LEVEL="minor"
-          elif [[ "$LABELS" == *"release:patch"* ]]; then
-            LEVEL="patch"
-          fi
+            const mergedPr = pulls.find(pr => pr.merged_at && pr.base?.ref === 'main');
 
-          echo "level=$LEVEL" >> "$GITHUB_OUTPUT"
-          echo "Selected release level: $LEVEL"
+            if (!mergedPr) {
+              core.info('No merged PR associated with this commit. Skipping release.');
+              core.setOutput('level', 'none');
+              return;
+            }
+
+            const labels = (mergedPr.labels ?? []).map(label => label.name);
+            let level = 'patch';
+
+            if (labels.includes('release:none')) level = 'none';
+            else if (labels.includes('release:major')) level = 'major';
+            else if (labels.includes('release:minor')) level = 'minor';
+            else if (labels.includes('release:patch')) level = 'patch';
+
+            core.info(`Merged PR: #${mergedPr.number} (${mergedPr.html_url})`);
+            core.info(`Labels: ${labels.join(', ') || '(none)'}`);
+            core.info(`Selected release level: ${level}`);
+            core.setOutput('level', level);
 
       - name: Skip release (release:none)
         if: steps.release_level.outputs.level == 'none'
