@@ -79,7 +79,7 @@ jobs:
           bun run build
           bun run test:unit
 
-      - name: Bump version, commit and tag
+      - name: Bump version and create local release commit/tag
         if: steps.release_level.outputs.level != 'none'
         env:
           RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
@@ -91,11 +91,15 @@ jobs:
           npm --no-git-tag-version --ignore-scripts version "$RELEASE_LEVEL"
 
           VERSION="v$(node -p "require('./package.json').version")"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           git add package.json
           git commit -m "chore(release): ${VERSION} [skip ci]"
           git tag "${VERSION}"
-          git push origin main --follow-tags
 
       - name: Publish to npm (Trusted Publishers)
         if: steps.release_level.outputs.level != 'none'
         run: npm publish --access public --provenance
+
+      - name: Push release commit and tag
+        if: steps.release_level.outputs.level != 'none'
+        run: git push origin main --follow-tags
