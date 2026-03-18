@@ -32,7 +32,7 @@
         "build:compile": "tsc",
         "api:platform": "openapi-typescript https://platform.bkper.app/openapi.json -o src/platform/types.d.ts",
         "api:platform:local": "openapi-typescript http://localhost:8790/openapi.json -o src/platform/types.d.ts",
-        "build:copy-docs": "mkdir -p lib/docs && cp -f docs/*.md lib/docs/ 2>/dev/null || true",
+        "build:copy-docs": "mkdir -p lib/docs && cp -f docs/*.md lib/docs/ 2>/dev/null || true && cp -f README.md lib/docs/cli-reference.md",
         "predev": "bun run build",
         "dev": "tsc -w",
         "ports": "devpod ssh ../ -L 6274",
@@ -52,7 +52,7 @@
     },
     "dependencies": {
         "@mariozechner/pi-coding-agent": "^0.60.0",
-        "bkper-js": "^2.29.4",
+        "bkper-js": "^2.31.1",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",
