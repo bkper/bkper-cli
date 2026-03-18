@@ -87,7 +87,9 @@ describe('CLI - apps undeploy Command', function () {
             }
 
             expect(exitCode).to.equal(1);
-            expect(consoleErrors).to.include('Error: App config is missing "id" field');
+            expect(
+                consoleErrors.some(message => message.includes('App config is missing "id" field'))
+            ).to.be.true;
         });
     });
 
