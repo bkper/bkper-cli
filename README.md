@@ -268,8 +268,11 @@ bkper transaction create -b abc123 --description "Office supplies"
 bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
 
-# List transactions with a query
-bkper transaction list -b abc123 -q "after:2025-01-01"
+# List transactions for a full year (on:YYYY)
+bkper transaction list -b abc123 -q "on:2025"
+
+# List transactions for a month (on:YYYY-MM)
+bkper transaction list -b abc123 -q "on:2025-01"
 
 # List with custom properties included
 bkper transaction list -b abc123 -q "account:Sales" -p
@@ -325,11 +328,11 @@ bkper transaction merge tx_123 tx_456 -b abc123
 Query account balances and group totals.
 
 ```bash
-# List balances for a query
-bkper balance list -b abc123 -q "period:2025-01"
+# List balances for a specific date (point-in-time)
+bkper balance list -b abc123 -q "on:2025-12-31"
 
-# Expand groups to see individual accounts
-bkper balance list -b abc123 -q "period:2025-01" --expanded 2
+# Monthly balance evolution of one account during 2025
+bkper balance list -b abc123 -q "account:'<accountName>' after:2025-01-01 before:2026-01-01 by:m" --expanded 2
 ```
 
 <details>
@@ -339,6 +342,28 @@ bkper balance list -b abc123 -q "period:2025-01" --expanded 2
     -   `--expanded <level>` - Expand groups to specified depth (`0`+)
 
 </details>
+
+### Query semantics (transactions and balances)
+
+Use the same query language across Bkper web app, CLI, and Google Sheets integrations.
+
+-   `on:` supports different granularities:
+    -   `on:2025` → full year
+    -   `on:2025-01` → full month
+    -   `on:2025-01-31` → specific day
+-   `after:` is **inclusive** and `before:` is **exclusive**.
+    -   Full year 2025: `after:2025-01-01 before:2026-01-01`
+-   For point-in-time statements (typically permanent accounts `ASSET`/`LIABILITY`), prefer `on:` or `before:`.
+-   For activity statements over a period (typically non-permanent accounts `INCOMING`/`OUTGOING`), prefer `after:` + `before:`.
+-   For statement-level analysis, prefer filtering by the report root group. Root names vary by book.
+
+```bash
+# Balance Sheet snapshot (point-in-time)
+bkper balance list -b abc123 -q "group:'<balanceSheetRootGroup>' before:2026-01-01"
+
+# P&L activity over 2025
+bkper balance list -b abc123 -q "group:'<profitAndLossRootGroup>' after:2025-01-01 before:2026-01-01"
+```
 
 ### Collections
 
