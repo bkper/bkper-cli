@@ -5,7 +5,7 @@
     "bin": {
         "bkper": "./lib/cli.js"
     },
-    "repository": "https://github.com/bkper/bkper-node.git",
+    "repository": "https://github.com/bkper/bkper-cli.git",
     "homepage": "https://bkper.com/docs",
     "author": "mael <mael@bkper.com>",
     "license": "Apache-2.0",
