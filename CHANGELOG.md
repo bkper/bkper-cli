@@ -22,6 +22,7 @@
     -   Added GitHub workflows for CI, Dependabot labeling/automerge, and label-driven releases
     -   Enabled npm Trusted Publisher (OIDC) flow for release automation
     -   Updated release workflow trigger to publish from `push` on `main`
+    -   Improved merged-PR detection to use merge commit SHA
 
 ### **February 2026**
 
