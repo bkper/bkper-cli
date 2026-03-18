@@ -20,6 +20,7 @@
     -   Updated README with Agent & Skills behavior, paths, and manual sync guidance
 -   **Automation**
     -   Added GitHub workflows for CI, Dependabot labeling/automerge, and label-driven releases
+    -   Enabled npm Trusted Publisher (OIDC) flow for release automation
 
 ### **February 2026**
 
