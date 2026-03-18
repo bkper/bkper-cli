@@ -73,10 +73,11 @@ Releases are automated and **label-driven**.
 
 ### Standard labels
 
--   `release:none` → do not publish
 -   `release:patch` → publish patch version
 -   `release:minor` → publish minor version
 -   `release:major` → publish major version
+
+If no `release:*` label is present, CI skips publishing.
 
 ## CI expectations
 

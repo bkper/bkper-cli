@@ -51,14 +51,7 @@ jobs:
             const labels = (mergedPr.labels ?? []).map(label => label.name);
             let level = 'none';
 
-            if (!labels.includes('deps:pi')) {
-              core.info('Merged PR is not a Pi dependency update (missing deps:pi label). Skipping release.');
-              core.setOutput('level', level);
-              return;
-            }
-
-            if (labels.includes('release:none')) level = 'none';
-            else if (labels.includes('release:major')) level = 'major';
+            if (labels.includes('release:major')) level = 'major';
             else if (labels.includes('release:minor')) level = 'minor';
             else if (labels.includes('release:patch')) level = 'patch';
 
@@ -67,9 +60,9 @@ jobs:
             core.info(`Selected release level: ${level}`);
             core.setOutput('level', level);
 
-      - name: Skip release (release:none)
+      - name: Skip release (no release label)
         if: steps.release_level.outputs.level == 'none'
-        run: echo "Skipping release due to release:none label"
+        run: echo "Skipping release due to missing release label"
 
       - name: Checkout main
         if: steps.release_level.outputs.level != 'none'

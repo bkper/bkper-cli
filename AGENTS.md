@@ -147,10 +147,9 @@ These rules are mandatory for coding agents working on this repository.
 
 ### Release labels (critical)
 
--   Default label for regular work: `release:none`.
--   Use `release:patch`, `release:minor`, or `release:major` only when explicitly requested.
+-   Add `release:patch`, `release:minor`, or `release:major` only when explicitly requested.
+-   PRs without a release label are not published.
 -   `deps:pi` is reserved for Pi dependency update PRs.
--   Only PRs labeled with `deps:pi` are eligible for automated publish.
 
 ### Pi dependency automation policy
 

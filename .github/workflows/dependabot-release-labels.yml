@@ -27,7 +27,6 @@ jobs:
           gh label create "release:patch" --color 0e8a16 --description "Publish patch version" || true
           gh label create "release:minor" --color 1d76db --description "Publish minor version" || true
           gh label create "release:major" --color b60205 --description "Publish major version" || true
-          gh label create "release:none" --color 6e7781 --description "Do not publish" || true
           gh label create "deps:pi" --color 5319e7 --description "Pi dependency update" || true
 
       - name: Apply Pi dependency and semver labels
@@ -40,8 +39,7 @@ jobs:
           set -euo pipefail
 
           if [[ "$DEPENDENCY_NAMES" != *"@mariozechner/pi-coding-agent"* ]]; then
-            gh pr edit "$PR_URL" --add-label "release:none"
-            echo "Non-Pi dependency update. Applied label: release:none"
+            echo "Non-Pi dependency update. No release label applied."
             exit 0
           fi
 
@@ -49,8 +47,14 @@ jobs:
             version-update:semver-major) RELEASE_LABEL="release:major" ;;
             version-update:semver-minor) RELEASE_LABEL="release:minor" ;;
             version-update:semver-patch) RELEASE_LABEL="release:patch" ;;
-            *) RELEASE_LABEL="release:none" ;;
+            *) RELEASE_LABEL="" ;;
           esac
+
+          if [[ -z "$RELEASE_LABEL" ]]; then
+            gh pr edit "$PR_URL" --add-label "deps:pi"
+            echo "Applied label: deps:pi (no semver release label for this update type)"
+            exit 0
+          fi
 
           gh pr edit "$PR_URL" --add-label "deps:pi" --add-label "$RELEASE_LABEL"
           echo "Applied labels: deps:pi, $RELEASE_LABEL"
