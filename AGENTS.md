@@ -155,7 +155,7 @@ These rules are mandatory for coding agents working on this repository.
 
 -   Dependabot tracks `@mariozechner/pi-coding-agent`.
 -   Pi patch updates can be auto-merged if checks pass.
--   Pi update PRs receive `deps:pi` + release semver labels.
+-   Pi update PRs always receive `deps:pi` + `release:patch` (independent of upstream semver).
 
 ### Pre-merge quality gate
 

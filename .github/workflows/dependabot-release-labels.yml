@@ -29,11 +29,10 @@ jobs:
           gh label create "release:major" --color b60205 --description "Publish major version" || true
           gh label create "deps:pi" --color 5319e7 --description "Pi dependency update" || true
 
-      - name: Apply Pi dependency and semver labels
+      - name: Apply Pi dependency labels
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
           DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
         run: |
           set -euo pipefail
@@ -43,18 +42,5 @@ jobs:
             exit 0
           fi
 
-          case "$UPDATE_TYPE" in
-            version-update:semver-major) RELEASE_LABEL="release:major" ;;
-            version-update:semver-minor) RELEASE_LABEL="release:minor" ;;
-            version-update:semver-patch) RELEASE_LABEL="release:patch" ;;
-            *) RELEASE_LABEL="" ;;
-          esac
-
-          if [[ -z "$RELEASE_LABEL" ]]; then
-            gh pr edit "$PR_URL" --add-label "deps:pi"
-            echo "Applied label: deps:pi (no semver release label for this update type)"
-            exit 0
-          fi
-
-          gh pr edit "$PR_URL" --add-label "deps:pi" --add-label "$RELEASE_LABEL"
-          echo "Applied labels: deps:pi, $RELEASE_LABEL"
+          gh pr edit "$PR_URL" --add-label "deps:pi" --add-label "release:patch"
+          echo "Applied labels: deps:pi, release:patch"
