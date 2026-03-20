@@ -1,4 +1,4 @@
-name: Dependabot automerge (Pi patch)
+name: Dependabot automerge (Pi)
 
 on:
   pull_request_target:
@@ -20,10 +20,8 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
-      - name: Enable auto-merge for Pi patch updates
-        if: >
-          contains(steps.metadata.outputs.dependency-names, '@mariozechner/pi-coding-agent')
-          && steps.metadata.outputs.update-type == 'version-update:semver-patch'
+      - name: Enable auto-merge for Pi updates
+        if: contains(steps.metadata.outputs.dependency-names, '@mariozechner/pi-coding-agent')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
