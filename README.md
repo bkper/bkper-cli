@@ -922,3 +922,11 @@ Bkper.setConfig({
 
 -   [Developer Docs]
 -   [App Template]
+
+## Release process (maintainers)
+
+Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from local machines.
+
+-   Merge a PR into `main` with one release label: `release:patch`, `release:minor`, or `release:major`
+-   On `main` push, CI determines the merged PR label, bumps `package.json` version, tags, and publishes to npm
+-   Without a release label, publish is skipped
