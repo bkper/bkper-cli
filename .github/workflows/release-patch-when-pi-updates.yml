@@ -85,7 +85,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.release_level.outputs.level != 'none'
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Install optional peer required for type-checking
         if: steps.release_level.outputs.level != 'none'
