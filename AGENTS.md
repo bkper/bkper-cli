@@ -149,13 +149,15 @@ These rules are mandatory for coding agents working on this repository.
 
 -   Add `release:patch`, `release:minor`, or `release:major` only when explicitly requested.
 -   PRs without a release label are not published.
--   `deps:pi` is reserved for Pi dependency update PRs.
+-   Do **not** manually bump `package.json` version in normal release PRs.
+-   The release label is the source of truth for the version bump level; after merge to `main`, CI runs `npm version patch|minor|major --no-git-tag-version --ignore-scripts`, creates the release commit/tag, and publishes to npm.
 
 ### Pi dependency automation policy
 
 -   Dependabot tracks `@mariozechner/pi-coding-agent`.
 -   Pi patch updates can be auto-merged if checks pass.
--   Pi update PRs always receive `deps:pi` + `release:patch` (independent of upstream semver).
+-   Pi update PRs always receive `release:patch` (independent of upstream semver).
+-   For Pi update PRs, Dependabot updates the dependency files in the PR, and the package version bump itself still happens later in CI after merge, driven by the `release:patch` label.
 
 ### Pre-merge quality gate
 

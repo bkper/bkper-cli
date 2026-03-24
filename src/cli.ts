@@ -16,11 +16,9 @@ import { registerAgentCommands } from './commands/agent-command.js';
 import { VERSION, autoUpgrade } from './upgrade/index.js';
 import { shouldStartAgentMode } from './agent/cli-dispatch.js';
 import { runAgentMode } from './agent/run-agent-mode.js';
-import { runStartupMaintenance } from './agent/startup-maintenance.js';
 
 async function main(): Promise<void> {
     if (shouldStartAgentMode(process.argv)) {
-        runStartupMaintenance();
         await runAgentMode();
         return;
     }

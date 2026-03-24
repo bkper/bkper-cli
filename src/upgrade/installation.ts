@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { exec, execSync, spawn } from 'child_process';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -13,20 +13,80 @@ const PACKAGE_NAME = 'bkper';
 /** Supported installation methods. */
 export type InstallMethod = 'npm' | 'bun' | 'yarn' | 'unknown';
 
+export type CommandRunner = (command: string, timeoutMs: number) => Promise<string>;
+export type DetachedCommandStarter = (command: string) => void;
+
+const defaultCommandRunner: CommandRunner = (command, timeoutMs) => {
+    return new Promise((resolve, reject) => {
+        exec(command, { timeout: timeoutMs, windowsHide: true }, (error, stdout) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+            resolve(stdout);
+        });
+    });
+};
+
+const defaultDetachedCommandStarter: DetachedCommandStarter = command => {
+    const child = spawn(command, [], {
+        shell: true,
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+    });
+    child.unref();
+};
+
+function getLatestVersionOverride(): string | undefined {
+    return process.env.BKPER_AUTOUPDATE_LATEST_VERSION || undefined;
+}
+
+function getUpgradeCommandOverride(): string | undefined {
+    return process.env.BKPER_AUTOUPDATE_COMMAND || undefined;
+}
+
+function getDetectionChecks(): Array<{ method: InstallMethod; command: string }> {
+    return [
+        { method: 'bun', command: 'bun pm ls -g' },
+        { method: 'npm', command: `npm list -g ${PACKAGE_NAME} --depth=0` },
+        { method: 'yarn', command: 'yarn global list --depth=0' },
+    ];
+}
+
 /**
  * Detects how the CLI was installed by checking global package lists
  * for each supported package manager.
  */
 export function detectMethod(): InstallMethod {
-    const checks: Array<{ method: InstallMethod; command: string }> = [
-        { method: 'bun', command: `bun pm ls -g 2>/dev/null` },
-        { method: 'npm', command: `npm list -g ${PACKAGE_NAME} --depth=0 2>/dev/null` },
-        { method: 'yarn', command: `yarn global list --depth=0 2>/dev/null` },
-    ];
-
-    for (const { method, command } of checks) {
+    for (const { method, command } of getDetectionChecks()) {
         try {
-            const output = execSync(command, { encoding: 'utf-8', timeout: 10000 });
+            const output = execSync(command, {
+                encoding: 'utf-8',
+                timeout: 10000,
+                stdio: ['ignore', 'pipe', 'ignore'],
+                windowsHide: true,
+            });
+            if (output.includes(PACKAGE_NAME)) {
+                return method;
+            }
+        } catch {
+            // Package manager not available or command failed — try next
+        }
+    }
+
+    return 'unknown';
+}
+
+/**
+ * Async version of installation method detection to avoid blocking the event loop.
+ */
+export async function detectMethodAsync(
+    commandRunner: CommandRunner = defaultCommandRunner
+): Promise<InstallMethod> {
+    for (const { method, command } of getDetectionChecks()) {
+        try {
+            const output = await commandRunner(command, 10000);
             if (output.includes(PACKAGE_NAME)) {
                 return method;
             }
@@ -43,6 +103,11 @@ export function detectMethod(): InstallMethod {
  * Returns null if the fetch fails.
  */
 export async function fetchLatestVersion(): Promise<string | null> {
+    const latestVersionOverride = getLatestVersionOverride();
+    if (latestVersionOverride) {
+        return latestVersionOverride;
+    }
+
     try {
         const response = await fetch(`https://registry.npmjs.org/${PACKAGE_NAME}/latest`, {
             headers: { Accept: 'application/json' },
@@ -84,5 +149,24 @@ export function executeUpgrade(method: InstallMethod, version: string): void {
                 `Please upgrade manually: npm install -g ${PACKAGE_NAME}@${version}`
         );
     }
-    execSync(command, { stdio: 'pipe', timeout: 60000 });
+    execSync(command, { stdio: 'pipe', timeout: 60000, windowsHide: true });
+}
+
+/**
+ * Starts the upgrade in a detached background process.
+ */
+export function startDetachedUpgrade(
+    method: InstallMethod,
+    version: string,
+    commandStarter: DetachedCommandStarter = defaultDetachedCommandStarter
+): void {
+    const command = getUpgradeCommandOverride() ?? getUpgradeCommand(method, version);
+    if (!command) {
+        throw new Error(
+            `Unable to auto-upgrade: unknown installation method. ` +
+                `Please upgrade manually: npm install -g ${PACKAGE_NAME}@${version}`
+        );
+    }
+
+    commandStarter(command);
 }
