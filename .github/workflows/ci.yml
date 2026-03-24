@@ -97,11 +97,31 @@ jobs:
                   ref: main
                   fetch-depth: 0
 
+            - name: Setup Bun
+              if: steps.release_level.outputs.level != 'none'
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
             - name: Setup Node
               if: steps.release_level.outputs.level != 'none'
               uses: actions/setup-node@v4
               with:
                   node-version: 22
+
+            - name: Install dependencies
+              if: steps.release_level.outputs.level != 'none'
+              run: bun install
+
+            - name: Install optional peer required for type-checking
+              if: steps.release_level.outputs.level != 'none'
+              run: npm install miniflare@^4 --no-save
+
+            - name: Build and unit test
+              if: steps.release_level.outputs.level != 'none'
+              run: |
+                  bun run build
+                  bun run test:unit
 
             - name: Upgrade npm
               if: steps.release_level.outputs.level != 'none'
@@ -143,3 +163,11 @@ jobs:
             - name: Push release commit and tag
               if: steps.release_level.outputs.level != 'none'
               run: git push origin main --follow-tags
+
+            - name: Notify Slack
+              if: always() && steps.release_level.outputs.level != 'none'
+              uses: pioug/le-slack-message@v1.0.0
+              with:
+                  ACTION_NAME: release ${{ env.VERSION || '' }}
+                  JOB: ${{ toJson(job) }}
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
