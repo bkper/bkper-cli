@@ -1,7 +1,62 @@
 import { expect } from '../helpers/test-setup.js';
-import { runAgentMode, type AgentModeDependencies } from '../../../src/agent/run-agent-mode.js';
+import sinon from 'sinon';
+import {
+    registerBkperAgentStartupExtension,
+    runAgentMode,
+    type AgentModeDependencies,
+} from '../../../src/agent/run-agent-mode.js';
 
 describe('runAgentMode', function () {
+    it('should register startup extension that shows ready message and starts maintenance once', async function () {
+        let sessionStartHandler:
+            | ((
+                  event: unknown,
+                  context: {
+                      ui: {
+                          notify: (message: string, type?: 'info' | 'warning' | 'error') => void;
+                      };
+                  }
+              ) => Promise<void>)
+            | undefined;
+
+        const startupMaintenance = sinon.stub().resolves();
+        const notify = sinon.stub();
+
+        registerBkperAgentStartupExtension(
+            {
+                on: (
+                    event: 'session_start',
+                    handler: (
+                        event: unknown,
+                        context: {
+                            ui: {
+                                notify: (
+                                    message: string,
+                                    type?: 'info' | 'warning' | 'error'
+                                ) => void;
+                            };
+                        }
+                    ) => Promise<void>
+                ) => {
+                    if (event === 'session_start') {
+                        sessionStartHandler = handler;
+                    }
+                },
+            },
+            startupMaintenance
+        );
+
+        expect(sessionStartHandler).to.not.equal(undefined);
+
+        await sessionStartHandler?.({}, {ui: {notify}});
+        await sessionStartHandler?.({}, {ui: {notify}});
+
+        expect(notify.calledWithExactly('Bkper Agent ready.', 'info')).to.be.true;
+        expect(startupMaintenance.calledOnce).to.be.true;
+        expect(startupMaintenance.firstCall.args[0]).to.have.property('notify');
+        expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
+    });
+
     it('should reload resources, create session and run interactive mode', async function () {
         const calls: string[] = [];
 

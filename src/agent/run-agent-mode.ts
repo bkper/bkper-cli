@@ -5,10 +5,25 @@ import {
     type CreateAgentSessionOptions,
     type ExtensionAPI,
 } from '@mariozechner/pi-coding-agent';
+import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
 type ReloadableResourceLoader = {
     reload(): Promise<void>;
+};
+
+type NotificationType = 'info' | 'warning' | 'error';
+
+type SessionStartContext = {
+    ui: {
+        notify: (message: string, type?: NotificationType) => void;
+    };
+};
+
+type SessionStartHandler = (event: unknown, context: SessionStartContext) => Promise<void>;
+
+type StartupExtensionAPI = {
+    on: (event: 'session_start', handler: SessionStartHandler) => void;
 };
 
 export interface AgentModeDependencies {
@@ -27,6 +42,26 @@ export interface AgentModeDependencies {
     };
 }
 
+export function registerBkperAgentStartupExtension(
+    pi: StartupExtensionAPI,
+    startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance
+): void {
+    let startupMaintenanceTriggered = false;
+
+    pi.on('session_start', async (_event, ctx) => {
+        ctx.ui.notify('Bkper Agent ready.', 'info');
+
+        if (startupMaintenanceTriggered) {
+            return;
+        }
+        startupMaintenanceTriggered = true;
+
+        void startupMaintenance({
+            notify: (message, type) => ctx.ui.notify(message, type),
+        });
+    });
+}
+
 function createDefaultDependencies(): AgentModeDependencies {
     return {
         createResourceLoader: () =>
@@ -35,9 +70,7 @@ function createDefaultDependencies(): AgentModeDependencies {
                 appendSystemPromptOverride: () => [],
                 extensionFactories: [
                     (pi: ExtensionAPI) => {
-                        pi.on('session_start', async (_event, ctx) => {
-                            ctx.ui.notify('Bkper Agent ready.', 'info');
-                        });
+                        registerBkperAgentStartupExtension(pi);
                     },
                 ],
             }),

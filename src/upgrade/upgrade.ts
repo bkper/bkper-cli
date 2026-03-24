@@ -2,8 +2,10 @@ import {
     VERSION,
     fetchLatestVersion,
     detectMethod,
+    detectMethodAsync,
     executeUpgrade,
     getUpgradeCommand,
+    startDetachedUpgrade,
 } from './installation.js';
 import type { InstallMethod } from './installation.js';
 
@@ -21,36 +23,109 @@ export function isNewerVersion(current: string, latest: string): boolean {
     return lPatch > cPatch;
 }
 
+export interface AvailableUpgrade {
+    current: string;
+    latest: string;
+    method: InstallMethod;
+}
+
+export interface AvailableUpgradeDependencies {
+    version: string;
+    fetchLatestVersion: () => Promise<string | null>;
+    detectMethod: () => Promise<InstallMethod>;
+}
+
+export interface AutoUpgradeDependencies extends AvailableUpgradeDependencies {
+    startUpgrade: (method: InstallMethod, version: string) => void;
+    writeStderr: (message: string) => void;
+}
+
+function writeAutoUpgradeMessage(message: string): void {
+    if (process.stdout.isTTY === true && process.stderr.isTTY === true) {
+        return;
+    }
+    process.stderr.write(message);
+}
+
+function createDefaultAvailableUpgradeDependencies(): AvailableUpgradeDependencies {
+    return {
+        version: VERSION,
+        fetchLatestVersion,
+        detectMethod: detectMethodAsync,
+    };
+}
+
+function createDefaultAutoUpgradeDependencies(): AutoUpgradeDependencies {
+    return {
+        ...createDefaultAvailableUpgradeDependencies(),
+        startUpgrade: startDetachedUpgrade,
+        writeStderr: writeAutoUpgradeMessage,
+    };
+}
+
+function getManualUpgradeMessage(current: string, latest: string): string {
+    return (
+        `\nbkper ${latest} available (current: ${current}). ` +
+        `Upgrade manually: npm install -g bkper@${latest}\n`
+    );
+}
+
+/**
+ * Checks whether a newer version is available and returns the target version
+ * plus the detected install method.
+ */
+export async function getAvailableUpgrade(
+    dependencies: AvailableUpgradeDependencies = createDefaultAvailableUpgradeDependencies()
+): Promise<AvailableUpgrade | null> {
+    const latest = await dependencies.fetchLatestVersion();
+    if (!latest) return null;
+    if (!isNewerVersion(dependencies.version, latest)) return null;
+
+    const method = await dependencies.detectMethod();
+    return {
+        current: dependencies.version,
+        latest,
+        method,
+    };
+}
+
 /**
  * Runs the silent auto-upgrade check in the background.
  *
  * Called on every CLI invocation. This function:
  * 1. Fetches the latest version from npm
  * 2. Compares with the current installed version
- * 3. If newer, silently upgrades using the detected install method
- * 4. Prints a brief message to stderr on success
+ * 3. If newer, starts a detached background upgrade using the detected install method
+ * 4. Prints a brief message to stderr on fallback or when running non-interactively
  *
  * All errors are swallowed silently to never disrupt the user's command.
  */
-export async function autoUpgrade(): Promise<void> {
+export async function autoUpgrade(
+    dependencies: AutoUpgradeDependencies = createDefaultAutoUpgradeDependencies()
+): Promise<void> {
     try {
-        const latest = await fetchLatestVersion();
-        if (!latest) return;
-        if (!isNewerVersion(VERSION, latest)) return;
+        const availableUpgrade = await getAvailableUpgrade(dependencies);
+        if (!availableUpgrade) return;
 
-        const method = detectMethod();
-        if (method === 'unknown') {
-            // Can't auto-upgrade if we don't know how it was installed.
-            // Print a hint to stderr so it doesn't pollute stdout.
-            process.stderr.write(
-                `\nbkper ${latest} available (current: ${VERSION}). ` +
-                    `Upgrade manually: npm install -g bkper@${latest}\n`
+        if (availableUpgrade.method === 'unknown') {
+            dependencies.writeStderr(
+                getManualUpgradeMessage(availableUpgrade.current, availableUpgrade.latest)
             );
             return;
         }
 
-        executeUpgrade(method, latest);
-        process.stderr.write(`\nbkper upgraded: ${VERSION} \u2192 ${latest} (restart to use)\n`);
+        try {
+            dependencies.startUpgrade(availableUpgrade.method, availableUpgrade.latest);
+            dependencies.writeStderr(
+                `\nbkper update started in background: ` +
+                    `${availableUpgrade.current} \u2192 ${availableUpgrade.latest} ` +
+                    `(restart later to use)\n`
+            );
+        } catch {
+            dependencies.writeStderr(
+                getManualUpgradeMessage(availableUpgrade.current, availableUpgrade.latest)
+            );
+        }
     } catch {
         // Silent failure — never break the user's command
     }
