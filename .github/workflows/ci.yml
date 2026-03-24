@@ -1,4 +1,4 @@
-name: CI
+name: bkper-cli-delivery
 
 on:
     pull_request:
@@ -154,7 +154,7 @@ jobs:
                   echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
                   git add package.json
                   git commit -m "chore(release): ${VERSION} [skip ci]"
-                  git tag "${VERSION}"
+                  git tag -a "${VERSION}" -m "${VERSION}"
 
             - name: Publish to npm (Trusted Publishers)
               if: steps.release_level.outputs.level != 'none'
