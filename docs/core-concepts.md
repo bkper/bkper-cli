@@ -1,7 +1,4 @@
-// AUTO-GENERATED FILE. DO NOT EDIT.
-// Source: https://bkper.com/docs/core-concepts.md
-
-export const CORE_CONCEPTS_MARKDOWN = `# Core Concepts
+# Core Concepts
 
 Bkper tracks resources — money, inventory, or anything countable — as movements between places. Every financial event is recorded as an amount moving **from** one Account **to** another. This from-to model replaces the traditional language of debits and credits with something intuitive: resources leave one place and arrive at another.
 
@@ -76,46 +73,46 @@ The sum of all credits and debits recorded in a Book always tallies to zero — 
 
 These examples show the same movement model in concrete situations. Some match the diagrams on this page. Others add common accrual flows that are easy to confuse.
 
-These examples use Bkper's transaction shorthand \`From >> To\`, meaning the amount leaves the Account on the left and arrives at the Account on the right.
+These examples use Bkper's transaction shorthand `From >> To`, meaning the amount leaves the Account on the left and arrives at the Account on the right.
 
 | Situation | Transaction |
 | --- | --- |
-| Salary received | \`Salary >> Bank Account\` |
-| Investment funded | \`Bank Account >> Investments\` |
-| Dividends received | \`Dividends >> Bank Account\` |
-| Loan received | \`Loan >> Bank Account\` |
-| Rent paid | \`Bank Account >> Rent\` |
-| Transportation bought on credit card | \`Credit Card >> Transportation\` |
+| Salary received | `Salary >> Bank Account` |
+| Investment funded | `Bank Account >> Investments` |
+| Dividends received | `Dividends >> Bank Account` |
+| Loan received | `Loan >> Bank Account` |
+| Rent paid | `Bank Account >> Rent` |
+| Transportation bought on credit card | `Credit Card >> Transportation` |
 
 **Buy on a credit card now, pay it later**
 
 | Step | Transaction |
 | --- | --- |
-| Purchase | \`Credit Card >> Outgoing\` |
-| Payment | \`Bank Account >> Credit Card\` |
+| Purchase | `Credit Card >> Outgoing` |
+| Payment | `Bank Account >> Credit Card` |
 
 **Sell now and receive cash later**
 
 | Step | Transaction |
 | --- | --- |
-| Sale on credit | \`Incoming >> Accounts Receivable\` |
-| Interest added while unpaid | \`Incoming >> Accounts Receivable\` |
-| Collection | \`Accounts Receivable >> Bank Account\` |
+| Sale on credit | `Incoming >> Accounts Receivable` |
+| Interest added while unpaid | `Incoming >> Accounts Receivable` |
+| Collection | `Accounts Receivable >> Bank Account` |
 
 **Receive a supplier bill now and pay it later**
 
 | Step | Transaction |
 | --- | --- |
-| Bill received | \`Accounts Payable >> Outgoing\` |
-| Interest added while unpaid | \`Accounts Payable >> Outgoing\` |
-| Payment | \`Bank Account >> Accounts Payable\` |
+| Bill received | `Accounts Payable >> Outgoing` |
+| Interest added while unpaid | `Accounts Payable >> Outgoing` |
+| Payment | `Bank Account >> Accounts Payable` |
 
 **Receive a loan now and repay principal later**
 
 | Step | Transaction |
 | --- | --- |
-| Loan proceeds | \`Loan >> Bank Account\` |
-| Principal repayment | \`Bank Account >> Loan\` |
+| Loan proceeds | `Loan >> Bank Account` |
+| Principal repayment | `Bank Account >> Loan` |
 
 In each case, the first movement records the position that was created — a receivable or a liability. The later movement settles that position. This keeps Incoming and Outgoing focused on activity, while Asset and Liability Accounts hold positions until they are cleared.
 
@@ -134,11 +131,11 @@ Bkper maintains a continuous ledger with no concept of closing periods — the s
 
 **Custom Properties** are key-value pairs attachable to any entity — Books, Accounts, Groups, Transactions, Collections, and Files. They add context, metadata, and meaning beyond core financial data.
 
-By attaching properties like \`invoice: inv123456\` or \`exc_code: BRL\`, entities become rich with information that can drive automation and reporting — without changing the core model.
+By attaching properties like `invoice: inv123456` or `exc_code: BRL`, entities become rich with information that can drive automation and reporting — without changing the core model.
 
 ## Hashtags
 
-**Hashtags** are lightweight labels on Transactions that enable multi-dimensional tracking. They complement the Account structure by adding dynamic categorization — a single transaction might carry \`#team_marketing #project_alpha #q1_campaign\`, enabling filtering and analysis from any perspective.
+**Hashtags** are lightweight labels on Transactions that enable multi-dimensional tracking. They complement the Account structure by adding dynamic categorization — a single transaction might carry `#team_marketing #project_alpha #q1_campaign`, enabling filtering and analysis from any perspective.
 
 Unlike Account structures, Hashtags can be added or removed as needs evolve, making them ideal for cost allocation, project tracking, and ad-hoc analysis.
 
@@ -153,4 +150,3 @@ Collections can also serve as references for automations (Bots or Apps) that wor
 Every action in a Book — posting a transaction, editing an account, adding a comment — generates an **Event**. Events record _who_ (a user) or _what_ (a bot, an automation) performed the action and _when_, forming a complete audit trail essential for collaboration and trust.
 
 Events are also the foundation of Bkper's automation model. Bots and Agents listen for specific event types and react automatically — for example, calculating taxes when a transaction is posted or converting currencies when one is checked.
-`;
