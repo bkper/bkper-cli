@@ -10,10 +10,14 @@ describe('agent system prompt', function () {
         expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('You are a Bkper team member');
     });
 
-    it('should include the core concepts canon', function () {
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('## Core Concepts Canon');
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('zero-sum invariant');
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('from one Account to another');
+    it('should include the canonical core concepts content', function () {
+        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('# Core Concepts');
+        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('## Transactions');
+        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('## Books');
+    });
+
+    it('should not include the duplicated core concepts canon heading', function () {
+        expect(BKPER_AGENT_SYSTEM_PROMPT).to.not.include('## Core Concepts Canon');
     });
 
     it('should include CLI usage section with reference path', function () {
