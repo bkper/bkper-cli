@@ -12,7 +12,7 @@ const REQUIRED_CORE_CONCEPTS_HEADINGS = [
 
 function resolveOutputPath(): string {
     const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(scriptDir, '..', 'src', 'agent', 'core-concepts.ts');
+    return path.resolve(scriptDir, '..', 'docs', 'core-concepts.md');
 }
 
 function validateCoreConceptsMarkdown(markdown: string): void {
@@ -27,25 +27,11 @@ function validateCoreConceptsMarkdown(markdown: string): void {
     }
 }
 
-function escapeForTemplateLiteral(value: string): string {
-    return value
-        .replace(/\\/g, '\\\\')
-        .replace(/`/g, '\\`')
-        .replace(/\$\{/g, '\\${');
-}
-
-function renderCoreConceptsModule(markdown: string): string {
-    validateCoreConceptsMarkdown(markdown);
-
-    const escapedMarkdown = escapeForTemplateLiteral(markdown);
-    return `// AUTO-GENERATED FILE. DO NOT EDIT.\n// Source: ${CORE_CONCEPTS_CANONICAL_URL}\n\nexport const CORE_CONCEPTS_MARKDOWN = \`${escapedMarkdown}\`;\n`;
-}
-
 async function fetchCoreConceptsMarkdown(): Promise<string> {
     const response = await fetch(CORE_CONCEPTS_CANONICAL_URL, {
         headers: {
             'Accept': 'text/markdown,text/plain,*/*',
-            'User-Agent': 'Mozilla/5.0 (compatible; bkper-cli build)',
+            'User-Agent': 'Mozilla/5.0 (compatible; bkper-cli sync)',
         },
     });
 
@@ -55,16 +41,17 @@ async function fetchCoreConceptsMarkdown(): Promise<string> {
         );
     }
 
-    return response.text();
+    const markdown = await response.text();
+    validateCoreConceptsMarkdown(markdown);
+    return markdown;
 }
 
 async function main(): Promise<void> {
     const markdown = await fetchCoreConceptsMarkdown();
     const outputPath = resolveOutputPath();
-    const moduleSource = renderCoreConceptsModule(markdown);
 
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, moduleSource, 'utf8');
+    await writeFile(outputPath, markdown, 'utf8');
 }
 
 void main().catch(error => {

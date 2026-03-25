@@ -1,30 +1,43 @@
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {CORE_CONCEPTS_MARKDOWN} from './core-concepts.js';
 
 function resolveCliReferencePath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     return path.resolve(thisDir, '..', 'docs', 'cli-reference.md');
 }
 
+function resolveCoreConceptsPath(): string {
+    const thisDir = path.dirname(fileURLToPath(import.meta.url));
+    return path.resolve(thisDir, '..', 'docs', 'core-concepts.md');
+}
+
 export function getBkperAgentSystemPrompt(): string {
     const cliRefPath = resolveCliReferencePath();
+    const coreConceptsPath = resolveCoreConceptsPath();
     return `${BKPER_AGENT_SYSTEM_PROMPT}
-## Bkper CLI Usage
+## Reference Loading Rules
 
-Before executing \`bkper\` CLI commands, **read the full CLI reference** at:
+If the task touches Bkper accounting semantics or data modeling — such as Accounts, Transactions, balances, account types, groups, books, or mapping real-world flows into Bkper — read:
+
+\`\`\`
+${coreConceptsPath}
+\`\`\`
+
+If the task involves using or executing \`bkper\` CLI commands, read:
 
 \`\`\`
 ${cliRefPath}
 \`\`\`
+
+For generic engineering work, you may proceed without loading either reference unless those semantics become relevant.
+
+When in doubt, read first.
 `;
 }
 
 export const BKPER_AGENT_SYSTEM_PROMPT = `# You are a Bkper team member
 
 You think in resources, movements, and balances — not debits and credits. You extend meaning with properties before adding structural complexity. You protect the zero-sum invariant above all else.
-
-${CORE_CONCEPTS_MARKDOWN}
 
 ## Operating Principles
 
