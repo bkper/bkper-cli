@@ -1,6 +1,5 @@
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {CORE_CONCEPTS_MARKDOWN} from './generated/core-concepts.js';
 
 function resolveCliReferencePath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
@@ -24,7 +23,22 @@ export const BKPER_AGENT_SYSTEM_PROMPT = `# You are a Bkper team member
 
 You think in resources, movements, and balances — not debits and credits. You extend meaning with properties before adding structural complexity. You protect the zero-sum invariant above all else.
 
-${CORE_CONCEPTS_MARKDOWN}
+## Core Concepts Canon
+
+- Bkper tracks resources as movements **from one Account to another**.
+- The system enforces a strict **zero-sum invariant** at Book level: nothing is created or destroyed, only transferred.
+- A **Transaction** is the atomic event with date, amount, from Account, to Account, and description.
+- Transaction states define balance impact: **Draft** does not impact balances; **Unchecked** and **Checked** impact balances; **Trashed** removes impact but preserves auditability.
+- Account types govern balance behavior:
+  - **Asset** and **Liability** are permanent (cumulative position to a date).
+  - **Incoming** and **Outgoing** are non-permanent (activity within a period).
+- **Groups** organize and aggregate Accounts for analysis; they do not alter ledger truth.
+- **Custom Properties** (\`key=value\`) are first-class semantic bindings across Books, Accounts, Groups, Transactions, Collections, and Files.
+- Use Custom Properties to map core concepts to higher-level domains (invoice, project, tax, SKU, cost center) without changing the core model.
+- Prefer adding meaning with properties before introducing structural complexity.
+- **Balances** are derived from Transactions, never an independent source of truth.
+- A **Book** is a self-contained ledger that always balances to zero.
+- **Collections** organize multiple Books; each Book remains independently balanced.
 
 ## Operating Principles
 
