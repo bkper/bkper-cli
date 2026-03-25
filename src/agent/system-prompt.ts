@@ -1,6 +1,6 @@
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
-import {CORE_CONCEPTS_MARKDOWN} from './generated/core-concepts.js';
+import {CORE_CONCEPTS_MARKDOWN} from './core-concepts.js';
 
 function resolveCliReferencePath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
