@@ -5,6 +5,10 @@ import { evaluateReadmeCompliance } from '../../../src/docs-compliance/rules.js'
 describe('docs-compliance rules', function () {
     it('should pass when README content follows required rules', function () {
         const readme = `
+### Book setup guidance (important)
+Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
+Verify the resulting group hierarchy and account memberships before reporting success.
+
 ### Query semantics (transactions and balances)
 -   \`on:2025\` → full year
 -   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
@@ -69,10 +73,41 @@ bkper balance list -b abc123 -q "on:2025-12-31"
         const result = evaluateReadmeCompliance(readme);
 
         const codes = result.errors.map(e => e.code);
+        expect(codes).to.include('missing-book-setup-guidance-title');
+        expect(codes).to.include('missing-book-setup-order-guidance');
+        expect(codes).to.include('missing-book-setup-verification-guidance');
         expect(codes).to.include('missing-llm-guidance-title');
         expect(codes).to.include('missing-csv-guidance');
         expect(codes).to.include('missing-json-guidance');
         expect(codes).to.include('missing-query-semantics-section');
         expect(codes).to.include('missing-after-before-semantics');
+    });
+
+    it('should report when README documents group stdin batch creation', function () {
+        const readme = `
+### Book setup guidance (important)
+Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
+Verify the resulting group hierarchy and account memberships before reporting success.
+
+### Query semantics (transactions and balances)
+-   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
+
+**LLM-first output guidance (important):**
+-   **LLM consumption of lists/reports** → CSV
+-   **Programmatic processing / pipelines** → JSON
+
+Write commands (\`account create\`, \`group create\`, \`transaction create\`) accept JSON data piped via stdin.
+\`\`\`bash
+bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
+\`\`\`
+
+**Group** (\`bkper.Group\`)
+`;
+
+        const result = evaluateReadmeCompliance(readme);
+        const codes = result.errors.map(e => e.code);
+        expect(codes).to.include('group-create-stdin-documented');
+        expect(codes).to.include('group-create-pipe-documented');
+        expect(codes).to.include('group-stdin-fields-documented');
     });
 });

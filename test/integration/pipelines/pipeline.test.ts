@@ -35,101 +35,37 @@ describe('CLI - pipeline (end-to-end)', function () {
     });
 
     // ----------------------------------------------------------------
-    // Groups: round-trip piping
+    // Groups: stdin is not supported for creation
     // ----------------------------------------------------------------
 
-    describe('groups round-trip', function () {
-        it('should pipe group list output as group create input', async function () {
-            // Seed groups in book A
-            const seedResult = await runBkperWithStdin(
-                ['group', 'create', '-b', bookA],
-                JSON.stringify([{ name: 'Pipe Group Alpha' }, { name: 'Pipe Group Beta' }])
-            );
-            expect(seedResult.exitCode).to.equal(0);
+    describe('groups creation', function () {
+        it('should reject piping group JSON into group create', async function () {
+            await runBkper([
+                'group',
+                'create',
+                '-b',
+                bookA,
+                '--name',
+                'Pipe Group Alpha',
+            ]);
+            await runBkper([
+                'group',
+                'create',
+                '-b',
+                bookA,
+                '--name',
+                'Pipe Group Beta',
+            ]);
 
-            // List groups from book A as JSON
             const listResult = await runBkper(['--format', 'json', 'group', 'list', '-b', bookA]);
             expect(listResult.exitCode).to.equal(0);
-            const listedGroups = JSON.parse(listResult.stdout);
-            expect(listedGroups).to.be.an('array');
-            expect(listedGroups.length).to.be.greaterThanOrEqual(2);
 
-            // Pipe list output into book B create
             const pipeResult = await runBkperWithStdin(
                 ['group', 'create', '-b', bookB],
                 listResult.stdout
             );
-            expect(pipeResult.exitCode).to.equal(0);
-
-            // Verify groups exist in book B
-            const verifyResult = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookB]);
-            const names = verifyResult.map(g => g.name);
-            expect(names).to.include('Pipe Group Alpha');
-            expect(names).to.include('Pipe Group Beta');
-        });
-
-        it('should pipe group batch create output as group create input', async function () {
-            // Create groups in book A via batch
-            const createResult = await runBkperWithStdin(
-                ['group', 'create', '-b', bookA],
-                JSON.stringify([{ name: 'Batch Pipe Group X' }])
-            );
-            expect(createResult.exitCode).to.equal(0);
-
-            // Parse batch output (flat JSON array) and pipe to book B
-            const parsed = JSON.parse(createResult.stdout);
-            expect(parsed).to.be.an('array').with.length(1);
-
-            const pipeResult = await runBkperWithStdin(
-                ['group', 'create', '-b', bookB],
-                createResult.stdout
-            );
-            expect(pipeResult.exitCode).to.equal(0);
-
-            // Verify
-            const verifyResult = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookB]);
-            const names = verifyResult.map(g => g.name);
-            expect(names).to.include('Batch Pipe Group X');
-        });
-
-        it('should pipe single group get output as group create input', async function () {
-            // Get a group from book A
-            const groups = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookA]);
-            const targetGroup = groups.find(g => g.name === 'Pipe Group Alpha');
-            expect(targetGroup).to.exist;
-
-            const getResult = await runBkper([
-                '--format',
-                'json',
-                'group',
-                'get',
-                targetGroup!.id!,
-                '-b',
-                bookA,
-            ]);
-            expect(getResult.exitCode).to.equal(0);
-
-            // Pipe single group JSON into create (single object -> one-item batch)
-            // Create in a fresh book to avoid name collision
-            const bookC = await createTestBook(uniqueTestName('test-pipe-grp-get'));
-            try {
-                const pipeResult = await runBkperWithStdin(
-                    ['group', 'create', '-b', bookC],
-                    getResult.stdout
-                );
-                expect(pipeResult.exitCode).to.equal(0);
-
-                const verifyResult = await runBkperJson<bkper.Group[]>([
-                    'group',
-                    'list',
-                    '-b',
-                    bookC,
-                ]);
-                const names = verifyResult.map(g => g.name);
-                expect(names).to.include('Pipe Group Alpha');
-            } finally {
-                await deleteTestBook(bookC);
-            }
+            expect(pipeResult.exitCode).to.not.equal(0);
+            expect(pipeResult.stderr).to.include('Missing required option: --name');
         });
     });
 
@@ -493,7 +429,7 @@ describe('CLI - pipeline (end-to-end)', function () {
     // ----------------------------------------------------------------
 
     describe('stdin { items: [...] } wrapper', function () {
-        it('should accept { items: [...] } wrapper for group create', async function () {
+        it('should reject { items: [...] } wrapper for group create', async function () {
             const bookC = await createTestBook(uniqueTestName('test-pipe-wrap-grp'));
             try {
                 const wrappedInput = JSON.stringify({
@@ -504,16 +440,8 @@ describe('CLI - pipeline (end-to-end)', function () {
                     ['group', 'create', '-b', bookC],
                     wrappedInput
                 );
-                expect(result.exitCode).to.equal(0);
-
-                const verifyResult = await runBkperJson<bkper.Group[]>([
-                    'group',
-                    'list',
-                    '-b',
-                    bookC,
-                ]);
-                const names = verifyResult.map(g => g.name);
-                expect(names).to.include('Wrapped Group');
+                expect(result.exitCode).to.not.equal(0);
+                expect(result.stderr).to.include('Missing required option: --name');
             } finally {
                 await deleteTestBook(bookC);
             }
@@ -599,11 +527,10 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(parsed).to.be.an('array').with.length(0);
         });
 
-        it('should handle empty array stdin gracefully for groups', async function () {
+        it('should reject empty array stdin for groups', async function () {
             const result = await runBkperWithStdin(['group', 'create', '-b', bookA], '[]');
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array').with.length(0);
+            expect(result.exitCode).to.not.equal(0);
+            expect(result.stderr).to.include('Missing required option: --name');
         });
 
         it('should handle empty array stdin gracefully for transactions', async function () {
@@ -613,14 +540,13 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(parsed).to.be.an('array').with.length(0);
         });
 
-        it('should handle { items: [] } wrapper with empty items', async function () {
+        it('should reject { items: [] } wrapper for groups', async function () {
             const result = await runBkperWithStdin(
                 ['group', 'create', '-b', bookA],
                 JSON.stringify({ items: [] })
             );
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array').with.length(0);
+            expect(result.exitCode).to.not.equal(0);
+            expect(result.stderr).to.include('Missing required option: --name');
         });
     });
 
@@ -629,36 +555,50 @@ describe('CLI - pipeline (end-to-end)', function () {
     // ----------------------------------------------------------------
 
     describe('cross-resource workflow', function () {
-        it('should pipe groups, accounts, and transactions across books', async function () {
+        it('should copy groups explicitly, then pipe accounts and transactions across books', async function () {
             const sourceBook = await createTestBook(uniqueTestName('test-pipe-src'));
             const destBook = await createTestBook(uniqueTestName('test-pipe-dest'));
 
             try {
-                // Step 1: Create groups in source
-                const grpCreate = await runBkperWithStdin(
-                    ['group', 'create', '-b', sourceBook],
-                    JSON.stringify([{ name: 'XFlow Assets' }, { name: 'XFlow Income' }])
-                );
-                expect(grpCreate.exitCode).to.equal(0);
-
-                // Step 2: Pipe groups from source to dest
-                const grpList = await runBkper([
-                    '--format',
-                    'json',
+                // Step 1: Create matching groups explicitly in both books
+                const sourceAssets = await runBkper([
                     'group',
-                    'list',
+                    'create',
                     '-b',
                     sourceBook,
+                    '--name',
+                    'XFlow Assets',
                 ]);
-                expect(grpList.exitCode).to.equal(0);
+                expect(sourceAssets.exitCode).to.equal(0);
+                const sourceIncome = await runBkper([
+                    'group',
+                    'create',
+                    '-b',
+                    sourceBook,
+                    '--name',
+                    'XFlow Income',
+                ]);
+                expect(sourceIncome.exitCode).to.equal(0);
+                const destAssets = await runBkper([
+                    'group',
+                    'create',
+                    '-b',
+                    destBook,
+                    '--name',
+                    'XFlow Assets',
+                ]);
+                expect(destAssets.exitCode).to.equal(0);
+                const destIncome = await runBkper([
+                    'group',
+                    'create',
+                    '-b',
+                    destBook,
+                    '--name',
+                    'XFlow Income',
+                ]);
+                expect(destIncome.exitCode).to.equal(0);
 
-                const grpPipe = await runBkperWithStdin(
-                    ['group', 'create', '-b', destBook],
-                    grpList.stdout
-                );
-                expect(grpPipe.exitCode).to.equal(0);
-
-                // Step 3: Create accounts in source
+                // Step 2: Create accounts in source
                 const acctCreate = await runBkperWithStdin(
                     ['account', 'create', '-b', sourceBook],
                     JSON.stringify([
@@ -668,7 +608,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(acctCreate.exitCode).to.equal(0);
 
-                // Step 4: Pipe accounts from source to dest
+                // Step 3: Pipe accounts from source to dest
                 const acctList = await runBkper([
                     '--format',
                     'json',
@@ -685,7 +625,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(acctPipe.exitCode).to.equal(0);
 
-                // Step 5: Create transactions in source
+                // Step 4: Create transactions in source
                 const txCreate = await runBkperWithStdin(
                     ['transaction', 'create', '-b', sourceBook],
                     JSON.stringify([
@@ -707,7 +647,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(txCreate.exitCode).to.equal(0);
 
-                // Step 6: Pipe transactions from source to dest
+                // Step 5: Pipe transactions from source to dest
                 const txList = await runBkper([
                     '--format',
                     'json',
@@ -726,7 +666,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(txPipe.exitCode).to.equal(0);
 
-                // Step 7: Verify everything in dest
+                // Step 6: Verify everything in dest
                 const destGroups = await runBkperJson<bkper.Group[]>([
                     'group',
                     'list',
@@ -819,16 +759,15 @@ describe('CLI - pipeline (end-to-end)', function () {
             }
         });
 
-        it('should output batch group create as a flat JSON array', async function () {
+        it('should reject batch group create via stdin', async function () {
             const bookC = await createTestBook(uniqueTestName('test-fmt-grp'));
             try {
                 const result = await runBkperWithStdin(
                     ['group', 'create', '-b', bookC],
                     JSON.stringify([{ name: 'Fmt Group' }])
                 );
-                expect(result.exitCode).to.equal(0);
-                const parsed = JSON.parse(result.stdout);
-                expect(parsed).to.be.an('array');
+                expect(result.exitCode).to.not.equal(0);
+                expect(result.stderr).to.include('Missing required option: --name');
             } finally {
                 await deleteTestBook(bookC);
             }

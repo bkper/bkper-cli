@@ -32,7 +32,7 @@ describe('CLI - group stdin', function () {
     });
 
     describe('JSON stdin', function () {
-        it('should create groups from JSON array', async function () {
+        it('should reject group creation from JSON stdin', async function () {
             const jsonInput = JSON.stringify([
                 { name: 'Stdin Group A' },
                 { name: 'Stdin Group B' },
@@ -40,33 +40,19 @@ describe('CLI - group stdin', function () {
 
             const result = await runBkperWithStdin(['group', 'create', '-b', bookId], jsonInput);
 
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array').with.length(2);
-            expect(parsed[0].name).to.equal('Stdin Group A');
-            expect(parsed[1].name).to.equal('Stdin Group B');
-        });
-
-        it('should create a single group from JSON object', async function () {
-            const jsonInput = JSON.stringify({ name: 'Stdin Group C' });
-
-            const result = await runBkperWithStdin(['group', 'create', '-b', bookId], jsonInput);
-
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array').with.length(1);
-            expect(parsed[0].name).to.equal('Stdin Group C');
+            expect(result.exitCode).to.not.equal(0);
+            expect(result.stderr).to.include('Missing required option: --name');
         });
     });
 
     describe('verification', function () {
-        it('should list all created groups', async function () {
+        it('should not create groups from stdin input', async function () {
             const result = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookId]);
 
             const names = result.map(g => g.name);
-            expect(names).to.include('Stdin Group A');
-            expect(names).to.include('Stdin Group B');
-            expect(names).to.include('Stdin Group C');
+            expect(names).to.not.include('Stdin Group A');
+            expect(names).to.not.include('Stdin Group B');
+            expect(names).to.not.include('Stdin Group C');
         });
     });
 });

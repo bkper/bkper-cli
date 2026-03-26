@@ -184,7 +184,7 @@ export function runBkper(
         );
 
         // Close stdin immediately so CLI commands that check for piped input
-        // (account create, group create, transaction create) don't hang
+        // (account create and transaction create) don't hang
         // waiting for data that will never come.
         if (child.stdin) {
             child.stdin.end();

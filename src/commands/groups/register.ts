@@ -3,15 +3,7 @@ import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
 import { renderListResult, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
-import { parseStdinItems } from '../../input/index.js';
-import {
-    listGroupsFormatted,
-    getGroup,
-    createGroup,
-    updateGroup,
-    deleteGroup,
-    batchCreateGroups,
-} from './index.js';
+import { listGroupsFormatted, getGroup, createGroup, updateGroup, deleteGroup } from './index.js';
 
 export function registerGroupCommands(program: Command): void {
     const groupCommand = program.command('group').description('Manage Groups');
@@ -50,30 +42,19 @@ export function registerGroupCommands(program: Command): void {
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action(options =>
             withAction('creating group', async format => {
-                const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
-
-                if (stdinData && stdinData.items.length > 0) {
-                    throwIfErrors(
-                        validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
-                    );
-                    await batchCreateGroups(options.book, stdinData.items, options.property);
-                } else if (stdinData && stdinData.items.length === 0) {
-                    console.log(JSON.stringify([], null, 2));
-                } else {
-                    throwIfErrors(
-                        validateRequiredOptions(options, [
-                            { name: 'book', flag: '--book' },
-                            { name: 'name', flag: '--name' },
-                        ])
-                    );
-                    const group = await createGroup(options.book, {
-                        name: options.name,
-                        parent: options.parent,
-                        hidden: options.hidden,
-                        property: options.property,
-                    });
-                    renderItem(group.json(), format);
-                }
+                throwIfErrors(
+                    validateRequiredOptions(options, [
+                        { name: 'book', flag: '--book' },
+                        { name: 'name', flag: '--name' },
+                    ])
+                );
+                const group = await createGroup(options.book, {
+                    name: options.name,
+                    parent: options.parent,
+                    hidden: options.hidden,
+                    property: options.property,
+                });
+                renderItem(group.json(), format);
             })()
         );
 

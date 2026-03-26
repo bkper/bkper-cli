@@ -471,30 +471,48 @@ describe('CLI - transaction commands', function () {
             expect(result.exitCode).to.not.equal(0);
         });
 
-        it('should fail when missing required --date option', async function () {
+        it('should create a draft transaction when --date is missing', async function () {
             const result = await runBkper([
+                '--format',
+                'json',
                 'transaction',
                 'create',
                 '-b',
                 bookId,
                 '--amount',
                 '100',
+                '--description',
+                'Draft without date',
             ]);
 
-            expect(result.exitCode).to.not.equal(0);
+            expect(result.exitCode).to.equal(0);
+            const created = JSON.parse(result.stdout) as bkper.Transaction;
+            expect(created).to.be.an('object');
+            expect(created.id).to.be.a('string');
+            expect(created.description).to.equal('Draft without date');
+            expect(created.posted).to.not.equal(true);
         });
 
-        it('should fail when missing required --amount option', async function () {
+        it('should create a draft transaction when --amount is missing', async function () {
             const result = await runBkper([
+                '--format',
+                'json',
                 'transaction',
                 'create',
                 '-b',
                 bookId,
                 '--date',
                 '2025-01-01',
+                '--description',
+                'Draft without amount',
             ]);
 
-            expect(result.exitCode).to.not.equal(0);
+            expect(result.exitCode).to.equal(0);
+            const created = JSON.parse(result.stdout) as bkper.Transaction;
+            expect(created).to.be.an('object');
+            expect(created.id).to.be.a('string');
+            expect(created.description).to.equal('Draft without amount');
+            expect(created.posted).to.not.equal(true);
         });
 
         it('should fail when missing required --query option for list', async function () {
