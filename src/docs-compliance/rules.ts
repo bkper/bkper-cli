@@ -76,6 +76,36 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
+    if (!content.includes('### Book setup guidance (important)')) {
+        errors.push({
+            code: 'missing-book-setup-guidance-title',
+            message: 'Missing `Book setup guidance (important)` section.',
+        });
+    }
+
+    if (
+        !content.includes(
+            'Create top-level groups first, then child groups with `--parent`, then accounts with `--groups`.'
+        )
+    ) {
+        errors.push({
+            code: 'missing-book-setup-order-guidance',
+            message:
+                'Missing guidance to create top-level groups first, then child groups, then accounts.',
+        });
+    }
+
+    if (
+        !content.includes(
+            'Verify the resulting group hierarchy and account memberships before reporting success.'
+        )
+    ) {
+        errors.push({
+            code: 'missing-book-setup-verification-guidance',
+            message: 'Missing guidance to verify hierarchy and account memberships before success.',
+        });
+    }
+
     if (!content.includes('LLM-first output guidance (important):')) {
         errors.push({
             code: 'missing-llm-guidance-title',
@@ -108,6 +138,32 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         errors.push({
             code: 'missing-after-before-semantics',
             message: 'Missing explicit semantics for `after:` and `before:`.',
+        });
+    }
+
+    if (
+        content.includes(
+            'Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin'
+        )
+    ) {
+        errors.push({
+            code: 'group-create-stdin-documented',
+            message: 'README should not document stdin batch creation for `group create`.',
+        });
+    }
+
+    const groupPipePattern = /bkper\s+group\s+list\b.*\|\s*bkper\s+group\s+create\b/;
+    if (groupPipePattern.test(content)) {
+        errors.push({
+            code: 'group-create-pipe-documented',
+            message: 'README should not document piping group JSON into `group create`.',
+        });
+    }
+
+    if (content.includes('**Group** (`bkper.Group`)')) {
+        errors.push({
+            code: 'group-stdin-fields-documented',
+            message: 'README should not document stdin writable fields for `bkper.Group`.',
         });
     }
 

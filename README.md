@@ -238,6 +238,16 @@ bkper group update "Cash" -b abc123 --hidden true
 bkper group delete "Cash" -b abc123
 ```
 
+### Book setup guidance (important)
+
+When setting up a full Book or starter chart of accounts, prefer a hierarchical group structure by default.
+
+Create top-level groups first, then child groups with `--parent`, then accounts with `--groups`.
+
+Verify the resulting group hierarchy and account memberships before reporting success.
+
+Avoid using the same name for a Group and an Account in the same Book.
+
 <details>
 <summary>Command reference</summary>
 
@@ -448,7 +458,7 @@ CSV is significantly more token-efficient than JSON for tabular data, and for wi
 
 ### Batch Operations & Piping
 
-Write commands (`account create`, `group create`, `transaction create`) accept JSON data piped via stdin for batch operations. The `transaction update` command also accepts stdin for batch updates. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
+Write commands (`account create`, `transaction create`) accept JSON data piped via stdin for batch operations. The `transaction update` command also accepts stdin for batch updates. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
 
 ```bash
 # Create transactions
@@ -465,15 +475,13 @@ echo '[{
 echo '[{"name":"Cash","type":"ASSET"},{"name":"Revenue","type":"INCOMING"}]' | \
   bkper account create -b abc123
 
-# Create groups
-echo '[{"name":"Fixed Costs","hidden":true}]' | \
-  bkper group create -b abc123
-
 # Pipe from a script
 python export_bank.py | bkper transaction create -b abc123
 ```
 
-The input follows the exact `bkper.Transaction`, `bkper.Account`, or `bkper.Group` type from the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts). Custom properties go inside the `properties` object.
+The input follows the exact `bkper.Transaction` or `bkper.Account` type from the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts). Custom properties go inside the `properties` object.
+
+Groups are created explicitly with `bkper group create --name` and optional `--parent` so hierarchy stays deterministic during setup.
 
 The `--property` CLI flag can override or delete properties from the stdin payload:
 
@@ -491,21 +499,17 @@ bkper account create -b abc123 < accounts.json
 
 **Piping between commands:**
 
-All JSON output is designed to be piped directly as stdin to other commands. The output of any list or batch create command can feed directly into a create or update command:
+For resources that support stdin creation, JSON output can be piped directly into create or update commands:
 
 ```bash
 # Copy all accounts from one book to another
 bkper account list -b $BOOK_A --format json | bkper account create -b $BOOK_B
 
-# Copy all groups from one book to another
-bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
-
 # Copy transactions matching a query
 bkper transaction list -b $BOOK_A -q "after:2025-01-01" --format json | \
   bkper transaction create -b $BOOK_B
 
-# Clone a full chart of accounts: groups, then accounts, then transactions
-bkper group list -b $SOURCE --format json | bkper group create -b $DEST
+# Clone accounts, then transactions
 bkper account list -b $SOURCE --format json | bkper account create -b $DEST
 bkper transaction list -b $SOURCE -q "after:2025-01-01" --format json | \
   bkper transaction create -b $DEST
@@ -554,15 +558,6 @@ Only the fields below are meaningful when creating or updating resources via std
 | `permanent`  | `boolean`               | Permanent accounts (e.g. bank accounts, customers) |
 | `groups`     | `[{"name":"..."}, ...]` | Groups to assign by name or id                     |
 | `properties` | `{"key": "value", ...}` | Custom key/value properties                        |
-
-**Group** (`bkper.Group`)
-
-| Field        | Type                               | Notes                            |
-| ------------ | ---------------------------------- | -------------------------------- |
-| `name`       | `string`                           | Group name (required)            |
-| `hidden`     | `boolean`                          | Hide from transactions main menu |
-| `parent`     | `{"name":"..."}` or `{"id":"..."}` | Parent group for nesting         |
-| `properties` | `{"key": "value", ...}`            | Custom key/value properties      |
 
 </details>
 
