@@ -1,28 +1,35 @@
-name: Dependabot automerge (Pi)
+name: Dependabot Pi patch
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  automerge:
+  patch:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v2
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Enable auto-merge for Pi updates
-        if: contains(steps.metadata.outputs.dependency-names, '@mariozechner/pi-coding-agent')
+      - name: Apply patch release label
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: gh pr edit "$PR_URL" --add-label "release:patch"
+
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.BKPER_AUTOMERGE_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "BKPER_AUTOMERGE_TOKEN secret is required to enable Dependabot auto-merge without suppressing the downstream main push release workflow."
+            exit 1
+          fi
+
+          gh pr merge --auto --squash "$PR_URL"
