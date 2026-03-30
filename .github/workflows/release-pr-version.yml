@@ -1,0 +1,107 @@
+name: Release PR version bump
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  bump:
+    if: github.event.pull_request.base.ref == 'main' && github.event.pull_request.state == 'open'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine release level
+        id: release_level
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labels = (pr.labels ?? [])
+              .map(label => typeof label === 'string' ? label : label.name)
+              .filter(Boolean);
+            const orderedLabels = ['release:major', 'release:minor', 'release:patch'];
+            const levelByLabel = {
+              'release:patch': 'patch',
+              'release:minor': 'minor',
+              'release:major': 'major',
+            };
+            const selectedLabel = orderedLabels.find(label => labels.includes(label)) ?? null;
+            const level = selectedLabel ? levelByLabel[selectedLabel] : 'none';
+            const sameRepo = pr.head.repo.full_name === `${context.repo.owner}/${context.repo.repo}`;
+
+            core.info(`PR #${pr.number} labels: ${labels.join(', ') || '(none)'}`);
+            core.info(`Selected release level: ${level}`);
+            core.info(`Same repository branch: ${sameRepo}`);
+
+            core.setOutput('level', level);
+            core.setOutput('same_repo', sameRepo ? 'true' : 'false');
+
+      - name: Skip version bump (no release label)
+        if: steps.release_level.outputs.level == 'none'
+        run: echo "Skipping version bump because the PR has no release label"
+
+      - name: Skip version bump (external PR branch)
+        if: steps.release_level.outputs.level != 'none' && steps.release_level.outputs.same_repo != 'true'
+        run: echo "Skipping version bump because the PR branch is not in this repository"
+
+      - name: Checkout PR branch
+        if: steps.release_level.outputs.level != 'none' && steps.release_level.outputs.same_repo == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Bump package version on PR branch
+        if: steps.release_level.outputs.level != 'none' && steps.release_level.outputs.same_repo == 'true'
+        env:
+          RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch --tags origin
+
+          LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
+          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+          NEXT_VERSION="$(node - "$LATEST_TAG" "$PACKAGE_VERSION" "$RELEASE_LEVEL" <<'NODE'
+          const [latestTag, packageVersion, level] = process.argv.slice(2);
+
+          const normalize = versionOrTag => {
+            const normalized = versionOrTag.startsWith('v') ? versionOrTag.slice(1) : versionOrTag;
+            if (!/^\d+\.\d+\.\d+$/.test(normalized)) {
+              throw new Error(`Invalid semver version: ${versionOrTag}`);
+            }
+            return normalized;
+          };
+
+          const currentVersion = latestTag ? normalize(latestTag) : normalize(packageVersion);
+          const [major, minor, patch] = currentVersion.split('.').map(Number);
+
+          let nextVersion;
+          if (level === 'major') nextVersion = `${major + 1}.0.0`;
+          else if (level === 'minor') nextVersion = `${major}.${minor + 1}.0`;
+          else if (level === 'patch') nextVersion = `${major}.${minor}.${patch + 1}`;
+          else throw new Error(`Unsupported release level: ${level}`);
+
+          process.stdout.write(nextVersion);
+          NODE
+          )"
+
+          if [[ "$PACKAGE_VERSION" == "$NEXT_VERSION" ]]; then
+            echo "package.json already at target version ${NEXT_VERSION}"
+            exit 0
+          fi
+
+          npm pkg set version="$NEXT_VERSION"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(release): prepare v${NEXT_VERSION}"
+          git push origin "HEAD:${PR_HEAD_REF}"

@@ -126,7 +126,7 @@ jobs:
                   bun run build
                   bun run test:unit
 
-            - name: Determine next version from latest release tag
+            - name: Validate package version for this release
               if: steps.release_level.outputs.level != 'none'
               env:
                   RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
@@ -136,28 +136,21 @@ jobs:
                   git fetch --tags origin
 
                   LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
-                  CURRENT_VERSION="${LATEST_TAG#v}"
-                  if [[ -z "$CURRENT_VERSION" ]]; then
-                    CURRENT_VERSION="$(node -p "require('./package.json').version")"
-                  fi
+                  PACKAGE_VERSION="$(node -p "require('./package.json').version")"
+                  EXPECTED_VERSION="$(node --input-type=module - "$LATEST_TAG" "$PACKAGE_VERSION" "$RELEASE_LEVEL" <<'NODE'
+                  import { resolveNextVersion } from './lib/release/versioning.js';
 
-                  NEXT_VERSION="$(node - "$CURRENT_VERSION" "$RELEASE_LEVEL" <<'NODE'
-                  const [current, level] = process.argv.slice(2);
-                  const [major, minor, patch] = current.split('.').map(Number);
-                  if ([major, minor, patch].some(Number.isNaN)) {
-                    throw new Error(`Invalid current version: ${current}`);
-                  }
-                  let next;
-                  if (level === 'major') next = [major + 1, 0, 0];
-                  else if (level === 'minor') next = [major, minor + 1, 0];
-                  else if (level === 'patch') next = [major, minor, patch + 1];
-                  else throw new Error(`Unsupported release level: ${level}`);
-                  process.stdout.write(next.join('.'));
+                  const [latestTag, packageVersion, level] = process.argv.slice(2);
+                  process.stdout.write(resolveNextVersion(latestTag || null, packageVersion, level));
                   NODE
                   )"
 
-                  echo "VERSION=v${NEXT_VERSION}" >> "$GITHUB_ENV"
-                  npm pkg set version="$NEXT_VERSION"
+                  if [[ "$PACKAGE_VERSION" != "$EXPECTED_VERSION" ]]; then
+                    echo "package.json version $PACKAGE_VERSION does not match expected next $EXPECTED_VERSION for release level $RELEASE_LEVEL"
+                    exit 1
+                  fi
+
+                  echo "VERSION=v${PACKAGE_VERSION}" >> "$GITHUB_ENV"
 
             - name: Upgrade npm
               if: steps.release_level.outputs.level != 'none'
@@ -175,18 +168,11 @@ jobs:
                   rm -f .npmrc ~/.npmrc || true
                   unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
-            - name: Create local release commit and tag
+            - name: Create release tag
               if: steps.release_level.outputs.level != 'none'
               env:
                   VERSION: ${{ env.VERSION }}
-              run: |
-                  set -euo pipefail
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-                  git add package.json
-                  git commit -m "chore(release): ${VERSION} [skip ci]"
-                  git tag -a "${VERSION}" -m "${VERSION}"
+              run: git tag -a "${VERSION}" -m "${VERSION}"
 
             - name: Publish to npm (Trusted Publishers)
               if: steps.release_level.outputs.level != 'none'

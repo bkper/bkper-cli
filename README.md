@@ -917,7 +917,8 @@ Bkper.setConfig({
 
 Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from local machines.
 
--   Merge a PR into `main` with one release label: `release:patch`, `release:minor`, or `release:major`
--   On each `main` push, the delivery workflow checks the merged PR associated with that commit, computes the next version from the latest release tag, publishes to npm, and pushes the new tag
+-   Add one release label to a PR targeting `main`: `release:patch`, `release:minor`, or `release:major`
+-   Before merge, the PR version bump workflow updates `package.json` on the PR branch to the next version derived from the latest release tag
+-   On each `main` push, the delivery workflow checks the merged PR label, verifies `package.json` already contains the expected next version, publishes to npm, and pushes the new tag
 -   Without a release label, publish is skipped
 -   Dependabot Pi update PRs are automatically labeled `release:patch` and set to GitHub native auto-merge when repo auto-merge and required checks are enabled
