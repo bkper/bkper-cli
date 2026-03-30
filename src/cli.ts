@@ -12,15 +12,19 @@ import { registerTransactionCommands } from './commands/transactions/register.js
 import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
-import { registerAgentCommands } from './commands/agent-command.js';
+import { registerAgentCommands, runAgentCommand } from './commands/agent-command.js';
+import { shouldRunAgentCommand } from './agent/cli-dispatch.js';
 import { VERSION, autoUpgrade } from './upgrade/index.js';
-import { shouldStartAgentMode } from './agent/cli-dispatch.js';
-import { runAgentMode } from './agent/run-agent-mode.js';
 
 async function main(): Promise<void> {
-    if (shouldStartAgentMode(process.argv)) {
-        await runAgentMode();
-        return;
+    if (shouldRunAgentCommand(process.argv)) {
+        try {
+            await runAgentCommand(process.argv.slice(3));
+            return;
+        } catch (err) {
+            console.error('Error running agent command:', err);
+            process.exit(1);
+        }
     }
 
     // Version

@@ -5,7 +5,7 @@
 
 A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
 
--   **Interactive mode** — run `bkper` with no arguments to open the agent TUI
+-   **Interactive mode** — run `bkper agent` to open the Bkper Agent TUI
 -   **Command mode** — run `bkper <command>` for explicit CLI workflows, scripts, and automation
 
 With one tool, you can build and deploy Bkper apps, and manage financial data -- books, accounts, transactions, and balances.
@@ -45,8 +45,13 @@ bkper auth login
 ### Start using bkper
 
 ```bash
-# Interactive mode (agent TUI)
+# Show CLI help
 bkper
+```
+
+```bash
+# Interactive mode (agent TUI)
+bkper agent
 ```
 
 ```bash
@@ -79,7 +84,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 ## Interactive Mode (powered by Pi)
 
-When you run `bkper` with no arguments in an interactive terminal, bkper starts the embedded agent TUI.
+Run `bkper agent` to start the embedded Bkper Agent TUI. Running `bkper` with no arguments shows CLI help.
 
 Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
 
@@ -95,25 +100,30 @@ On each agent startup, bkper performs a background CLI auto-update check (same b
 Use Pi CLI features directly through bkper:
 
 ```bash
-bkper agent -- <pi-args>
+bkper agent <pi-args>
 ```
+
+If no Pi arguments are provided, `bkper agent` starts the interactive Bkper Agent experience.
+If Pi arguments are provided, everything after `bkper agent` is passed through to Pi.
 
 Examples:
 
 ```bash
-bkper agent -- -p "Summarize this repository"
-bkper agent -- --model openai/gpt-4o -c
-bkper agent -- install <pi-package-source>
+bkper agent -p "Summarize this repository"
+bkper agent --model openai/gpt-4o -c
+bkper agent install <pi-package-source>
+bkper agent --help
 ```
 
-`bkper agent` keeps Bkper defaults (including Bkper system prompt) unless you explicitly pass `--system-prompt`.
+`bkper agent` keeps Bkper defaults (including the Bkper system prompt) unless you explicitly pass `--system-prompt`.
+Use `bkper help agent` for the Bkper CLI command help, and `bkper agent --help` for Pi help.
 
 For all available passthrough flags and commands, see the Pi CLI reference:
 https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#cli-reference
 
 Pi-specific extensions are loaded from Pi extension folders (for example `.pi/extensions` and `~/.pi/agent/extensions`).
 
-<!-- Suggested showcase media: add a short terminal GIF here (bkper -> "Bkper Agent ready." -> one prompt). -->
+<!-- Suggested showcase media: add a short terminal GIF here (bkper agent -> "Bkper Agent ready." -> one prompt). -->
 
 ---
 
@@ -855,9 +865,10 @@ deployment:
 -   `auth logout` - Remove stored credentials
 -   `auth token` - Print the current OAuth access token to stdout
 
-#### Agent Bridge (Pi passthrough)
+#### Agent
 
--   `agent -- <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
+-   `agent` - Start the interactive Bkper Agent
+-   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 
 #### App Lifecycle
 

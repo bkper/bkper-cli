@@ -1,18 +1,26 @@
 import { expect } from '../helpers/test-setup.js';
 import sinon from 'sinon';
-import { Command } from 'commander';
-import { registerAgentCommands } from '../../../src/commands/agent-command.js';
+import { runAgentCommand } from '../../../src/commands/agent-command.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
 describe('CLI - agent command', function () {
-    it('should forward pi args and inject bkper system prompt by default', async function () {
+    it('should start embedded interactive mode when no pi args are provided', async function () {
         const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
 
-        const program = new Command();
-        registerAgentCommands(program, { runPi });
+        await runAgentCommand([], { runPi, runInteractiveMode });
 
-        await program.parseAsync(['node', 'bkper', 'agent', '--', '-p', 'hello']);
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runPi.called).to.be.false;
+    });
 
+    it('should forward pi args without requiring -- and inject bkper system prompt by default', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['-p', 'hello'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal([
             '--system-prompt',
@@ -22,23 +30,31 @@ describe('CLI - agent command', function () {
         ]);
     });
 
+    it('should pass --help through to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--help'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
+            '--help',
+        ]);
+    });
+
     it('should not inject system prompt when user provides --system-prompt', async function () {
         const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
 
-        const program = new Command();
-        registerAgentCommands(program, { runPi });
+        await runAgentCommand(['--system-prompt', 'custom prompt', '-p', 'hello'], {
+            runPi,
+            runInteractiveMode,
+        });
 
-        await program.parseAsync([
-            'node',
-            'bkper',
-            'agent',
-            '--',
-            '--system-prompt',
-            'custom prompt',
-            '-p',
-            'hello',
-        ]);
-
+        expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal([
             '--system-prompt',
@@ -50,18 +66,11 @@ describe('CLI - agent command', function () {
 
     it('should not inject system prompt when user provides --system-prompt=value', async function () {
         const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
 
-        const program = new Command();
-        registerAgentCommands(program, { runPi });
+        await runAgentCommand(['--system-prompt=custom prompt'], { runPi, runInteractiveMode });
 
-        await program.parseAsync([
-            'node',
-            'bkper',
-            'agent',
-            '--',
-            '--system-prompt=custom prompt',
-        ]);
-
+        expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal(['--system-prompt=custom prompt']);
     });
