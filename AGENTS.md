@@ -10,6 +10,7 @@ The README.md file is the main documentation for the project, its showed at gith
 as serving as the content for the app listing on the Bkper website and main Dashboard.
 It should be kept up to date with the latest features and usage instructions, and should be clear and concise for users of all levels.
 In the high level it should be divided in a session user will see, and an expandable session for developers, more technical, with reference documentation and more detailed instructions.
+Its a public facing document, so it should be written for a general audience, with a focus on clarity and ease of use. Avoid internal technical and sdlc flow, terms and rules, such as release labels, publishing policy, etc
 
 ## Build Commands
 
@@ -145,12 +146,13 @@ These rules are mandatory for coding agents working on this repository.
 -   Keep PRs small, scoped, and single-purpose.
 -   Do not bundle unrelated refactors with feature/fix work.
 
-### Release labels (critical)
+### Release labels 
 
--   Add `release:patch`, `release:minor`, or `release:major` only when explicitly requested.
--   PRs without a release label are not published.
--   Do **not** manually bump `package.json` version in normal release PRs.
--   The release label is the source of truth for the version bump level; after merge to `main`, CI runs `npm version patch|minor|major --no-git-tag-version --ignore-scripts`, creates the release commit/tag, and publishes to npm.
+Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from local machines.
+
+-   Merge a PR into `main` with one release label: `release:patch`, `release:minor`, or `release:major`
+-   On `main` push, CI determines the merged PR label, bumps `package.json` version, tags, and publishes to npm
+-   Without a release label, publish is skipped
 
 ### Pi dependency automation policy
 

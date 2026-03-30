@@ -1,40 +1,20 @@
 import { expect } from '../helpers/test-setup.js';
-import { shouldStartAgentMode } from '../../../src/agent/cli-dispatch.js';
+import { shouldRunAgentCommand } from '../../../src/agent/cli-dispatch.js';
 
 describe('agent cli dispatch', function () {
-    it('should start agent mode when there are no arguments and terminal is interactive', function () {
-        expect(
-            shouldStartAgentMode(['node', 'bkper'], {
-                stdinIsTTY: true,
-                stdoutIsTTY: true,
-            })
-        ).to.be.true;
+    it('should not treat bare bkper as an agent command', function () {
+        expect(shouldRunAgentCommand(['node', 'bkper'])).to.be.false;
     });
 
-    it('should not start agent mode when there are cli arguments', function () {
-        expect(
-            shouldStartAgentMode(['node', 'bkper', '--help'], {
-                stdinIsTTY: true,
-                stdoutIsTTY: true,
-            })
-        ).to.be.false;
+    it('should not treat top-level help as an agent command', function () {
+        expect(shouldRunAgentCommand(['node', 'bkper', '--help'])).to.be.false;
     });
 
-    it('should not start agent mode when stdin is not a tty', function () {
-        expect(
-            shouldStartAgentMode(['node', 'bkper'], {
-                stdinIsTTY: false,
-                stdoutIsTTY: true,
-            })
-        ).to.be.false;
+    it('should detect agent command invocations', function () {
+        expect(shouldRunAgentCommand(['node', 'bkper', 'agent'])).to.be.true;
     });
 
-    it('should not start agent mode when stdout is not a tty', function () {
-        expect(
-            shouldStartAgentMode(['node', 'bkper'], {
-                stdinIsTTY: true,
-                stdoutIsTTY: false,
-            })
-        ).to.be.false;
+    it('should detect agent command invocations with pi flags', function () {
+        expect(shouldRunAgentCommand(['node', 'bkper', 'agent', '--help'])).to.be.true;
     });
 });

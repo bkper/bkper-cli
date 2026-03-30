@@ -1,14 +1,17 @@
 import type { Command } from 'commander';
 import { main as runPiMain } from '@mariozechner/pi-coding-agent';
+import { runAgentMode } from '../agent/run-agent-mode.js';
 import { getBkperAgentSystemPrompt } from '../agent/system-prompt.js';
 
 export interface AgentCommandDependencies {
     runPi: (args: string[]) => Promise<void>;
+    runInteractiveMode: () => Promise<void>;
 }
 
 function createDefaultDependencies(): AgentCommandDependencies {
     return {
         runPi: (args: string[]) => runPiMain(args),
+        runInteractiveMode: () => runAgentMode(),
     };
 }
 
@@ -24,22 +27,23 @@ function buildPiArgs(args: string[]): string[] {
     return ['--system-prompt', getBkperAgentSystemPrompt(), ...args];
 }
 
-export function registerAgentCommands(
-    program: Command,
+export async function runAgentCommand(
+    piArgs: string[],
     dependencies: AgentCommandDependencies = createDefaultDependencies()
-): void {
+): Promise<void> {
+    if (piArgs.length === 0) {
+        await dependencies.runInteractiveMode();
+        return;
+    }
+
+    const args = buildPiArgs(piArgs);
+    await dependencies.runPi(args);
+}
+
+export function registerAgentCommands(program: Command): void {
     program
         .command('agent [piArgs...]')
-        .description('Run Pi CLI with Bkper defaults (passthrough)')
+        .description('Start Bkper Agent or run Pi CLI with Bkper defaults')
         .allowUnknownOption(true)
-        .allowExcessArguments(true)
-        .action(async (piArgs: string[] = []) => {
-            try {
-                const args = buildPiArgs(piArgs);
-                await dependencies.runPi(args);
-            } catch (err) {
-                console.error('Error running agent command:', err);
-                process.exit(1);
-            }
-        });
+        .allowExcessArguments(true);
 }
