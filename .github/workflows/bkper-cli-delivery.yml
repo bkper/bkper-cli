@@ -2,11 +2,12 @@ name: bkper-cli-delivery
 
 on:
     pull_request:
-    push:
-        branches: [main]
+    pull_request_target:
+        types: [closed]
 
 jobs:
     build-and-unit-test:
+        if: github.event_name == 'pull_request'
         runs-on: ubuntu-latest
 
         steps:
@@ -36,8 +37,7 @@ jobs:
               run: bun run test:unit
 
     release:
-        needs: build-and-unit-test
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'pull_request_target' && github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
         runs-on: ubuntu-latest
         concurrency:
             group: release-main
@@ -48,43 +48,26 @@ jobs:
             id-token: write
 
         steps:
-            - name: Determine release level from PR labels associated with this commit
+            - name: Determine release level from merged PR labels
               id: release_level
               uses: actions/github-script@v7
               with:
                   script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const commitSha = context.sha;
+                      const pr = context.payload.pull_request;
                       const levelByLabel = {
                         'release:patch': 'patch',
                         'release:minor': 'minor',
                         'release:major': 'major',
                       };
                       const orderedLabels = ['release:major', 'release:minor', 'release:patch'];
-
-                      const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                        owner,
-                        repo,
-                        commit_sha: commitSha,
-                      });
-
-                      const mergedPr = pulls.find(pr => pr.merged_at && pr.base?.ref === 'main');
-
-                      if (!mergedPr) {
-                        core.info('No merged PR associated with this commit. Skipping release.');
-                        core.setOutput('level', 'none');
-                        return;
-                      }
-
-                      const labels = (mergedPr.labels ?? [])
+                      const labels = (pr.labels ?? [])
                         .map(label => typeof label === 'string' ? label : label.name)
                         .filter(Boolean);
 
                       const selectedLabel = orderedLabels.find(label => labels.includes(label)) ?? null;
                       const level = selectedLabel ? levelByLabel[selectedLabel] : 'none';
 
-                      core.info(`Merged PR: #${mergedPr.number} (${mergedPr.html_url})`);
+                      core.info(`Merged PR: #${pr.number} (${pr.html_url})`);
                       core.info(`Labels: ${labels.join(', ') || '(none)'}`);
                       core.info(`Selected release level: ${level}`);
                       core.setOutput('level', level);
