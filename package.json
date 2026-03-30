@@ -52,7 +52,7 @@
         "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
     },
     "dependencies": {
-        "@mariozechner/pi-coding-agent": "^0.63.1",
+        "@mariozechner/pi-coding-agent": "^0.64.0",
         "bkper-js": "^2.31.1",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",

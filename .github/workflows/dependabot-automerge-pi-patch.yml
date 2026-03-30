@@ -20,16 +20,26 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr edit "$PR_URL" --add-label "release:patch"
 
-      - name: Enable auto-merge
+      - name: Verify GitHub auto-merge repo setup
         env:
-          GH_TOKEN: ${{ secrets.BKPER_AUTOMERGE_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "BKPER_AUTOMERGE_TOKEN secret is required to enable Dependabot auto-merge without suppressing the downstream main push release workflow."
+          allow_auto_merge="$(gh api "repos/$REPO" --jq '.allow_auto_merge')"
+          if [[ "$allow_auto_merge" != "true" ]]; then
+            echo "Repository auto-merge is disabled. Enable Settings > General > Pull Requests > Allow auto-merge."
             exit 1
           fi
 
-          gh pr merge --auto --squash "$PR_URL"
+          if ! gh api "repos/$REPO/branches/main/protection" >/dev/null 2>&1; then
+            echo "Branch protection is not configured on main. GitHub auto-merge requires a protected branch with merge requirements such as required status checks."
+            exit 1
+          fi
+
+      - name: Enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
