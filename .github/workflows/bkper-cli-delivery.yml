@@ -126,6 +126,39 @@ jobs:
                   bun run build
                   bun run test:unit
 
+            - name: Determine next version from latest release tag
+              if: steps.release_level.outputs.level != 'none'
+              env:
+                  RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
+              run: |
+                  set -euo pipefail
+
+                  git fetch --tags origin
+
+                  LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
+                  CURRENT_VERSION="${LATEST_TAG#v}"
+                  if [[ -z "$CURRENT_VERSION" ]]; then
+                    CURRENT_VERSION="$(node -p "require('./package.json').version")"
+                  fi
+
+                  NEXT_VERSION="$(node - "$CURRENT_VERSION" "$RELEASE_LEVEL" <<'NODE'
+                  const [current, level] = process.argv.slice(2);
+                  const [major, minor, patch] = current.split('.').map(Number);
+                  if ([major, minor, patch].some(Number.isNaN)) {
+                    throw new Error(`Invalid current version: ${current}`);
+                  }
+                  let next;
+                  if (level === 'major') next = [major + 1, 0, 0];
+                  else if (level === 'minor') next = [major, minor + 1, 0];
+                  else if (level === 'patch') next = [major, minor, patch + 1];
+                  else throw new Error(`Unsupported release level: ${level}`);
+                  process.stdout.write(next.join('.'));
+                  NODE
+                  )"
+
+                  echo "VERSION=v${NEXT_VERSION}" >> "$GITHUB_ENV"
+                  npm pkg set version="$NEXT_VERSION"
+
             - name: Upgrade npm
               if: steps.release_level.outputs.level != 'none'
               run: npm install -g npm@latest
@@ -142,19 +175,15 @@ jobs:
                   rm -f .npmrc ~/.npmrc || true
                   unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
-            - name: Bump version and create local release commit/tag
+            - name: Create local release commit and tag
               if: steps.release_level.outputs.level != 'none'
               env:
-                  RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
+                  VERSION: ${{ env.VERSION }}
               run: |
                   set -euo pipefail
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-                  npm --no-git-tag-version --ignore-scripts version "$RELEASE_LEVEL"
-
-                  VERSION="v$(node -p "require('./package.json').version")"
-                  echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
                   git add package.json
                   git commit -m "chore(release): ${VERSION} [skip ci]"
                   git tag -a "${VERSION}" -m "${VERSION}"
@@ -163,9 +192,11 @@ jobs:
               if: steps.release_level.outputs.level != 'none'
               run: npm publish --access public --provenance --verbose
 
-            - name: Push release commit and tag
+            - name: Push release tag
               if: steps.release_level.outputs.level != 'none'
-              run: git push origin main --follow-tags
+              env:
+                  VERSION: ${{ env.VERSION }}
+              run: git push origin "${VERSION}"
 
             - name: Notify Slack
               if: always() && steps.release_level.outputs.level != 'none'
