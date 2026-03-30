@@ -172,7 +172,10 @@ jobs:
               if: steps.release_level.outputs.level != 'none'
               env:
                   VERSION: ${{ env.VERSION }}
-              run: git tag -a "${VERSION}" -m "${VERSION}"
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git tag -a "${VERSION}" -m "${VERSION}"
 
             - name: Publish to npm (Trusted Publishers)
               if: steps.release_level.outputs.level != 'none'
