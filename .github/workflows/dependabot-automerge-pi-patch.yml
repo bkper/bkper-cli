@@ -40,14 +40,6 @@ jobs:
 
       - name: Enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.BKPER_AUTOMERGE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
-        run: |
-          set -euo pipefail
-
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "BKPER_AUTOMERGE_TOKEN secret is required so Dependabot auto-merges still trigger the downstream push-based trusted publisher workflow."
-            exit 1
-          fi
-
-          gh pr merge --auto --squash "$PR_URL"
+        run: gh pr merge --auto --squash "$PR_URL"
