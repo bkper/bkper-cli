@@ -65,7 +65,7 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
-    const periodInQueryPattern = /-q\s+"[^"]*period:/g;
+    const periodInQueryPattern = /(?:-q|--query)\s+['"][^'"\n]*period:/g;
     let periodMatch: RegExpExecArray | null;
     while ((periodMatch = periodInQueryPattern.exec(content)) !== null) {
         errors.push({
@@ -73,6 +73,20 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
             message:
                 'Found `period:` in query example. Prefer documented query operators such as `on:`, `after:`, `before:`, and `by:`.',
             line: getLineNumber(content, periodMatch.index),
+        });
+    }
+
+    const doubleQuotedDateVariablePattern =
+        /(?:-q|--query)\s+"[^"\n]*(?<!\\)\$(?:d|m|y)(?:[+-]\d+)?[^"\n]*"/g;
+    let doubleQuotedDateVariableMatch: RegExpExecArray | null;
+    while (
+        (doubleQuotedDateVariableMatch = doubleQuotedDateVariablePattern.exec(content)) !== null
+    ) {
+        errors.push({
+            code: 'double-quoted-date-variable-query-example',
+            message:
+                'Found a double-quoted query example with an unescaped Bkper date variable. Prefer single quotes around queries using `$d`, `$m`, or `$y`, or escape `$` inside double quotes.',
+            line: getLineNumber(content, doubleQuotedDateVariableMatch.index),
         });
     }
 

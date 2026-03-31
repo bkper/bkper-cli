@@ -1,6 +1,7 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, Transaction, Account, TransactionList } from 'bkper-js';
 import type { OutputFormat, ListResult } from '../../render/output.js';
+import { warnIfSuspiciousDateVariableQuery } from '../../utils/query-warning.js';
 
 /**
  * Options for querying transactions from a book.
@@ -36,6 +37,8 @@ export async function listTransactions(
     bookId: string,
     options: ListTransactionsOptions
 ): Promise<ListTransactionsResult> {
+    warnIfSuspiciousDateVariableQuery(options.query);
+
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId, true);
 

@@ -289,13 +289,13 @@ bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
 
 # List transactions for a full year (on:YYYY)
-bkper transaction list -b abc123 -q "on:2025"
+bkper transaction list -b abc123 -q 'on:2025'
 
 # List transactions for a month (on:YYYY-MM)
-bkper transaction list -b abc123 -q "on:2025-01"
+bkper transaction list -b abc123 -q 'on:2025-01'
 
 # List with custom properties included
-bkper transaction list -b abc123 -q "account:Sales" -p
+bkper transaction list -b abc123 -q 'account:Sales' -p
 
 # Update a transaction
 bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
@@ -349,7 +349,7 @@ Query account balances and group totals.
 
 ```bash
 # List balances for a specific date (point-in-time)
-bkper balance list -b abc123 -q "on:2025-12-31"
+bkper balance list -b abc123 -q 'on:2025-12-31'
 
 # Monthly balance evolution of one account during 2025
 bkper balance list -b abc123 -q "account:'<accountName>' after:2025-01-01 before:2026-01-01 by:m" --expanded 2
@@ -373,6 +373,9 @@ Use the same query language across Bkper web app, CLI, and Google Sheets integra
     -   `on:2025-01-31` → specific day
 -   `after:` is **inclusive** and `before:` is **exclusive**.
     -   Full year 2025: `after:2025-01-01 before:2026-01-01`
+-   In shell commands, wrap queries with Bkper date variables (`$d`, `$m`, `$y`) in single quotes to avoid shell expansion.
+    -   Example: `bkper transaction list -b abc123 -q 'after:$m-3 before:$m+1'`
+    -   If the query already needs single quotes inside (for example, `account:'Brex Cash'`), keep double quotes and escape `$`: `-q "account:'Brex Cash' after:\$m-3 before:\$m+1"`
 -   For point-in-time statements (typically permanent accounts `ASSET`/`LIABILITY`), prefer `on:` or `before:`.
 -   For activity statements over a period (typically non-permanent accounts `INCOMING`/`OUTGOING`), prefer `after:` + `before:`.
 -   For statement-level analysis, prefer filtering by the report root group. Root names vary by book.
@@ -516,25 +519,25 @@ For resources that support stdin creation, JSON output can be piped directly int
 bkper account list -b $BOOK_A --format json | bkper account create -b $BOOK_B
 
 # Copy transactions matching a query
-bkper transaction list -b $BOOK_A -q "after:2025-01-01" --format json | \
+bkper transaction list -b $BOOK_A -q 'after:2025-01-01' --format json | \
   bkper transaction create -b $BOOK_B
 
 # Clone accounts, then transactions
 bkper account list -b $SOURCE --format json | bkper account create -b $DEST
-bkper transaction list -b $SOURCE -q "after:2025-01-01" --format json | \
+bkper transaction list -b $SOURCE -q 'after:2025-01-01' --format json | \
   bkper transaction create -b $DEST
 
 # Batch update: list transactions, modify, and pipe back to update
-bkper transaction list -b $BOOK -q "after:2025-01-01" --format json | \
+bkper transaction list -b $BOOK -q 'after:2025-01-01' --format json | \
   jq '[.[] | .description = "Updated: " + .description]' | \
   bkper transaction update -b $BOOK
 
 # Batch update: add a property to all matching transactions
-bkper transaction list -b $BOOK -q "account:Expenses" --format json | \
+bkper transaction list -b $BOOK -q 'account:Expenses' --format json | \
   bkper transaction update -b $BOOK -p "reviewed=true"
 
 # Batch update checked transactions
-bkper transaction list -b $BOOK -q "is:checked after:2025-01-01" --format json | \
+bkper transaction list -b $BOOK -q 'is:checked after:2025-01-01' --format json | \
   bkper transaction update -b $BOOK --update-checked -p "migrated=true"
 ```
 

@@ -19,8 +19,9 @@ Verify the resulting group hierarchy and account memberships before reporting su
 -   **Programmatic processing / pipelines** → JSON
 
 \`\`\`bash
-bkper transaction list -b abc123 -q "on:2025"
-bkper balance list -b abc123 -q "on:2025-12-31"
+bkper transaction list -b abc123 -q 'on:2025'
+bkper transaction list -b abc123 -q 'after:$m-1 before:$m+1'
+bkper balance list -b abc123 -q 'on:2025-12-31'
 \`\`\`
 `;
 
@@ -58,7 +59,7 @@ bkper balance list -b abc123 -q "on:2025-12-31"
     });
 
     it('should fail when period: is used in query examples', function () {
-        const readme = 'bkper balance list -b abc123 -q "period:2025-01"';
+        const readme = "bkper balance list -b abc123 -q 'period:2025-01'";
 
         const result = evaluateReadmeCompliance(readme);
 
@@ -67,8 +68,18 @@ bkper balance list -b abc123 -q "on:2025-12-31"
         );
     });
 
+    it('should fail when a date variable query example is double quoted', function () {
+        const readme = 'bkper transaction list -b abc123 -q "after:$m-1 before:$m+1"';
+
+        const result = evaluateReadmeCompliance(readme);
+
+        expect(
+            result.errors.some(e => e.code === 'double-quoted-date-variable-query-example')
+        ).to.equal(true);
+    });
+
     it('should report missing guidance sections', function () {
-        const readme = 'bkper transaction list -b abc123 -q "on:2025"';
+        const readme = "bkper transaction list -b abc123 -q 'on:2025'";
 
         const result = evaluateReadmeCompliance(readme);
 
