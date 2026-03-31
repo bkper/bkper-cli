@@ -1,4 +1,5 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
+import sinon from 'sinon';
 import { setMockBkper } from '../../helpers/mock-factory.js';
 
 // Import after mock setup
@@ -155,5 +156,31 @@ describe('CLI - transaction list Command', function () {
 
         const result = await listTransactions('book-123', { query: '' });
         expect(result.book).to.equal(mockBook);
+    });
+
+    it('should warn when query looks like a shell-expanded date variable', async function () {
+        const consoleWarnStub = sinon.stub(console, 'warn');
+
+        mockBook = {
+            listTransactions: async () => ({
+                getItems: () => [],
+                getAccount: async () => null,
+                getCursor: () => undefined,
+            }),
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        try {
+            await listTransactions('book-123', { query: 'on:' });
+        } finally {
+            consoleWarnStub.restore();
+        }
+
+        expect(consoleWarnStub.calledOnce).to.equal(true);
+        expect(consoleWarnStub.firstCall.args[0]).to.contain('suspicious date fragment(s): on:');
     });
 });

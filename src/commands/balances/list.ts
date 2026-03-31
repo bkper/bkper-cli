@@ -1,6 +1,7 @@
 import { BalanceType } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
 import type { OutputFormat } from '../../render/output.js';
+import { warnIfSuspiciousDateVariableQuery } from '../../utils/query-warning.js';
 
 /**
  * Options for listing account balances from a book.
@@ -30,6 +31,8 @@ export async function listBalancesMatrix(
     bookId: string,
     options: ListBalancesOptions
 ): Promise<unknown[][]> {
+    warnIfSuspiciousDateVariableQuery(options.query);
+
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
