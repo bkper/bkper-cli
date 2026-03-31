@@ -110,4 +110,25 @@ bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
         expect(codes).to.include('group-create-pipe-documented');
         expect(codes).to.include('group-stdin-fields-documented');
     });
+
+    it('should report when README documents internal release workflow details', function () {
+        const readme = `
+### Book setup guidance (important)
+Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
+Verify the resulting group hierarchy and account memberships before reporting success.
+
+### Query semantics (transactions and balances)
+-   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
+
+**LLM-first output guidance (important):**
+-   **LLM consumption of lists/reports** → CSV
+-   **Programmatic processing / pipelines** → JSON
+
+Use the \`release:patch\` label on PRs. Publishing is handled by GitHub Actions and CI/CD after merge.
+`;
+
+        const result = evaluateReadmeCompliance(readme);
+        const codes = result.errors.map(e => e.code);
+        expect(codes).to.include('internal-release-process-documented');
+    });
 });

@@ -10,7 +10,14 @@ The README.md file is the main documentation for the project, its showed at gith
 as serving as the content for the app listing on the Bkper website and main Dashboard.
 It should be kept up to date with the latest features and usage instructions, and should be clear and concise for users of all levels.
 In the high level it should be divided in a session user will see, and an expandable session for developers, more technical, with reference documentation and more detailed instructions.
-Its a public facing document, so it should be written for a general audience, with a focus on clarity and ease of use. Avoid internal technical and sdlc flow, terms and rules, such as release labels, publishing policy, etc
+Its a public facing document, so it should be written for a general audience, with a focus on clarity and ease of use.
+
+### README restrictions
+
+-   NEVER add internal technical or SDLC workflow details to README.md
+-   NEVER document release labels, release automation, publishing policy, CI/CD flow, branch strategy, or maintainer-only procedures in README.md
+-   Keep maintainer and contributor workflow details in CONTRIBUTING.md, AGENTS.md, or internal docs instead
+-   If in doubt, prefer removing internal process detail from README.md rather than adding it
 
 ## Build Commands
 
