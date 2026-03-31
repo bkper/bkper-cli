@@ -1,6 +1,6 @@
 {
     "name": "bkper",
-    "version": "4.12.0",
+    "version": "4.12.1",
     "description": "Command line client for Bkper",
     "bin": {
         "bkper": "./lib/cli.js"
@@ -44,16 +44,11 @@
         "test:all": "bun run test:unit && bun run test:integration",
         "docs:compliance": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/check.ts",
         "docs:compliance:live": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/live.ts",
-        "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest",
-        "patch": "yarn version --patch",
-        "minor": "yarn version --minor",
-        "major": "yarn version --major",
-        "preversion": "bun run build",
-        "postversion": "git push --tags && yarn publish --new-version $npm_package_version && git push && echo \"Successfully released version $npm_package_version!\""
+        "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {
         "@mariozechner/pi-coding-agent": "^0.64.0",
-        "bkper-js": "^2.31.1",
+        "bkper-js": "^2.32.1",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",

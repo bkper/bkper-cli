@@ -167,5 +167,17 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
+    const internalReleaseDetailPattern =
+        /release:(patch|minor|major)|Trusted Publisher|GitHub Actions|CI\/CD|publishing policy|publish(?:ing)?\s+is\s+handled|maintainer-only procedures/i;
+    const internalReleaseDetailMatch = internalReleaseDetailPattern.exec(content);
+    if (internalReleaseDetailMatch) {
+        errors.push({
+            code: 'internal-release-process-documented',
+            message:
+                'README should not document internal release, publishing, CI/CD, or maintainer workflow details.',
+            line: getLineNumber(content, internalReleaseDetailMatch.index),
+        });
+    }
+
     return {errors};
 }
