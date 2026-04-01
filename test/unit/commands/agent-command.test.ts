@@ -1,7 +1,7 @@
 import { expect } from '../helpers/test-setup.js';
 import sinon from 'sinon';
 import { runAgentCommand } from '../../../src/commands/agent-command.js';
-import { getBkperAgentAppendPrompt } from '../../../src/agent/system-prompt.js';
+import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
 describe('CLI - agent command', function () {
     it('should start embedded interactive mode when no pi args are provided', async function () {
@@ -14,7 +14,7 @@ describe('CLI - agent command', function () {
         expect(runPi.called).to.be.false;
     });
 
-    it('should forward pi args without requiring -- and append bkper prompt context by default', async function () {
+    it('should forward pi args without requiring -- and inject bkper system prompt by default', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
 
@@ -23,29 +23,8 @@ describe('CLI - agent command', function () {
         expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal([
-            '--append-system-prompt',
-            getBkperAgentAppendPrompt(),
-            '-p',
-            'hello',
-        ]);
-    });
-
-    it('should preserve bkper prompt context when user adds another append prompt', async function () {
-        const runPi = sinon.stub().resolves();
-        const runInteractiveMode = sinon.stub().resolves();
-
-        await runAgentCommand(['--append-system-prompt', 'custom prompt', '-p', 'hello'], {
-            runPi,
-            runInteractiveMode,
-        });
-
-        expect(runInteractiveMode.called).to.be.false;
-        expect(runPi.calledOnce).to.be.true;
-        expect(runPi.firstCall.args[0]).to.deep.equal([
-            '--append-system-prompt',
-            getBkperAgentAppendPrompt(),
-            '--append-system-prompt',
-            'custom prompt',
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
             '-p',
             'hello',
         ]);
@@ -60,8 +39,8 @@ describe('CLI - agent command', function () {
         expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal([
-            '--append-system-prompt',
-            getBkperAgentAppendPrompt(),
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
             '--help',
         ]);
     });

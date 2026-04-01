@@ -1,21 +1,12 @@
 import { expect } from '../helpers/test-setup.js';
 import sinon from 'sinon';
 import {
-    appendBkperAgentPrompt,
     registerBkperAgentStartupExtension,
     runAgentMode,
     type AgentModeDependencies,
 } from '../../../src/agent/run-agent-mode.js';
-import { getBkperAgentAppendPrompt } from '../../../src/agent/system-prompt.js';
 
 describe('runAgentMode', function () {
-    it('should append Bkper prompt after existing append prompts', function () {
-        expect(appendBkperAgentPrompt(['existing prompt'])).to.deep.equal([
-            'existing prompt',
-            getBkperAgentAppendPrompt(),
-        ]);
-    });
-
     it('should register startup extension that shows ready message and starts maintenance once', async function () {
         let sessionStartHandler:
             | ((
