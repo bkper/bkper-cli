@@ -6,7 +6,7 @@ import {
     type ExtensionAPI,
 } from '@mariozechner/pi-coding-agent';
 import { runStartupMaintenance } from './startup-maintenance.js';
-import { getBkperAgentSystemPrompt } from './system-prompt.js';
+import { getBkperAgentAppendPrompt } from './system-prompt.js';
 
 type ReloadableResourceLoader = {
     reload(): Promise<void>;
@@ -42,6 +42,10 @@ export interface AgentModeDependencies {
     };
 }
 
+export function appendBkperAgentPrompt(base: string[]): string[] {
+    return [...base, getBkperAgentAppendPrompt()];
+}
+
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance
@@ -66,8 +70,7 @@ function createDefaultDependencies(): AgentModeDependencies {
     return {
         createResourceLoader: () =>
             new DefaultResourceLoader({
-                systemPromptOverride: () => getBkperAgentSystemPrompt(),
-                appendSystemPromptOverride: () => [],
+                appendSystemPromptOverride: appendBkperAgentPrompt,
                 extensionFactories: [
                     (pi: ExtensionAPI) => {
                         registerBkperAgentStartupExtension(pi);
