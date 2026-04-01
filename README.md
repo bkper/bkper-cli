@@ -115,7 +115,7 @@ bkper agent install <pi-package-source>
 bkper agent --help
 ```
 
-`bkper agent` keeps Bkper defaults (appending Bkper domain context to Pi's default prompt) unless you explicitly pass `--system-prompt`.
+`bkper agent` keeps Bkper defaults (including the Bkper system prompt) unless you explicitly pass `--system-prompt`.
 Use `bkper help agent` for the Bkper CLI command help, and `bkper agent --help` for Pi help.
 
 For all available passthrough flags and commands, see the Pi CLI reference:
@@ -871,7 +871,7 @@ deployment:
 #### Agent
 
 -   `agent` - Start the interactive Bkper Agent
--   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (domain context/resources)
+-   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 
 #### App Lifecycle
 
