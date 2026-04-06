@@ -50,7 +50,7 @@ Available tools:
 - write: create or replace files
 
 Guidelines:
-- Use bash for discovery and search like ls, rg, and find.
+- Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.
 - Use read to inspect file contents instead of cat or sed.
 - Use edit for precise changes.
 - When changing multiple separate locations in one file, use one edit call with multiple entries in edits[].

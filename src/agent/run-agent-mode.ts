@@ -1,16 +1,17 @@
 import {
-    createAgentSession,
-    DefaultResourceLoader,
+    createAgentSessionFromServices,
+    createAgentSessionRuntime,
+    createAgentSessionServices,
+    getAgentDir,
     InteractiveMode,
-    type CreateAgentSessionOptions,
+    SessionManager,
+    type CreateAgentSessionRuntimeFactory,
     type ExtensionAPI,
 } from '@mariozechner/pi-coding-agent';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
-type ReloadableResourceLoader = {
-    reload(): Promise<void>;
-};
+export type InteractiveRuntimeHost = ConstructorParameters<typeof InteractiveMode>[0];
 
 type NotificationType = 'info' | 'warning' | 'error';
 
@@ -27,15 +28,12 @@ type StartupExtensionAPI = {
 };
 
 export interface AgentModeDependencies {
-    createResourceLoader: () => ReloadableResourceLoader;
-    createSession: (options: {
-        resourceLoader: ReloadableResourceLoader;
-    }) => Promise<{
-        session: unknown;
+    createRuntime: () => Promise<{
+        runtime: InteractiveRuntimeHost;
         modelFallbackMessage?: string;
     }>;
     createInteractiveMode: (
-        session: unknown,
+        runtime: InteractiveRuntimeHost,
         modelFallbackMessage?: string
     ) => {
         run(): Promise<void>;
@@ -64,22 +62,50 @@ export function registerBkperAgentStartupExtension(
 
 function createDefaultDependencies(): AgentModeDependencies {
     return {
-        createResourceLoader: () =>
-            new DefaultResourceLoader({
-                systemPromptOverride: () => getBkperAgentSystemPrompt(),
-                extensionFactories: [
-                    (pi: ExtensionAPI) => {
-                        registerBkperAgentStartupExtension(pi);
+        createRuntime: async () => {
+            const createRuntime: CreateAgentSessionRuntimeFactory = async ({
+                cwd,
+                agentDir,
+                sessionManager,
+                sessionStartEvent,
+            }) => {
+                const services = await createAgentSessionServices({
+                    cwd,
+                    agentDir,
+                    resourceLoaderOptions: {
+                        systemPromptOverride: () => getBkperAgentSystemPrompt(),
+                        extensionFactories: [
+                            (pi: ExtensionAPI) => {
+                                registerBkperAgentStartupExtension(pi);
+                            },
+                        ],
                     },
-                ],
-            }),
-        createSession: async ({ resourceLoader }) =>
-            createAgentSession({
-                resourceLoader:
-                    resourceLoader as NonNullable<CreateAgentSessionOptions['resourceLoader']>,
-            }),
-        createInteractiveMode: (session, modelFallbackMessage) =>
-            new InteractiveMode(session as ConstructorParameters<typeof InteractiveMode>[0], {
+                });
+
+                return {
+                    ...(await createAgentSessionFromServices({
+                        services,
+                        sessionManager,
+                        sessionStartEvent,
+                    })),
+                    services,
+                    diagnostics: services.diagnostics,
+                };
+            };
+
+            const runtime = await createAgentSessionRuntime(createRuntime, {
+                cwd: process.cwd(),
+                agentDir: getAgentDir(),
+                sessionManager: SessionManager.create(process.cwd()),
+            });
+
+            return {
+                runtime,
+                modelFallbackMessage: runtime.modelFallbackMessage,
+            };
+        },
+        createInteractiveMode: (runtime, modelFallbackMessage) =>
+            new InteractiveMode(runtime, {
                 modelFallbackMessage,
             }),
     };
@@ -90,11 +116,8 @@ export async function runAgentMode(
 ): Promise<void> {
     process.env.PI_SKIP_VERSION_CHECK ??= '1';
 
-    const resourceLoader = dependencies.createResourceLoader();
-    await resourceLoader.reload();
-
-    const { session, modelFallbackMessage } = await dependencies.createSession({ resourceLoader });
-    const mode = dependencies.createInteractiveMode(session, modelFallbackMessage);
+    const { runtime, modelFallbackMessage } = await dependencies.createRuntime();
+    const mode = dependencies.createInteractiveMode(runtime, modelFallbackMessage);
 
     await mode.run();
 }

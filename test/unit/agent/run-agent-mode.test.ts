@@ -4,7 +4,12 @@ import {
     registerBkperAgentStartupExtension,
     runAgentMode,
     type AgentModeDependencies,
+    type InteractiveRuntimeHost,
 } from '../../../src/agent/run-agent-mode.js';
+
+function createFakeRuntime(): InteractiveRuntimeHost {
+    return Object.create(null) as unknown as InteractiveRuntimeHost;
+}
 
 describe('runAgentMode', function () {
     it('should register startup extension that shows ready message and starts maintenance once', async function () {
@@ -57,35 +62,20 @@ describe('runAgentMode', function () {
         expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
     });
 
-    it('should reload resources, create session and run interactive mode', async function () {
+    it('should create runtime and run interactive mode', async function () {
         const calls: string[] = [];
 
-        const fakeLoader = {
-            reload: async () => {
-                calls.push('reload');
-            },
-        };
-
-        const fakeSession = {
-            sessionId: 'test-session',
-        };
+        const fakeRuntime = createFakeRuntime();
 
         const deps: AgentModeDependencies = {
-            createResourceLoader: () => fakeLoader,
-            createSession: async ({ resourceLoader }) => {
-                expect(resourceLoader).to.equal(fakeLoader);
-                calls.push('createSession');
+            createRuntime: async () => {
+                calls.push('createRuntime');
                 return {
-                    session: fakeSession,
-                    extensionsResult: {
-                        extensions: [],
-                        errors: [],
-                        runtime: {},
-                    },
+                    runtime: fakeRuntime,
                 };
             },
-            createInteractiveMode: (session, modelFallbackMessage) => {
-                expect(session).to.equal(fakeSession);
+            createInteractiveMode: (runtime, modelFallbackMessage) => {
+                expect(runtime).to.equal(fakeRuntime);
                 expect(modelFallbackMessage).to.equal(undefined);
                 return {
                     run: async () => {
@@ -97,7 +87,7 @@ describe('runAgentMode', function () {
 
         await runAgentMode(deps);
 
-        expect(calls).to.deep.equal(['reload', 'createSession', 'run']);
+        expect(calls).to.deep.equal(['createRuntime', 'run']);
     });
 
     it('should set PI_SKIP_VERSION_CHECK by default for embedded agent mode', async function () {
@@ -105,11 +95,8 @@ describe('runAgentMode', function () {
         delete process.env.PI_SKIP_VERSION_CHECK;
 
         const deps: AgentModeDependencies = {
-            createResourceLoader: () => ({
-                reload: async () => {},
-            }),
-            createSession: async () => ({
-                session: {},
+            createRuntime: async () => ({
+                runtime: createFakeRuntime(),
             }),
             createInteractiveMode: () => ({
                 run: async () => {},
@@ -133,11 +120,8 @@ describe('runAgentMode', function () {
         process.env.PI_SKIP_VERSION_CHECK = '0';
 
         const deps: AgentModeDependencies = {
-            createResourceLoader: () => ({
-                reload: async () => {},
-            }),
-            createSession: async () => ({
-                session: {},
+            createRuntime: async () => ({
+                runtime: createFakeRuntime(),
             }),
             createInteractiveMode: () => ({
                 run: async () => {},
