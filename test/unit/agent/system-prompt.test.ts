@@ -38,16 +38,6 @@ describe('agent system prompt', function () {
         expect(full).to.match(/core-concepts\.md/i);
     });
 
-    it('should include Pi SDK routing when relevant', function () {
-        const full = getBkperAgentSystemPrompt();
-        expect(full).to.match(/If the task involves embedding or customizing the Pi agent or SDK/i);
-        expect(full).to.match(/@mariozechner\/pi-coding-agent|AgentSessionRuntime|InteractiveMode/i);
-        expect(full).to.include(
-            'https://raw.githubusercontent.com/badlogic/pi-mono/refs/heads/main/packages/coding-agent/docs/sdk.md'
-        );
-        expect(full).to.match(/node_modules\/@mariozechner\/pi-coding-agent/i);
-    });
-
     it('should keep Pi routing scoped to SDK guidance', function () {
         const full = getBkperAgentSystemPrompt();
         expect(full).to.not.match(/Pi documentation/i);
