@@ -154,7 +154,9 @@ jobs:
 
             - name: Upgrade npm
               if: steps.release_level.outputs.level != 'none'
-              run: npm install -g npm@11.12.1
+              run: |
+                  npm install -g npm@11.11.0
+                  npm install -g npm@11.12.1
 
             - name: Print tool versions
               if: steps.release_level.outputs.level != 'none'
