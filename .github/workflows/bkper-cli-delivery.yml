@@ -111,6 +111,7 @@ jobs:
               uses: actions/setup-node@v6
               with:
                   node-version: 22
+                  registry-url: 'https://registry.npmjs.org'
 
             - name: Install dependencies
               if: steps.release_level.outputs.level != 'none'
@@ -157,12 +158,6 @@ jobs:
               run: |
                   node -v
                   npm -v
-
-            - name: Ensure tokenless OIDC publishing context
-              if: steps.release_level.outputs.level != 'none'
-              run: |
-                  rm -f .npmrc ~/.npmrc || true
-                  unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
             - name: Create release tag
               if: steps.release_level.outputs.level != 'none'
