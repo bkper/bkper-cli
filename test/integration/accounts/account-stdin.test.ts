@@ -61,6 +61,42 @@ describe('CLI - account stdin', function () {
             expect(parsed[0].name).to.equal('Stdin Expenses');
             expect(parsed[0].type).to.equal('OUTGOING');
         });
+
+        it('should create accounts with groups referenced by name', async function () {
+            await runBkperJson<bkper.Group>([
+                'group',
+                'create',
+                '-b',
+                bookId,
+                '--name',
+                'Stdin Current Assets',
+            ]);
+
+            const jsonInput = JSON.stringify([
+                {
+                    name: 'Stdin Grouped Cash',
+                    type: 'ASSET',
+                    groups: [{ name: 'Stdin Current Assets' }],
+                },
+            ]);
+
+            const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
+
+            expect(result.exitCode).to.equal(0);
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.be.an('array').with.length(1);
+            expect(parsed[0].name).to.equal('Stdin Grouped Cash');
+
+            const account = await runBkperJson<bkper.Account>([
+                'account',
+                'get',
+                'Stdin Grouped Cash',
+                '-b',
+                bookId,
+            ]);
+            const groupNames = (account.groups || []).map(group => group.name);
+            expect(groupNames).to.include('Stdin Current Assets');
+        });
     });
 
     describe('verification', function () {
@@ -71,6 +107,7 @@ describe('CLI - account stdin', function () {
             expect(names).to.include('Stdin Cash');
             expect(names).to.include('Stdin Revenue');
             expect(names).to.include('Stdin Expenses');
+            expect(names).to.include('Stdin Grouped Cash');
         });
     });
 });
