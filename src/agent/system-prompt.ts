@@ -61,7 +61,7 @@ Available tools:
 - edit: make precise file edits
 - write: create or replace files
 
-Guidelines:
+IMPORTANT Guidelines:
 - Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.
 - Use read to inspect file contents instead of cat or sed.
 - Use edit for precise changes.
