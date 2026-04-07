@@ -1,5 +1,5 @@
 import { getBkperInstance } from '../../bkper-factory.js';
-import { Account } from 'bkper-js';
+import { Account, Book } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 
 /**
@@ -23,7 +23,7 @@ export async function batchCreateAccounts(
     const accounts: Account[] = [];
 
     for (const item of items) {
-        const account = new Account(book, item as bkper.Account);
+        const account = await buildAccountFromStdin(book, item);
 
         // CLI --property flags override stdin properties
         if (propertyOverrides) {
@@ -44,4 +44,30 @@ export async function batchCreateAccounts(
     const allResults = results.map(result => result.json());
 
     console.log(JSON.stringify(allResults, null, 2));
+}
+
+async function buildAccountFromStdin(book: Book, item: Record<string, unknown>): Promise<Account> {
+    const payload: bkper.Account = {...(item as bkper.Account)};
+    const groupRefs = payload.groups;
+    delete payload.groups;
+
+    const account = new Account(book, payload);
+
+    if (groupRefs) {
+        for (const groupRef of groupRefs) {
+            const idOrName = groupRef.id || groupRef.name;
+            if (!idOrName || idOrName.trim() === '') {
+                throw new Error('Account group reference must include id or name');
+            }
+
+            const group = await book.getGroup(idOrName);
+            if (!group) {
+                throw new Error(`Group not found: ${idOrName}`);
+            }
+
+            account.addGroup(group);
+        }
+    }
+
+    return account;
 }
