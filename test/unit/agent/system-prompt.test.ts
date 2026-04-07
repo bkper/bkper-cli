@@ -54,4 +54,17 @@ describe('agent system prompt', function () {
         expect(full).to.match(/If the task involves using, generating, or executing `bkper` CLI commands/i);
         expect(full).to.match(/cli-reference\.md/i);
     });
+
+    it('should include bkper-js SDK reference routing', function () {
+        const full = getBkperAgentSystemPrompt();
+        expect(full).to.match(/If the task involves writing, reviewing, or debugging.*bkper-js/i);
+        expect(full).to.match(/bkper-js\.md/i);
+        expect(full).to.match(/bkper-api-types\.md/i);
+    });
+
+    it('should include llms.txt fallback for general Bkper questions', function () {
+        const full = getBkperAgentSystemPrompt();
+        expect(full).to.include('https://bkper.com/llms.txt');
+        expect(full).to.match(/follow the most relevant link/i);
+    });
 });
