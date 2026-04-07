@@ -18,8 +18,8 @@ Bkper organizes Accounts into four types that determine how an Account behaves a
 
 - **Asset** (blue) — **permanent**. Real resources you own: bank accounts, cash, receivables. Balances carry forward continuously, showing your position at any point in time.
 - **Liability** (yellow) — **permanent**. Obligations you owe: credit cards, loans, supplier debts. Balances also carry forward continuously.
-- **Incoming** (green) — **non-permanent**. Revenue sources: salary, sales, interest. Balances track activity within a period and reset to zero for the next one.
-- **Outgoing** (red) — **non-permanent**. Expenses and costs: rent, supplies, payroll. Balances also track activity within a period.
+- **Incoming** (green) — **non-permanent**. Revenue sources: salary, sales, interest. Balances track activity within a selected period rather than as a cumulative position.
+- **Outgoing** (red) — **non-permanent**. Expenses and costs: rent, supplies, payroll. Balances also track activity within a selected period.
 
 ## Transactions
 
