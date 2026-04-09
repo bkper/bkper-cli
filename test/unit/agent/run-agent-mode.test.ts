@@ -64,6 +64,56 @@ describe('runAgentMode', function () {
         expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
     });
 
+    it('should suppress the ready message when quietStartup is enabled', async function () {
+        let sessionStartHandler:
+            | ((
+                  event: unknown,
+                  context: {
+                      ui: {
+                          notify: (message: string, type?: 'info' | 'warning' | 'error') => void;
+                      };
+                  }
+              ) => Promise<void>)
+            | undefined;
+
+        const startupMaintenance = sinon.stub().resolves();
+        const notify = sinon.stub();
+
+        registerBkperAgentStartupExtension(
+            {
+                on: (
+                    event: 'session_start',
+                    handler: (
+                        event: unknown,
+                        context: {
+                            ui: {
+                                notify: (
+                                    message: string,
+                                    type?: 'info' | 'warning' | 'error'
+                                ) => void;
+                            };
+                        }
+                    ) => Promise<void>
+                ) => {
+                    if (event === 'session_start') {
+                        sessionStartHandler = handler;
+                    }
+                },
+            },
+            startupMaintenance,
+            {
+                getQuietStartup: () => true,
+            }
+        );
+
+        expect(sessionStartHandler).to.not.equal(undefined);
+
+        await sessionStartHandler?.({}, {ui: {notify}});
+
+        expect(notify.called).to.be.false;
+        expect(startupMaintenance.calledOnce).to.be.true;
+    });
+
     it('should create startup session manager with sessionDir from settings', function () {
         const createSessionManager = sinon.stub().returns({id: 'session-manager'});
 

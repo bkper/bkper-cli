@@ -41,6 +41,7 @@ type SettingsManagerLike = {
     getEnabledModels(): string[] | undefined;
     getDefaultProvider(): string | undefined;
     getDefaultModel(): string | undefined;
+    getQuietStartup(): boolean;
 };
 
 type ModelLike = {
@@ -299,12 +300,15 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
 
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
-    startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance
+    startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
+    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>
 ): void {
     let startupMaintenanceTriggered = false;
 
     pi.on('session_start', async (_event, ctx) => {
-        ctx.ui.notify('Bkper Agent ready.', 'info');
+        if (!settingsManager?.getQuietStartup()) {
+            ctx.ui.notify('Bkper Agent ready.', 'info');
+        }
 
         if (startupMaintenanceTriggered) {
             return;
@@ -343,7 +347,7 @@ function createDefaultDependencies(): AgentModeDependencies {
                         systemPromptOverride: () => getBkperAgentSystemPrompt(),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
-                                registerBkperAgentStartupExtension(pi);
+                                registerBkperAgentStartupExtension(pi, runStartupMaintenance, settingsManager);
                             },
                         ],
                     },
