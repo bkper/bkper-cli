@@ -1,5 +1,7 @@
 import { expect } from '../helpers/test-setup.js';
+import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import sinon from 'sinon';
+import { VERSION as BKPER_VERSION } from '../../../src/upgrade/installation.js';
 import {
     createStartupSessionManager,
     registerBkperAgentStartupExtension,
@@ -13,105 +15,181 @@ function createFakeRuntime(): InteractiveRuntimeHost {
     return Object.create(null) as unknown as InteractiveRuntimeHost;
 }
 
+type NotificationType = 'info' | 'warning' | 'error';
+
+type StartupTheme = {
+    bold: (text: string) => string;
+    fg: (color: string, text: string) => string;
+};
+
+type StartupHeaderFactory = (
+    tui: unknown,
+    theme: StartupTheme
+) => {
+    render: (width: number) => string[];
+};
+
+type RegisteredSessionStartHandler = (
+    event: unknown,
+    context: {
+        ui: {
+            notify: (message: string, type?: NotificationType) => void;
+            setHeader: (factory: StartupHeaderFactory | undefined) => void;
+        };
+        modelRegistry: {
+            getAvailable: () => Array<{
+                provider: string;
+                id: string;
+            }>;
+        };
+    }
+) => Promise<void>;
+
+function createThemeStub(): StartupTheme {
+    return {
+        bold: (text: string) => text,
+        fg: (_color: string, text: string) => text,
+    };
+}
+
+function registerStartupExtension(
+    startupMaintenance = sinon.stub().resolves(),
+    settingsManager?: {
+        getQuietStartup: () => boolean;
+    }
+): {
+    sessionStartHandler: RegisteredSessionStartHandler;
+    startupMaintenance: typeof startupMaintenance;
+} {
+    let sessionStartHandler: RegisteredSessionStartHandler | undefined;
+
+    registerBkperAgentStartupExtension(
+        {
+            on: ((event: 'session_start', handler: RegisteredSessionStartHandler) => {
+                if (event === 'session_start') {
+                    sessionStartHandler = handler;
+                }
+            }) as unknown as ExtensionAPI['on'],
+        },
+        startupMaintenance,
+        settingsManager
+    );
+
+    expect(sessionStartHandler).to.not.equal(undefined);
+
+    return {
+        sessionStartHandler: sessionStartHandler as RegisteredSessionStartHandler,
+        startupMaintenance,
+    };
+}
+
 describe('runAgentMode', function () {
-    it('should register startup extension that shows ready message and starts maintenance once', async function () {
-        let sessionStartHandler:
-            | ((
-                  event: unknown,
-                  context: {
-                      ui: {
-                          notify: (message: string, type?: 'info' | 'warning' | 'error') => void;
-                      };
-                  }
-              ) => Promise<void>)
-            | undefined;
-
-        const startupMaintenance = sinon.stub().resolves();
+    it('should replace the Pi startup header with basic Bkper hints and start maintenance once', async function () {
         const notify = sinon.stub();
+        let startupHeaderFactory: StartupHeaderFactory | undefined;
+        const setHeader = sinon
+            .stub()
+            .callsFake((factory: StartupHeaderFactory | undefined) => {
+                startupHeaderFactory = factory;
+            });
 
-        registerBkperAgentStartupExtension(
+        const {sessionStartHandler, startupMaintenance} = registerStartupExtension();
+
+        await sessionStartHandler(
+            {},
             {
-                on: (
-                    event: 'session_start',
-                    handler: (
-                        event: unknown,
-                        context: {
-                            ui: {
-                                notify: (
-                                    message: string,
-                                    type?: 'info' | 'warning' | 'error'
-                                ) => void;
-                            };
-                        }
-                    ) => Promise<void>
-                ) => {
-                    if (event === 'session_start') {
-                        sessionStartHandler = handler;
-                    }
+                ui: {notify, setHeader},
+                modelRegistry: {
+                    getAvailable: () => [{provider: 'anthropic', id: 'claude-sonnet-4'}],
                 },
-            },
-            startupMaintenance
+            }
+        );
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify, setHeader},
+                modelRegistry: {
+                    getAvailable: () => [{provider: 'anthropic', id: 'claude-sonnet-4'}],
+                },
+            }
         );
 
-        expect(sessionStartHandler).to.not.equal(undefined);
+        expect(setHeader.called).to.be.true;
+        expect(startupHeaderFactory).to.not.equal(undefined);
+        const headerText =
+            startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
 
-        await sessionStartHandler?.({}, {ui: {notify}});
-        await sessionStartHandler?.({}, {ui: {notify}});
-
-        expect(notify.calledWithExactly('Bkper Agent ready.', 'info')).to.be.true;
+        expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
+        expect(headerText).to.include('to interrupt');
+        expect(headerText).to.include('to clear');
+        expect(headerText).to.include('to exit');
+        expect(headerText).to.include('for commands');
+        expect(headerText).to.include('to run bash');
+        expect(headerText).to.not.include('Pi can explain its own features and look up its docs.');
+        expect(notify.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
         expect(startupMaintenance.firstCall.args[0]).to.have.property('notify');
         expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
     });
 
-    it('should suppress the ready message when quietStartup is enabled', async function () {
-        let sessionStartHandler:
-            | ((
-                  event: unknown,
-                  context: {
-                      ui: {
-                          notify: (message: string, type?: 'info' | 'warning' | 'error') => void;
-                      };
-                  }
-              ) => Promise<void>)
-            | undefined;
-
-        const startupMaintenance = sinon.stub().resolves();
+    it('should suppress the header override when quietStartup is enabled', async function () {
         const notify = sinon.stub();
+        const setHeader = sinon.stub();
 
-        registerBkperAgentStartupExtension(
-            {
-                on: (
-                    event: 'session_start',
-                    handler: (
-                        event: unknown,
-                        context: {
-                            ui: {
-                                notify: (
-                                    message: string,
-                                    type?: 'info' | 'warning' | 'error'
-                                ) => void;
-                            };
-                        }
-                    ) => Promise<void>
-                ) => {
-                    if (event === 'session_start') {
-                        sessionStartHandler = handler;
-                    }
-                },
-            },
-            startupMaintenance,
+        const {sessionStartHandler, startupMaintenance} = registerStartupExtension(
+            sinon.stub().resolves(),
             {
                 getQuietStartup: () => true,
             }
         );
 
-        expect(sessionStartHandler).to.not.equal(undefined);
-
-        await sessionStartHandler?.({}, {ui: {notify}});
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify, setHeader},
+                modelRegistry: {
+                    getAvailable: () => [],
+                },
+            }
+        );
 
         expect(notify.called).to.be.false;
+        expect(setHeader.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
+    });
+
+    it('should show a setup hint in the startup header when no models are available', async function () {
+        const notify = sinon.stub();
+        let startupHeaderFactory: StartupHeaderFactory | undefined;
+        const setHeader = sinon
+            .stub()
+            .callsFake((factory: StartupHeaderFactory | undefined) => {
+                startupHeaderFactory = factory;
+            });
+
+        const {sessionStartHandler} = registerStartupExtension();
+
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify, setHeader},
+                modelRegistry: {
+                    getAvailable: () => [],
+                },
+            }
+        );
+
+        expect(startupHeaderFactory).to.not.equal(undefined);
+        const headerText =
+            startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
+        expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
+        expect(headerText).to.include('to interrupt');
+        expect(headerText).to.include('to clear');
+        expect(headerText).to.include('to exit');
+        expect(headerText).to.include('for commands');
+        expect(headerText).to.include('to run bash');
+        expect(headerText).to.include('No model provider configured. Use /login or add an API key.');
+        expect(notify.called).to.be.false;
     });
 
     it('should create startup session manager with sessionDir from settings', function () {
