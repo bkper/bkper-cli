@@ -4,12 +4,15 @@ import {
     createAgentSessionServices,
     getAgentDir,
     InteractiveMode,
+    keyText,
     SessionManager,
     SettingsManager,
     type AgentSessionRuntimeDiagnostic,
     type CreateAgentSessionRuntimeFactory,
     type ExtensionAPI,
+    type Theme,
 } from '@mariozechner/pi-coding-agent';
+import { VERSION as BKPER_VERSION } from '../upgrade/installation.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
@@ -18,17 +21,15 @@ export type InteractiveRuntimeHost = ConstructorParameters<typeof InteractiveMod
 type NotificationType = 'info' | 'warning' | 'error';
 type ScopedThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
-type SessionStartContext = {
-    ui: {
-        notify: (message: string, type?: NotificationType) => void;
-    };
+type StartupHeaderComponent = {
+    render: (width: number) => string[];
+    invalidate: () => void;
+    dispose?: () => void;
 };
 
-type SessionStartHandler = (event: unknown, context: SessionStartContext) => Promise<void>;
+type StartupHeaderFactory = (_tui: unknown, theme: Theme) => StartupHeaderComponent;
 
-type StartupExtensionAPI = {
-    on: (event: 'session_start', handler: SessionStartHandler) => void;
-};
+type StartupExtensionAPI = Pick<ExtensionAPI, 'on'>;
 
 type SettingsError = {
     scope: 'global' | 'project';
@@ -298,6 +299,97 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
     }
 }
 
+const NO_MODELS_STARTUP_HINT = 'No model provider configured. Use /login or add an API key.';
+
+function wrapStartupHeaderLine(line: string, width: number): string[] {
+    const normalizedWidth = Math.max(1, width);
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+        return [''];
+    }
+
+    const wrappedLines: string[] = [];
+    let currentLine = '';
+
+    const pushWord = (word: string): void => {
+        if (!currentLine) {
+            currentLine = word;
+            return;
+        }
+
+        const candidate = `${currentLine} ${word}`;
+        if (candidate.length <= normalizedWidth) {
+            currentLine = candidate;
+            return;
+        }
+
+        wrappedLines.push(currentLine);
+        currentLine = word;
+    };
+
+    for (const word of trimmedLine.split(/\s+/)) {
+        if (word.length <= normalizedWidth) {
+            pushWord(word);
+            continue;
+        }
+
+        if (currentLine) {
+            wrappedLines.push(currentLine);
+            currentLine = '';
+        }
+
+        for (let start = 0; start < word.length; start += normalizedWidth) {
+            wrappedLines.push(word.slice(start, start + normalizedWidth));
+        }
+    }
+
+    if (currentLine) {
+        wrappedLines.push(currentLine);
+    }
+
+    return wrappedLines;
+}
+
+function formatStartupHint(theme: Theme, key: string, description: string): string {
+    return theme.fg('dim', key) + theme.fg('muted', ` ${description}`);
+}
+
+function buildStartupHeaderLines(
+    theme: Theme,
+    modelRegistry: Pick<ModelRegistryLike, 'getAvailable'>,
+    width: number
+): string[] {
+    const lines = [
+        `${theme.bold(theme.fg('accent', 'Bkper Agent'))}${theme.fg('dim', ` v${BKPER_VERSION}`)}`,
+        formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
+        formatStartupHint(theme, keyText('app.clear'), 'to clear'),
+        formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
+        formatStartupHint(theme, '/', 'for commands'),
+        formatStartupHint(theme, '!', 'to run bash'),
+    ];
+
+    if (modelRegistry.getAvailable().length === 0) {
+        lines.push(
+            '',
+            ...wrapStartupHeaderLine(NO_MODELS_STARTUP_HINT, width).map(line =>
+                theme.fg('warning', line)
+            )
+        );
+    }
+
+    return lines;
+}
+
+function createStartupHeaderFactory(
+    modelRegistry: Pick<ModelRegistryLike, 'getAvailable'>
+): StartupHeaderFactory {
+    return (_tui, theme) => ({
+        render: (width: number) => buildStartupHeaderLines(theme, modelRegistry, width),
+        invalidate: () => {},
+    });
+}
+
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
@@ -307,7 +399,7 @@ export function registerBkperAgentStartupExtension(
 
     pi.on('session_start', async (_event, ctx) => {
         if (!settingsManager?.getQuietStartup()) {
-            ctx.ui.notify('Bkper Agent ready.', 'info');
+            ctx.ui.setHeader(createStartupHeaderFactory(ctx.modelRegistry));
         }
 
         if (startupMaintenanceTriggered) {
