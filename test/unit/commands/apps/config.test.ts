@@ -1,6 +1,7 @@
 import { expect, setupTestEnvironment, getTestPaths } from '../../helpers/test-setup.js';
 import fs from 'fs';
 import path from 'path';
+import sinon from 'sinon';
 
 const { __dirname } = getTestPaths(import.meta.url);
 
@@ -15,12 +16,14 @@ describe('CLI - apps config functions', function () {
     let isSourceConfig: typeof import('../../../../src/commands/apps/config.js').isSourceConfig;
     let loadSourceDeploymentConfig: typeof import('../../../../src/commands/apps/config.js').loadSourceDeploymentConfig;
     let loadDeploymentConfig: typeof import('../../../../src/commands/apps/config.js').loadDeploymentConfig;
+    let handleError: typeof import('../../../../src/commands/apps/config.js').handleError;
 
     before(async function () {
         const config = await import('../../../../src/commands/apps/config.js');
         isSourceConfig = config.isSourceConfig;
         loadSourceDeploymentConfig = config.loadSourceDeploymentConfig;
         loadDeploymentConfig = config.loadDeploymentConfig;
+        handleError = config.handleError;
     });
 
     beforeEach(function () {
@@ -30,6 +33,7 @@ describe('CLI - apps config functions', function () {
     });
 
     afterEach(function () {
+        sinon.restore();
         process.chdir(originalCwd);
         // Cleanup temp directory
         if (fs.existsSync(testDir)) {
@@ -203,6 +207,34 @@ describe('CLI - apps config functions', function () {
             expect(config).to.not.be.undefined;
             expect(config?.web).to.not.be.undefined;
             expect(config?.web?.main).to.equal('packages/web/server/src/index.ts');
+        });
+    });
+
+    describe('handleError', function () {
+        it('should print login guidance for invalid token errors', function () {
+            const consoleErrorStub = sinon.stub(console, 'error');
+            const exitError = new Error('process.exit(1)');
+            sinon.stub(process, 'exit').throws(exitError);
+
+            let thrownError: unknown;
+            try {
+                handleError({
+                    success: false,
+                    error: {
+                        code: 'INVALID_TOKEN',
+                        message: 'Invalid or expired token',
+                    },
+                });
+            } catch (err) {
+                thrownError = err;
+            }
+
+            expect(thrownError).to.equal(exitError);
+            expect(
+                consoleErrorStub.calledWith(
+                    'Error: Authentication required. Run: bkper auth login'
+                )
+            ).to.be.true;
         });
     });
 

@@ -1,7 +1,7 @@
 import * as readline from 'readline';
 import fs from 'fs';
 import path from 'path';
-import { getOAuthToken, isLoggedIn } from '../../auth/local-auth-service.js';
+import { getStoredOAuthToken } from '../../auth/local-auth-service.js';
 import { createPlatformClient } from '../../platform/client.js';
 import { createAssetManifest, readAssetFiles } from './bundler.js';
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from './config.js';
@@ -17,13 +17,7 @@ import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } 
  * @param options Deploy options (dev, events)
  */
 export async function deployApp(options: DeployOptions = {}): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load bkper.yaml/json to get app ID
+    // 1. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -103,8 +97,9 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         }
     }
 
-    // 9. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 9. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 10. Call Platform API
@@ -214,13 +209,7 @@ async function confirmDeletion(appId: string): Promise<boolean> {
  * @param options Undeploy options (dev, events, deleteData)
  */
 export async function undeployApp(options: DeployOptions = {}): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load bkper.yaml/json to get app ID
+    // 1. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -243,8 +232,9 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
         }
     }
 
-    // 4. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 4. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
@@ -291,13 +281,7 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
  * Shows the deployment status for the app.
  */
 export async function statusApp(): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load bkper.yaml/json to get app ID
+    // 1. Load bkper.yaml/json to get app ID
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -311,8 +295,9 @@ export async function statusApp(): Promise<void> {
         process.exit(1);
     }
 
-    // 3. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 3. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 4. Call Platform API

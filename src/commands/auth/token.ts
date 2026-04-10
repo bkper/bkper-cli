@@ -1,4 +1,5 @@
-import { isLoggedIn, getOAuthToken } from '../../auth/local-auth-service.js';
+import { AUTHENTICATION_REQUIRED_MESSAGE } from '../../auth/auth-errors.js';
+import { getStoredOAuthToken } from '../../auth/local-auth-service.js';
 
 /**
  * Prints the current OAuth access token to stdout.
@@ -10,11 +11,11 @@ import { isLoggedIn, getOAuthToken } from '../../auth/local-auth-service.js';
  * token doesn't collide with the shell prompt.
  */
 export async function token(): Promise<void> {
-    if (!isLoggedIn()) {
-        console.error('Error: Not logged in. Run: bkper auth login');
+    const accessToken = await getStoredOAuthToken();
+    if (!accessToken) {
+        console.error(`Error: ${AUTHENTICATION_REQUIRED_MESSAGE}`);
         process.exit(1);
     }
-    const accessToken = await getOAuthToken();
     if (process.stdout.isTTY) {
         console.log(accessToken);
     } else {

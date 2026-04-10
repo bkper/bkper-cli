@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import { getOAuthToken, isLoggedIn } from '../../auth/local-auth-service.js';
+import { getStoredOAuthToken } from '../../auth/local-auth-service.js';
 import { createPlatformClient } from '../../platform/client.js';
 import { handleError, loadAppConfig } from './config.js';
 import type { Environment, SecretsOptions } from './types.js';
@@ -56,13 +56,7 @@ async function promptSecretValue(): Promise<string> {
  * @param options - Options (dev environment)
  */
 export async function secretsPut(name: string, options: SecretsOptions = {}): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load app config
+    // 1. Load app config
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -83,8 +77,9 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
         process.exit(1);
     }
 
-    // 4. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 4. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 5. Call Platform API
@@ -116,13 +111,7 @@ export async function secretsPut(name: string, options: SecretsOptions = {}): Pr
  * @param options - Options (dev environment)
  */
 export async function secretsList(options: SecretsOptions = {}): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load app config
+    // 1. Load app config
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -136,8 +125,9 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 3. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 3. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 4. Call Platform API
@@ -176,13 +166,7 @@ export async function secretsList(options: SecretsOptions = {}): Promise<void> {
  * @param options - Options (dev environment)
  */
 export async function secretsDelete(name: string, options: SecretsOptions = {}): Promise<void> {
-    // 1. Check if logged in
-    if (!isLoggedIn()) {
-        console.error('Error: You must be logged in. Run: bkper login');
-        process.exit(1);
-    }
-
-    // 2. Load app config
+    // 1. Load app config
     let config: bkper.App;
     try {
         config = loadAppConfig();
@@ -196,8 +180,9 @@ export async function secretsDelete(name: string, options: SecretsOptions = {}):
         process.exit(1);
     }
 
-    // 3. Get OAuth token and create client
-    const token = await getOAuthToken();
+    // 3. Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await getStoredOAuthToken();
     const client = createPlatformClient(token);
 
     // 4. Call Platform API

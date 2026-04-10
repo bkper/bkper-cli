@@ -1,5 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { isLoggedIn, getOAuthToken } from '../auth/local-auth-service.js';
+import { AUTHENTICATION_REQUIRED_MESSAGE } from '../auth/auth-errors.js';
+import {
+    getStoredCredentials,
+    getStoredOAuthToken,
+    isLoggedIn,
+} from '../auth/local-auth-service.js';
 
 /**
  * Response format matching production /auth/refresh endpoint.
@@ -44,22 +49,12 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
  * @returns User ID (email) or 'unknown' if extraction fails
  */
 async function extractUserId(): Promise<string> {
-    // Read stored credentials to get id_token
-    // The id_token contains user info as JWT claims
-    try {
-        const fs = await import('fs');
-        const os = await import('os');
-        const credentialsPath = `${os.homedir()}/.config/bkper/.bkper-credentials.json`;
-        const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
-
-        if (credentials.id_token) {
-            const payload = decodeJwtPayload(credentials.id_token);
-            if (payload && typeof payload.email === 'string') {
-                return payload.email;
-            }
+    const credentials = getStoredCredentials();
+    if (credentials?.id_token) {
+        const payload = decodeJwtPayload(credentials.id_token);
+        if (payload && typeof payload.email === 'string') {
+            return payload.email;
         }
-    } catch {
-        // Fall through to unknown
     }
 
     return 'unknown';
@@ -98,17 +93,26 @@ export function createBkperAuthMiddleware(): (
         if (!isLoggedIn()) {
             res.statusCode = 401;
             const errorResponse: AuthErrorResponse = {
-                error: 'Not logged in. Run: bkper login',
+                error: AUTHENTICATION_REQUIRED_MESSAGE,
             };
             res.end(JSON.stringify(errorResponse));
             return;
         }
 
         try {
-            // Get fresh access token (auto-refreshes if expired)
-            const accessToken = await getOAuthToken();
-            const userId = await extractUserId();
+            // Get a fresh access token from stored credentials without triggering
+            // an interactive login flow.
+            const accessToken = await getStoredOAuthToken();
+            if (!accessToken) {
+                res.statusCode = 401;
+                const errorResponse: AuthErrorResponse = {
+                    error: AUTHENTICATION_REQUIRED_MESSAGE,
+                };
+                res.end(JSON.stringify(errorResponse));
+                return;
+            }
 
+            const userId = await extractUserId();
             const response: AuthRefreshResponse = {
                 userId,
                 accessToken,

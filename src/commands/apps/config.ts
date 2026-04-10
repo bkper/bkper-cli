@@ -1,6 +1,7 @@
 import { App } from 'bkper-js';
 import fs from 'fs';
 import * as YAML from 'yaml';
+import { AUTHENTICATION_REQUIRED_MESSAGE, isAuthenticationError } from '../../auth/auth-errors.js';
 import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from './types.js';
 
 // =============================================================================
@@ -159,6 +160,11 @@ export function createConfiguredApp(): App {
  * Handles error response from Platform API
  */
 export function handleError(error: ErrorResponse | unknown): never {
+    if (isAuthenticationError(error)) {
+        console.error(`Error: ${AUTHENTICATION_REQUIRED_MESSAGE}`);
+        process.exit(1);
+    }
+
     // Handle unexpected error shapes (e.g., network errors, non-JSON responses)
     if (
         !error ||

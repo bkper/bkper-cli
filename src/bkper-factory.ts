@@ -1,5 +1,5 @@
 import { Bkper } from 'bkper-js';
-import { getOAuthToken } from './auth/local-auth-service.js';
+import { getStoredOAuthToken } from './auth/local-auth-service.js';
 
 let configuredBkperInstance: Bkper | undefined = undefined;
 
@@ -40,7 +40,7 @@ export function setupBkper() {
 
     Bkper.setConfig({
         apiKeyProvider: apiKey ? async () => apiKey : undefined,
-        oauthTokenProvider: () => getOAuthToken(),
+        oauthTokenProvider: () => getStoredOAuthToken(),
         requestHeadersProvider: async () => {
             return {
                 'bkper-agent-id': 'bkper-cli',

@@ -2,43 +2,32 @@ import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import sinon from 'sinon';
 
 describe('CLI - auth token Command', function () {
-    let isLoggedInStub: sinon.SinonStub;
-    let getOAuthTokenStub: sinon.SinonStub;
+    let getStoredOAuthTokenStub: sinon.SinonStub;
     let stdoutWriteStub: sinon.SinonStub;
     let stderrWriteStub: sinon.SinonStub;
     let processExitStub: sinon.SinonStub;
-    let token: () => Promise<void>;
 
-    beforeEach(async function () {
+    beforeEach(function () {
         setupTestEnvironment();
 
-        // Create stubs for auth service
-        isLoggedInStub = sinon.stub();
-        getOAuthTokenStub = sinon.stub();
-
-        // Stub process.stdout.write and process.stderr (via console.error)
+        getStoredOAuthTokenStub = sinon.stub();
         stdoutWriteStub = sinon.stub(process.stdout, 'write');
         stderrWriteStub = sinon.stub(console, 'error');
         processExitStub = sinon.stub(process, 'exit');
-
-        // We need to create the token function with injected dependencies
-        // since the module imports are static. We'll test the logic directly.
     });
 
     afterEach(function () {
         sinon.restore();
     });
 
-    it('should print the access token to stdout when logged in', async function () {
-        isLoggedInStub.returns(true);
-        getOAuthTokenStub.resolves('ya29.test-access-token-12345');
+    it('should print the access token to stdout when available', async function () {
+        getStoredOAuthTokenStub.resolves('ya29.test-access-token-12345');
 
-        // Simulate the token command logic
-        if (!isLoggedInStub()) {
-            console.error('Error: Not logged in. Run: bkper auth login');
+        const accessToken = await getStoredOAuthTokenStub();
+        if (!accessToken) {
+            console.error('Error: Authentication required. Run: bkper auth login');
             process.exit(1);
         }
-        const accessToken = await getOAuthTokenStub();
         process.stdout.write(accessToken);
 
         expect(stdoutWriteStub.calledOnce).to.be.true;
@@ -47,42 +36,40 @@ describe('CLI - auth token Command', function () {
         expect(processExitStub.called).to.be.false;
     });
 
-    it('should print error to stderr and exit 1 when not logged in', async function () {
-        isLoggedInStub.returns(false);
+    it('should print error to stderr and exit 1 when no current token is available', async function () {
+        getStoredOAuthTokenStub.resolves(undefined);
 
-        // Simulate the token command logic
-        if (!isLoggedInStub()) {
-            console.error('Error: Not logged in. Run: bkper auth login');
+        const accessToken = await getStoredOAuthTokenStub();
+        if (!accessToken) {
+            console.error('Error: Authentication required. Run: bkper auth login');
             process.exit(1);
         }
 
         expect(stderrWriteStub.calledOnce).to.be.true;
-        expect(stderrWriteStub.calledWith('Error: Not logged in. Run: bkper auth login')).to.be
-            .true;
+        expect(
+            stderrWriteStub.calledWith('Error: Authentication required. Run: bkper auth login')
+        ).to.be.true;
         expect(processExitStub.calledWith(1)).to.be.true;
         expect(stdoutWriteStub.called).to.be.false;
     });
 
     it('should output raw token without trailing newline when piped (non-TTY)', async function () {
-        isLoggedInStub.returns(true);
-        getOAuthTokenStub.resolves('ya29.raw-token');
+        getStoredOAuthTokenStub.resolves('ya29.raw-token');
 
-        // Simulate non-TTY (piped) environment
         const originalIsTTY = process.stdout.isTTY;
         Object.defineProperty(process.stdout, 'isTTY', { value: undefined, configurable: true });
 
-        if (!isLoggedInStub()) {
-            console.error('Error: Not logged in. Run: bkper auth login');
+        const accessToken = await getStoredOAuthTokenStub();
+        if (!accessToken) {
+            console.error('Error: Authentication required. Run: bkper auth login');
             process.exit(1);
         }
-        const accessToken = await getOAuthTokenStub();
         if (process.stdout.isTTY) {
             console.log(accessToken);
         } else {
             process.stdout.write(accessToken);
         }
 
-        // process.stdout.write does not append a newline (unlike console.log)
         const output = stdoutWriteStub.firstCall.args[0];
         expect(output).to.equal('ya29.raw-token');
         expect(output).to.not.include('\n');
@@ -94,20 +81,17 @@ describe('CLI - auth token Command', function () {
     });
 
     it('should output token with trailing newline when interactive (TTY)', async function () {
-        isLoggedInStub.returns(true);
-        getOAuthTokenStub.resolves('ya29.tty-token');
+        getStoredOAuthTokenStub.resolves('ya29.tty-token');
 
         const consoleLogStub = sinon.stub(console, 'log');
-
-        // Simulate TTY environment
         const originalIsTTY = process.stdout.isTTY;
         Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
 
-        if (!isLoggedInStub()) {
-            console.error('Error: Not logged in. Run: bkper auth login');
+        const accessToken = await getStoredOAuthTokenStub();
+        if (!accessToken) {
+            console.error('Error: Authentication required. Run: bkper auth login');
             process.exit(1);
         }
-        const accessToken = await getOAuthTokenStub();
         if (process.stdout.isTTY) {
             console.log(accessToken);
         } else {

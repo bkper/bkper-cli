@@ -26,16 +26,17 @@ const PLATFORM_API_URL = process.env.BKPER_PLATFORM_URL || 'https://platform.bkp
 /**
  * Creates a typed Platform API client.
  *
- * @param token - OAuth bearer token
+ * @param token - Optional OAuth bearer token. If omitted, requests are sent without
+ *     an Authorization header so an external proxy can inject auth.
  * @param baseUrl - Optional base URL override (for local development)
  * @returns Typed openapi-fetch client
  */
-export function createPlatformClient(token: string, baseUrl = PLATFORM_API_URL) {
+export function createPlatformClient(token?: string, baseUrl = PLATFORM_API_URL) {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
     return createClient<paths>({
         baseUrl,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
+        headers,
     });
 }
 

@@ -42,6 +42,16 @@ yarn global add bkper
 bkper auth login
 ```
 
+This is the only command that opens the browser OAuth flow.
+
+Other commands:
+
+-   use stored credentials when available
+-   otherwise return an authentication error instead of starting login automatically
+-   can also work behind an external proxy that injects auth headers
+
+When you are done working in a sandbox, run `bkper auth logout` to revoke the stored refresh token and clear local credentials.
+
 ### Start using bkper
 
 ```bash
@@ -71,7 +81,8 @@ bkper transaction create -b <bookId> --description "Office supplies 123.78"
 
 ### Access Token
 
-Use the access token for direct API calls from any tool:
+Use the access token for direct API calls from any tool.
+This requires a prior `bkper auth login`, and `bkper auth token` does not start a browser login flow:
 
 ```bash
 # Print the current access token
@@ -865,8 +876,8 @@ deployment:
 #### Authentication
 
 -   `auth login` - Authenticate with Bkper, storing credentials locally
--   `auth logout` - Remove stored credentials
--   `auth token` - Print the current OAuth access token to stdout
+-   `auth logout` - Revoke the stored refresh token and clear local credentials
+-   `auth token` - Print the current OAuth access token to stdout (requires prior login)
 
 #### Agent
 

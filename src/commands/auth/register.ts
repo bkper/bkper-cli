@@ -14,9 +14,9 @@ export function registerAuthCommands(program: Command): void {
 
     authCommand
         .command('logout')
-        .description('Remove stored credentials')
-        .action(() => {
-            logout();
+        .description('Revoke stored credentials and clear local auth state')
+        .action(async () => {
+            await logout();
         });
 
     authCommand
