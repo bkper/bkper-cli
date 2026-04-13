@@ -1,7 +1,7 @@
 import { expect } from '../helpers/test-setup.js';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import sinon from 'sinon';
-import { VERSION as BKPER_VERSION } from '../../../src/upgrade/installation.js';
+import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
 import {
     createStartupSessionManager,
     registerBkperAgentStartupExtension,
@@ -119,7 +119,8 @@ describe('runAgentMode', function () {
         const headerText =
             startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
 
-        expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
+        expect(headerText).to.include('██████╗');
+        expect(headerText).to.include(`pi v${PI_VERSION}`);
         expect(headerText).to.include('to interrupt');
         expect(headerText).to.include('for session tree');
         expect(headerText).to.include('to clear');
@@ -183,7 +184,8 @@ describe('runAgentMode', function () {
         expect(startupHeaderFactory).to.not.equal(undefined);
         const headerText =
             startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
-        expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
+        expect(headerText).to.include('██████╗');
+        expect(headerText).to.include(`pi v${PI_VERSION}`);
         expect(headerText).to.include('to interrupt');
         expect(headerText).to.include('for session tree');
         expect(headerText).to.include('to clear');

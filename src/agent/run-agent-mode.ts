@@ -12,7 +12,7 @@ import {
     type ExtensionAPI,
     type Theme,
 } from '@mariozechner/pi-coding-agent';
-import { VERSION as BKPER_VERSION } from '../upgrade/installation.js';
+import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
@@ -351,6 +351,15 @@ function wrapStartupHeaderLine(line: string, width: number): string[] {
     return wrappedLines;
 }
 
+const BKPER_BANNER = [
+    '██████╗ ██╗  ██╗██████╗ ███████╗██████╗ ',
+    '██╔══██╗██║ ██╔╝██╔══██╗██╔════╝██╔══██╗',
+    '██████╔╝█████╔╝ ██████╔╝█████╗  ██████╔╝',
+    '██╔══██╗██╔═██╗ ██╔═══╝ ██╔══╝  ██╔══██╗',
+    '██████╔╝██║  ██╗██║     ███████╗██║  ██║',
+    '╚═════╝ ╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝',
+];
+
 function formatStartupHint(theme: Theme, key: string, description: string): string {
     return theme.fg('dim', key) + theme.fg('muted', ` ${description}`);
 }
@@ -361,7 +370,9 @@ function buildStartupHeaderLines(
     width: number
 ): string[] {
     const lines = [
-        `${theme.bold(theme.fg('accent', 'Bkper Agent'))}${theme.fg('dim', ` v${BKPER_VERSION}`)}`,
+        ...BKPER_BANNER.map(line => theme.bold(theme.fg('accent', line))),
+        theme.fg('muted', `powered by `) + theme.fg('dim', `pi v${PI_VERSION}`),
+        '',
         formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
         formatStartupHint(theme, `${keyText('app.interrupt')} twice`, 'for session tree'),
         formatStartupHint(theme, keyText('app.clear'), 'to clear'),
