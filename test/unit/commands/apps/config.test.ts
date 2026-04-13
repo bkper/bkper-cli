@@ -211,7 +211,7 @@ describe('CLI - apps config functions', function () {
     });
 
     describe('handleError', function () {
-        it('should print login guidance for invalid token errors', function () {
+        it('should print the underlying API message for invalid token errors', function () {
             const consoleErrorStub = sinon.stub(console, 'error');
             const exitError = new Error('process.exit(1)');
             sinon.stub(process, 'exit').throws(exitError);
@@ -230,11 +230,7 @@ describe('CLI - apps config functions', function () {
             }
 
             expect(thrownError).to.equal(exitError);
-            expect(
-                consoleErrorStub.calledWith(
-                    'Error: Authentication required. Run: bkper auth login'
-                )
-            ).to.be.true;
+            expect(consoleErrorStub.calledWith('Error: Invalid or expired token')).to.be.true;
         });
     });
 
