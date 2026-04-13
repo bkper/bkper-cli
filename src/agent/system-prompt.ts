@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -6,11 +7,26 @@ function resolveDocPath(filename: string): string {
     return path.resolve(thisDir, '..', 'docs', filename);
 }
 
+function resolvePiPackageRoot(): string {
+    const piIndexPath = fileURLToPath(import.meta.resolve('@mariozechner/pi-coding-agent'));
+    let dir = path.dirname(piIndexPath);
+    while (dir !== path.dirname(dir)) {
+        if (existsSync(path.join(dir, 'package.json'))) {
+            return dir;
+        }
+        dir = path.dirname(dir);
+    }
+    return path.dirname(piIndexPath);
+}
+
 export function getBkperAgentSystemPrompt(): string {
     const cliRefPath = resolveDocPath('cli-reference.md');
     const coreConceptsPath = resolveDocPath('core-concepts.md');
     const bkperJsPath = resolveDocPath('bkper-js.md');
     const bkperApiTypesPath = resolveDocPath('bkper-api-types.md');
+    const piRoot = resolvePiPackageRoot();
+    const piDocsPath = path.resolve(piRoot, 'docs');
+    const piExamplesPath = path.resolve(piRoot, 'examples');
     return `${BKPER_AGENT_SYSTEM_PROMPT}
 ## Reference Routing
 
@@ -35,6 +51,18 @@ ${bkperJsPath}
 
 \`\`\`
 ${bkperApiTypesPath}
+\`\`\`
+
+- If the task involves building or debugging pi extensions, custom tools, themes, or skills — read the pi docs directory and follow cross-references within:
+
+\`\`\`
+${piDocsPath}
+\`\`\`
+
+Check extension examples at:
+
+\`\`\`
+${piExamplesPath}
 \`\`\`
 
 - For generic engineering work, do not load Bkper reference docs unless directly relevant.
