@@ -121,6 +121,7 @@ describe('runAgentMode', function () {
 
         expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
         expect(headerText).to.include('to interrupt');
+        expect(headerText).to.include('for session tree');
         expect(headerText).to.include('to clear');
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
@@ -184,6 +185,7 @@ describe('runAgentMode', function () {
             startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
         expect(headerText).to.include(`Bkper Agent v${BKPER_VERSION}`);
         expect(headerText).to.include('to interrupt');
+        expect(headerText).to.include('for session tree');
         expect(headerText).to.include('to clear');
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');

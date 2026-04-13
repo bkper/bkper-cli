@@ -363,6 +363,7 @@ function buildStartupHeaderLines(
     const lines = [
         `${theme.bold(theme.fg('accent', 'Bkper Agent'))}${theme.fg('dim', ` v${BKPER_VERSION}`)}`,
         formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
+        formatStartupHint(theme, `${keyText('app.interrupt')} twice`, 'for session tree'),
         formatStartupHint(theme, keyText('app.clear'), 'to clear'),
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
         formatStartupHint(theme, '/', 'for commands'),
