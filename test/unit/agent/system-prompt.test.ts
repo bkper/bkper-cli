@@ -38,10 +38,18 @@ describe('agent system prompt', function () {
         expect(full).to.match(/core-concepts\.md/i);
     });
 
-    it('should keep Pi routing scoped to SDK guidance', function () {
+    it('should not include pi default identity or full doc routing block', function () {
         const full = getBkperAgentSystemPrompt();
         expect(full).to.not.match(/Pi documentation/i);
-        expect(full).to.not.match(/themes, TUI/i);
+        expect(full).to.not.match(/expert coding assistant/i);
+    });
+
+    it('should include selective pi extension and tools doc routing', function () {
+        const full = getBkperAgentSystemPrompt();
+        expect(full).to.match(/pi extensions.*custom tools/i);
+        expect(full).to.match(/pi-coding-agent/);
+        expect(full).to.include('docs');
+        expect(full).to.include('examples');
     });
 
     it('should not inline the full core concepts reference', function () {
