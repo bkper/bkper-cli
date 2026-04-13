@@ -1,4 +1,4 @@
-import { isAuthenticationError, AUTHENTICATION_REQUIRED_MESSAGE } from '../auth/auth-errors.js';
+import { getErrorMessage } from '../auth/auth-errors.js';
 import { setupBkper } from '../bkper-factory.js';
 import { getFormat } from './cli-helpers.js';
 import type { OutputFormat } from '../render/output.js';
@@ -33,11 +33,7 @@ export function withAction(
             }
             await fn(getFormat());
         } catch (err) {
-            if (isAuthenticationError(err)) {
-                console.error(`Error ${label}: ${AUTHENTICATION_REQUIRED_MESSAGE}`);
-            } else {
-                console.error(`Error ${label}:`, err);
-            }
+            console.error(`Error ${label}: ${getErrorMessage(err)}`);
             process.exit(1);
         }
     };

@@ -1,51 +1,52 @@
-import { BkperError } from 'bkper-js';
-
 export const AUTHENTICATION_REQUIRED_MESSAGE =
     'Authentication required. Run: bkper auth login';
 
 interface ErrorWithNestedAuthInfo {
+    message?: unknown;
     error?: {
-        code?: unknown;
         message?: unknown;
     };
 }
 
+function normalizeMessage(message: unknown): string | undefined {
+    if (typeof message !== 'string') {
+        return undefined;
+    }
+
+    const trimmed = message.trim();
+    return trimmed ? trimmed : undefined;
+}
+
 /**
- * Detects whether an error represents a missing or invalid authentication state.
+ * Extracts a concise human-readable message from CLI and API errors.
  */
-export function isAuthenticationError(error: unknown): boolean {
-    if (error instanceof BkperError) {
-        const message = error.message.toLowerCase();
-        return (
-            error.code === 401 ||
-            (error.code === 403 &&
-                (message.includes('login required') ||
-                    message.includes('authentication required') ||
-                    message.includes('invalid or expired token')))
-        );
+export function getErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+
+    if (typeof error === 'string') {
+        return error;
     }
 
     if (typeof error !== 'object' || error === null) {
-        return false;
+        return String(error);
     }
 
-    const nested = (error as ErrorWithNestedAuthInfo).error;
-    const code = typeof nested?.code === 'string' ? nested.code.toUpperCase() : undefined;
-    const message =
-        typeof nested?.message === 'string' ? nested.message.toLowerCase() : undefined;
-
-    if (code && (code.includes('TOKEN') || code.includes('AUTH'))) {
-        return true;
+    const typedError = error as ErrorWithNestedAuthInfo;
+    const nestedMessage = normalizeMessage(typedError.error?.message);
+    if (nestedMessage) {
+        return nestedMessage;
     }
 
-    if (
-        message &&
-        (message.includes('token') ||
-            message.includes('authentication') ||
-            message.includes('login required'))
-    ) {
-        return true;
+    const topLevelMessage = normalizeMessage(typedError.message);
+    if (topLevelMessage) {
+        return topLevelMessage;
     }
 
-    return false;
+    try {
+        return JSON.stringify(error);
+    } catch {
+        return String(error);
+    }
 }
