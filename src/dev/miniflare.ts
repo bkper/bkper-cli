@@ -1,4 +1,6 @@
 import type { Miniflare, Log } from 'miniflare';
+import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 import { buildWorker } from './esbuild.js';
 
 export interface WorkerServerOptions {
@@ -30,18 +32,33 @@ interface BaseConfig {
  * Maps Miniflare instance to its base configuration (without modules).
  */
 const instanceConfigs = new WeakMap<Miniflare, BaseConfig>();
+const require = createRequire(import.meta.url);
 
 /**
- * Dynamically imports miniflare, exiting with a helpful message if not installed.
+ * Resolves the Miniflare entry point from the app project root.
+ * This allows a globally installed bkper CLI to load the app-local devDependency.
  */
-async function loadMiniflare(): Promise<typeof import('miniflare')> {
+export function resolveMiniflareModulePath(projectRoot: string): string {
+    return require.resolve('miniflare', { paths: [projectRoot] });
+}
+
+/**
+ * Dynamically imports Miniflare from the app project root, exiting with a helpful
+ * message if it is not installed there.
+ */
+async function loadMiniflare(projectRoot: string = process.cwd()): Promise<typeof import('miniflare')> {
+    let resolvedPath: string;
     try {
-        return await import('miniflare');
+        resolvedPath = resolveMiniflareModulePath(projectRoot);
     } catch {
         console.error('miniflare is required for local development.');
-        console.error('Install it as a devDependency (e.g. npm install -D miniflare).');
+        console.error(
+            'Install it in the app root devDependencies (e.g. bun add -d miniflare or npm install -D miniflare).'
+        );
         process.exit(1);
     }
+
+    return (await import(pathToFileURL(resolvedPath).href)) as typeof import('miniflare');
 }
 
 /**
