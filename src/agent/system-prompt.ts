@@ -1,6 +1,12 @@
+import {
+    createBashToolDefinition,
+    createEditToolDefinition,
+    createReadToolDefinition,
+    createWriteToolDefinition,
+} from '@mariozechner/pi-coding-agent';
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function resolveDocPath(filename: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +23,69 @@ function resolvePiPackageRoot(): string {
         dir = path.dirname(dir);
     }
     return path.dirname(piIndexPath);
+}
+
+function normalizePromptSnippet(text: string | undefined): string | undefined {
+    if (!text) {
+        return undefined;
+    }
+    const oneLine = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return oneLine.length > 0 ? oneLine : undefined;
+}
+
+function normalizePromptGuidelines(guidelines: string[] | undefined): string[] {
+    if (!guidelines || guidelines.length === 0) {
+        return [];
+    }
+    const unique = new Set<string>();
+    for (const guideline of guidelines) {
+        const normalized = guideline.trim();
+        if (normalized.length > 0) {
+            unique.add(normalized);
+        }
+    }
+    return Array.from(unique);
+}
+
+function getCodingToolDefinitions() {
+    return [
+        createReadToolDefinition(process.cwd()),
+        createBashToolDefinition(process.cwd()),
+        createEditToolDefinition(process.cwd()),
+        createWriteToolDefinition(process.cwd()),
+    ];
+}
+
+function buildToolPromptSection(): string {
+    const toolDefinitions = getCodingToolDefinitions();
+    const toolLines = toolDefinitions
+        .flatMap(definition => {
+            const snippet = normalizePromptSnippet(definition.promptSnippet);
+            return snippet ? [`- ${definition.name}: ${snippet}`] : [];
+        })
+        .join('\n');
+
+    const guidelineLines: string[] = [];
+    const seenGuidelines = new Set<string>();
+    const addGuideline = (guideline: string) => {
+        const normalized = guideline.trim();
+        if (normalized.length === 0 || seenGuidelines.has(normalized)) {
+            return;
+        }
+        seenGuidelines.add(normalized);
+        guidelineLines.push(`- ${normalized}`);
+    };
+
+    addGuideline('Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.');
+    for (const definition of toolDefinitions) {
+        for (const guideline of normalizePromptGuidelines(definition.promptGuidelines)) {
+            addGuideline(guideline);
+        }
+    }
+    addGuideline('Do not claim builds, tests, or command results unless you actually ran them.');
+
+    const toolsList = toolLines.length > 0 ? toolLines : '(none)';
+    return `Available tools:\n${toolsList}\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n\nGuidelines:\n${guidelineLines.join('\n')}`;
 }
 
 export function getBkperAgentSystemPrompt(): string {
@@ -67,11 +136,17 @@ ${piExamplesPath}
 
 - For generic engineering work, do not load Bkper reference docs unless directly relevant.
 - When scope is unclear, inspect local files and project instructions first; load reference docs only after identifying a concrete need.
-- For any other question about Bkper — product features, accounting guides, app architecture, integrations, or general usage — fetch and read:
+- For any other question about Bkper — product features, accounting guides, app architecture, integrations, or general usage — first read the core concepts file for foundational vocabulary and invariants:
+
+\`\`\`
+${coreConceptsPath}
+\`\`\`
+
+  Then fetch and read:
 
   https://bkper.com/llms.txt
 
-  Then follow the most relevant link to find the answer.
+  And follow the most relevant link to find the answer.
 `;
 }
 
@@ -83,21 +158,7 @@ Protect the zero-sum invariant above all else.
 
 You help users by reading files, executing commands, editing code, and writing new files.
 
-Available tools:
-- read: read file contents
-- bash: run shell commands for search and discovery
-- edit: make precise file edits
-- write: create or replace files
-
-IMPORTANT Guidelines:
-- Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.
-- Use read to inspect file contents instead of cat or sed.
-- Use edit for precise changes.
-- When changing multiple separate locations in one file, use one edit call with multiple entries in edits[].
-- Each edits[].oldText is matched against the original file, not after earlier edits are applied. Do not use overlapping or nested edits. Merge nearby changes into one edit.
-- Keep edits[].oldText as small as possible while still being unique in the file.
-- Use write only for new files or complete rewrites.
-- Do not claim builds, tests, or command results unless you actually ran them.
+${buildToolPromptSection()}
 
 ## Operating Principles
 

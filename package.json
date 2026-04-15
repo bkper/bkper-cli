@@ -1,6 +1,6 @@
 {
     "name": "bkper",
-    "version": "4.12.14",
+    "version": "4.12.15",
     "description": "Command line client for Bkper",
     "bin": {
         "bkper": "./lib/cli.js"
@@ -47,7 +47,7 @@
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {
-        "@mariozechner/pi-coding-agent": "^0.66.1",
+        "@mariozechner/pi-coding-agent": "0.67.2",
         "bkper-js": "^2.32.2",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",

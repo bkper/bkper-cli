@@ -1,3 +1,9 @@
+import {
+    createBashToolDefinition,
+    createEditToolDefinition,
+    createReadToolDefinition,
+    createWriteToolDefinition,
+} from '@mariozechner/pi-coding-agent';
 import { expect } from '../helpers/test-setup.js';
 import { BKPER_AGENT_SYSTEM_PROMPT, getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
@@ -11,14 +17,27 @@ describe('agent system prompt', function () {
         expect(BKPER_AGENT_SYSTEM_PROMPT).to.match(/Protect the zero-sum invariant above all else\.?/i);
     });
 
-    it('should include the minimal tool guidance', function () {
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('Available tools:');
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('- read:');
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include('- bash:');
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.match(/Use bash for .*discovery.*search/i);
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.match(/bkper cli/i);
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.match(/bkper cli.*relevant|relevant.*bkper cli/i);
-        expect(BKPER_AGENT_SYSTEM_PROMPT).to.include(
+    it('should include tool guidance sourced from pi tool definitions', function () {
+        const full = getBkperAgentSystemPrompt();
+        const definitions = [
+            createReadToolDefinition(process.cwd()),
+            createBashToolDefinition(process.cwd()),
+            createEditToolDefinition(process.cwd()),
+            createWriteToolDefinition(process.cwd()),
+        ];
+        expect(full).to.include('Available tools:');
+        for (const definition of definitions) {
+            if (definition.promptSnippet) {
+                expect(full).to.include(`- ${definition.name}: ${definition.promptSnippet}`);
+            }
+            for (const guideline of definition.promptGuidelines ?? []) {
+                expect(full).to.include(`- ${guideline}`);
+            }
+        }
+        expect(full).to.match(/Use bash for .*discovery.*search/i);
+        expect(full).to.match(/bkper cli/i);
+        expect(full).to.match(/bkper cli.*relevant|relevant.*bkper cli/i);
+        expect(full).to.include(
             'Do not claim builds, tests, or command results unless you actually ran them.'
         );
     });
