@@ -126,7 +126,8 @@ jobs:
                   bun run build
                   bun run test:unit
 
-            - name: Validate package version for this release
+            - name: Prepare release version on main
+              id: prepare_release
               if: steps.release_level.outputs.level != 'none'
               env:
                   RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
@@ -137,7 +138,23 @@ jobs:
 
                   LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
                   PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-                  EXPECTED_VERSION="$(node --input-type=module - "$LATEST_TAG" "$PACKAGE_VERSION" "$RELEASE_LEVEL" <<'NODE'
+                  HEAD_SUBJECT="$(git log -1 --pretty=%s)"
+                  LATEST_TAG_VERSION="$(node --input-type=module - "$LATEST_TAG" <<'NODE'
+                  import { normalizeTagVersion } from './lib/release/versioning.js';
+
+                  const [latestTag] = process.argv.slice(2);
+                  process.stdout.write(latestTag ? normalizeTagVersion(latestTag) : '');
+                  NODE
+                  )"
+
+                  if [[ -n "$LATEST_TAG_VERSION" && "$PACKAGE_VERSION" == "$LATEST_TAG_VERSION" && "$HEAD_SUBJECT" == "chore(release): prepare v${PACKAGE_VERSION}" ]]; then
+                    echo "Release version already prepared on main at ${PACKAGE_VERSION}. Skipping."
+                    echo "skip_release=true" >> "$GITHUB_OUTPUT"
+                    echo "VERSION=v${PACKAGE_VERSION}" >> "$GITHUB_ENV"
+                    exit 0
+                  fi
+
+                  NEXT_VERSION="$(node --input-type=module - "$LATEST_TAG" "$PACKAGE_VERSION" "$RELEASE_LEVEL" <<'NODE'
                   import { resolveNextVersion } from './lib/release/versioning.js';
 
                   const [latestTag, packageVersion, level] = process.argv.slice(2);
@@ -145,33 +162,43 @@ jobs:
                   NODE
                   )"
 
-                  if [[ "$PACKAGE_VERSION" != "$EXPECTED_VERSION" ]]; then
-                    echo "package.json version $PACKAGE_VERSION does not match expected next $EXPECTED_VERSION for release level $RELEASE_LEVEL"
-                    exit 1
+                  npm pkg set version="$NEXT_VERSION"
+                  bun install --lockfile-only
+
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git add package.json bun.lock
+
+                  if git diff --cached --quiet; then
+                    echo "Release version already prepared in the working tree"
+                  else
+                    git commit -m "chore(release): prepare v${NEXT_VERSION}"
+                    git push origin HEAD:main
                   fi
 
-                  echo "VERSION=v${PACKAGE_VERSION}" >> "$GITHUB_ENV"
+                  echo "skip_release=false" >> "$GITHUB_OUTPUT"
+                  echo "VERSION=v${NEXT_VERSION}" >> "$GITHUB_ENV"
 
             - name: Upgrade npm
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               run: |
                   npm install -g npm@11.11.0
                   npm install -g npm@11.12.1
 
             - name: Print tool versions
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               run: |
                   node -v
                   npm -v
 
             - name: Ensure tokenless OIDC publishing context
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               run: |
                   rm -f .npmrc ~/.npmrc || true
                   unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
             - name: Create release tag
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               env:
                   VERSION: ${{ env.VERSION }}
               run: |
@@ -180,17 +207,17 @@ jobs:
                   git tag -a "${VERSION}" -m "${VERSION}"
 
             - name: Publish to npm (Trusted Publishers)
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               run: npm publish --access public --provenance --verbose
 
             - name: Push release tag
-              if: steps.release_level.outputs.level != 'none'
+              if: steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               env:
                   VERSION: ${{ env.VERSION }}
               run: git push origin "${VERSION}"
 
             - name: Notify Slack
-              if: always() && steps.release_level.outputs.level != 'none'
+              if: always() && steps.release_level.outputs.level != 'none' && steps.prepare_release.outputs.skip_release != 'true'
               uses: pioug/le-slack-message@v1.0.0
               with:
                   ACTION_NAME: release ${{ env.VERSION || '' }}

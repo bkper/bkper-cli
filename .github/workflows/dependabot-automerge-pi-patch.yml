@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor == 'dependabot[bot]'
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
     runs-on: ubuntu-latest
 
     steps:
@@ -19,52 +19,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr edit "$PR_URL" --add-label "release:patch"
-
-      - name: Checkout PR branch
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Bump package version on PR branch
-        env:
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: |
-          set -euo pipefail
-
-          git fetch --tags origin
-
-          LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
-          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-          NEXT_VERSION="$(node - "$LATEST_TAG" "$PACKAGE_VERSION" <<'NODE'
-          const [latestTag, packageVersion] = process.argv.slice(2);
-
-          const normalize = versionOrTag => {
-            const normalized = versionOrTag.startsWith('v') ? versionOrTag.slice(1) : versionOrTag;
-            if (!/^\d+\.\d+\.\d+$/.test(normalized)) {
-              throw new Error(`Invalid semver version: ${versionOrTag}`);
-            }
-            return normalized;
-          };
-
-          const currentVersion = latestTag ? normalize(latestTag) : normalize(packageVersion);
-          const [major, minor, patch] = currentVersion.split('.').map(Number);
-          process.stdout.write(`${major}.${minor}.${patch + 1}`);
-          NODE
-          )"
-
-          if [[ "$PACKAGE_VERSION" != "$NEXT_VERSION" ]]; then
-            npm pkg set version="$NEXT_VERSION"
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package.json
-            git commit -m "chore(release): prepare v${NEXT_VERSION}"
-            git push origin "HEAD:${PR_HEAD_REF}"
-          else
-            echo "package.json already at target version ${NEXT_VERSION}"
-          fi
 
       - name: Verify GitHub auto-merge repo setup
         env:
