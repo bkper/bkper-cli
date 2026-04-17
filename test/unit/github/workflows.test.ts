@@ -47,6 +47,8 @@ describe('github workflows', function () {
         expect(content).to.not.include('npm pkg set version=');
         expect(content).to.not.include('git push origin HEAD:main');
         expect(content).to.not.include('Push release tag');
+        expect(content).to.not.include('Upgrade npm');
+        expect(content).to.not.include('npm install -g npm@');
     });
 
     it('should expose npm version release helpers', function () {

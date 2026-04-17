@@ -101,9 +101,6 @@ jobs:
                   bun run build
                   bun run test:unit
 
-            - name: Upgrade npm
-              run: npm install -g npm@11.12.1
-
             - name: Print tool versions
               run: |
                   node -v
