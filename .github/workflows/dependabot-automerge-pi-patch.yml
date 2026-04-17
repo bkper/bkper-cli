@@ -1,4 +1,4 @@
-name: Dependabot Pi patch
+name: Dependabot Pi auto-merge
 
 on:
   pull_request_target:
@@ -9,17 +9,11 @@ permissions:
   pull-requests: write
 
 jobs:
-  patch:
-    if: github.actor == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main'
+  auto-merge:
+    if: github.actor == 'dependabot[bot]' && github.event.pull_request.base.ref == 'main' && contains(github.event.pull_request.title, '@mariozechner/pi-coding-agent')
     runs-on: ubuntu-latest
 
     steps:
-      - name: Apply patch release label
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr edit "$PR_URL" --add-label "release:patch"
-
       - name: Verify GitHub auto-merge repo setup
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
