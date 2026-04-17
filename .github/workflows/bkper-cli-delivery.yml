@@ -62,6 +62,7 @@ jobs:
               uses: actions/setup-node@v6
               with:
                   node-version: 22
+                  registry-url: 'https://registry.npmjs.org'
 
             - name: Validate release tag matches package version
               env:
@@ -101,15 +102,13 @@ jobs:
                   bun run build
                   bun run test:unit
 
+            - name: Upgrade npm
+              run: npm install -g npm@11.11.0
+
             - name: Print tool versions
               run: |
                   node -v
                   npm -v
-
-            - name: Ensure tokenless OIDC publishing context
-              run: |
-                  rm -f .npmrc ~/.npmrc || true
-                  unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
             - name: Publish to npm (Trusted Publishers)
               run: npm publish --access public --provenance --verbose

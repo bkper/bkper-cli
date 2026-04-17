@@ -42,13 +42,17 @@ describe('github workflows', function () {
         expect(content).to.include('Validate release tag matches package version');
         expect(content).to.include('Ensure tagged commit is on main');
         expect(content).to.include('git merge-base --is-ancestor');
+        expect(content).to.include("registry-url: 'https://registry.npmjs.org'");
+        expect(content).to.include('Upgrade npm');
+        expect(content).to.include('npm install -g npm@11.11.0');
         expect(content).to.not.include('listPullRequestsAssociatedWithCommit');
         expect(content).to.not.include('release:patch');
         expect(content).to.not.include('npm pkg set version=');
         expect(content).to.not.include('git push origin HEAD:main');
         expect(content).to.not.include('Push release tag');
-        expect(content).to.not.include('Upgrade npm');
-        expect(content).to.not.include('npm install -g npm@');
+        expect(content).to.not.include('npm install -g npm@11.12.1');
+        expect(content).to.not.include('Ensure tokenless OIDC publishing context');
+        expect(content).to.not.include('rm -f .npmrc ~/.npmrc');
     });
 
     it('should expose npm version release helpers', function () {
