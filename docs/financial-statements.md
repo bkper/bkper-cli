@@ -82,6 +82,27 @@ When you discover the correct roots, persist them for future runs.
 
 Prefer storing the **group ID** in the local report config/script. If the execution route also needs the group name for a query string, persist the name as well.
 
+### If the book has no usable statement hierarchy
+
+If Step 2 does **not** reveal clear statement roots, treat that as a modeling gap, not as permission to improvise one silently.
+
+In that case:
+
+- explain that the book is **not yet statement-ready** for deterministic reporting
+- do **not** invent arbitrary roots from subgroup names or partial account matches
+- inspect the existing account names, language, and reporting style already present in the book
+- propose the **smallest** hierarchy that fits the user's actual use case and local standards
+- ask approval before creating groups, moving accounts, or persisting the proposed roots
+- once approved, validate the hierarchy with live balance queries and then persist it in the local runner/config
+
+When relevant, clarify whether the user wants:
+
+- internal management reporting
+- local/statutory reporting
+- a simplified starter structure to evolve later
+
+If the user only wants a quick answer for now, you may still provide an **exploratory / provisional** result, but state clearly that the book still needs an approved reporting hierarchy for future deterministic statements.
+
 ---
 
 ## Step 3 — Fetch balances to validate and implement the runner
@@ -197,6 +218,7 @@ Use these patterns when validating or implementing the deterministic runner.
 | Immediately running ad-hoc balance queries as the default response to a first statement request | First look for a local runner; if none exists, propose creating one and use queries only for bootstrap |
 | Assuming `AGENTS.md` must already exist | `AGENTS.md` can be created or updated during bootstrap to route future requests |
 | `group:'Assets' before:2025-01-01` | `group:'Total Equity' before:2025-01-01` — use root group, not subgroup |
+| Inventing a new statement hierarchy silently because no roots were found | Explain that the book is not yet statement-ready, propose a minimal hierarchy aligned with the user's language and local standards, and ask approval before changing structure |
 | `before:$m` for P&L | `after:$m-1 before:$m` — P&L needs a period, not just an end date |
 | `after:$y-1 before:$d` | `after:$y-1 before:$y` — use consistent date basis on both ends |
 | `-q 'before:2025-01-01'` without group filter | `-q "group:'<rootGroup>' before:2025-01-01"` — always filter by group |
