@@ -4,9 +4,11 @@ on:
     pull_request:
     push:
         branches: [main]
+        tags: ['v*.*.*']
 
 jobs:
     build-and-unit-test:
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
 
         steps:
@@ -36,163 +38,89 @@ jobs:
               run: bun run test:unit
 
     release:
-        needs: build-and-unit-test
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         runs-on: ubuntu-latest
         concurrency:
-            group: release-main
+            group: release-${{ github.ref_name }}
             cancel-in-progress: false
         permissions:
-            contents: write
-            pull-requests: read
+            contents: read
             id-token: write
 
         steps:
-            - name: Determine release level from PR labels associated with this commit
-              id: release_level
-              uses: actions/github-script@v8
-              with:
-                  script: |
-                      const owner = context.repo.owner;
-                      const repo = context.repo.repo;
-                      const commitSha = context.sha;
-                      const levelByLabel = {
-                        'release:patch': 'patch',
-                        'release:minor': 'minor',
-                        'release:major': 'major',
-                      };
-                      const orderedLabels = ['release:major', 'release:minor', 'release:patch'];
-
-                      const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-                        owner,
-                        repo,
-                        commit_sha: commitSha,
-                      });
-
-                      const mergedPr = pulls.find(pr => pr.merged_at && pr.base?.ref === 'main');
-
-                      if (!mergedPr) {
-                        core.info('No merged PR associated with this commit. Skipping release.');
-                        core.setOutput('level', 'none');
-                        return;
-                      }
-
-                      const labels = (mergedPr.labels ?? [])
-                        .map(label => typeof label === 'string' ? label : label.name)
-                        .filter(Boolean);
-
-                      const selectedLabel = orderedLabels.find(label => labels.includes(label)) ?? null;
-                      const level = selectedLabel ? levelByLabel[selectedLabel] : 'none';
-
-                      core.info(`Merged PR: #${mergedPr.number} (${mergedPr.html_url})`);
-                      core.info(`Labels: ${labels.join(', ') || '(none)'}`);
-                      core.info(`Selected release level: ${level}`);
-                      core.setOutput('level', level);
-
-            - name: Skip release (no release label)
-              if: steps.release_level.outputs.level == 'none'
-              run: echo "Skipping release due to missing release label"
-
-            - name: Checkout main
-              if: steps.release_level.outputs.level != 'none'
+            - name: Checkout tagged commit
               uses: actions/checkout@v6
               with:
-                  ref: main
                   fetch-depth: 0
 
             - name: Setup Bun
-              if: steps.release_level.outputs.level != 'none'
               uses: oven-sh/setup-bun@v2
               with:
                   bun-version: latest
 
             - name: Setup Node
-              if: steps.release_level.outputs.level != 'none'
               uses: actions/setup-node@v6
               with:
                   node-version: 22
 
+            - name: Validate release tag matches package version
+              env:
+                  RELEASE_TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  PACKAGE_VERSION="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).version')"
+                  EXPECTED_TAG="v${PACKAGE_VERSION}"
+
+                  if [[ "$RELEASE_TAG" != "$EXPECTED_TAG" ]]; then
+                    echo "Release tag $RELEASE_TAG does not match package.json version $EXPECTED_TAG"
+                    exit 1
+                  fi
+
+            - name: Ensure tagged commit is on main
+              env:
+                  TAG_COMMIT_SHA: ${{ github.sha }}
+              run: |
+                  set -euo pipefail
+
+                  git fetch origin main --force
+
+                  if ! git merge-base --is-ancestor "$TAG_COMMIT_SHA" origin/main; then
+                    echo "Tagged commit $TAG_COMMIT_SHA is not reachable from origin/main"
+                    exit 1
+                  fi
+
             - name: Install dependencies
-              if: steps.release_level.outputs.level != 'none'
               run: bun install
 
             - name: Install optional peer required for type-checking
-              if: steps.release_level.outputs.level != 'none'
               run: npm install miniflare@^4 --no-save
 
             - name: Build and unit test
-              if: steps.release_level.outputs.level != 'none'
               run: |
                   bun run build
                   bun run test:unit
 
-            - name: Validate package version for this release
-              if: steps.release_level.outputs.level != 'none'
-              env:
-                  RELEASE_LEVEL: ${{ steps.release_level.outputs.level }}
-              run: |
-                  set -euo pipefail
-
-                  git fetch --tags origin
-
-                  LATEST_TAG="$(git tag --list 'v*' --sort=-version:refname | head -n1)"
-                  PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-                  EXPECTED_VERSION="$(node --input-type=module - "$LATEST_TAG" "$PACKAGE_VERSION" "$RELEASE_LEVEL" <<'NODE'
-                  import { resolveNextVersion } from './lib/release/versioning.js';
-
-                  const [latestTag, packageVersion, level] = process.argv.slice(2);
-                  process.stdout.write(resolveNextVersion(latestTag || null, packageVersion, level));
-                  NODE
-                  )"
-
-                  if [[ "$PACKAGE_VERSION" != "$EXPECTED_VERSION" ]]; then
-                    echo "package.json version $PACKAGE_VERSION does not match expected next $EXPECTED_VERSION for release level $RELEASE_LEVEL"
-                    exit 1
-                  fi
-
-                  echo "VERSION=v${PACKAGE_VERSION}" >> "$GITHUB_ENV"
-
             - name: Upgrade npm
-              if: steps.release_level.outputs.level != 'none'
-              run: |
-                  npm install -g npm@11.11.0
-                  npm install -g npm@11.12.1
+              run: npm install -g npm@11.12.1
 
             - name: Print tool versions
-              if: steps.release_level.outputs.level != 'none'
               run: |
                   node -v
                   npm -v
 
             - name: Ensure tokenless OIDC publishing context
-              if: steps.release_level.outputs.level != 'none'
               run: |
                   rm -f .npmrc ~/.npmrc || true
                   unset NODE_AUTH_TOKEN NPM_TOKEN || true
 
-            - name: Create release tag
-              if: steps.release_level.outputs.level != 'none'
-              env:
-                  VERSION: ${{ env.VERSION }}
-              run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  git tag -a "${VERSION}" -m "${VERSION}"
-
             - name: Publish to npm (Trusted Publishers)
-              if: steps.release_level.outputs.level != 'none'
               run: npm publish --access public --provenance --verbose
 
-            - name: Push release tag
-              if: steps.release_level.outputs.level != 'none'
-              env:
-                  VERSION: ${{ env.VERSION }}
-              run: git push origin "${VERSION}"
-
             - name: Notify Slack
-              if: always() && steps.release_level.outputs.level != 'none'
+              if: always()
               uses: pioug/le-slack-message@v1.0.0
               with:
-                  ACTION_NAME: release ${{ env.VERSION || '' }}
+                  ACTION_NAME: release ${{ github.ref_name }}
                   JOB: ${{ toJson(job) }}
                   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -153,20 +153,23 @@ These rules are mandatory for coding agents working on this repository.
 -   Keep PRs small, scoped, and single-purpose.
 -   Do not bundle unrelated refactors with feature/fix work.
 
-### Release labels 
+### Release workflow
 
 Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from local machines.
 
--   Merge a PR into `main` with one release label: `release:patch`, `release:minor`, or `release:major`
--   On `main` push, CI determines the merged PR label, bumps `package.json` version, tags, and publishes to npm
--   Without a release label, publish is skipped
+-   Merge work into `main` normally; release timing is decoupled from PRs.
+-   When ready to release from a clean, up-to-date `main`, run one of:
+    -   `bun run release:patch`
+    -   `bun run release:minor`
+    -   `bun run release:major`
+-   Push the resulting commit and tag with `git push origin main --follow-tags`
+-   CI publishes only from version tags matching `v*.*.*`
 
 ### Pi dependency automation policy
 
 -   Dependabot tracks `@mariozechner/pi-coding-agent`.
--   Pi patch updates can be auto-merged if checks pass.
--   Pi update PRs always receive `release:patch` (independent of upstream semver).
--   For Pi update PRs, Dependabot updates the dependency files in the PR, and the package version bump itself still happens later in CI after merge, driven by the `release:patch` label.
+-   Pi update PRs stay standard dependency PRs and can be auto-merged if checks pass.
+-   Do not add release labels or version bumps on Dependabot PR branches.
 
 ### Pre-merge quality gate
 
@@ -180,5 +183,5 @@ bun run test:unit
 ### Publishing policy
 
 -   Never publish manually from local environment unless explicitly instructed.
--   Publishing is performed by CI on `main` push, with Trusted Publisher (OIDC).
--   If publish fails, fix root cause and re-run through PR/merge flow; do not bypass with ad-hoc changes.
+-   Publishing is performed by CI on version tag pushes, with Trusted Publisher (OIDC).
+-   If publish fails, fix root cause and re-run through the tag-based release flow; do not bypass with ad-hoc changes.

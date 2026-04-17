@@ -89,10 +89,8 @@ function buildToolPromptSection(): string {
 }
 
 export function getBkperAgentSystemPrompt(): string {
-    const cliRefPath = resolveDocPath('cli-reference.md');
     const coreConceptsPath = resolveDocPath('core-concepts.md');
-    const bkperJsPath = resolveDocPath('bkper-js.md');
-    const bkperApiTypesPath = resolveDocPath('bkper-api-types.md');
+    const indexPath = resolveDocPath('index.md');
     const piRoot = resolvePiPackageRoot();
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');
@@ -100,28 +98,20 @@ export function getBkperAgentSystemPrompt(): string {
 ## Reference Routing
 
 - Read local \`AGENTS.md\`, nearby files, and existing tests first for project-specific work.
-- If the task touches Bkper accounting semantics or data modeling — such as Accounts, Transactions, balances, account types, groups, books, or mapping real-world flows into Bkper — read full file:
+- For any Bkper question or task — accounting concepts, CLI usage, SDK code, data management, or financial reports — start by reading both:
 
 \`\`\`
 ${coreConceptsPath}
 \`\`\`
 
-- If the task involves using, generating, or executing \`bkper\` CLI commands, read full file:
-
 \`\`\`
-${cliRefPath}
+${indexPath}
 \`\`\`
 
-- If the task involves writing, reviewing, or debugging code that uses the \`bkper-js\` library — such as Bkper, Book, Account, Transaction, Group classes, or any import from \`bkper-js\` — read both files:
+  Then load the additional specific doc(s) the index points to based on what is relevant to the task.
 
-\`\`\`
-${bkperJsPath}
-\`\`\`
-
-\`\`\`
-${bkperApiTypesPath}
-\`\`\`
-
+- For generic engineering work unrelated to Bkper, do not load Bkper reference docs unless directly relevant.
+- When scope is unclear, inspect local files and project instructions first; load reference docs only after identifying a concrete need.
 - If the task involves building or debugging pi extensions, custom tools, themes, or skills — read the pi docs directory and follow cross-references within:
 
 \`\`\`
@@ -134,15 +124,7 @@ Check extension examples at:
 ${piExamplesPath}
 \`\`\`
 
-- For generic engineering work, do not load Bkper reference docs unless directly relevant.
-- When scope is unclear, inspect local files and project instructions first; load reference docs only after identifying a concrete need.
-- For any other question about Bkper — product features, accounting guides, app architecture, integrations, or general usage — first read the core concepts file for foundational vocabulary and invariants:
-
-\`\`\`
-${coreConceptsPath}
-\`\`\`
-
-  Then fetch and read:
+- For anything not covered by the local docs index, fetch and read:
 
   https://bkper.com/llms.txt
 

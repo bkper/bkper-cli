@@ -48,13 +48,12 @@ describe('agent system prompt', function () {
         expect(BKPER_AGENT_SYSTEM_PROMPT).to.not.include('Credit card purchase: `Credit Card >> Outgoing`');
     });
 
-    it('should include concise loading rules for core concepts', function () {
+    it('should route all Bkper tasks through core concepts and the docs index', function () {
         const full = getBkperAgentSystemPrompt();
-        expect(full).to.match(/If the task touches Bkper accounting semantics or data modeling/i);
-        expect(full).to.match(/Accounts, Transactions, balances, account types, groups, books/i);
-        expect(full).to.match(/mapping real-world flows into Bkper/i);
-        expect(full).to.match(/When scope is unclear, inspect local files and project instructions first/i);
+        expect(full).to.match(/For any Bkper question or task/i);
+        expect(full).to.match(/start by reading both/i);
         expect(full).to.match(/core-concepts\.md/i);
+        expect(full).to.match(/index\.md/i);
     });
 
     it('should not include pi default identity or full doc routing block', function () {
@@ -74,19 +73,6 @@ describe('agent system prompt', function () {
     it('should not inline the full core concepts reference', function () {
         expect(BKPER_AGENT_SYSTEM_PROMPT).to.not.include('## Example Flows');
         expect(BKPER_AGENT_SYSTEM_PROMPT).to.not.include("These examples use Bkper's transaction shorthand `From >> To`");
-    });
-
-    it('should include CLI usage section with reference path', function () {
-        const full = getBkperAgentSystemPrompt();
-        expect(full).to.match(/If the task involves using, generating, or executing `bkper` CLI commands/i);
-        expect(full).to.match(/cli-reference\.md/i);
-    });
-
-    it('should include bkper-js SDK reference routing', function () {
-        const full = getBkperAgentSystemPrompt();
-        expect(full).to.match(/If the task involves writing, reviewing, or debugging.*bkper-js/i);
-        expect(full).to.match(/bkper-js\.md/i);
-        expect(full).to.match(/bkper-api-types\.md/i);
     });
 
     it('should include llms.txt fallback for general Bkper questions', function () {

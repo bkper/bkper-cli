@@ -42,6 +42,9 @@
         "test:integration": "BKPER_API_URL=${BKPER_API_URL:-http://localhost:8081/_ah/api/bkper} TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.integration.json",
         "test:deploy": "BKPER_PLATFORM_URL=http://localhost:8790 BKPER_API_URL=https://api-dev.bkper.app TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.deploy.json",
         "test:all": "bun run test:unit && bun run test:integration",
+        "release:patch": "npm version patch -m \"chore(release): v%s\"",
+        "release:minor": "npm version minor -m \"chore(release): v%s\"",
+        "release:major": "npm version major -m \"chore(release): v%s\"",
         "docs:compliance": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/check.ts",
         "docs:compliance:live": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/live.ts",
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"

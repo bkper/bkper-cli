@@ -67,17 +67,27 @@ bun run test:unit
 
 ---
 
-## Release and label policy
+## Release workflow
 
-Releases are automated and **label-driven**.
+Releases are automated and **tag-driven**.
 
-### Standard labels
+1. Start from a clean, up-to-date `main`
+2. Run one of:
 
--   `release:patch` → publish patch version
--   `release:minor` → publish minor version
--   `release:major` → publish major version
+```bash
+bun run release:patch
+bun run release:minor
+bun run release:major
+```
 
-If no `release:*` label is present, CI skips publishing.
+3. Push the release commit and tag:
+
+```bash
+git push origin main --follow-tags
+```
+
+GitHub Actions publishes only from version tags matching `v*.*.*`.
+Dependabot PRs stay standard dependency PRs; Pi bumps may be auto-merged if checks pass.
 
 ## CI expectations
 
