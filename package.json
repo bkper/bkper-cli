@@ -50,7 +50,7 @@
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {
-        "@mariozechner/pi-coding-agent": "0.67.6",
+        "@mariozechner/pi-coding-agent": "0.67.68",
         "bkper-js": "^2.32.2",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
