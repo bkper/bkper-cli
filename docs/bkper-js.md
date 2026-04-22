@@ -595,16 +595,18 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 
 **Methods:**
 
-- `audit()` → `void` — Trigger [Balances Audit](https://help.bkper.com/en/articles/4412038-balances-audit) async process.
+- `audit()` → `void` — Trigger Balances Audit async process.
 - `batchCheckTransactions(transactions: Transaction[])` → `Promise<void>` — Batch check `Transactions` on the Book.
 - `batchCreateAccounts(accounts: Account[])` → `Promise<Account[]>` — Create `Accounts` on the Book, in batch.
 - `batchCreateGroups(groups: Group[])` → `Promise<Group[]>` — Create `Groups` on the Book, in batch.
 - `batchCreateTransactions(transactions: Transaction[])` → `Promise<Transaction[]>` — Batch create `Transactions` on the Book.
+- `batchDeleteAccounts(accounts: Account[])` → `Promise<Account[]>` — Delete `Accounts` on the Book, in batch.
 - `batchPostTransactions(transactions: Transaction[])` → `Promise<void>` — Batch post `Transactions` on the Book.
 - `batchReplayEvents(events: Event[], errorOnly?: boolean)` → `Promise<void>` — Replay `Events` on the Book, in batch.
 - `batchTrashTransactions(transactions: Transaction[], trashChecked?: boolean)` → `Promise<void>` — Batch trash `Transactions` on the Book.
 - `batchUncheckTransactions(transactions: Transaction[])` → `Promise<void>` — Batch uncheck `Transactions` on the Book.
 - `batchUntrashTransactions(transactions: Transaction[])` → `Promise<void>` — Batch untrash `Transactions` on the Book.
+- `batchUpdateAccounts(accounts: Account[])` → `Promise<Account[]>` — Update `Accounts` on the Book, in batch.
 - `batchUpdateTransactions(transactions: Transaction[], updateChecked?: boolean)` → `Promise<Transaction[]>` — Batch update `Transactions` on the Book.
 - `copy(name: string, copyTransactions?: boolean, fromDate?: number)` → `Promise<Book>` — Creates a copy of this Book
 - `countTransactions(query?: string)` → `Promise<number | undefined>` — Retrieve the number of transactions based on a query.
@@ -635,6 +637,7 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `getIntegrations()` → `Promise<Integration[]>` — Gets the existing `Integrations` in the Book.
 - `getLastUpdateMs()` → `number | undefined` — Gets the last update date of the book, in milliseconds.
 - `getLockDate()` / `setLockDate(lockDate: string | null)` → `string | undefined (set: string | null)` — Gets the lock date of the Book in ISO format yyyy-MM-dd.
+- `getLogoUrl()` → `string | undefined` — Gets the logo URL of the Book owner's custom domain, if any.
 - `getName()` / `setName(name: string)` → `string | undefined (set: string)` — Gets the name of this Book.
 - `getOwnerName()` → `string | undefined` — Gets the name of the owner of the Book.
 - `getPageSize()` / `setPageSize(pageSize: number)` → `number | undefined (set: number)` — Gets the transactions pagination page size.
@@ -652,6 +655,7 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `json()` → `bkper.Book` — Gets an immutable copy of the JSON payload for this resource.
 - `listEvents(afterDate: string | null, beforeDate: string | null, onError: boolean, resourceId: string | null, limit: number, cursor?: string)` → `Promise<EventList>` — Lists events in the Book based on the provided parameters.
 - `listTransactions(query?: string, limit?: number, cursor?: string)` → `Promise<TransactionList>` — Lists transactions in the Book based on the provided query, limit, and cursor, for pagination.
+- `mergeTransactions(transaction1: Transaction, transaction2: Transaction)` → `Promise<Transaction>` — Merge two `Transactions` into a single new canonical transaction.
 - `parseDate(date: string)` → `Date` — Parse a date string according to date pattern and timezone of the Book. Also parse ISO yyyy-mm-dd format.
 - `parseValue(value: string)` → `Amount | undefined` — Parse a value string according to `DecimalSeparator` and fraction digits of the Book.
 - `remove()` → `Promise<Book>` — Warning!
@@ -745,6 +749,11 @@ const groups = await book.getGroups();
 const bookWithGroups = await Bkper.getBook(bookId, false, true);
 const groups2 = await bookWithGroups.getGroups(); // Already cached
 ```
+
+**mergeTransactions**
+
+The merged transaction is created synchronously. Cleanup of the two
+originals is scheduled asynchronously by the backend.
 
 **remove**
 

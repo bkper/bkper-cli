@@ -30,12 +30,12 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 
 - `agentId?`: `string` — The id of agent that created the resource
 - `archived?`: `boolean` — Archived accounts are kept for history
-- `balance?`: `string` — The current account balance, when querying transactions.
+- `balance?`: `string` — The running balance of the account at the transaction date.
 - `balanceVerified?`: `boolean` — Whether the account balance has been verified/audited
 - `createdAt?`: `string` — The creation timestamp, in milliseconds
 - `credit?`: `boolean` — Credit nature or Debit otherwise
 - `groups?`: `bkper.Group[]` — The groups of the account
-- `hasTransactionPosted?`: `boolean` — Tell if the account has transaction posted
+- `hasTransactionPosted?`: `boolean` — Whether the account has any transactions posted
 - `id?`: `string` — The unique id that identifies the Account in the Book
 - `name?`: `string` — The name of the Account
 - `normalizedName?`: `string` — The name of the Account, lowercase, without spaces or special characters
@@ -85,14 +85,14 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `apiVersion?`: `"v0" | "v1" | "v2" | "v3" | "v4" | "v5"` — The API version of the event payload
 - `clientId?`: `string` — The Google OAuth Client ID
 - `clientSecret?`: `string` — The Google OAuth Client Secret
-- `connectable?`: `boolean` — Tell if this app is connectable by a user
-- `deprecated?`: `boolean` — Tell if the code app is deprecated
+- `connectable?`: `boolean` — Whether this app is connectable by a user
+- `deprecated?`: `boolean` — Whether the app is deprecated
 - `description?`: `string` — The App description
 - `developers?`: `string` — The developers (usernames and domain patterns), comma or space separated
 - `events?`: `("FILE_CREATED" | "FILE_UPDATED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_UPDATED" | "BOOK_DELETED")[]` — Event types the App listen to
-- `filePatterns?`: `string[]` — File patters the App handles - wildcard accepted - E.g *.pdf *-bank.csv
+- `filePatterns?`: `string[]` — File patterns the App handles - wildcard accepted. E.g. *.pdf, *-bank.csv
 - `id?`: `string` — The unique agent id of the App - this can't be changed after created
-- `installable?`: `boolean` — Tell if this app is installable in a book
+- `installable?`: `boolean` — Whether this app is installable in a book
 - `logoUrl?`: `string` — The App logo url
 - `logoUrlDark?`: `string` — The App logo url in dark mode
 - `menuPopupHeight?`: `string` — The menu popup window height
@@ -107,10 +107,10 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `ownerName?`: `string` — The owner company name
 - `ownerWebsite?`: `string` — The owner company website url
 - `propertiesSchema?`: `bkper.AppPropertiesSchema`
-- `published?`: `boolean` — Tell if this app already published
+- `published?`: `boolean` — Whether this app is already published
 - `readme?`: `string` — The readme.md file as string
 - `readmeMd?`: `string` — The readme.md file as raw markdown string
-- `repoPrivate?`: `boolean` — Tell if the code repository is private
+- `repoPrivate?`: `boolean` — Whether the code repository is private
 - `repoUrl?`: `string` — The code repository url
 - `scopes?`: `string[]` — The Google OAuth Scopes used by the app
 - `users?`: `string` — The users (usernames and domain patterns) to enable the App while not yet published
@@ -197,16 +197,17 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `accounts?`: `bkper.Account[]` — The book Accounts
 - `agentId?`: `string` — The id of agent that created the resource
 - `autoPost?`: `boolean` — Tells if the Book has auto post enabled
-- `closingDate?`: `string` — The book closing date
+- `closingDate?`: `string` — The book closing date, in ISO format yyyy-MM-dd. Transactions on or before this date are closed for the period
 - `collection?`: `bkper.Collection`
 - `createdAt?`: `string` — The creation timestamp, in milliseconds
 - `datePattern?`: `string` — The date pattern of the Book. Example: dd/MM/yyyy
 - `decimalSeparator?`: `"DOT" | "COMMA"` — The decimal separator of the Book
-- `fractionDigits?`: `number` — The number of fraction digits (decimal places) of the Book
+- `fractionDigits?`: `number` — The number of fraction digits (decimal places) of the Book. E.g. 2 for ####.##, 4 for ####.####
 - `groups?`: `bkper.Group[]` — The book account Groups
 - `id?`: `string` — The unique id that identifies the Book in the system. Found at bookId url param
-- `lastUpdateMs?`: `string` — The last update date of the Book, in in milliseconds
-- `lockDate?`: `string` — The book lock date
+- `lastUpdateMs?`: `string` — The last update date of the Book, in milliseconds
+- `lockDate?`: `string` — The book lock date, in ISO format yyyy-MM-dd. Transactions on or before this date are locked
+- `logoUrl?`: `string` — The logo URL of the book owner's custom domain
 - `name?`: `string` — The name of the Book
 - `ownerName?`: `string` — The Book owner username
 - `pageSize?`: `number` — The transactions pagination page size
@@ -214,7 +215,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `periodStartMonth?`: `"JANUARY" | "FEBRUARY" | "MARCH" | "APRIL" | "MAY" | "JUNE" | "JULY" | "AUGUST" | "SEPTEMBER" | "OCTOBER" | "NOVEMBER" | "DECEMBER"` — The start month when YEAR period set
 - `permission?`: `"OWNER" | "EDITOR" | "POSTER" | "RECORDER" | "VIEWER" | "NONE"` — The Permission the current user has in the Book
 - `properties?`: `{ [name: string]: string }` — The key/value custom properties of the Book
-- `timeZone?`: `string` — The time zone of the Book
+- `timeZone?`: `string` — The time zone of the Book, in IANA format. E.g. America/New_York, Europe/London
 - `timeZoneOffset?`: `number` — The time zone offset of the Book, in minutes
 - `totalTransactions?`: `number` — The total transactions posted
 - `totalTransactionsCurrentMonth?`: `number` — The total transactions posted on current month
@@ -264,7 +265,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `id?`: `string` — The unique id of the Collection
 - `name?`: `string` — The name of the Collection
 - `ownerUsername?`: `string` — The username of the Collection owner
-- `permission?`: `"OWNER" | "EDITOR" | "POSTER" | "RECORDER" | "VIEWER" | "NONE"`
+- `permission?`: `"OWNER" | "EDITOR" | "POSTER" | "RECORDER" | "VIEWER" | "NONE"` — The permission the current user has in the Collection. E.g. OWNER, EDITOR, NONE
 - `updatedAt?`: `string` — The last update timestamp, in milliseconds
 
 ### CollectionList
@@ -333,7 +334,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 
 **Properties:**
 
-- `object?`: `bkper.Any`
+- `object?`: `unknown`
 - `previousAttributes?`: `{ [name: string]: string }` — The object previous attributes when updated
 
 ### EventList
@@ -364,19 +365,19 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 
 - `agentId?`: `string` — The id of agent that created the resource
 - `createdAt?`: `string` — The creation timestamp, in milliseconds
-- `credit?`: `boolean` — Tell if the group is credit
-- `hasAccounts?`: `boolean` — Tell if the group is has any accounts
-- `hasGroups?`: `boolean` — Tell if the group is has any children groups
-- `hidden?`: `boolean` — Tell if the group is hidden on transactions main menu
+- `credit?`: `boolean` — Whether the group has credit nature
+- `hasAccounts?`: `boolean` — Whether the group has any accounts
+- `hasGroups?`: `boolean` — Whether the group has any children groups
+- `hidden?`: `boolean` — Whether the group is hidden on the transactions main menu
 - `id?`: `string` — The unique id that identifies the Group in the Book
-- `locked?`: `boolean` — Tell if the group is locked by the Book owner
-- `mixed?`: `boolean` — Tell if has mixed type of accounts
+- `locked?`: `boolean` — Whether the group is locked by the Book owner
+- `mixed?`: `boolean` — Whether the group has mixed types of accounts
 - `name?`: `string` — The name of the Group
 - `normalizedName?`: `string` — The name of the Group, lowercase, without spaces or special characters
 - `parent?`: `bkper.Group`
-- `permanent?`: `boolean` — Tell if the group is permanent
+- `permanent?`: `boolean` — Whether the group is permanent
 - `properties?`: `{ [name: string]: string }` — The key/value custom properties of the Group
-- `type?`: `"ASSET" | "LIABILITY" | "INCOMING" | "OUTGOING"`
+- `type?`: `"ASSET" | "LIABILITY" | "INCOMING" | "OUTGOING"` — The type of the accounts in the group. E.g. ASSET, LIABILITY, INCOMING, OUTGOING
 - `updatedAt?`: `string` — The last update timestamp, in milliseconds
 
 ### GroupBalances
@@ -475,7 +476,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `agentLogoDark?`: `string` — The logo in dark mode, of the agent that created the transaction
 - `agentName?`: `string` — The name of the agent that created the transaction
 - `amount?`: `string` — The amount on format ####.##
-- `checked?`: `boolean` — Tell if the transaction is a checked
+- `checked?`: `boolean` — Whether the transaction is checked
 - `createdAt?`: `string` — The creation timestamp, in milliseconds
 - `createdBy?`: `string` — The actor username that created the transaction
 - `creditAccount?`: `bkper.Account`
@@ -484,14 +485,14 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `dateValue?`: `number` — The date number representation on format YYYYMMDD
 - `debitAccount?`: `bkper.Account`
 - `description?`: `string` — The transaction description
-- `draft?`: `boolean` — Tell if its a draft transaction
+- `draft?`: `boolean` — Whether the transaction is a draft
 - `files?`: `bkper.File[]` — The files attached to the transaction
 - `id?`: `string` — The unique id that identifies the transaction in the book
-- `posted?`: `boolean` — Tell if the transaction is already posted on accounts, otherwise is a draft
+- `posted?`: `boolean` — Whether the transaction is already posted on accounts, otherwise is a draft
 - `properties?`: `{ [name: string]: string }` — The key/value custom properties of the Transaction
 - `remoteIds?`: `string[]` — The transaction remote ids, to avoid duplication
 - `tags?`: `string[]` — The transaction #hashtags
-- `trashed?`: `boolean` — Tell if transaction is trashed
+- `trashed?`: `boolean` — Whether the transaction is trashed
 - `updatedAt?`: `string` — The last update timestamp, in milliseconds
 - `urls?`: `string[]` — The transaction urls
 
