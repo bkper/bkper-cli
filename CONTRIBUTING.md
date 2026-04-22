@@ -87,7 +87,7 @@ git push origin main --follow-tags
 ```
 
 GitHub Actions publishes only from version tags matching `v*.*.*`.
-Dependabot PRs stay standard dependency PRs; Pi bumps may be auto-merged if checks pass.
+Dependabot PRs stay standard dependency PRs.
 
 ## CI expectations
 

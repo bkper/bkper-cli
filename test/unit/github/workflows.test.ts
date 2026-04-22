@@ -24,14 +24,10 @@ describe('github workflows', function () {
         expect(fs.existsSync(path.join(workflowsDir, 'release-pr-version.yml'))).to.equal(false);
     });
 
-    it('should keep dependabot pi PRs as standard dependency updates', function () {
-        const content = readWorkflow('dependabot-automerge-pi-patch.yml');
-
-        expect(content).to.include('@mariozechner/pi-coding-agent');
-        expect(content).to.include('Enable auto-merge');
-        expect(content).to.not.include('Apply patch release label');
-        expect(content).to.not.include('--add-label');
-        expect(content).to.not.include('npm pkg set version=');
+    it('should not keep a dedicated dependabot auto-merge workflow', function () {
+        expect(fs.existsSync(path.join(workflowsDir, 'dependabot-automerge-pi-patch.yml'))).to.equal(
+            false
+        );
     });
 
     it('should publish only from version tags', function () {
