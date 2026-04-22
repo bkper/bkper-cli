@@ -34,7 +34,7 @@ bkper app deploy --events
 bkper app status
 ```
 
-> **Note:** `bkper app dev` runs the worker runtime only — Miniflare, file watching, and the Cloudflare tunnel. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`.
+> **Note:** `bkper app dev` runs the worker runtime only — Miniflare, file watching, and the Cloudflare tunnel. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
 
 ---
 

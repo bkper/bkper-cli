@@ -94,7 +94,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         process.cwd()
     );
 
-    const preflight = preflightDependencies(process.cwd());
+    const preflight = preflightDependencies(process.cwd(), {
+        requireMiniflare: true,
+    });
     if (!preflight.ok) {
         console.error(preflight.message);
         process.exit(1);
