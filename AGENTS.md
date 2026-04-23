@@ -171,7 +171,11 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 -   Pi update PRs stay standard dependency PRs.
 -   Do not add release labels or version bumps on Dependabot PR branches.
 
-### Pre-merge quality gate
+### Agent docs maintenance
+
+`docs/index.md` is the routing index for the Bkper agent system prompt. The system prompt points to it for task routing — it is the map that tells the agent which doc to read for which intent.
+
+When adding, renaming, or significantly restructuring docs in `docs/`, update `docs/index.md` in the same commit. Keep index entries intent-descriptive and concise.
 
 Before requesting merge, always run:
 

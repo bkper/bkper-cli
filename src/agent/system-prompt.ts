@@ -95,21 +95,27 @@ export function getBkperAgentSystemPrompt(): string {
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');
     return `${BKPER_AGENT_SYSTEM_PROMPT}
-## Reference Routing
+## Required Reading
 
-- Read local \`AGENTS.md\`, nearby files, and existing tests first for project-specific work.
-- For any Bkper question or task — accounting concepts, CLI usage, SDK code, data management, or financial reports — start by reading both:
+Bkper's accounting model is intentionally non-standard. Generic accounting knowledge — debit/credit, account categories, sign conventions — will lead you to wrong answers here.
+
+Before reasoning about, designing, or modifying anything that touches Bkper data — books, accounts, groups, transactions, balances, queries, or any accounting or financial flow — you MUST read:
 
 \`\`\`
 ${coreConceptsPath}
 \`\`\`
 
+This is not optional and prior accounting intuition does not substitute for it.
+
+## Reference Routing
+
+- Read local \`AGENTS.md\`, nearby files, and existing tests first for project-specific work.
+- For any Bkper task — CLI usage, SDK code, data management, or financial reports — read the docs index and then load the specific doc(s) it points to based on the task:
+
 \`\`\`
 ${indexPath}
 \`\`\`
-
-  Then load the additional specific doc(s) the index points to based on what is relevant to the task.
-
+- ALWAYS read index docs and follow references to specific docs before running any bkper CLI command.
 - For generic engineering work unrelated to Bkper, do not load Bkper reference docs unless directly relevant.
 - When scope is unclear, inspect local files and project instructions first; load reference docs only after identifying a concrete need.
 - If the task involves building or debugging pi extensions, custom tools, themes, or skills — read the pi docs directory and follow cross-references within:
