@@ -1,10 +1,12 @@
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import { expect } from '../helpers/test-setup.js';
+import path from 'node:path';
 import {
     buildCoreConceptsReadInstruction,
     detectCoreConceptsPreloadLevel,
     getCoreConceptsDocPath,
     registerBkperCoreConceptsPreloadExtension,
+    resolveBkperDocPathFromModuleDir,
     type CoreConceptsPreloadResult,
 } from '../../../src/agent/core-concepts-preload.js';
 
@@ -96,6 +98,24 @@ describe('core concepts preload', function () {
                 prompt: 'review the README for clarity',
             })
         ).to.equal('none');
+    });
+
+    it('should resolve docs from source module directories', function () {
+        const docPath = resolveBkperDocPathFromModuleDir(
+            path.resolve('/workspace/bkper-cli', 'src', 'agent'),
+            'core-concepts.md'
+        );
+
+        expect(docPath).to.equal(path.resolve('/workspace/bkper-cli', 'docs', 'core-concepts.md'));
+    });
+
+    it('should resolve docs from built module directories', function () {
+        const docPath = resolveBkperDocPathFromModuleDir(
+            path.resolve('/workspace/bkper-cli', 'lib', 'agent'),
+            'core-concepts.md'
+        );
+
+        expect(docPath).to.equal(path.resolve('/workspace/bkper-cli', 'lib', 'docs', 'core-concepts.md'));
     });
 
     it('should build an explicit read-first instruction with the canonical doc path', function () {

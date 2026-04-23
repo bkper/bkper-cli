@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
@@ -35,9 +35,24 @@ type ToolCallEventLike = {
     input: Record<string, unknown>;
 };
 
+export function resolveBkperDocPathFromModuleDir(moduleDir: string, filename: string): string {
+    const candidates = [
+        path.resolve(moduleDir, '..', 'docs', filename),
+        path.resolve(moduleDir, '..', '..', 'docs', filename),
+    ];
+
+    for (const candidate of candidates) {
+        if (existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    return candidates[0];
+}
+
 function resolveDocPath(filename: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(thisDir, '..', '..', 'docs', filename);
+    return resolveBkperDocPathFromModuleDir(thisDir, filename);
 }
 
 function normalizePath(filePath: string): string {
