@@ -377,6 +377,8 @@ function buildStartupHeaderLines(
         formatStartupHint(theme, keyText('app.clear'), 'to clear'),
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
         formatStartupHint(theme, '/tree', 'for session tree'),
+        formatStartupHint(theme, '/fork', 'to branch from a message'),
+        formatStartupHint(theme, '/clone', 'to duplicate session'),
         formatStartupHint(theme, '/', 'for commands'),
         formatStartupHint(theme, '!', 'to run bash'),
     ];

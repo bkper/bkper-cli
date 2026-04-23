@@ -127,6 +127,10 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
+        expect(headerText).to.include('/fork');
+        expect(headerText).to.include('to branch from a message');
+        expect(headerText).to.include('/clone');
+        expect(headerText).to.include('to duplicate session');
         expect(headerText).to.not.include('Pi can explain its own features and look up its docs.');
         expect(notify.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
@@ -192,6 +196,10 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
+        expect(headerText).to.include('/fork');
+        expect(headerText).to.include('to branch from a message');
+        expect(headerText).to.include('/clone');
+        expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('No model provider configured. Use /login or add an API key.');
         expect(notify.called).to.be.false;
     });
