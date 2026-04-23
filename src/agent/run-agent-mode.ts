@@ -13,6 +13,7 @@ import {
     type Theme,
 } from '@mariozechner/pi-coding-agent';
 import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
+import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
@@ -452,6 +453,9 @@ function createDefaultDependencies(): AgentModeDependencies {
                     resourceLoaderOptions: {
                         systemPromptOverride: () => getBkperAgentSystemPrompt(),
                         extensionFactories: [
+                            (pi: ExtensionAPI) => {
+                                registerBkperCoreConceptsPreloadExtension(pi);
+                            },
                             (pi: ExtensionAPI) => {
                                 registerBkperAgentStartupExtension(pi, runStartupMaintenance, settingsManager);
                             },
