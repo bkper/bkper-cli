@@ -20,10 +20,10 @@ const SYSTEM_PROMPT_PATH = path.join(
 );
 const SKILLS_REPO = path.resolve(CLI_ROOT, '..', 'skills');
 const SKILLS_DIR = path.join(SKILLS_REPO, 'skills');
-const SKILL_DIR = path.join(SKILLS_DIR, 'bkper-dev');
+const SKILL_DIR = path.join(SKILLS_DIR, 'bkper');
 const REFERENCES_DIR = path.join(SKILL_DIR, 'references');
 
-const SKILL_NAME = 'bkper-dev';
+const SKILL_NAME = 'bkper';
 const SKILL_DESCRIPTION =
     'Comprehensive Bkper development skill covering CLI usage, SDK code (bkper-js), data management, financial reporting, app development, and support. Use for any Bkper-related task including books, accounts, transactions, groups, balances, queries, apps, automations, or integrations.';
 
@@ -118,7 +118,7 @@ async function removeOldSkills(): Promise<string[]> {
         if (!entry.isDirectory()) {
             continue;
         }
-        if (entry.name === 'bkper-dev') {
+        if (entry.name === 'bkper') {
             continue;
         }
         if (!entry.name.startsWith('bkper-')) {

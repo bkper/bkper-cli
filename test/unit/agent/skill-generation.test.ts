@@ -4,7 +4,7 @@ import path from 'node:path';
 import { generateSkill } from '../../../scripts/generate-skill.js';
 
 describe('skill generation', function () {
-    const skillDir = path.resolve('..', 'skills', 'skills', 'bkper-dev');
+    const skillDir = path.resolve('..', 'skills', 'skills', 'bkper');
     const skillPath = path.join(skillDir, 'SKILL.md');
     const referencesDir = path.join(skillDir, 'references');
 
@@ -18,7 +18,7 @@ describe('skill generation', function () {
         const content = await readFile(skillPath, 'utf8');
 
         expect(content).to.match(/^---\n/);
-        expect(content).to.include('name: bkper-dev');
+        expect(content).to.include('name: bkper');
         expect(content).to.include('description:');
     });
 
@@ -59,6 +59,6 @@ describe('skill generation', function () {
             .filter(e => e.isDirectory())
             .map(e => e.name);
 
-        expect(skillDirs).to.deep.equal(['bkper-dev']);
+        expect(skillDirs).to.deep.equal(['bkper']);
     });
 });
