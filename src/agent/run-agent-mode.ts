@@ -92,7 +92,7 @@ export function collectSettingsDiagnostics(
     settingsManager: Pick<SettingsManagerLike, 'drainErrors'>,
     context: string
 ): AgentSessionRuntimeDiagnostic[] {
-    return settingsManager.drainErrors().map(({scope, error}) => ({
+    return settingsManager.drainErrors().map(({ scope, error }) => ({
         type: 'warning',
         message: `(${context}, ${scope} settings) ${error.message}`,
     }));
@@ -176,7 +176,7 @@ function resolvePatternMatches<TModel extends ModelLike>(
 } {
     const exactMatches = findExactModelMatch(rawPattern, availableModels);
     if (exactMatches.length > 0) {
-        return {matches: exactMatches};
+        return { matches: exactMatches };
     }
 
     let pattern = rawPattern.trim();
@@ -239,7 +239,7 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
     const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
 
     for (const pattern of enabledModels) {
-        const {matches, thinkingLevel} = resolvePatternMatches(pattern, availableModels);
+        const { matches, thinkingLevel } = resolvePatternMatches(pattern, availableModels);
 
         if (matches.length === 0) {
             diagnostics.push({
@@ -294,8 +294,8 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
             diagnostic.type === 'error'
                 ? 'Error: '
                 : diagnostic.type === 'warning'
-                  ? 'Warning: '
-                  : '';
+                ? 'Warning: '
+                : '';
         console.error(`${prefix}${diagnostic.message}`);
     }
 }
@@ -377,10 +377,11 @@ function buildStartupHeaderLines(
         formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
         formatStartupHint(theme, keyText('app.clear'), 'to clear'),
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
-        formatStartupHint(theme, '/tree', 'for session tree'),
-        formatStartupHint(theme, '/fork', 'to branch from a message'),
-        formatStartupHint(theme, '/clone', 'to duplicate session'),
         formatStartupHint(theme, '/', 'for commands'),
+        formatStartupHint(theme, '/new', 'to start new session'),
+        formatStartupHint(theme, '/clone', 'to duplicate session'),
+        formatStartupHint(theme, '/fork', 'to branch from a message'),
+        formatStartupHint(theme, '/tree', 'for session tree'),
         formatStartupHint(theme, '!', 'to run bash'),
     ];
 
@@ -457,7 +458,11 @@ function createDefaultDependencies(): AgentModeDependencies {
                                 registerBkperCoreConceptsPreloadExtension(pi);
                             },
                             (pi: ExtensionAPI) => {
-                                registerBkperAgentStartupExtension(pi, runStartupMaintenance, settingsManager);
+                                registerBkperAgentStartupExtension(
+                                    pi,
+                                    runStartupMaintenance,
+                                    settingsManager
+                                );
                             },
                         ],
                     },
@@ -514,7 +519,7 @@ export async function runAgentMode(
 ): Promise<void> {
     process.env.PI_SKIP_VERSION_CHECK ??= '1';
 
-    const {runtime, modelFallbackMessage, diagnostics = []} = await dependencies.createRuntime();
+    const { runtime, modelFallbackMessage, diagnostics = [] } = await dependencies.createRuntime();
     reportDiagnostics(diagnostics);
 
     const mode = dependencies.createInteractiveMode(runtime, modelFallbackMessage);
