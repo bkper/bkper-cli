@@ -74,6 +74,13 @@ export interface RestoredPersistedSessionOptions<TModel extends ModelLike = Mode
     diagnostics: AgentSessionRuntimeDiagnostic[];
 }
 
+export class BkperInteractiveMode extends InteractiveMode {
+    async init(): Promise<void> {
+        (this as unknown as Record<string, unknown>).getChangelogForDisplay = () => undefined;
+        await super.init();
+    }
+}
+
 export interface AgentModeDependencies {
     createRuntime: () => Promise<{
         runtime: InteractiveRuntimeHost;
@@ -508,7 +515,7 @@ function createDefaultDependencies(): AgentModeDependencies {
             };
         },
         createInteractiveMode: (runtime, modelFallbackMessage) =>
-            new InteractiveMode(runtime, {
+            new BkperInteractiveMode(runtime, {
                 modelFallbackMessage,
             }),
     };

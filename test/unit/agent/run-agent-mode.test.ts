@@ -3,6 +3,7 @@ import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
 import sinon from 'sinon';
 import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
 import {
+    BkperInteractiveMode,
     createStartupSessionManager,
     registerBkperAgentStartupExtension,
     restorePersistedSessionOptions,
@@ -397,5 +398,18 @@ describe('runAgentMode', function () {
                 process.env.PI_SKIP_VERSION_CHECK = previous;
             }
         }
+    });
+
+    it('should suppress the pi changelog banner in BkperInteractiveMode', async function () {
+        const mode: Record<string, unknown> = {};
+
+        try {
+            await BkperInteractiveMode.prototype.init.call(mode);
+        } catch {
+            // expected — mode lacks InteractiveMode internals
+        }
+
+        expect(typeof mode.getChangelogForDisplay).to.equal('function');
+        expect((mode.getChangelogForDisplay as () => unknown)()).to.equal(undefined);
     });
 });
