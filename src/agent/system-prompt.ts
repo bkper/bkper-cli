@@ -29,7 +29,10 @@ function normalizePromptSnippet(text: string | undefined): string | undefined {
     if (!text) {
         return undefined;
     }
-    const oneLine = text.replace(/[\r\n]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const oneLine = text
+        .replace(/[\r\n]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
     return oneLine.length > 0 ? oneLine : undefined;
 }
 
@@ -76,7 +79,9 @@ function buildToolPromptSection(): string {
         guidelineLines.push(`- ${normalized}`);
     };
 
-    addGuideline('Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.');
+    addGuideline(
+        'Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.'
+    );
     for (const definition of toolDefinitions) {
         for (const guideline of normalizePromptGuidelines(definition.promptGuidelines)) {
             addGuideline(guideline);
@@ -85,7 +90,9 @@ function buildToolPromptSection(): string {
     addGuideline('Do not claim builds, tests, or command results unless you actually ran them.');
 
     const toolsList = toolLines.length > 0 ? toolLines : '(none)';
-    return `Available tools:\n${toolsList}\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n\nGuidelines:\n${guidelineLines.join('\n')}`;
+    return `Available tools:\n${toolsList}\n\nIn addition to the tools above, you may have access to other custom tools depending on the project.\n\nGuidelines:\n${guidelineLines.join(
+        '\n'
+    )}`;
 }
 
 export function getBkperAgentSystemPrompt(): string {
@@ -157,5 +164,4 @@ ${buildToolPromptSection()}
 - Extend meaning with properties before adding structural complexity.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
 - Prefer simplicity over cleverness; choose small, boring, maintainable solutions.
-- When implementing authentication for any Bkper app, script, or integration, use the documented SDK patterns (@bkper/web-auth, getOAuthToken(), or bkper-oauth-token headers). Do not implement custom OAuth flows, do not reverse-engineer SDK internals, and do not use the REST API directly when an SDK pattern exists.
 `;
