@@ -7,6 +7,58 @@ Build, deploy, and manage Bkper apps using the `bkper` CLI.
 
 ---
 
+## Verification Workflow
+
+When scaffolding, developing, or deploying an app, verify each step before proceeding. This prevents broken deployments and silent failures.
+
+### 1. Init
+```bash
+bkper app init my-app
+```
+Verify:
+- `packages/web/client/`, `packages/web/server/`, `packages/events/`, and `packages/shared/` exist
+- `bkper.yaml` has `id`, `name`, `description`, and `developers`
+- `package.json` scripts include `dev` and `build`
+
+### 2. Develop
+```bash
+npm run dev
+```
+Verify:
+- Web server responds: `curl http://localhost:8787` (or the port you configured)
+- Client dev server is reachable if running separately
+- Events tunnel URL is printed in terminal and registered in Bkper (check `webhookUrlDev` in app settings)
+- If any handler fails to start, fix before writing code
+
+### 3. Build
+```bash
+npm run build
+```
+Verify:
+- `dist/web/server/` contains the web worker bundle
+- `dist/events/` contains the events handler bundle
+- No build errors in terminal output
+
+### 4. Sync & Deploy
+```bash
+bkper app sync && bkper app deploy
+```
+Verify:
+- `bkper app status` shows the deployed version
+- URLs in `bkper.yaml` match the deployed domain (`https://{appId}.bkper.app`)
+
+### 5. Validate
+```bash
+bkper app install <appId> -b <bookId>
+```
+Verify:
+- Menu appears in the book's "More" menu (if configured)
+- Trigger a subscribed event in the book
+- Check the Bkper activity stream for the handler response
+- If the handler writes back to the book, confirm loop prevention is in place (check `event.agent.id`)
+
+---
+
 ## Development Workflow
 
 ```bash
@@ -54,13 +106,13 @@ bkper app uninstall my-app -b abc123
 
 ```bash
 # Store a secret (prompts for value)
-bkper app secrets put API_KEY
+bkper app secrets put EXTERNAL_SERVICE_TOKEN
 
 # List all secrets
 bkper app secrets list
 
 # Delete a secret
-bkper app secrets delete API_KEY
+bkper app secrets delete EXTERNAL_SERVICE_TOKEN
 ```
 
 ---

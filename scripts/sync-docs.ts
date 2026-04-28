@@ -41,6 +41,17 @@ const DOCS: readonly DocSpec[] = [
             '### Transaction',
         ],
     },
+    {
+        url: 'https://bkper.com/docs/build/apps/llms-full.txt',
+        filename: 'app-building.md',
+        requiredHeadings: [
+            '# App Architecture',
+            '# App Configuration',
+            '# Development Experience',
+            '# Event Handlers',
+            '# Building & Deploying',
+        ],
+    },
 ];
 
 function resolveOutputDir(): string {
