@@ -74,4 +74,124 @@ describe('CLI - agent command', function () {
         expect(runPi.calledOnce).to.be.true;
         expect(runPi.firstCall.args[0]).to.deep.equal(['--system-prompt=custom prompt']);
     });
+
+    it('should route --continue to the embedded interactive mode wrapper', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--continue'], { runPi, runInteractiveMode });
+
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            continueSession: true,
+        });
+    });
+
+    it('should route -c to the embedded interactive mode wrapper', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['-c'], { runPi, runInteractiveMode });
+
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            continueSession: true,
+        });
+    });
+
+    it('should route --no-session to the embedded interactive mode wrapper', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--no-session'], { runPi, runInteractiveMode });
+
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            noSession: true,
+        });
+    });
+
+    it('should forward --resume to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--resume'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
+            '--resume',
+        ]);
+    });
+
+    it('should forward --session to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--session', 'abc123'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
+            '--session',
+            'abc123',
+        ]);
+    });
+
+    it('should forward --mode rpc to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--mode', 'rpc'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
+
+    it('should forward --mode json to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--mode', 'json'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
+
+    it('should forward --print to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--print', 'hello'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
+
+    it('should forward --export to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--export', 'session.html'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
+
+    it('should forward --list-models to pi', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--list-models'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
 });

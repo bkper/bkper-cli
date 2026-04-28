@@ -386,7 +386,7 @@ function buildStartupHeaderLines(
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
         formatStartupHint(theme, '/', 'for commands'),
         formatStartupHint(theme, '/new', 'to start new session'),
-        formatStartupHint(theme, '/resume', 'to resume last session'),
+        formatStartupHint(theme, '/resume', 'to resume a session'),
         formatStartupHint(theme, '/clone', 'to duplicate session'),
         formatStartupHint(theme, '/fork', 'to branch from a message'),
         formatStartupHint(theme, '/tree', 'for session tree'),
@@ -437,7 +437,14 @@ export function registerBkperAgentStartupExtension(
     });
 }
 
-function createDefaultDependencies(): AgentModeDependencies {
+export interface SessionOptions {
+    continueSession?: boolean;
+    noSession?: boolean;
+}
+
+export function createAgentModeDependencies(
+    sessionOptions: SessionOptions = {}
+): AgentModeDependencies {
     return {
         createRuntime: async () => {
             const cwd = process.cwd();
@@ -499,14 +506,21 @@ function createDefaultDependencies(): AgentModeDependencies {
                 };
             };
 
+            const sessionDir = startupSettingsManager.getSessionDir();
+            const sessionManager = sessionOptions.continueSession
+                ? SessionManager.continueRecent(cwd, sessionDir)
+                : sessionOptions.noSession
+                ? SessionManager.inMemory()
+                : createStartupSessionManager(
+                      cwd,
+                      startupSettingsManager,
+                      (sessionCwd, sessionDir) => SessionManager.create(sessionCwd, sessionDir)
+                  );
+
             const runtime = await createAgentSessionRuntime(createRuntime, {
                 cwd,
                 agentDir,
-                sessionManager: createStartupSessionManager(
-                    cwd,
-                    startupSettingsManager,
-                    (sessionCwd, sessionDir) => SessionManager.create(sessionCwd, sessionDir)
-                ),
+                sessionManager,
             });
 
             return {
@@ -523,7 +537,7 @@ function createDefaultDependencies(): AgentModeDependencies {
 }
 
 export async function runAgentMode(
-    dependencies: AgentModeDependencies = createDefaultDependencies()
+    dependencies: AgentModeDependencies = createAgentModeDependencies()
 ): Promise<void> {
     process.env.PI_SKIP_VERSION_CHECK ??= '1';
 
