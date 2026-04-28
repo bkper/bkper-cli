@@ -128,6 +128,8 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
+        expect(headerText).to.include('/resume');
+        expect(headerText).to.include('to resume a session');
         expect(headerText).to.include('/fork');
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
@@ -197,6 +199,8 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
+        expect(headerText).to.include('/resume');
+        expect(headerText).to.include('to resume a session');
         expect(headerText).to.include('/fork');
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
