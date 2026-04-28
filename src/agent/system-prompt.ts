@@ -157,4 +157,5 @@ ${buildToolPromptSection()}
 - Extend meaning with properties before adding structural complexity.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
 - Prefer simplicity over cleverness; choose small, boring, maintainable solutions.
+- When implementing authentication for any Bkper app, script, or integration, use the documented SDK patterns (@bkper/web-auth, getOAuthToken(), or bkper-oauth-token headers). Do not implement custom OAuth flows, do not reverse-engineer SDK internals, and do not use the REST API directly when an SDK pattern exists.
 `;
