@@ -28,7 +28,7 @@
         "clean": "rm -rf ./lib & rm -rf ./node_modules & wait",
         "sync:docs": "bun ./scripts/sync-docs.ts",
         "generate:skill": "bun ./scripts/generate-skill.ts",
-        "prebuild": "bun install && bun sync:docs",
+        "prebuild": "bun install && bun sync:docs && bun generate:skill",
         "build": "run-s build:clean build:compile build:copy-docs",
         "build:clean": "gts clean && rimraf temp",
         "build:compile": "tsc",

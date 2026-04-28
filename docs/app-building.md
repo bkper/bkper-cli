@@ -86,13 +86,35 @@ The packages are connected via [Bun workspaces](https://bun.sh/docs/install/work
 
 ## Web client
 
-The client package builds a browser UI with [Lit](https://lit.dev/) and [@bkper/web-design](https://www.npmjs.com/package/@bkper/web-design) for consistent Bkper styling. Authentication uses [@bkper/web-auth](https://www.npmjs.com/package/@bkper/web-auth).
+The client package builds a browser UI with [Lit](https://lit.dev/) and [@bkper/web-design](https://www.npmjs.com/package/@bkper/web-design) for consistent Bkper styling.
 
 - Built with [Vite](https://vitejs.dev/) — configured in the project's `vite.config.ts` for fast builds and HMR during development
 - Static assets served by the web server handler
-- Communicates with Bkper via `bkper-js` (authenticated with the web-auth SDK)
+- Communicates with Bkper via `bkper-js`
 
 This is where your app's UI lives — book pickers, account lists, reports, forms.
+
+### Web client authentication
+
+The client authenticates users via the [`@bkper/web-auth`](https://www.npmjs.com/package/@bkper/web-auth) SDK. OAuth is pre-configured on the platform — no client IDs, redirect URIs, or consent screens to set up.
+
+```ts
+import { Bkper } from 'bkper-js';
+import { BkperAuth } from '@bkper/web-auth';
+
+const auth = new BkperAuth({
+    baseUrl: isLocalDev ? window.location.origin : undefined,
+    onLoginSuccess: () => initializeApp(),
+    onLoginRequired: () => showLoginButton(),
+});
+await auth.init();
+
+const bkper = new Bkper({
+    oauthTokenProvider: async () => auth.getAccessToken(),
+});
+```
+
+This is the canonical pattern. Do not implement custom OAuth flows, redirect handling, or token refresh — the SDK and platform handle everything. See the [@bkper/web-auth API Reference](https://bkper.com/docs/api/bkper-web-auth.md) for the full SDK documentation.
 
 ## Web server
 
@@ -118,7 +140,7 @@ export default app;
 
 ## Events handler
 
-The events package receives webhook calls from Bkper when subscribed [events](https://bkper.com/docs/build/concepts/events.md) occur. It's a separate Hono app that processes events and returns responses.
+The events package receives webhook calls from Bkper when subscribed [events](https://bkper.com/docs/build/apps/event-handlers.md) occur. It's a separate Hono app that processes events and returns responses.
 
 ```ts
 import { Hono } from 'hono';
@@ -189,6 +211,87 @@ Not every app needs a UI, API, and event handler:
 - **Full app** — All three packages. Interactive UI with backend logic and event-driven automation.
 
 The template includes all three by default. Remove what you don't need.
+
+## Simple App Patterns
+
+These are the minimal, canonical patterns for common app tasks. Use them as starting points and resist adding complexity unless the user explicitly asks for it.
+
+### Client-only UI with authentication
+
+The smallest useful app needs only the `packages/web/client/` directory. No server routes, no event handlers, no custom auth logic.
+
+```ts
+// packages/web/client/src/app.ts
+import { Bkper } from 'bkper-js';
+import { BkperAuth } from '@bkper/web-auth';
+
+const auth = new BkperAuth({
+    baseUrl: window.location.origin.includes('localhost') ? undefined : window.location.origin,
+    onLoginSuccess: () => render(),
+    onLoginRequired: () => renderLogin(),
+});
+await auth.init();
+
+const bkper = new Bkper({
+    oauthTokenProvider: async () => auth.getAccessToken(),
+});
+
+async function render() {
+    const books = await bkper.getBooks();
+    // render books
+}
+```
+
+Key points:
+- `BkperAuth` handles OAuth, token refresh, and session management internally.
+- `auth.getAccessToken()` returns a valid token synchronously after `init()` resolves.
+- Do not add server-side `/auth/*` routes. Do not implement `refresh_token` logic yourself.
+
+### Fetch and display data
+
+```ts
+const book = await bkper.getBook(bookId);
+const accounts = await book.getAccounts();
+// render accounts
+```
+
+Use `bkper-js` for all API calls. Do not call the REST API directly when `bkper-js` provides the same method.
+
+## Library Usage Reference
+
+| Task | Use | Do not use |
+|------|-----|------------|
+| Client authentication | `@bkper/web-auth` (`BkperAuth`, `getAccessToken`) | Custom OAuth flows, manual `fetch('/auth/refresh')`, `google-auth-library` in the browser |
+| API calls from client | `bkper-js` (`Bkper`, `Book`, `Account`, `Transaction`) | Direct `fetch()` to REST endpoints |
+| API calls from event handler | `bkper-js` with `oauthTokenProvider` from `bkper-oauth-token` header | Hard-coding API keys, calling REST directly |
+| Local development server | `npm run dev` (template script) | Manual `miniflare` + `cloudflared` invocations |
+| Event handler routing | `switch (event.type)` in `packages/events/src/index.ts` | Middleware frameworks, external webhook routers |
+| UI components | `@bkper/web-design` + Lit | Heavy UI frameworks unless the user explicitly requests them |
+
+## Common Pitfalls
+
+Avoid these patterns even if they seem necessary. The platform or SDK already solves the problem.
+
+1. **Implementing custom OAuth on the server**
+   - `@bkper/web-auth` manages the full OAuth lifecycle on the client. The platform handles tokens. Adding a server-side auth layer is unnecessary and will break.
+
+2. **Adding `/api/auth/refresh` or similar routes**
+   - Token refresh is internal to `@bkper/web-auth`. Exposing it via Hono routes creates security surface area and duplicates platform functionality.
+
+3. **Modifying `packages/web/server/` for a simple UI task**
+   - If the user only asked for a client-side feature, do not touch the server package. The Vite dev server proxies `/api` to the Miniflare worker automatically; you do not need to add routes unless the user explicitly asks for custom backend logic.
+
+4. **Installing additional auth or HTTP libraries**
+   - `bkper-js` and `@bkper/web-auth` are the only packages you need for Bkper API access and authentication. Adding `axios`, `google-auth-library`, or similar is almost always wrong.
+
+5. **Creating event handlers when the user asked for a UI-only feature**
+   - If the user says "show me a list of books in a popup," that is a client-only task. Do not scaffold `packages/events/` handlers or subscribe to webhooks.
+
+6. **Calling REST endpoints directly when `bkper-js` has the method**
+   - If `bkper-js` exposes `book.getTransactions()`, use it. Do not `fetch('https://api.bkper.com/...')` and parse JSON manually.
+
+7. **Reverse-engineering SDK internals**
+   - Use the public API surface documented in the API reference. Do not read SDK source to find private methods or internal request patterns.
 
 ---
 source: /docs/build/apps/configuration.md
@@ -322,7 +425,7 @@ The following variables can be used in `menuUrl` and `menuUrlDev`:
 | `webhookUrl`    | Production webhook URL for receiving events.                                    |
 | `webhookUrlDev` | Development webhook URL (auto-updated by `bkper app dev`).                      |
 | `apiVersion`    | API version for event payloads (currently `v5`).                                |
-| `events`        | List of [event types](https://bkper.com/docs/build/concepts/events.md#event-types) to subscribe to. |
+| `events`        | List of [event types](https://bkper.com/docs/build/apps/event-handlers.md#event-types) to subscribe to. |
 
 See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for details on handling events.
 
@@ -645,7 +748,29 @@ bkper app dev --sp 8787 --ep 8791
 
 The client dev server is configured in `vite.config.ts` at the project root. This is a standard Vite config — add plugins, adjust settings, or customize the dev server as needed.
 
-The template includes a Bkper auth middleware plugin that handles OAuth token refresh during local development, and an `/api` proxy to the Miniflare worker.
+### Local development authentication
+
+During local development, the Vite dev server runs a Bkper auth middleware plugin (`createBkperAuthMiddleware()` from `bkper/dev`). This plugin:
+
+1. Uses your CLI credentials (from `bkper auth login`) to obtain and refresh OAuth tokens
+2. Injects the token into your client code automatically
+3. Proxies `/api` requests to the Miniflare worker
+
+Before starting development, run:
+
+```bash
+bkper auth login   # one-time setup
+```
+
+Then `npm run dev` handles authentication automatically. The client calls `auth.getAccessToken()` and the middleware ensures the token is valid.
+
+If you see authentication errors in the browser, verify you're logged in:
+
+```bash
+bkper auth token   # should print a token
+```
+
+This is the canonical pattern for local development. Do not manually pass tokens or implement custom auth flows.
 
 ## Local secrets
 
@@ -708,7 +833,7 @@ source: /docs/build/apps/event-handlers.md
 
 # Event Handlers
 
-Event handlers are the code that reacts to [events](https://bkper.com/docs/build/concepts/events.md) in your Bkper Books. When a transaction is checked, an account is created, or any other event occurs, your handler receives it and can take action — calculate taxes, sync data between books, post to external services, and more.
+Event handlers are the code that reacts to events in your Bkper Books. When a transaction is checked, an account is created, or any other event occurs, your handler receives it and can take action — calculate taxes, sync data between books, post to external services, and more.
 
 ![Bkper Event Handler](https://bkper.com/images/bots/bkper-tax-bot/bkper-tax-bot.gif)
 
@@ -792,6 +917,29 @@ function handleEvent(event: bkper.Event) {
 
 This pattern is essential for any handler that writes back to the same book.
 
+## Authentication
+
+When Bkper calls your event handler's webhook URL, it sends two headers on every request:
+
+- `bkper-oauth-token` — The OAuth access token of the user who installed the app. Use this to call the API back on behalf of the user.
+- `bkper-agent-id` — Your app's agent identifier.
+
+Pass these directly to `bkper-js`:
+
+```ts
+const bkper = new Bkper({
+    oauthTokenProvider: async () => c.req.header('bkper-oauth-token'),
+    agentIdProvider: async () => c.req.header('bkper-agent-id'),
+});
+const book = new Book(event.book, bkper.getConfig());
+```
+
+This is the canonical pattern. Do not implement custom authentication for event handlers.
+
+> **Note**
+> Both production (`webhookUrl`) and development (`webhookUrlDev`) endpoints receive OAuth tokens in the `bkper-oauth-token` header. During local development, events are routed through the Cloudflare tunnel started by `bkper app dev`.
+For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, the same headers are sent to your production `webhookUrl`.
+
 ## Event routing pattern
 
 On the Bkper Platform, the `events` package uses [Hono](https://hono.dev) to receive webhook calls. A typical pattern routes events by type:
@@ -821,7 +969,125 @@ app.post('/', async c => {
 });
 ```
 
-For the full event type reference, see [Events](https://bkper.com/docs/build/concepts/events.md).
+## The Event object
+
+The event payload has the following structure:
+
+```ts
+{
+    /** The id of the Book associated to the Event */
+    bookId?: string;
+
+    /** The Book object associated with the Event */
+    book?: {
+        agentId?: string;
+        collection?: Collection;
+        createdAt?: string;
+        datePattern?: string;
+        decimalSeparator?: "DOT" | "COMMA";
+        fractionDigits?: number;
+        id?: string;
+        lastUpdateMs?: string;
+        lockDate?: string;
+        name?: string;
+        ownerName?: string;
+        pageSize?: number;
+        period?: "MONTH" | "QUARTER" | "YEAR";
+        periodStartMonth?: "JANUARY" | "FEBRUARY" | "MARCH" | "APRIL"
+            | "MAY" | "JUNE" | "JULY" | "AUGUST" | "SEPTEMBER"
+            | "OCTOBER" | "NOVEMBER" | "DECEMBER";
+        permission?: "OWNER" | "EDITOR" | "POSTER" | "RECORDER"
+            | "VIEWER" | "NONE";
+        properties?: { [name: string]: string };
+        timeZone?: string;
+        timeZoneOffset?: number;
+    };
+
+    /** The user in charge of the Event */
+    user?: {
+        avatarUrl?: string;
+        name?: string;
+        username?: string;
+    };
+
+    /** The Event agent, such as the App, Bot or Bank institution */
+    agent?: {
+        id?: string;
+        logo?: string;
+        name?: string;
+    };
+
+    /** The creation timestamp, in milliseconds */
+    createdAt?: string;
+
+    /** The event data */
+    data?: {
+        /** The object payload. Depends on the event type. */
+        object?: any;
+        /** The object previous attributes when updated */
+        previousAttributes?: { [name: string]: string };
+    };
+
+    /** The unique id that identifies the Event */
+    id?: string;
+
+    /** The resource associated to the Event */
+    resource?: string;
+
+    /** The type of the Event */
+    type?: EventType;
+}
+```
+
+The event payload is the same structure exposed by the [REST API](https://bkper.com/docs/build/scripts/rest-api.md). If you use TypeScript, add the [`@bkper/bkper-api-types`](https://www.npmjs.com/package/@bkper/bkper-api-types) package to your project for full type definitions.
+
+For update events, `data.previousAttributes` contains the fields that changed and their previous values — useful for computing diffs or reacting only to specific field changes.
+
+## Event types
+
+Declare which events your app handles in `bkper.yaml`:
+
+```yaml
+events:
+    - TRANSACTION_CHECKED
+    - TRANSACTION_POSTED
+    - ACCOUNT_CREATED
+```
+
+The complete current set of event types:
+
+| Event | Description |
+| --- | --- |
+| `FILE_CREATED` | A file was attached to the book. |
+| `FILE_UPDATED` | An attached file was updated. |
+| `TRANSACTION_CREATED` | A draft transaction was created. |
+| `TRANSACTION_UPDATED` | A transaction was updated. |
+| `TRANSACTION_DELETED` | A transaction was deleted. |
+| `TRANSACTION_POSTED` | A draft transaction was posted and now affects balances. |
+| `TRANSACTION_CHECKED` | A posted transaction was checked (reviewed and locked). |
+| `TRANSACTION_UNCHECKED` | A checked transaction was unchecked and becomes editable again. |
+| `TRANSACTION_RESTORED` | A deleted transaction was restored. |
+| `ACCOUNT_CREATED` | An account was created. |
+| `ACCOUNT_UPDATED` | An account was updated. |
+| `ACCOUNT_DELETED` | An account was deleted. |
+| `QUERY_CREATED` | A saved query was created. |
+| `QUERY_UPDATED` | A saved query was updated. |
+| `QUERY_DELETED` | A saved query was deleted. |
+| `GROUP_CREATED` | A group was created. |
+| `GROUP_UPDATED` | A group was updated. |
+| `GROUP_DELETED` | A group was deleted. |
+| `COMMENT_CREATED` | A comment was added. |
+| `COMMENT_DELETED` | A comment was deleted. |
+| `COLLABORATOR_ADDED` | A collaborator was added to the book. |
+| `COLLABORATOR_UPDATED` | A collaborator's permissions were updated. |
+| `COLLABORATOR_REMOVED` | A collaborator was removed from the book. |
+| `INTEGRATION_CREATED` | An integration was created in the book. |
+| `INTEGRATION_UPDATED` | An integration was updated. |
+| `INTEGRATION_DELETED` | An integration was deleted. |
+| `BOOK_CREATED` | A book was created. |
+| `BOOK_AUDITED` | A balances audit completed for the book. |
+| `BOOK_UPDATED` | Book settings were updated. |
+| `BOOK_DELETED` | The book was deleted. |
 
 ---
 source: /docs/build/apps/overview.md
@@ -838,7 +1104,11 @@ Preview environments are built in — deploy to a preview URL to test before goi
 
 ### Authentication
 
-OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build. In your client code, call `auth.getAccessToken()` and the platform handles the rest. In your event handlers, the user's OAuth token arrives automatically in the request headers.
+OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build.
+
+- **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Web client authentication](https://bkper.com/docs/build/apps/architecture.md#web-client-authentication).
+- **Event handlers** — The user's OAuth token arrives in the `bkper-oauth-token` header. See [Event Handlers → Authentication](https://bkper.com/docs/build/apps/event-handlers.md#authentication).
+- **Local development** — The Vite auth middleware uses your CLI credentials. See [Development Experience → Local development authentication](https://bkper.com/docs/build/apps/development.md#local-development-authentication).
 
 ### Services
 
@@ -921,7 +1191,7 @@ webhookUrl: https://us-central1-my-project.cloudfunctions.net/events
 
 An OAuth Access Token **of the user who installed the app** is sent to the production `webhookUrl` endpoint in the `bkper-oauth-token` HTTP header, along with the agent identifier in `bkper-agent-id`, on each event. Your handler uses this token to call the API back on behalf of the user.
 
-The development endpoint (`webhookUrlDev`) does **not** receive these tokens. During development, you need to authenticate locally — this can be simplified using the [CLI](https://bkper.com/docs/build/tools/cli.md).
+Both production (`webhookUrl`) and development (`webhookUrlDev`) endpoints receive OAuth tokens in the `bkper-oauth-token` header.
 
 ### Throughput and scaling
 
