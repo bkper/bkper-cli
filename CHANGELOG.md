@@ -2,6 +2,11 @@
 
 ## 2026
 
+### **April 2026**
+
+-   **App Platform**
+    -   Added [`app logs`](https://bkper.com/docs) command to view recent web and events handler logs with filtering by time, handler, outcome, and status code
+
 ### **March 2026**
 
 -   **Agent Experience**
