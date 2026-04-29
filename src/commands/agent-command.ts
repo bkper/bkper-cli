@@ -72,6 +72,8 @@ function parseSessionOptions(
         const arg = args[i];
         if (arg === '--continue' || arg === '-c') {
             options.continueSession = true;
+        } else if (arg === '--resume' || arg === '-r') {
+            options.resumeSession = true;
         } else if (arg === '--no-session') {
             options.noSession = true;
         } else {

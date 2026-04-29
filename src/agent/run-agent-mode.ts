@@ -440,6 +440,7 @@ export function registerBkperAgentStartupExtension(
 export interface SessionOptions {
     continueSession?: boolean;
     noSession?: boolean;
+    resumeSession?: boolean;
 }
 
 export function createAgentModeDependencies(
@@ -507,15 +508,32 @@ export function createAgentModeDependencies(
             };
 
             const sessionDir = startupSettingsManager.getSessionDir();
-            const sessionManager = sessionOptions.continueSession
-                ? SessionManager.continueRecent(cwd, sessionDir)
-                : sessionOptions.noSession
-                ? SessionManager.inMemory()
-                : createStartupSessionManager(
-                      cwd,
-                      startupSettingsManager,
-                      (sessionCwd, sessionDir) => SessionManager.create(sessionCwd, sessionDir)
-                  );
+            let sessionManager: SessionManager;
+
+            if (sessionOptions.resumeSession) {
+                const {initTheme} = await import('@mariozechner/pi-coding-agent');
+                initTheme(startupSettingsManager.getTheme(), false);
+                const {selectSession} = await import('./select-session.js');
+                const selectedPath = await selectSession(
+                    (onProgress) => SessionManager.list(cwd, sessionDir, onProgress),
+                    SessionManager.listAll
+                );
+                if (!selectedPath) {
+                    console.log('No session selected');
+                    process.exit(0);
+                }
+                sessionManager = SessionManager.open(selectedPath, sessionDir);
+            } else if (sessionOptions.continueSession) {
+                sessionManager = SessionManager.continueRecent(cwd, sessionDir);
+            } else if (sessionOptions.noSession) {
+                sessionManager = SessionManager.inMemory();
+            } else {
+                sessionManager = createStartupSessionManager(
+                    cwd,
+                    startupSettingsManager,
+                    (sessionCwd, sessionDir) => SessionManager.create(sessionCwd, sessionDir)
+                );
+            }
 
             const runtime = await createAgentSessionRuntime(createRuntime, {
                 cwd,

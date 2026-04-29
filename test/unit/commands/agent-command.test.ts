@@ -114,19 +114,30 @@ describe('CLI - agent command', function () {
         });
     });
 
-    it('should forward --resume to pi', async function () {
+    it('should route --resume to the embedded interactive mode wrapper', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
 
         await runAgentCommand(['--resume'], { runPi, runInteractiveMode });
 
-        expect(runInteractiveMode.called).to.be.false;
-        expect(runPi.calledOnce).to.be.true;
-        expect(runPi.firstCall.args[0]).to.deep.equal([
-            '--system-prompt',
-            getBkperAgentSystemPrompt(),
-            '--resume',
-        ]);
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            resumeSession: true,
+        });
+    });
+
+    it('should route -r to the embedded interactive mode wrapper', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['-r'], { runPi, runInteractiveMode });
+
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.calledOnce).to.be.true;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            resumeSession: true,
+        });
     });
 
     it('should forward --session to pi', async function () {
