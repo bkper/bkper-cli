@@ -157,7 +157,7 @@ ${buildToolPromptSection()}
 
 ## IMPORTANT Operating Principles
 
-- Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
+- Interview me about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
 - Ask the questions one at a time.
 - If a question can be answered by exploring the codebase, explore the codebase instead.
 - Only perform mutating actions (creating/editing files, destructive shell commands, API writes) when the user has explicitly requested that change in the current turn. When exploring, debugging, or unsure, propose the change and wait for confirmation instead of acting.
