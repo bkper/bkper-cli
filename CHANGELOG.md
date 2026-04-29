@@ -5,7 +5,7 @@
 ### **April 2026**
 
 -   **App Platform**
-    -   Added [`app logs`](https://bkper.com/docs) command to view recent web and events handler logs with filtering by time, handler, outcome, and status code
+    -   Added [`app logs`](https://bkper.com/docs/build/tools/cli) command to view recent web and events handler logs with filtering by time, handler, outcome, and status code
 
 ### **March 2026**
 
@@ -22,17 +22,17 @@
     -   CSV output follows RFC 4180 — raw values, all metadata, no truncation, ideal for spreadsheets and data pipelines
     -   Batch operations via stdin — pipe JSON or CSV data into create commands for bulk processing
     -   Table-formatted output is now the default for all commands
-    -   Added `-b, --book` option for scoping commands to a specific [Book](https://bkper.com/docs)
+    -   Added `-b, --book` option for scoping commands to a specific [Book](https://bkper.com/docs/guides/using-bkper/books)
     -   Added `-p, --properties` repeatable flag for setting custom properties as `key=value` pairs
-    -   [Transaction](https://bkper.com/docs) tables show formatted dates and values with IDs
-    -   [Group](https://bkper.com/docs) tables render as indented trees showing hierarchy
+    -   [Transaction](https://bkper.com/docs/guides/using-bkper/transactions) tables show formatted dates and values with IDs
+    -   [Group](https://bkper.com/docs/guides/using-bkper/groups) tables render as indented trees showing hierarchy
     -   Single-item commands display as indented key-value pairs
     -   Removed MCP server — now maintained as a separate project
 -   **Data Management**
-    -   Added batch create for [Account](https://bkper.com/docs)s, [Group](https://bkper.com/docs)s, and [Transaction](https://bkper.com/docs)s — accepts JSON arrays or CSV via stdin
-    -   Added [Book](https://bkper.com/docs) create command
-    -   Added [Collection](https://bkper.com/docs) commands: create, list, get, update, delete, add-book, remove-book
-    -   Added [Transaction](https://bkper.com/docs) update command
+    -   Added batch create for [Account](https://bkper.com/docs/guides/using-bkper/accounts)s, [Group](https://bkper.com/docs/guides/using-bkper/groups)s, and [Transaction](https://bkper.com/docs/guides/using-bkper/transactions)s — accepts JSON arrays or CSV via stdin
+    -   Added [Book](https://bkper.com/docs/guides/using-bkper/books) create command
+    -   Added [Collection](https://bkper.com/docs/guides/using-bkper/collections) commands: create, list, get, update, delete, add-book, remove-book
+    -   Added [Transaction](https://bkper.com/docs/guides/using-bkper/transactions) update command
     -   Renamed `balance get` to `balance list` for consistency
 -   **Authentication**
     -   Switched to PKCE-based OAuth flow — no client secret required
@@ -45,12 +45,12 @@
 ### **January 2026**
 
 -   **App Platform**
-    -   Added [`app init`](https://bkper.com/docs) command to scaffold new apps from template
-    -   Added [`app deploy`](https://bkper.com/docs) and [`app undeploy`](https://bkper.com/docs) commands for managing deployments
-    -   Added [`app status`](https://bkper.com/docs) to view current deployment information
-    -   Added [`app dev`](https://bkper.com/docs) and [`app build`](https://bkper.com/docs) commands for local development and build workflows
-    -   Added [`app secrets`](https://bkper.com/docs) management — put, list, and delete secrets for your apps
-    -   Added [`app sync`](https://bkper.com/docs) command to push `bkper.yaml` configuration to the platform
+    -   Added [`app init`](https://bkper.com/docs/build/apps/deploying) command to scaffold new apps from template
+    -   Added [`app deploy`](https://bkper.com/docs/build/apps/deploying) and [`app undeploy`](https://bkper.com/docs/build/apps/deploying) commands for managing deployments
+    -   Added [`app status`](https://bkper.com/docs/build/apps/deploying) to view current deployment information
+    -   Added [`app dev`](https://bkper.com/docs/build/apps/development) and [`app build`](https://bkper.com/docs/build/apps/deploying) commands for local development and build workflows
+    -   Added [`app secrets`](https://bkper.com/docs/build/apps/deploying) management — put, list, and delete secrets for your apps
+    -   Added [`app sync`](https://bkper.com/docs/build/apps/configuration) command to push `bkper.yaml` configuration to the platform
     -   Support for shared packages in monorepo setups with hot reload
     -   Asset file uploads included in deployments
     -   Migrated app configuration from `bkperapp.yaml` to `bkper.yaml`
@@ -60,8 +60,8 @@
 ### **October 2025**
 
 -   **MCP Server**
-    -   Added smart [Transaction](https://bkper.com/docs) merging — combine multiple transactions based on date and account matching
-    -   Simplified [Transaction](https://bkper.com/docs) creation — accounts are now optional for recording simple income and expenses
+    -   Added smart [Transaction](https://bkper.com/docs/guides/using-bkper/transactions) merging — combine multiple transactions based on date and account matching
+    -   Simplified [Transaction](https://bkper.com/docs/guides/using-bkper/transactions) creation — accounts are now optional for recording simple income and expenses
     -   Improved transaction data responses for better AI assistant integration
 
 ### **September 2025**
@@ -73,12 +73,12 @@
 ### **July 2025**
 
 -   **MCP Server**
-    -   Added monthly and year-to-date [Balance](https://bkper.com/docs) analysis for AI assistants
+    -   Added monthly and year-to-date [Balance](https://bkper.com/docs/guides/using-bkper/chart-reports) analysis for AI assistants
     -   Improved date filtering with `before:` operator
     -   Added setup instructions for Claude Desktop and other AI tools
 
 ### **June 2025**
 
 -   **CLI**
-    -   Introduced MCP server — connect AI assistants to your Bkper [Books](https://bkper.com/docs) with `bkper mcp start`
-    -   Added [Book](https://bkper.com/docs) name filtering to quickly find specific books
+    -   Introduced MCP server — connect AI assistants to your Bkper [Books](https://bkper.com/docs/guides/using-bkper/books) with `bkper mcp start`
+    -   Added [Book](https://bkper.com/docs/guides/using-bkper/books) name filtering to quickly find specific books
