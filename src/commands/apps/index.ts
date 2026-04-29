@@ -7,6 +7,11 @@ export type {
     DeployResult,
     Environment,
     HandlerType,
+    LogEntry,
+    LogsMeta,
+    LogsOptions,
+    LogsOutputMode,
+    LogsResponse,
     SecretsOptions,
     SyncResult,
     UndeployResult,
@@ -26,6 +31,16 @@ export { createApp, syncApp, updateApp } from './sync.js';
 
 // Deploy
 export { deployApp, statusApp, undeployApp } from './deploy.js';
+
+//Logs
+export {
+    buildLogsQuery,
+    logsApp,
+    renderLogsResponse,
+    requestAppLogs,
+    resolveLogsHandler,
+    resolveLogsOutputMode,
+} from './logs.js';
 
 // Dev
 export { dev } from './dev.js';

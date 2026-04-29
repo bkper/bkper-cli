@@ -277,6 +277,97 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    '/api/apps/{appId}/logs': {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get recent app logs
+         * @description Query recent app logs for a deployed app
+         */
+        get: {
+            parameters: {
+                query?: {
+                    since?: string;
+                    until?: string;
+                    /** @description Return the newest N rows after filters */
+                    last?: number;
+                    /** @description Environment filter */
+                    env?: 'production' | 'preview';
+                    /** @description Optional handler filter */
+                    handler?: 'web' | 'events';
+                    /** @description Cloudflare worker outcome filter */
+                    outcome?: components['schemas']['LogOutcome'];
+                    /** @description Optional HTTP status code filter */
+                    statusCode?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recent app logs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        'application/json': components['schemas']['LogsResponse'];
+                    };
+                };
+                /** @description Invalid logs query */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        'application/json': components['schemas']['ErrorResponse'];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        'application/json': components['schemas']['ErrorResponse'];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        'application/json': components['schemas']['ErrorResponse'];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        'application/json': components['schemas']['ErrorResponse'];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     '/api/apps/{appId}/secrets': {
         parameters: {
             query?: never;
@@ -572,6 +663,45 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         } | null;
+        /** @enum {string} */
+        LogOutcome:
+            | 'unknown'
+            | 'ok'
+            | 'exception'
+            | 'exceededCpu'
+            | 'exceededMemory'
+            | 'scriptNotFound'
+            | 'canceled'
+            | 'responseStreamDisconnected';
+        LogException: {
+            /** @example Error */
+            name: string;
+            /** @example Webhook failed */
+            message: string;
+            /** @example Error: Webhook failed\n    at ... */
+            stack?: string;
+        };
+        LogEntry: {
+            /** Format: date-time */
+            timestamp: string;
+            environment: 'production' | 'preview';
+            handler: 'web' | 'events';
+            outcome: components['schemas']['LogOutcome'];
+            requestMethod: string | null;
+            requestUrl: string | null;
+            statusCode: number | null;
+            logs: string[];
+            exceptions: components['schemas']['LogException'][];
+        };
+        LogsMeta: {
+            last: number;
+            retentionDays: number;
+            warnings: string[];
+        };
+        LogsResponse: {
+            logs: components['schemas']['LogEntry'][];
+            meta: components['schemas']['LogsMeta'];
+        };
         SecretsListResponse: {
             secrets: string[];
         };

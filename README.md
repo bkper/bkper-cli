@@ -159,7 +159,14 @@ Build, deploy, and manage Bkper apps.
 bkper app init my-app
 bkper app dev
 bkper app sync && bkper app deploy
+bkper app logs --last 50
+bkper app logs --since 5m --preview --events
+bkper app logs --json
 ```
+
+`bkper app logs` reads recent app logs kept for 15 days. The default output is human-readable, and JSON is available with `--json` or `--format json`.
+
+Log request URLs and sensitive headers follow Cloudflare's default redaction rules, and this first release supports recent retrieval only (`last N` plus optional time filters), not full-text search.
 
 → [Full App Management reference](https://github.com/bkper/bkper-cli/blob/main/docs/app-management.md)
 

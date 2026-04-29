@@ -10,6 +10,7 @@ import {
     deployApp,
     undeployApp,
     statusApp,
+    logsApp,
     initApp,
     secretsPut,
     secretsList,
@@ -96,6 +97,27 @@ export function registerAppCommands(program: Command): void {
                 'getting app status',
                 async () => {
                     await statusApp();
+                },
+                { skipSetup: true }
+            )()
+        );
+
+    appCommand
+        .command('logs')
+        .description('View recent app logs')
+        .option('--since <time>', 'ISO8601 or relative lower bound such as 5m, 1h, or 15d')
+        .option('--until <time>', 'ISO8601 or relative upper bound such as 5m, 1h, or 15d')
+        .option('--last <n>', 'Show newest N entries after filters', value => Number.parseInt(value, 10))
+        .option('-p, --preview', 'Query preview logs instead of production logs')
+        .option('-w, --web', 'Filter to the web handler')
+        .option('-e, --events', 'Filter to the events handler')
+        .option('--outcome <outcome>', 'Filter by Cloudflare worker outcome')
+        .option('--status-code <code>', 'Filter by HTTP status code', value => Number.parseInt(value, 10))
+        .action(options =>
+            withAction(
+                'getting app logs',
+                async () => {
+                    await logsApp(options);
                 },
                 { skipSetup: true }
             )()

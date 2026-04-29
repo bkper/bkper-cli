@@ -8,6 +8,10 @@ export type DeployResult = components['schemas']['DeployResult'];
 export type UndeployResult = components['schemas']['UndeployResult'];
 export type AppStatus = components['schemas']['AppStatus'];
 export type ErrorResponse = components['schemas']['ErrorResponse'];
+export type LogsResponse = components['schemas']['LogsResponse'];
+export type LogEntry = components['schemas']['LogEntry'];
+export type LogsMeta = components['schemas']['LogsMeta'];
+export type LogOutcome = components['schemas']['LogOutcome'];
 
 // =============================================================================
 // Command Options
@@ -23,6 +27,19 @@ export interface DeployOptions {
 export interface SecretsOptions {
     preview?: boolean;
 }
+
+export interface LogsOptions {
+    since?: string;
+    until?: string;
+    last?: number;
+    preview?: boolean;
+    web?: boolean;
+    events?: boolean;
+    outcome?: LogOutcome;
+    statusCode?: number;
+}
+
+export type LogsOutputMode = 'pretty' | 'json';
 
 // =============================================================================
 // Result Types
