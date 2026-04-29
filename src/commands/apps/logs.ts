@@ -183,8 +183,12 @@ export async function requestAppLogs(
     return data;
 }
 
-export async function logsApp(options: LogsOptions = {}): Promise<void> {
-    const response = await requestAppLogs(options);
-    const outputMode = resolveLogsOutputMode(program);
+export async function logsApp(
+    options: LogsOptions = {},
+    overrides: Partial<LogsCommandDependencies> = {},
+    command: Pick<Command, 'optsWithGlobals' | 'getOptionValueSourceWithGlobals'> = program
+): Promise<void> {
+    const outputMode = resolveLogsOutputMode(command);
+    const response = await requestAppLogs(options, overrides);
     console.log(renderLogsResponse(response, outputMode));
 }

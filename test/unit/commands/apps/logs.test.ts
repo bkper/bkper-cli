@@ -4,6 +4,7 @@ import sinon from 'sinon';
 import type { LogsResponse } from '../../../../src/commands/apps/types.js';
 import {
     buildLogsQuery,
+    logsApp,
     renderLogsResponse,
     requestAppLogs,
     resolveLogsOutputMode,
@@ -153,5 +154,29 @@ describe('CLI - apps logs Command', function () {
 
         const rendered = renderLogsResponse(response, 'json');
         expect(JSON.parse(rendered)).to.deep.equal(response);
+    });
+
+    it('should reject unsupported output format before making an API request', async function () {
+        const command = new Command();
+        command.setOptionValueWithSource('format', 'csv', 'cli');
+
+        const createPlatformClient = sinon.stub();
+
+        try {
+            await logsApp(
+                {},
+                {
+                    createPlatformClient,
+                },
+                command
+            );
+            expect.fail('Expected logsApp to throw');
+        } catch (error) {
+            expect((error as Error).message).to.equal(
+                'bkper app logs only supports default human-readable output or JSON. Use --json or --format json.'
+            );
+        }
+
+        expect(createPlatformClient.called).to.equal(false);
     });
 });
