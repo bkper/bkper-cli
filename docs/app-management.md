@@ -369,6 +369,15 @@ deployment:
     -   `-p, --preview` - Deploy to preview environment
     -   `--events` - Deploy events handler instead of web handler
 -   `app status` - Show deployment status
+-   `app logs` - View recent app logs
+    -   `--since <time>` - ISO8601 or relative lower bound (e.g. `5m`, `1h`, `15d`)
+    -   `--until <time>` - ISO8601 or relative upper bound
+    -   `--last <n>` - Show newest N entries after filters (default: 100)
+    -   `-p, --preview` - Query preview logs instead of production
+    -   `-w, --web` - Filter to the web handler
+    -   `-e, --events` - Filter to the events handler
+    -   `--outcome <outcome>` - Filter by Cloudflare worker outcome
+    -   `--status-code <code>` - Filter by HTTP status code
 -   `app undeploy` - Remove app from platform
     -   `-p, --preview` - Remove from preview environment
     -   `--events` - Remove events handler instead of web handler
