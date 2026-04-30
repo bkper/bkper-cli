@@ -102,6 +102,26 @@ async function downloadTemplate(targetDir: string): Promise<void> {
 // =============================================================================
 
 /**
+ * Recursively replaces 'my-app' with the new app name in all string values.
+ */
+export function replaceMyAppInObject(obj: unknown, appName: string): unknown {
+    if (typeof obj === 'string') {
+        return obj.replace(/my-app/g, appName);
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(item => replaceMyAppInObject(item, appName));
+    }
+    if (obj && typeof obj === 'object') {
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(obj)) {
+            result[key] = replaceMyAppInObject(value, appName);
+        }
+        return result;
+    }
+    return obj;
+}
+
+/**
  * Updates the bkper.yaml file with the new app name.
  * Also handles bkperapp.yaml for backward compatibility.
  */
@@ -131,7 +151,39 @@ function updateBkperYaml(projectDir: string, appName: string): void {
             .join(' ');
     }
 
-    fs.writeFileSync(yamlPath, YAML.stringify(config), 'utf8');
+    // Replace all remaining 'my-app' placeholders in URLs and other values
+    const updatedConfig = replaceMyAppInObject(config, appName) as typeof config;
+
+    fs.writeFileSync(yamlPath, YAML.stringify(updatedConfig), 'utf8');
+}
+
+/**
+ * Replaces the placeholder app id 'my-app' in event handler source files.
+ */
+export function updateEventHandlers(projectDir: string, appName: string): void {
+    const eventsDir = path.join(projectDir, 'packages/events/src');
+    if (!fs.existsSync(eventsDir)) {
+        return;
+    }
+
+    function processDir(dir: string) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+                processDir(fullPath);
+            } else if (entry.name.endsWith('.ts')) {
+                let content = fs.readFileSync(fullPath, 'utf8');
+                const original = content;
+                // Replace both single and double quoted 'my-app' used as an identifier
+                content = content.replace(/(['"])my-app\1/g, `$1${appName}$1`);
+                if (content !== original) {
+                    fs.writeFileSync(fullPath, content, 'utf8');
+                }
+            }
+        }
+    }
+
+    processDir(eventsDir);
 }
 
 /**
@@ -231,7 +283,16 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 5. Update package.json
+    // 5. Update event handler loop guards
+    try {
+        updateEventHandlers(targetDir, name);
+        console.log('  Updated event handlers');
+    } catch (err) {
+        console.error('Error updating event handlers:', err instanceof Error ? err.message : err);
+        process.exit(1);
+    }
+
+    // 6. Update package.json
     try {
         updatePackageJson(targetDir, name);
         console.log('  Updated package.json');
@@ -240,7 +301,7 @@ export async function initApp(name: string): Promise<void> {
         process.exit(1);
     }
 
-    // 6. Install dependencies
+    // 7. Install dependencies
     console.log('  Installing dependencies...');
     try {
         await runCommand('bun', ['install'], targetDir);
@@ -249,11 +310,16 @@ export async function initApp(name: string): Promise<void> {
         console.log('  Warning: Could not install dependencies. Run "bun install" manually.');
     }
 
-    // 7. Print success message
+    // 8. Print success message
     console.log(`
 Done! To get started:
 
   cd ${name}
   bun run dev
+
+Next steps:
+  - Review bkper.yaml: update description, ownerName, ownerWebsite, and repoUrl
+  - Replace logo-light.svg and logo-dark.svg in packages/web/client/public/images/
+  - Edit README.md to explain what your app does for end users
 `);
 }

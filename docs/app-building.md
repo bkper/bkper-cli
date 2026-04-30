@@ -55,7 +55,24 @@ To make your app available to all Bkper users, contact us at [support@bkper.com]
 
 - **Functionality check** — The app works correctly and handles errors gracefully
 - **Security review** — Event handlers are idempotent and include loop prevention
-- **Listing quality** — The app has a clear name, description, and logo
+- **Listing quality** — The app has a clear name, description, logo, and user-facing documentation
+
+### README matters
+
+Your app's `README.md` is displayed to end users on the app listing page. Write it for the people who will install and use your app — not for developers.
+
+**README should explain:**
+- What the app does from a user's perspective
+- How to use it (step-by-step for non-technical users)
+- What features are available
+
+**README should NOT contain:**
+- Tech stack or architecture details
+- Build commands or development setup
+- Project structure or internal file paths
+- API documentation or SDK references
+
+Put developer documentation in `AGENTS.md` or internal docs instead. Keep `README.md` focused on the user experience.
 
 ### Where published apps appear
 
@@ -1090,6 +1107,81 @@ The complete current set of event types:
 | `BOOK_DELETED` | The book was deleted. |
 
 ---
+source: /docs/build/apps/first-app.md
+
+# Your First App
+
+This tutorial walks you through building and deploying a Bkper app from scratch. For the deep reference on any topic — architecture, configuration, development, events, or deployment — follow the links in each step.
+
+## Prerequisites
+
+[Development Setup](https://bkper.com/docs/build/getting-started/setup.md) — the CLI installed and authenticated.
+
+## Walkthrough
+
+1. **Scaffold from the template**
+
+    ```bash
+    bkper app init my-app
+    cd my-app
+    ```
+
+    The CLI sets your app ID, package name, URLs, and event-handler loop guards automatically. See [App Configuration](https://bkper.com/docs/build/apps/configuration.md) for the full `bkper.yaml` reference.
+
+2. **Start developing**
+
+    ```bash
+    npm run dev
+    ```
+
+    This runs the Vite client dev server and the local worker runtime with automatic webhook tunneling. See [Development Experience](https://bkper.com/docs/build/apps/development.md) for details.
+
+3. **Open the app**
+
+    Visit [http://localhost:5173](http://localhost:5173). Select a book to see account balances. No OAuth setup required — the platform handles authentication.
+
+4. **Trigger an event**
+
+    Go to any Bkper book and check (reconcile) a transaction. Your local event handler receives the webhook via the tunnel and creates a 20% draft transaction. See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for the full event model.
+
+5. **Make a change**
+
+    Edit the handler in `packages/events/src/handlers/transaction-checked.ts` and save. The worker reloads automatically. Check another transaction to see your change.
+
+6. **Customize your listing**
+
+    Update `bkper.yaml` with your app's description, owner details, and repository URL. Replace the placeholder logos in `packages/web/client/public/images/`. See [App Listing](https://bkper.com/docs/build/apps/app-listing.md) for publishing details.
+
+7. **Update the README**
+
+    Edit `README.md` for end users — what the app does and how to use it. Keep developer docs in `AGENTS.md`.
+
+8. **Deploy**
+
+    ```bash
+    npm run build
+    bkper app sync
+    bkper app deploy
+    ```
+
+    Your app is live at `https://my-app.bkper.app`. See [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md) for preview environments, secrets, and KV.
+
+## What you built
+
+| You wrote | Platform handled |
+| --- | --- |
+| ~30 lines of UI | OAuth, consent screen, token refresh |
+| ~40 lines of event logic | Hosting, SSL, edge routing |
+| `bkper.yaml` | Webhook tunnels, KV, type generation |
+
+## Next steps
+
+- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Understand the three-package pattern
+- [App Configuration](https://bkper.com/docs/build/apps/configuration.md) — Full `bkper.yaml` reference
+- [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) — All event types and patterns
+- [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md) — Preview environments and secrets
+
+---
 source: /docs/build/apps/overview.md
 
 # The Bkper Platform
@@ -1166,7 +1258,7 @@ npm run dev
 
 This gives you a working app with a client UI, server API, and event handler — all running locally with full HMR and webhook tunneling.
 
-See [Your First App](https://bkper.com/docs/build/getting-started/first-app.md) for a complete walkthrough, or continue to [App Architecture](https://bkper.com/docs/build/apps/architecture.md) to understand how platform apps are structured.
+See [Your First App](https://bkper.com/docs/build/apps/first-app.md) for a complete walkthrough, or continue to [App Architecture](https://bkper.com/docs/build/apps/architecture.md) to understand how platform apps are structured.
 
 ---
 source: /docs/build/apps/self-hosted.md

@@ -106,13 +106,13 @@ export function getBkperAgentSystemPrompt(): string {
 
 Bkper's accounting model is intentionally non-standard. Generic accounting knowledge — debit/credit, account categories, sign conventions — will lead you to wrong answers here.
 
-Before reasoning about, designing, or modifying anything that touches Bkper data — books, accounts, groups, transactions, balances, queries, or any accounting or financial flow — you MUST read:
+The canonical Bkper data model reference:
 
 \`\`\`
 ${coreConceptsPath}
 \`\`\`
 
-This is not optional and prior accounting intuition does not substitute for it.
+Base all reasoning about Bkper data — books, accounts, groups, transactions, balances, queries, or any accounting or financial flow — on this reference. Prior accounting intuition does not substitute for it.
 
 ## Reference Routing
 

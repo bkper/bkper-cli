@@ -76,7 +76,7 @@ bkper app build
 # Sync configuration and deploy to production
 bkper app sync && bkper app deploy
 
-# Deploy to development environment
+# Deploy to preview environment (URL: https://{appId}-preview.bkper.app)
 bkper app deploy --preview
 
 # Deploy only the events handler
