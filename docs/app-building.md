@@ -615,6 +615,8 @@ Deploy to a separate preview environment for testing before production:
 bkper app deploy --preview
 ```
 
+Preview URLs use a dash suffix: `https://{appId}-preview.bkper.app`. For example, an app with `id: my-app` deploys to `https://my-app-preview.bkper.app`.
+
 Preview has independent secrets and KV storage from production.
 
 ### Independent handler deployment
