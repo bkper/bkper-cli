@@ -11,8 +11,8 @@ import {
     type CreateAgentSessionRuntimeFactory,
     type ExtensionAPI,
     type Theme,
-} from '@mariozechner/pi-coding-agent';
-import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
+import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
@@ -511,7 +511,7 @@ export function createAgentModeDependencies(
             let sessionManager: SessionManager;
 
             if (sessionOptions.resumeSession) {
-                const {initTheme} = await import('@mariozechner/pi-coding-agent');
+                const {initTheme} = await import('@earendil-works/pi-coding-agent');
                 initTheme(startupSettingsManager.getTheme(), false);
                 const {selectSession} = await import('./select-session.js');
                 const selectedPath = await selectSession(

@@ -7,7 +7,7 @@ updates:
       time: "06:00"
       timezone: "UTC"
     allow:
-      - dependency-name: "@mariozechner/pi-coding-agent"
+      - dependency-name: "@earendil-works/pi-coding-agent"
     commit-message:
       prefix: "build(deps)"
     open-pull-requests-limit: 5

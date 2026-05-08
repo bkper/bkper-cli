@@ -353,8 +353,6 @@ users: someuser *@yoursite.com
 
 menuUrl: https://my-app.bkper.app?bookId=${book.id}
 menuUrlDev: http://localhost:8787?bookId=${book.id}
-menuPopupWidth: 500
-menuPopupHeight: 300
 
 webhookUrl: https://my-app.bkper.app/events
 apiVersion: v5
@@ -413,8 +411,7 @@ deployment:
 | `menuUrl`         | Production menu URL. Supports [variable substitution](#menu-url-variables). |
 | `menuUrlDev`      | Development menu URL (used when the developer clicks the menu).             |
 | `menuText`        | Custom menu text (defaults to app name).                                    |
-| `menuPopupWidth`  | Popup width in pixels.                                                      |
-| `menuPopupHeight` | Popup height in pixels.                                                     |
+| `menuOpenMode`    | How the app menu opens: `SIDEBAR` (default), `EXPANDED`, or `NEW_TAB`.      |
 
 See [Context Menu](https://bkper.com/docs/build/apps/context-menu.md) for details on building menu integrations.
 
@@ -534,14 +531,19 @@ menuUrlDev: http://localhost:8787?bookId=${book.id}&query=${transactions.query}
 
 The development URL is used when the app developer is the one clicking the menu item.
 
-### Popup dimensions
+### Menu open mode
 
-Control the popup size with:
+Control how the menu opens with `menuOpenMode`:
 
 ```yaml
-menuPopupWidth: 800
-menuPopupHeight: 600
+menuOpenMode: SIDEBAR
 ```
+
+| Mode       | Behavior                                                                  |
+| ---------- | ------------------------------------------------------------------------- |
+| `SIDEBAR`  | Opens in a narrow side panel (default).                                   |
+| `EXPANDED` | Opens in a wider panel with more room for complex UIs.                    |
+| `NEW_TAB`  | Opens the menu URL in a new browser tab instead of an embedded panel.     |
 
 ### Available expressions
 

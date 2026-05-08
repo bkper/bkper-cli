@@ -3,7 +3,7 @@ import {
     createEditToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ function resolveDocPath(filename: string): string {
 }
 
 function resolvePiPackageRoot(): string {
-    const piIndexPath = fileURLToPath(import.meta.resolve('@mariozechner/pi-coding-agent'));
+    const piIndexPath = fileURLToPath(import.meta.resolve('@earendil-works/pi-coding-agent'));
     let dir = path.dirname(piIndexPath);
     while (dir !== path.dirname(dir)) {
         if (existsSync(path.join(dir, 'package.json'))) {

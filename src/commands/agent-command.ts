@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { main as runPiMain } from '@mariozechner/pi-coding-agent';
+import { main as runPiMain } from '@earendil-works/pi-coding-agent';
 import {
     createAgentModeDependencies,
     runAgentMode,

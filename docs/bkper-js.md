@@ -308,8 +308,9 @@ Apps can be installed on Books by users.
 - `getId()` → `string | undefined` — Gets the App universal identifier.
 - `getLogoUrl()` → `string | undefined` — Gets the logo url of this App.
 - `getLogoUrlDark()` → `string | undefined` — Gets the logo url of this App in dark mode.
-- `getMenuPopupHeight()` → `string | undefined` — Gets the menu popup height of this App.
-- `getMenuPopupWidth()` → `string | undefined` — Gets the menu popup width of this App.
+- `getMenuOpenMode()` / `setMenuOpenMode(menuOpenMode?: MenuOpenMode)` → `MenuOpenMode` — Gets how the app menu opens.
+- `getMenuPopupHeight()` → `string | undefined` — ~~Deprecated: Use getMenuOpenMode() to decide how the app should open.~~ Gets the menu popup height of this App.
+- `getMenuPopupWidth()` → `string | undefined` — ~~Deprecated: Use getMenuOpenMode() to decide how the app should open.~~ Gets the menu popup width of this App.
 - `getMenuText()` → `string | undefined` — Gets the menu text of this App.
 - `getMenuUrl()` → `string | undefined` — Gets the menu url of this App.
 - `getMenuUrlDev()` → `string | undefined` — Gets the menu development url of this App.
@@ -514,31 +515,6 @@ The Billing information includes the plan, the admin email, and the billing port
 ### Bkper
 
 This is the main entry point of the [bkper-js](https://www.npmjs.com/package/bkper-js) library.
-
-You can configure the library in two ways:
-
-1. Using static configuration (traditional approach):
-
-```typescript
-Bkper.setConfig({
-  apiKeyProvider: () => process.env.BKPER_API_KEY,
-  oauthTokenProvider: () => process.env.BKPER_OAUTH_TOKEN
-});
-
-const bkper = new Bkper();
-const book = await bkper.getBook('bookId');
-```
-
-2. Using per-instance configuration (recommended for Cloudflare Workers):
-
-```typescript
-const bkper = new Bkper({
-  apiKeyProvider: () => process.env.BKPER_API_KEY,
-  oauthTokenProvider: () => process.env.BKPER_OAUTH_TOKEN
-});
-
-const book = await bkper.getBook('bookId');
-```
 
 **Constructor:** `new Bkper(config?: Config)`
 
@@ -1377,6 +1353,14 @@ Enum that represents event types.
 - `TRANSACTION_RESTORED`
 - `TRANSACTION_UNCHECKED`
 - `TRANSACTION_UPDATED`
+
+### MenuOpenMode
+
+Enum that represents how an App menu opens.
+
+- `EXPANDED` — Open expanded inside the app panel.
+- `NEW_TAB` — Open in a new browser tab.
+- `SIDEBAR` — Open inside the sidebar panel.
 
 ### Month
 

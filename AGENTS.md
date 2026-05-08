@@ -167,7 +167,7 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 
 ### Pi dependency automation policy
 
--   Dependabot tracks `@mariozechner/pi-coding-agent`.
+-   Dependabot tracks `@earendil-works/pi-coding-agent`.
 -   Pi update PRs stay standard dependency PRs.
 -   Do not add release labels or version bumps on Dependabot PR branches.
 

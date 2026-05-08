@@ -2,11 +2,11 @@ import {
     SessionSelectorComponent,
     SessionManager,
     type SessionInfo,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import {
     ProcessTerminal,
     TUI,
-} from '@mariozechner/pi-tui';
+} from '@earendil-works/pi-tui';
 
 type ProgressCallback = (loaded: number, total: number) => void;
 

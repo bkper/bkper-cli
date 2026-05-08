@@ -95,6 +95,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `installable?`: `boolean` — Whether this app is installable in a book
 - `logoUrl?`: `string` — The App logo url
 - `logoUrlDark?`: `string` — The App logo url in dark mode
+- `menuOpenMode?`: `"SIDEBAR" | "EXPANDED" | "NEW_TAB"` — How the app menu opens. Default to SIDEBAR
 - `menuPopupHeight?`: `string` — The menu popup window height
 - `menuPopupWidth?`: `string` — The menu popup window width
 - `menuText?`: `string` — The contex menu text - default to the App name
@@ -334,7 +335,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 
 **Properties:**
 
-- `object?`: `unknown`
+- `object?`: `{ [key: string]: any }`
 - `previousAttributes?`: `{ [name: string]: string }` — The object previous attributes when updated
 
 ### EventList

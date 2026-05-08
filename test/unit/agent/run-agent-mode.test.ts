@@ -1,7 +1,7 @@
 import { expect } from '../helpers/test-setup.js';
-import type { ExtensionAPI } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
-import { VERSION as PI_VERSION } from '@mariozechner/pi-coding-agent';
+import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import {
     BkperInteractiveMode,
     createStartupSessionManager,

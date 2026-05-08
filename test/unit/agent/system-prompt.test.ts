@@ -3,7 +3,7 @@ import {
     createEditToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
-} from '@mariozechner/pi-coding-agent';
+} from '@earendil-works/pi-coding-agent';
 import { expect } from '../helpers/test-setup.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
