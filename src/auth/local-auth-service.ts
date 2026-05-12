@@ -115,11 +115,11 @@ function generatePKCECodes(): { codeVerifier: string; codeChallenge: string } {
     return { codeVerifier, codeChallenge };
 }
 
-function createOAuthClient(): OAuth2Client {
+function createOAuthClient(redirectUri?: string): OAuth2Client {
     return new OAuth2Client({
         clientId: OAUTH_CONFIG.clientId,
         clientSecret: OAUTH_CONFIG.clientSecret,
-        redirectUri: OAUTH_CONFIG.redirectUri,
+        redirectUri: redirectUri ?? OAUTH_CONFIG.redirectUri,
     });
 }
 
@@ -150,91 +150,119 @@ function registerCredentialPersistence(localAuth: OAuth2Client) {
  * opening the user's browser, and waiting for the authorization code.
  * Uses PKCE (Proof Key for Code Exchange) for enhanced security without client_secret.
  */
+const MAX_PORT_ATTEMPTS = 10;
+
 async function authenticateLocal(): Promise<OAuth2Client> {
     const pkceCodes = generatePKCECodes();
-    const oAuth2Client = createOAuthClient();
-
-    const authorizeUrl = oAuth2Client.generateAuthUrl({
-        access_type: 'offline',
-        scope: ['https://www.googleapis.com/auth/userinfo.email'],
-        prompt: 'consent',
-        code_challenge: pkceCodes.codeChallenge,
-        code_challenge_method: CodeChallengeMethod.S256,
-    });
-
     const open = (await import('open')).default;
 
+    const baseRedirectUrl = new URL(OAUTH_CONFIG.redirectUri);
+    const basePort = parseInt(baseRedirectUrl.port) || 3000;
+
     return new Promise((resolve, reject) => {
-        const redirectUrl = new URL(OAUTH_CONFIG.redirectUri);
-        const port = parseInt(redirectUrl.port) || 3000;
+        let attempts = 0;
 
-        const server = http.createServer(async (req, res) => {
-            try {
-                if (req.url && req.url.startsWith('/oauth2callback')) {
-                    const searchParams = new URL(req.url, `http://localhost:${port}`).searchParams;
-                    const code = searchParams.get('code');
-
-                    if (code) {
-                        const { tokens } = await oAuth2Client.getToken({
-                            code,
-                            codeVerifier: pkceCodes.codeVerifier,
-                        });
-                        oAuth2Client.setCredentials(tokens);
-
-                        res.writeHead(200, { 'Content-Type': 'text/html' });
-                        res.end(
-                            generateAuthPage({
-                                type: 'success',
-                                title: 'Authentication Successful',
-                                message: 'You have been successfully authenticated with Bkper CLI.',
-                            })
-                        );
-
-                        server.closeAllConnections();
-                        server.close();
-
-                        resolve(oAuth2Client);
-                    } else {
-                        const error = searchParams.get('error');
-                        res.writeHead(400, { 'Content-Type': 'text/html' });
-                        res.end(
-                            generateAuthPage({
-                                type: 'error',
-                                title: 'Authentication Failed',
-                                message: error || 'No authorization code received.',
-                            })
-                        );
-                        server.closeAllConnections();
-                        server.close();
-                        reject(new Error(error || 'No authorization code received'));
-                    }
-                }
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : String(err);
-                res.writeHead(500, { 'Content-Type': 'text/html' });
-                res.end(
-                    generateAuthPage({
-                        type: 'error',
-                        title: 'Authentication Error',
-                        message: errorMessage,
-                    })
+        function tryPort(port: number) {
+            if (attempts >= MAX_PORT_ATTEMPTS) {
+                reject(
+                    new Error(
+                        `Failed to start local server: All ports in range ${basePort}-${basePort + MAX_PORT_ATTEMPTS - 1} are in use`
+                    )
                 );
-                server.closeAllConnections();
-                server.close();
-                reject(err);
+                return;
             }
-        });
+            attempts++;
 
-        server.listen(port, () => {
-            console.log(`\nOpen this URL to authenticate:\n${authorizeUrl}\n`);
-            open(authorizeUrl, { wait: false }).catch(() => {
-                // Browser couldn't open - URL already displayed above
+            const redirectUri = `http://localhost:${port}/oauth2callback`;
+            const oAuth2Client = createOAuthClient(redirectUri);
+
+            const authorizeUrl = oAuth2Client.generateAuthUrl({
+                access_type: 'offline',
+                scope: ['https://www.googleapis.com/auth/userinfo.email'],
+                prompt: 'consent',
+                code_challenge: pkceCodes.codeChallenge,
+                code_challenge_method: CodeChallengeMethod.S256,
             });
-        });
 
-        server.on('error', err => {
-            reject(new Error(`Failed to start local server: ${err.message}`));
-        });
+            const server = http.createServer(async (req, res) => {
+                try {
+                    if (req.url && req.url.startsWith('/oauth2callback')) {
+                        const searchParams = new URL(
+                            req.url,
+                            `http://localhost:${port}`
+                        ).searchParams;
+                        const code = searchParams.get('code');
+
+                        if (code) {
+                            const { tokens } = await oAuth2Client.getToken({
+                                code,
+                                codeVerifier: pkceCodes.codeVerifier,
+                            });
+                            oAuth2Client.setCredentials(tokens);
+
+                            res.writeHead(200, { 'Content-Type': 'text/html' });
+                            res.end(
+                                generateAuthPage({
+                                    type: 'success',
+                                    title: 'Authentication Successful',
+                                    message:
+                                        'You have been successfully authenticated with Bkper CLI.',
+                                })
+                            );
+
+                            server.closeAllConnections();
+                            server.close();
+
+                            resolve(oAuth2Client);
+                        } else {
+                            const error = searchParams.get('error');
+                            res.writeHead(400, { 'Content-Type': 'text/html' });
+                            res.end(
+                                generateAuthPage({
+                                    type: 'error',
+                                    title: 'Authentication Failed',
+                                    message: error || 'No authorization code received.',
+                                })
+                            );
+                            server.closeAllConnections();
+                            server.close();
+                            reject(new Error(error || 'No authorization code received'));
+                        }
+                    }
+                } catch (err) {
+                    const errorMessage = err instanceof Error ? err.message : String(err);
+                    res.writeHead(500, { 'Content-Type': 'text/html' });
+                    res.end(
+                        generateAuthPage({
+                            type: 'error',
+                            title: 'Authentication Error',
+                            message: errorMessage,
+                        })
+                    );
+                    server.closeAllConnections();
+                    server.close();
+                    reject(err);
+                }
+            });
+
+            server.listen(port, () => {
+                console.log(`\nOpen this URL to authenticate:\n${authorizeUrl}\n`);
+                open(authorizeUrl, { wait: false }).catch(() => {
+                    // Browser couldn't open - URL already displayed above
+                });
+            });
+
+            server.on('error', err => {
+                if ('code' in err && err.code === 'EADDRINUSE') {
+                    server.close();
+                    tryPort(port + 1);
+                } else {
+                    reject(new Error(`Failed to start local server: ${err.message}`));
+                }
+            });
+        }
+
+        tryPort(basePort);
     });
 }
 
