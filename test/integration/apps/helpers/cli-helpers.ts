@@ -4,7 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { expect } from 'chai';
 
-const CLI_PATH = '/workspace/bkper-cli/lib/cli.js';
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
+const CLI_PATH = path.join(REPO_ROOT, 'lib', 'cli.js');
 const API_URL = process.env.BKPER_API_URL || 'https://api-dev.bkper.app';
 
 // Dynamic platform URL - set during test setup

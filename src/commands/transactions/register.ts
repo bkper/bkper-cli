@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
-import { collectProperty } from '../cli-helpers.js';
+import { collectProperty, collectRepeatable } from '../cli-helpers.js';
 import { renderListResult, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { parseStdinItems } from '../../input/index.js';
@@ -14,6 +14,7 @@ import {
     mergeTransactions,
     batchCreateTransactions,
     batchUpdateTransactions,
+    resolveCreateTransactionFilePath,
 } from './index.js';
 
 export function registerTransactionCommands(program: Command): void {
@@ -56,6 +57,7 @@ export function registerTransactionCommands(program: Command): void {
         .option('--to <to>', 'Debit account (destination)')
         .option('--url <url>', 'URL (repeatable)', collectProperty)
         .option('--remote-id <remoteId>', 'Remote ID (repeatable)', collectProperty)
+        .option('--file <path>', 'Attach a local file (single-create only)', collectRepeatable)
         .option(
             '-p, --property <key=value>',
             'Set a property (repeatable, empty value deletes)',
@@ -64,6 +66,10 @@ export function registerTransactionCommands(program: Command): void {
         .action(options =>
             withAction('creating transaction', async format => {
                 const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
+                const filePath = resolveCreateTransactionFilePath(
+                    options.file,
+                    stdinData !== null
+                );
 
                 if (stdinData && stdinData.items.length > 0) {
                     throwIfErrors(
@@ -85,6 +91,7 @@ export function registerTransactionCommands(program: Command): void {
                         url: options.url,
                         remoteId: options.remoteId,
                         property: options.property,
+                        file: filePath,
                     });
                     renderItem(transaction.json(), format);
                 }

@@ -1,8 +1,9 @@
 import fs from 'fs';
+import path from 'path';
 import { isUserLoggedIn, determinePlatformUrl } from '../../helpers.js';
 import { initializePlatformUrl, getPlatformUrl } from './cli-helpers.js';
 
-const CLI_PATH = '/workspace/bkper-cli/lib/cli.js';
+const CLI_PATH = path.resolve(import.meta.dirname, '../../../../lib/cli.js');
 
 /**
  * Check if platform has deploy API available
@@ -32,8 +33,8 @@ export async function setupAppTest(context: Mocha.Context, timeoutMs: number = 3
     context.timeout(timeoutMs);
 
     if (!fs.existsSync(CLI_PATH)) {
-        console.log('\n  Skipping: CLI build not found at /workspace/bkper-cli/lib/cli.js');
-        console.log('   Build it with: cd bkper-cli && bun run build\n');
+        console.log(`\n  Skipping: CLI build not found at ${CLI_PATH}`);
+        console.log('   Build it with: bun run build\n');
         return context.skip();
     }
 
@@ -42,7 +43,7 @@ export async function setupAppTest(context: Mocha.Context, timeoutMs: number = 3
     if (!platformUrl) {
         console.log('\n  Skipping: Platform not accessible');
         console.log('   Tried: localhost:8790 and platform-dev.bkper.app');
-        console.log('   Start local platform with: cd bkper-clients/packages/platform && bun dev\n');
+        console.log('   Start a compatible local platform server or set BKPER_PLATFORM_URL\n');
         return context.skip();
     }
 

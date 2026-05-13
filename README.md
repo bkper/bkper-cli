@@ -137,10 +137,13 @@ Pi-specific extensions are loaded from Pi extension folders (for example `.pi/ex
 
 ## Data Management
 
-Manage books, accounts, transactions, and balances.
+Manage books, files, accounts, transactions, and balances.
 
 ```bash
 bkper book list
+bkper file upload ./receipt.pdf -b <bookId>
+bkper file get <fileId> -b <bookId>
+bkper transaction create -b <bookId> --description "Team lunch" --file ./receipt.pdf
 bkper account list -b <bookId>
 bkper transaction list -b <bookId> -q 'on:2025' --format csv
 bkper balance list -b <bookId> -q 'on:2025-12-31' --format csv

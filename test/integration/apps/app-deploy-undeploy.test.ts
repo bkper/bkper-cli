@@ -7,6 +7,8 @@ describe('Integration: app deploy/undeploy', function () {
     let stateManager: AppStateManager | undefined;
     let appDir: string | undefined;
     let setupComplete = false;
+    let webDeployed = false;
+    let eventsDeployed = false;
 
     before(async function () {
         this.timeout(60000);
@@ -28,19 +30,23 @@ describe('Integration: app deploy/undeploy', function () {
             return;
         }
 
-        // Always cleanup: undeploy both web and events, even if tests failed
-        try {
-            console.log('\n  Cleaning up: undeploying events handler...');
-            await runCli(['app', 'undeploy', '--preview', '--events', '--force'], appDir!);
-        } catch {
-            // Ignore errors - may not be deployed
+        // Cleanup only what is still deployed if tests aborted mid-flow
+        if (eventsDeployed) {
+            try {
+                console.log('\n  Cleaning up: undeploying events handler...');
+                await runCli(['app', 'undeploy', '--preview', '--events', '--force'], appDir!);
+            } catch {
+                // Ignore errors - may not be deployed
+            }
         }
 
-        try {
-            console.log('  Cleaning up: undeploying web handler...');
-            await runCli(['app', 'undeploy', '--preview', '--force'], appDir!);
-        } catch {
-            // Ignore errors - may not be deployed
+        if (webDeployed) {
+            try {
+                console.log('  Cleaning up: undeploying web handler...');
+                await runCli(['app', 'undeploy', '--preview', '--force'], appDir!);
+            } catch {
+                // Ignore errors - may not be deployed
+            }
         }
 
         // Clean up temp directories
@@ -53,6 +59,7 @@ describe('Integration: app deploy/undeploy', function () {
         // Deploy web handler (uses --dev flag)
         // Command succeeds = deploy worked (CLI handles errors internally)
         await runCli(['app', 'deploy', '--preview'], appDir!);
+        webDeployed = true;
     });
 
     it('should deploy events handler to dev environment', async function () {
@@ -60,6 +67,7 @@ describe('Integration: app deploy/undeploy', function () {
 
         // Deploy events handler (uses --dev and --events flags)
         await runCli(['app', 'deploy', '--preview', '--events'], appDir!);
+        eventsDeployed = true;
     });
 
     it('should undeploy events handler from dev environment', async function () {
@@ -68,6 +76,7 @@ describe('Integration: app deploy/undeploy', function () {
         // Undeploy events handler
         // Command succeeds = undeploy worked (CLI handles errors internally)
         await runCli(['app', 'undeploy', '--preview', '--events', '--force'], appDir!);
+        eventsDeployed = false;
     });
 
     it('should undeploy web handler from dev environment', async function () {
@@ -75,5 +84,6 @@ describe('Integration: app deploy/undeploy', function () {
 
         // Undeploy web handler
         await runCli(['app', 'undeploy', '--preview', '--force'], appDir!);
+        webDeployed = false;
     });
 });

@@ -2,6 +2,13 @@
 
 ## 2026
 
+### **May 2026**
+
+-   **Data Management**
+    -   Added `file upload` and `file get` commands for working with Book files from the CLI
+    -   Added `transaction create --file` to attach a local file while creating a transaction
+    -   Local file uploads now infer MIME types so PDFs and other known file types keep the correct `contentType`
+
 ### **April 2026**
 
 -   **App Platform**

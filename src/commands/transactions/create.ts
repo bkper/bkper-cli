@@ -1,5 +1,6 @@
+import { File as BkperFile, Transaction } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
-import { Transaction } from 'bkper-js';
+import { readLocalFilePayload } from '../../utils/local-file.js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { throwIfErrors } from '../../utils/validation.js';
 
@@ -15,6 +16,34 @@ export interface CreateTransactionOptions {
     url?: string[];
     remoteId?: string[];
     property?: string[];
+    file?: string;
+}
+
+/**
+ * Resolves the single supported --file value for transaction create.
+ *
+ * @param filePaths - Parsed --file option values
+ * @param hasStdinInput - Whether stdin JSON input was provided
+ * @returns The single file path, if any
+ */
+export function resolveCreateTransactionFilePath(
+    filePaths: string[] | undefined,
+    hasStdinInput: boolean
+): string | undefined {
+    const errors: string[] = [];
+
+    if (filePaths && filePaths.length > 1) {
+        errors.push('Option --file may only be provided once');
+    }
+
+    if (hasStdinInput && filePaths && filePaths.length > 0) {
+        errors.push(
+            'Option --file is only supported for single transaction create and cannot be used with stdin input'
+        );
+    }
+
+    throwIfErrors(errors);
+    return filePaths?.[0];
 }
 
 /**
@@ -81,6 +110,16 @@ export async function createTransaction(
             } catch (err: unknown) {
                 errors.push((err as Error).message);
             }
+        }
+    }
+
+    if (options.file) {
+        try {
+            const payload = await readLocalFilePayload(options.file);
+            const file = new BkperFile(book, payload);
+            tx.addFile(file);
+        } catch (err: unknown) {
+            errors.push((err as Error).message);
         }
     }
 

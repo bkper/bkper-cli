@@ -1,6 +1,6 @@
 # Data Management
 
-Interact with books, accounts, transactions, and balances using the `bkper` CLI.
+Interact with books, files, accounts, transactions, and balances using the `bkper` CLI.
 
 All commands that operate within a book use `-b, --book <bookId>` to specify the book context.
 
@@ -155,6 +155,39 @@ Avoid using the same name for a Group and an Account in the same Book.
 
 ---
 
+## Files
+
+Upload local files to a book and optionally route them with properties.
+
+```bash
+# Upload a file to a book
+bkper file upload ./receipt.jpg -b abc123
+
+# Get a file by id
+bkper file get file_123 -b abc123
+
+# Upload and resolve an account to canonical account_id
+bkper file upload ./statement.pdf -b abc123 --account "Credit Card"
+
+# Upload with workflow properties
+bkper file upload ./statement.pdf -b abc123 \
+  -p statement_period=2025-01 -p group_id=grp_123
+```
+
+Use `-p group_id=...` for group-based routing. The CLI infers `contentType` from the local filename when possible, so PDFs are uploaded as `application/pdf` instead of a generic binary type. It rejects `--account` together with raw `-p account_id=...` and forbids `-p upload_method=...` because that property is reserved for transaction attachments.
+
+<details>
+<summary>Command reference</summary>
+
+-   `file get <fileId> -b <bookId>` - Get a file by ID
+-   `file upload <path> -b <bookId>` - Upload a local file to a book
+    -   `--account <accountIdOrName>` - Resolve an account by name or id and persist canonical `account_id=<resolvedAccountId>`
+    -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
+
+</details>
+
+---
+
 ## Transactions
 
 Record, query, and manage financial transactions.
@@ -166,6 +199,13 @@ bkper transaction create -b abc123 --description "Office supplies"
 # Create a complete transaction
 bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
+
+# Create a transaction with one local attachment
+bkper transaction create -b abc123 --date 2025-01-15 --amount 23.90 \
+  --from "Cash" --to "Meals" --description "Team lunch" --file ./receipt.pdf
+
+# Create a file-only draft for receipt capture
+bkper transaction create -b abc123 --file ./invoice.pdf
 
 # List transactions for a full year (on:YYYY)
 bkper transaction list -b abc123 -q 'on:2025'
@@ -205,6 +245,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
     -   `--to <to>` - Debit account (destination)
     -   `--url <url>` - URL (repeatable)
     -   `--remote-id <remoteId>` - Remote ID (repeatable)
+    -   `--file <path>` - Attach one local file during single-create mode only
     -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
 -   `transaction update [transactionId] -b <bookId>` - Update a transaction (or batch update via stdin)
     -   `--date <date>` - Transaction date
@@ -221,6 +262,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 -   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
 </details>
+
 
 ---
 
@@ -366,6 +408,8 @@ CSV is significantly more token-efficient than JSON for tabular data, and for wi
 ## Batch Operations & Piping
 
 Write commands (`account create`, `transaction create`) accept JSON data piped via stdin for batch operations. The `transaction update` command also accepts stdin for batch updates. The input format follows the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) exactly -- a single JSON object or an array of objects.
+
+`transaction create --file` is not available in stdin batch mode. Use single-create commands when attaching a local file.
 
 ```bash
 # Create transactions

@@ -58,6 +58,7 @@
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",
         "google-auth-library": "^10.5.0",
+        "mime": "^4.1.0",
         "open": "^10.1.0",
         "openapi-fetch": "^0.15.0",
         "tar": "^7.0.0",

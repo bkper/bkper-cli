@@ -7,7 +7,6 @@ export { expect };
  * Test configuration for integration tests
  */
 export const TestConfig = {
-    APP_TEMPLATE_PATH: '../bkper-app-template',
     APP_ID: 'my-app',
     PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
     FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',

@@ -2,17 +2,24 @@ import { program } from 'commander';
 import type { OutputFormat } from '../render/output.js';
 
 /**
+ * Commander option collector for repeatable scalar flags.
+ */
+export function collectRepeatable(value: string, previous: string[] | undefined): string[] {
+    return previous ? [...previous, value] : [value];
+}
+
+/**
  * Commander option collector for repeatable --property flags.
  */
 export function collectProperty(value: string, previous: string[] | undefined): string[] {
-    return previous ? [...previous, value] : [value];
+    return collectRepeatable(value, previous);
 }
 
 /**
  * Commander option collector for repeatable --book flags.
  */
 export function collectBook(value: string, previous: string[] | undefined): string[] {
-    return previous ? [...previous, value] : [value];
+    return collectRepeatable(value, previous);
 }
 
 /**

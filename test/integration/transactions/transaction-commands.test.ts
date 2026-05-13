@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { expect } from 'chai';
 import {
     isApiAvailable,
@@ -6,6 +9,7 @@ import {
     deleteTestBook,
     runBkper,
     runBkperJson,
+    runBkperWithStdin,
     uniqueTestName,
 } from '../helpers/api-helpers.js';
 
@@ -13,6 +17,7 @@ describe('CLI - transaction commands', function () {
     this.timeout(120000);
 
     let bookId: string;
+    let tempDir: string;
 
     before(async function () {
         const available = await isApiAvailable();
@@ -20,6 +25,8 @@ describe('CLI - transaction commands', function () {
             console.log(`    Skipping: API not available at ${getApiUrl()}`);
             this.skip();
         }
+
+        tempDir = mkdtempSync(path.join(os.tmpdir(), 'bkper-transaction-integration-'));
 
         const bookName = uniqueTestName('test-transactions');
         bookId = await createTestBook(bookName);
@@ -55,6 +62,12 @@ describe('CLI - transaction commands', function () {
             '--type',
             'OUTGOING',
         ]);
+    });
+
+    after(function () {
+        if (tempDir) {
+            rmSync(tempDir, { recursive: true, force: true });
+        }
     });
 
     after(async function () {
@@ -150,6 +163,110 @@ describe('CLI - transaction commands', function () {
 
             expect(result).to.be.an('object');
             expect(result.properties).to.deep.include({ invoice: 'INV-001' });
+        });
+
+        it('should create a transaction with one attached file and allow retrieving that file', async function () {
+            const filePath = path.join(tempDir, 'receipt-attachment.pdf');
+            const fileContent = '%PDF-1.4\nreceipt-attachment\n%%EOF';
+            writeFileSync(filePath, fileContent);
+
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--date',
+                '2025-01-19',
+                '--amount',
+                '25',
+                '--description',
+                'With attachment',
+                '--from',
+                'Cash',
+                '--to',
+                'Expenses',
+                '--file',
+                filePath,
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.files).to.be.an('array').with.length(1);
+            expect(result.files?.[0].name).to.equal('receipt-attachment.pdf');
+            expect(result.files?.[0].contentType).to.equal('application/pdf');
+
+            const retrieved = await runBkperJson<bkper.File>([
+                'file',
+                'get',
+                result.files?.[0].id!,
+                '-b',
+                bookId,
+            ]);
+
+            expect(retrieved.id).to.equal(result.files?.[0].id);
+            expect(retrieved.name).to.equal('receipt-attachment.pdf');
+            expect(retrieved.contentType).to.equal('application/pdf');
+            expect(retrieved.content).to.equal(Buffer.from(fileContent).toString('base64'));
+        });
+
+        it('should allow file-only draft create', async function () {
+            const filePath = path.join(tempDir, 'receipt-draft.pdf');
+            writeFileSync(filePath, '%PDF-1.4\nreceipt-draft\n%%EOF');
+
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--file',
+                filePath,
+            ]);
+
+            expect(result).to.be.an('object');
+            expect(result.id).to.be.a('string');
+            expect(result.files).to.be.an('array').with.length(1);
+            expect(result.files?.[0].contentType).to.equal('application/pdf');
+            expect(result.posted).to.not.equal(true);
+        });
+
+        it('should reject stdin input together with --file', async function () {
+            const filePath = path.join(tempDir, 'receipt-stdin.txt');
+            writeFileSync(filePath, 'receipt-stdin');
+
+            const result = await runBkperWithStdin(
+                [
+                    'transaction',
+                    'create',
+                    '-b',
+                    bookId,
+                    '--file',
+                    filePath,
+                ],
+                JSON.stringify([{ description: 'stdin transaction' }])
+            );
+
+            expect(result.exitCode).to.not.equal(0);
+            expect(result.stderr).to.include('--file');
+        });
+
+        it('should reject repeated --file flags', async function () {
+            const filePathA = path.join(tempDir, 'receipt-a.txt');
+            const filePathB = path.join(tempDir, 'receipt-b.txt');
+            writeFileSync(filePathA, 'receipt-a');
+            writeFileSync(filePathB, 'receipt-b');
+
+            const result = await runBkper([
+                'transaction',
+                'create',
+                '-b',
+                bookId,
+                '--file',
+                filePathA,
+                '--file',
+                filePathB,
+            ]);
+
+            expect(result.exitCode).to.not.equal(0);
+            expect(result.stderr).to.include('may only be provided once');
         });
     });
 

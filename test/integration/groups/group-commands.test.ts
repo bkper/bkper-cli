@@ -13,6 +13,11 @@ describe('CLI - group commands', function () {
     this.timeout(30000);
 
     let bookId: string;
+    let assetsName = '';
+    let currentAssetsName = '';
+    let internalName = '';
+    let expensesName = '';
+    let operatingExpensesName = '';
 
     before(async function () {
         const available = await isApiAvailable();
@@ -33,65 +38,73 @@ describe('CLI - group commands', function () {
 
     describe('group create', function () {
         it('should create a group', async function () {
+            assetsName = uniqueTestName('assets');
+
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
                 '-b',
                 bookId,
                 '--name',
-                'Assets',
+                assetsName,
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Assets');
+            expect(result.name).to.equal(assetsName);
         });
 
         it('should create a child group with parent', async function () {
+            currentAssetsName = uniqueTestName('current-assets');
+
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
                 '-b',
                 bookId,
                 '--name',
-                'Current Assets',
+                currentAssetsName,
                 '--parent',
-                'Assets',
+                assetsName,
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Current Assets');
+            expect(result.name).to.equal(currentAssetsName);
         });
 
         it('should create a hidden group', async function () {
+            internalName = uniqueTestName('internal');
+
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
                 '-b',
                 bookId,
                 '--name',
-                'Internal',
+                internalName,
                 '--hidden',
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Internal');
+            expect(result.name).to.equal(internalName);
             expect(result.hidden).to.equal(true);
         });
 
         it('should create a group with properties', async function () {
+            expensesName = uniqueTestName('expenses');
+
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'create',
                 '-b',
                 bookId,
                 '--name',
-                'Expenses',
+                expensesName,
                 '-p',
                 'code=GRP-001',
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Expenses');
+            expect(result.name).to.equal(expensesName);
             expect(result.properties).to.deep.include({ code: 'GRP-001' });
         });
     });
@@ -104,10 +117,10 @@ describe('CLI - group commands', function () {
             expect(result.length).to.be.greaterThanOrEqual(4);
 
             const names = result.map(g => g.name);
-            expect(names).to.include('Assets');
-            expect(names).to.include('Current Assets');
-            expect(names).to.include('Internal');
-            expect(names).to.include('Expenses');
+            expect(names).to.include(assetsName);
+            expect(names).to.include(currentAssetsName);
+            expect(names).to.include(internalName);
+            expect(names).to.include(expensesName);
         });
     });
 
@@ -116,13 +129,13 @@ describe('CLI - group commands', function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'get',
-                'Assets',
+                assetsName,
                 '-b',
                 bookId,
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Assets');
+            expect(result.name).to.equal(assetsName);
         });
 
         it('should fail for a non-existent group', async function () {
@@ -134,25 +147,27 @@ describe('CLI - group commands', function () {
 
     describe('group update', function () {
         it('should update a group name', async function () {
+            operatingExpensesName = uniqueTestName('operating-expenses');
+
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'update',
-                'Expenses',
+                expensesName,
                 '-b',
                 bookId,
                 '--name',
-                'Operating Expenses',
+                operatingExpensesName,
             ]);
 
             expect(result).to.be.an('object');
-            expect(result.name).to.equal('Operating Expenses');
+            expect(result.name).to.equal(operatingExpensesName);
         });
 
         it('should update group properties', async function () {
             const result = await runBkperJson<bkper.Group>([
                 'group',
                 'update',
-                'Operating Expenses',
+                operatingExpensesName,
                 '-b',
                 bookId,
                 '-p',

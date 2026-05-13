@@ -18,7 +18,7 @@ describe('Integration: app init', function () {
     });
 
     after(async function () {
-        this.timeout(10000);
+        this.timeout(60000);
         await stateManager.reset();
     });
 

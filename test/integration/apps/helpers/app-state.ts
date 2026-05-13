@@ -2,8 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { runCli, runCommand } from './cli-helpers.js';
 
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const APP_NAME = 'my-app';
-const CACHE_DIR = path.resolve(process.cwd(), 'tmp', 'app-state-cache');
+const CACHE_DIR = path.join(REPO_ROOT, 'tmp', 'app-state-cache');
 
 export type AppState = 'init' | 'built' | 'cleaned';
 
@@ -73,11 +74,14 @@ export class AppStateManager {
         // Check if state exists on disk from previous runs
         const cachedPath = this.getCachePath(state);
         if (fs.existsSync(cachedPath)) {
-            this.states.set(state, {
-                path: cachedPath,
-                createdAt: fs.statSync(cachedPath).mtimeMs,
-            });
-            return;
+            if (this.isCacheCompatible(state, cachedPath)) {
+                this.states.set(state, {
+                    path: cachedPath,
+                    createdAt: fs.statSync(cachedPath).mtimeMs,
+                });
+                return;
+            }
+            fs.rmSync(cachedPath, { recursive: true, force: true });
         }
 
         // Create the state
@@ -113,6 +117,7 @@ export class AppStateManager {
 
         // Install dependencies
         await runCommand('bun', ['install'], appDir);
+        this.linkLocalBkper(appDir);
 
         // Compile shared types
         await runCommand('bun', ['x', 'tsc', '-p', 'tsconfig.json'], path.join(appDir, 'packages/shared'));
@@ -133,8 +138,10 @@ export class AppStateManager {
 
         // Copy init state
         this.copyDirectory(initPath, targetPath);
+        this.linkLocalBkper(targetPath);
 
-        // Run build
+        // Build client assets and worker bundles
+        await runCommand('bun', ['x', 'vite', 'build'], targetPath);
         await runCli(['app', 'build'], targetPath);
     }
 
@@ -164,7 +171,7 @@ export class AppStateManager {
 
         // Create temp directory on first use
         if (!this.tempDir) {
-            const tempRoot = path.resolve(process.cwd(), 'tmp');
+            const tempRoot = path.join(REPO_ROOT, 'tmp');
             fs.mkdirSync(tempRoot, { recursive: true });
             this.tempDir = fs.mkdtempSync(path.join(tempRoot, 'app-test-'));
         }
@@ -180,6 +187,81 @@ export class AppStateManager {
      */
     private getCachePath(state: AppState): string {
         return path.join(CACHE_DIR, `${state}-cache`, APP_NAME);
+    }
+
+    /**
+     * Checks whether a cached app state is self-sufficient for the integration tests.
+     *
+     * This intentionally validates only the cached app itself and the local bkper link.
+     * It must not depend on another workspace project being present.
+     */
+    private isCacheCompatible(state: AppState, cachedPath: string): boolean {
+        if (!this.hasBaseAppStructure(cachedPath) || !this.hasLocalBkperLink(cachedPath)) {
+            return false;
+        }
+
+        if (state === 'init') {
+            return this.hasInitTooling(cachedPath);
+        }
+
+        if (state === 'built') {
+            return (
+                this.hasInitTooling(cachedPath) &&
+                fs.existsSync(path.join(cachedPath, 'dist/web/server/index.js')) &&
+                fs.existsSync(path.join(cachedPath, 'dist/events/index.js')) &&
+                fs.existsSync(path.join(cachedPath, 'dist/web/client'))
+            );
+        }
+
+        return !fs.existsSync(path.join(cachedPath, 'dist')) && !fs.existsSync(path.join(cachedPath, 'node_modules'));
+    }
+
+    /**
+     * Validates the minimal structure expected from `bkper app init`.
+     */
+    private hasBaseAppStructure(appDir: string): boolean {
+        return [
+            'package.json',
+            'bkper.yaml',
+            'packages/shared',
+            'packages/web/client',
+            'packages/web/server',
+            'packages/events',
+        ].every(relativePath => fs.existsSync(path.join(appDir, relativePath)));
+    }
+
+    /**
+     * Validates tooling required by the build/dev/deploy integration tests.
+     */
+    private hasInitTooling(appDir: string): boolean {
+        return [
+            'node_modules',
+            'node_modules/miniflare/package.json',
+            'node_modules/vite/package.json',
+            'packages/shared/dist',
+        ].every(relativePath => fs.existsSync(path.join(appDir, relativePath)));
+    }
+
+    /**
+     * Ensures the generated app can import the local bkper package.
+     */
+    private linkLocalBkper(appDir: string): void {
+        const nodeModulesDir = path.join(appDir, 'node_modules');
+        const targetPath = path.join(nodeModulesDir, 'bkper');
+        const sourcePath = REPO_ROOT;
+
+        fs.mkdirSync(nodeModulesDir, { recursive: true });
+        if (fs.existsSync(targetPath)) {
+            fs.rmSync(targetPath, { recursive: true, force: true });
+        }
+        fs.symlinkSync(sourcePath, targetPath, 'dir');
+    }
+
+    /**
+     * Checks whether the cached app keeps a link to the local bkper package.
+     */
+    private hasLocalBkperLink(appDir: string): boolean {
+        return fs.existsSync(path.join(appDir, 'node_modules', 'bkper', 'package.json'));
     }
 
     /**

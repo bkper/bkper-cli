@@ -11,6 +11,7 @@ import { registerGroupCommands } from './commands/groups/register.js';
 import { registerTransactionCommands } from './commands/transactions/register.js';
 import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
+import { registerFileCommands } from './commands/files/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
 import { registerAgentCommands, runAgentCommand } from './commands/agent-command.js';
 import { shouldRunAgentCommand } from './agent/cli-dispatch.js';
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
     registerTransactionCommands(program);
     registerBalanceCommands(program);
     registerCollectionCommands(program);
+    registerFileCommands(program);
 
     // Agent bridge command
     registerAgentCommands(program);

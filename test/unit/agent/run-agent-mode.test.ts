@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
@@ -11,6 +12,8 @@ import {
     type AgentModeDependencies,
     type InteractiveRuntimeHost,
 } from '../../../src/agent/run-agent-mode.js';
+
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
 
 function createFakeRuntime(): InteractiveRuntimeHost {
     return Object.create(null) as unknown as InteractiveRuntimeHost;
@@ -213,15 +216,14 @@ describe('runAgentMode', function () {
         const createSessionManager = sinon.stub().returns({id: 'session-manager'});
 
         const sessionManager = createStartupSessionManager(
-            '/workspace/bkper-cli',
+            REPO_ROOT,
             {
                 getSessionDir: () => '.pi/sessions',
             },
             createSessionManager
         );
 
-        expect(createSessionManager.calledOnceWithExactly('/workspace/bkper-cli', '.pi/sessions'))
-            .to.be.true;
+        expect(createSessionManager.calledOnceWithExactly(REPO_ROOT, '.pi/sessions')).to.be.true;
         expect(sessionManager).to.equal(createSessionManager.firstCall.returnValue);
     });
 

@@ -39,6 +39,11 @@ type RegisteredAgentEndHandler = (
     }
 ) => Promise<void> | void;
 
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
+const WORKSPACE_ROOT = path.dirname(REPO_ROOT);
+const REVIEW_PROMPT = `review tax bot on ${WORKSPACE_ROOT}, check code and spot any inconsistency`;
+const FIND_WORKSPACE_COMMAND = `find ${WORKSPACE_ROOT} -maxdepth 2`;
+
 function registerPreloadExtension() {
     let beforeAgentStartHandler: RegisteredBeforeAgentStartHandler | undefined;
     let toolCallHandler: RegisteredToolCallHandler | undefined;
@@ -81,7 +86,7 @@ describe('core concepts preload', function () {
     it('should classify bot code reviews as full preload tasks', function () {
         expect(
             detectCoreConceptsPreloadLevel({
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
             })
         ).to.equal('full');
     });
@@ -141,11 +146,11 @@ describe('core concepts preload', function () {
 
         const result = await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -160,21 +165,21 @@ describe('core concepts preload', function () {
 
         await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
         const result = await toolCallHandler(
             {
                 toolName: 'bash',
-                input: {command: 'find /workspace -maxdepth 2'},
+                input: {command: FIND_WORKSPACE_COMMAND},
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -189,11 +194,11 @@ describe('core concepts preload', function () {
 
         await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -203,17 +208,17 @@ describe('core concepts preload', function () {
                 input: {path: getCoreConceptsDocPath()},
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
         const bashResult = await toolCallHandler(
             {
                 toolName: 'bash',
-                input: {command: 'find /workspace -maxdepth 2'},
+                input: {command: FIND_WORKSPACE_COMMAND},
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -226,11 +231,11 @@ describe('core concepts preload', function () {
 
         await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -240,17 +245,17 @@ describe('core concepts preload', function () {
                 input: {path: getCoreConceptsDocPath()},
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
         const result = await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
@@ -262,15 +267,15 @@ describe('core concepts preload', function () {
 
         await beforeAgentStartHandler(
             {
-                prompt: 'review tax bot on /workspace, check code and spot any inconsistency',
+                prompt: REVIEW_PROMPT,
                 systemPrompt: 'Base prompt',
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
-        await agentEndHandler({}, {cwd: '/workspace/bkper-cli'});
+        await agentEndHandler({}, {cwd: REPO_ROOT});
 
         const result = await toolCallHandler(
             {
@@ -278,7 +283,7 @@ describe('core concepts preload', function () {
                 input: {command: 'pwd'},
             },
             {
-                cwd: '/workspace/bkper-cli',
+                cwd: REPO_ROOT,
             }
         );
 
