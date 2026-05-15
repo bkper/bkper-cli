@@ -523,18 +523,21 @@ describe('CLI - transaction commands', function () {
             await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
             await runBkperJson(['transaction', 'post', txId2, '-b', bookId]);
 
-            const result = await runBkperJson<{
-                mergedTransaction: bkper.Transaction;
-                revertedTransactionId: string;
-                auditRecord: string | null;
-            }>(['transaction', 'merge', txId1, txId2, '-b', bookId]);
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'merge',
+                txId1,
+                txId2,
+                '-b',
+                bookId,
+            ]);
 
             expect(result).to.be.an('object');
-            expect(result.mergedTransaction).to.be.an('object');
-            expect(result.revertedTransactionId).to.be.a('string');
+            expect(result.id).to.be.a('string');
+            expect(result.amount).to.exist;
         });
 
-        it('should fail to merge transactions with different amounts', async function () {
+        it('should merge transactions with different amounts using canonical server logic', async function () {
             const created1 = await runBkperJson<bkper.Transaction>([
                 'transaction',
                 'create',
@@ -575,9 +578,18 @@ describe('CLI - transaction commands', function () {
             await runBkperJson(['transaction', 'post', txId1, '-b', bookId]);
             await runBkperJson(['transaction', 'post', txId2, '-b', bookId]);
 
-            const result = await runBkper(['transaction', 'merge', txId1, txId2, '-b', bookId]);
+            const result = await runBkperJson<bkper.Transaction>([
+                'transaction',
+                'merge',
+                txId1,
+                txId2,
+                '-b',
+                bookId,
+            ]);
 
-            expect(result.exitCode).to.not.equal(0);
+            expect(result).to.be.an('object');
+            expect(result.id).to.be.a('string');
+            expect(result.amount).to.exist;
         });
     });
 

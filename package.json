@@ -53,7 +53,7 @@
     "dependencies": {
         "@earendil-works/pi-coding-agent": "0.74.0",
         "@earendil-works/pi-tui": "0.74.0",
-        "bkper-js": "^2.33.1",
+        "bkper-js": "^2.34.2",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",

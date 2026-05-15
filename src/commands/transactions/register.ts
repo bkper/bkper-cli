@@ -194,26 +194,12 @@ export function registerTransactionCommands(program: Command): void {
         .action((transactionId1: string, transactionId2: string, options) =>
             withAction('merging transactions', async format => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const result = await mergeTransactions(
+                const transaction = await mergeTransactions(
                     options.book,
                     transactionId1,
                     transactionId2
                 );
-                if (format === 'json' || format === 'csv') {
-                    console.log(
-                        JSON.stringify(
-                            {
-                                mergedTransaction: result.mergedTransaction.json(),
-                                revertedTransactionId: result.revertedTransactionId,
-                                auditRecord: result.auditRecord,
-                            },
-                            null,
-                            2
-                        )
-                    );
-                } else {
-                    renderItem(result.mergedTransaction.json(), 'table');
-                }
+                renderItem(transaction.json(), format);
             })()
         );
 }
