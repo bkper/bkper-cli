@@ -60,6 +60,13 @@ bkper agent
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
+Good starting prompts:
+
+- `What are the main account types in Bkper?`
+- `How do I query transactions using the CLI?`
+- `What files are in this project?`
+- `Help me create a script that lists all accounts in my book`
+
 ```bash
 # Command mode — explicit CLI workflows
 bkper book list
