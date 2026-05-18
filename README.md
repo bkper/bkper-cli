@@ -58,7 +58,7 @@ When you are done working in a sandbox, run `bkper auth logout` to revoke the st
 bkper agent
 ```
 
-![Bkper CLI Agent TUI](assets/bkper-agent-cli.png)
+![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
 ```bash
 # Command mode — explicit CLI workflows
