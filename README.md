@@ -134,6 +134,10 @@ bkper agent install <pi-package-source>
 bkper agent --help
 ```
 
+### Connect a model provider
+
+On first launch, type `/login` and select a provider. We recommend [OpenCode Go](https://opencode.ai/go) for open-weights models and [OpenCode Zen](https://opencode.ai/zen) for frontier models — both give you access to high-quality models with no extra setup.
+
 `bkper agent` keeps Bkper defaults (including the Bkper system prompt) unless you explicitly pass `--system-prompt`.
 Use `bkper help agent` for the Bkper CLI command help, and `bkper agent --help` for Pi help.
 
