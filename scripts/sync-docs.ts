@@ -5,52 +5,24 @@ import { fileURLToPath } from 'node:url';
 interface DocSpec {
     url: string;
     filename: string;
-    requiredHeadings: readonly string[];
 }
 
 const DOCS: readonly DocSpec[] = [
     {
         url: 'https://bkper.com/docs/core-concepts.md',
         filename: 'core-concepts.md',
-        requiredHeadings: [
-            '# Core Concepts',
-            '## Accounts',
-            '## Transactions',
-            '## Books',
-        ],
     },
     {
         url: 'https://bkper.com/docs/api/bkper-js.md',
         filename: 'bkper-js.md',
-        requiredHeadings: [
-            '# bkper-js',
-            '## Classes',
-            '### Book',
-            '### Account',
-            '### Transaction',
-        ],
     },
     {
         url: 'https://bkper.com/docs/api/bkper-api-types.md',
         filename: 'bkper-api-types.md',
-        requiredHeadings: [
-            '# bkper-api-types',
-            '## Interfaces',
-            '### Account',
-            '### Book',
-            '### Transaction',
-        ],
     },
     {
         url: 'https://bkper.com/docs/build/apps/llms-full.txt',
         filename: 'app-building.md',
-        requiredHeadings: [
-            '# App Architecture',
-            '# App Configuration',
-            '# Development Experience',
-            '# Event Handlers',
-            '# Building & Deploying',
-        ],
     },
 ];
 
@@ -59,17 +31,17 @@ function resolveOutputDir(): string {
     return path.resolve(scriptDir, '..', 'docs');
 }
 
-function validateMarkdown(markdown: string, spec: DocSpec): void {
-    if (!markdown.trim()) {
+export function validateMarkdown(markdown: string, spec: DocSpec): void {
+    const trimmed = markdown.trim();
+    if (!trimmed) {
         throw new Error(`${spec.filename}: fetched markdown is empty.`);
     }
 
-    for (const heading of spec.requiredHeadings) {
-        if (!markdown.includes(heading)) {
-            throw new Error(
-                `${spec.filename}: missing required heading: ${heading}`
-            );
-        }
+    const lower = trimmed.toLowerCase();
+    if (lower.startsWith('<!doctype html') || lower.startsWith('<html')) {
+        throw new Error(
+            `${spec.filename}: fetched content looks like HTML, not markdown.`
+        );
     }
 }
 

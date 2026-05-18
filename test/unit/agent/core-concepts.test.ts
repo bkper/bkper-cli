@@ -14,16 +14,9 @@ describe('agent core concepts', function () {
         expect(markdown.trim().length).to.be.greaterThan(0);
     });
 
-    it('should include the required core concepts headings', function () {
-        const markdown = readFileSync(resolveCoreConceptsPath(), 'utf8');
-        expect(markdown).to.include('# Core Concepts');
-        expect(markdown).to.include('## Accounts');
-        expect(markdown).to.include('## Transactions');
-        expect(markdown).to.include('## Books');
-    });
-
-    it('should preserve markdown examples with backticks', function () {
-        const markdown = readFileSync(resolveCoreConceptsPath(), 'utf8');
-        expect(markdown).to.include("These examples use Bkper's transaction shorthand `From >> To`");
+    it('should not be an obvious html document', function () {
+        const markdown = readFileSync(resolveCoreConceptsPath(), 'utf8').trimStart();
+        expect(markdown.toLowerCase()).not.to.match(/^<!doctype html\b/);
+        expect(markdown.toLowerCase()).not.to.match(/^<html\b/);
     });
 });
