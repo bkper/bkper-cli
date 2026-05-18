@@ -1,4 +1,4 @@
-# Core Concepts
+# Bkper Core Concepts
 
 Bkper tracks resources — money, inventory, or anything countable — as movements between places. Every financial event is recorded as an amount moving **from** one Account **to** another. This from-to model replaces the traditional language of debits and credits with something intuitive: resources leave one place and arrive at another.
 

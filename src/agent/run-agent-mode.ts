@@ -307,6 +307,8 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
     }
 }
 
+const STARTUP_LEFT_PADDING = ' ';
+
 const NO_MODELS_STARTUP_HINT = 'No model provider configured. Use /login or add an API key.';
 
 function wrapStartupHeaderLine(line: string, width: number): string[] {
@@ -402,7 +404,7 @@ function buildStartupHeaderLines(
         );
     }
 
-    return lines;
+    return lines.map(line => (line.length > 0 ? STARTUP_LEFT_PADDING + line : line));
 }
 
 function createStartupHeaderFactory(

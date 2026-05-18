@@ -120,7 +120,7 @@ const bkper = new Bkper();
 const books = await bkper.getBooks();
 ```
 
-See the [@bkper/web-auth documentation](https://bkper.com/docs/auth-sdk) for more details.
+See the [@bkper/web-auth documentation](https://bkper.com/docs/api/bkper-web-auth) for more details.
 
 ### API Key (Optional)
 
