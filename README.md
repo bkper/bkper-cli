@@ -54,18 +54,20 @@ When you are done working in a sandbox, run `bkper auth logout` to revoke the st
 ### Start using bkper
 
 ```bash
-# Show CLI help
-bkper
-```
-
-```bash
-# Interactive mode (agent TUI)
+# Interactive mode — the fastest way to explore (agent TUI)
 bkper agent
 ```
 
+![Bkper CLI Agent TUI](assets/bkper-agent-cli.png)
+
 ```bash
-# Command mode (explicit command)
+# Command mode — explicit CLI workflows
 bkper book list
+```
+
+```bash
+# Show CLI help
+bkper
 ```
 
 Pick a book and create your first transaction:
@@ -95,8 +97,6 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ## Interactive Mode (powered by Pi)
 
 Run `bkper agent` to start the embedded Bkper Agent TUI. Running `bkper` with no arguments shows CLI help.
-
-![Bkper CLI Agent TUI showing the interactive terminal interface with Bkper ASCII art header, command shortcuts, and active prompt](assets/bkper-agent-cli.png)
 
 Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
 
