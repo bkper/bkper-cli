@@ -96,6 +96,8 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 Run `bkper agent` to start the embedded Bkper Agent TUI. Running `bkper` with no arguments shows CLI help.
 
+![Bkper CLI Agent TUI showing the interactive terminal interface with Bkper ASCII art header, command shortcuts, and active prompt](assets/bkper-agent-cli.png)
+
 Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
 
 -   Pi provides the core agent runtime and TUI
