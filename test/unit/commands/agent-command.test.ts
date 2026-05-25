@@ -114,7 +114,7 @@ describe('CLI - agent command', function () {
         });
     });
 
-    it('should route --resume to the embedded interactive mode wrapper', async function () {
+    it('should route --resume to the embedded interactive mode wrapper as continue', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
 
@@ -123,11 +123,11 @@ describe('CLI - agent command', function () {
         expect(runPi.called).to.be.false;
         expect(runInteractiveMode.calledOnce).to.be.true;
         expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
-            resumeSession: true,
+            continueSession: true,
         });
     });
 
-    it('should route -r to the embedded interactive mode wrapper', async function () {
+    it('should route -r to the embedded interactive mode wrapper as continue', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
 
@@ -136,7 +136,7 @@ describe('CLI - agent command', function () {
         expect(runPi.called).to.be.false;
         expect(runInteractiveMode.calledOnce).to.be.true;
         expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
-            resumeSession: true,
+            continueSession: true,
         });
     });
 

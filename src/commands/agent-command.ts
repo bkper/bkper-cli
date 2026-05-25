@@ -73,7 +73,7 @@ function parseSessionOptions(
         if (arg === '--continue' || arg === '-c') {
             options.continueSession = true;
         } else if (arg === '--resume' || arg === '-r') {
-            options.resumeSession = true;
+            options.continueSession = true;
         } else if (arg === '--no-session') {
             options.noSession = true;
         } else {
@@ -102,7 +102,7 @@ export async function runAgentCommand(
     const {options, remainingArgs} = parseSessionOptions(piArgs);
 
     if (remainingArgs.length > 0) {
-        // Unsupported interactive args (e.g. --resume, --session, --fork)
+        // Unsupported interactive args (e.g. --session, --fork)
         // Forward to pi so the user still gets a working session.
         const args = buildPiArgs(piArgs);
         await dependencies.runPi(args);
