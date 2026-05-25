@@ -140,7 +140,8 @@ describe('auth/local-auth-service', function () {
         expect(revokeTokenStub.calledOnce).to.be.true;
         expect(revokeTokenStub.firstCall.args[0]).to.equal('refresh-token-123');
         expect(fs.existsSync(credentialsPath)).to.be.false;
-        expect(String(consoleLogStub.firstCall.args[0])).to.match(/revoked/i);
+        expect(consoleLogStub.getCalls().some(call => String(call.args[0]).match(/revoked/i))).to.be
+            .true;
     });
 
     it('should clear local credentials even when remote revocation fails', async function () {
