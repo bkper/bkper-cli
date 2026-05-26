@@ -62,6 +62,20 @@ function isInteractiveSessionArgs(args: string[]): boolean {
     return true;
 }
 
+const PI_MANAGEMENT_COMMANDS = new Set([
+    'install',
+    'remove',
+    'uninstall',
+    'update',
+    'list',
+    'config',
+]);
+
+function isPiManagementCommand(args: string[]): boolean {
+    const [command] = args;
+    return command !== undefined && PI_MANAGEMENT_COMMANDS.has(command);
+}
+
 function parseSessionOptions(
     args: string[]
 ): {options: SessionOptions; remainingArgs: string[]} {
@@ -90,6 +104,11 @@ export async function runAgentCommand(
 ): Promise<void> {
     if (piArgs.length === 0) {
         await dependencies.runInteractiveMode();
+        return;
+    }
+
+    if (isPiManagementCommand(piArgs)) {
+        await dependencies.runPi(piArgs);
         return;
     }
 

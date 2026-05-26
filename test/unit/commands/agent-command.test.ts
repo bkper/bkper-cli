@@ -45,6 +45,17 @@ describe('CLI - agent command', function () {
         ]);
     });
 
+    it('should forward pi package install command without injecting system prompt', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['install', 'npm:pi-slopchop'], { runPi, runInteractiveMode });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal(['install', 'npm:pi-slopchop']);
+    });
+
     it('should not inject system prompt when user provides --system-prompt', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
