@@ -52,7 +52,7 @@
     },
     "dependencies": {
         "@earendil-works/pi-coding-agent": "0.75.5",
-        "bkper-js": "^2.34.2",
+        "bkper-js": "^2.35.2",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.27.2",

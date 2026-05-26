@@ -2,6 +2,7 @@ import type { Miniflare, Log } from 'miniflare';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import { buildWorker } from './esbuild.js';
+import type { LocalOutboundService } from './local-outbound.js';
 
 export interface WorkerServerOptions {
     port: number;
@@ -10,6 +11,7 @@ export interface WorkerServerOptions {
     compatibilityDate?: string;
     persist?: boolean;
     persistPath?: string;
+    outboundService?: LocalOutboundService;
 }
 
 /**
@@ -25,6 +27,7 @@ interface BaseConfig {
     kvNamespaces?: Record<string, string>;
     kvPersist?: string;
     bindings?: Record<string, string>;
+    outboundService?: LocalOutboundService;
 }
 
 /**
@@ -104,6 +107,9 @@ export async function createWorkerServer(
 
         // Environment variables and secrets
         bindings: options.vars,
+
+        // Local outbound service emulates Workers for Platforms egress policies.
+        outboundService: options.outboundService,
     };
 
     const mf = new MiniflareClass({

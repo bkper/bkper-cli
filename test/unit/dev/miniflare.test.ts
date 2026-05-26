@@ -19,6 +19,7 @@ describe('Miniflare Integration', function () {
     const simpleWorkerPath = path.join(fixturesDir, 'simple.ts');
     const withKvWorkerPath = path.join(fixturesDir, 'with-kv.ts');
     const withVarsWorkerPath = path.join(fixturesDir, 'with-vars.ts');
+    const fetchExternalWorkerPath = path.join(fixturesDir, 'fetch-external.ts');
 
     // Track Miniflare instance for cleanup
     let mf: Miniflare | null = null;
@@ -113,6 +114,25 @@ describe('Miniflare Integration', function () {
             // Server should start successfully with custom compatibility date
             const response = await fetch(`http://localhost:${testPort}/`);
             expect(response.ok).to.be.true;
+        });
+
+        it('should route Worker outbound fetches through a configured outbound service', async function () {
+            const outboundRequests: Request[] = [];
+            mf = await createWorkerServer(fetchExternalWorkerPath, {
+                port: testPort,
+                outboundService: async request => {
+                    outboundRequests.push(request);
+                    return new Response('from outbound', { status: 201 });
+                },
+            });
+
+            const response = await fetch(`http://localhost:${testPort}/`);
+            const text = await response.text();
+
+            expect(response.status).to.equal(201);
+            expect(text).to.equal('from outbound');
+            expect(outboundRequests).to.have.length(1);
+            expect(outboundRequests[0].url).to.equal('https://api.bkper.app/v5/books');
         });
     });
 

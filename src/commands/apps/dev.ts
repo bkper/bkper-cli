@@ -13,6 +13,7 @@ import { ensureTypesUpToDate, loadDevVars } from '../../dev/types.js';
 import { createLogger, logDevServerBanner } from '../../dev/logger.js';
 import { buildSharedIfPresent } from '../../dev/shared.js';
 import { preflightDependencies } from '../../dev/preflight.js';
+import { createLocalOutboundService } from '../../dev/local-outbound.js';
 import { loadAppConfig, loadSourceDeploymentConfig } from './config.js';
 import { isLoggedIn } from '../../auth/local-auth-service.js';
 import { startCloudflaredTunnel, TunnelHandle } from '../../dev/tunnel.js';
@@ -293,12 +294,16 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     // Start web server (Miniflare) with esbuild watch
     if (hasWeb) {
         serverLogger.info('Starting server...');
+        const outboundService = appConfig.id
+            ? createLocalOutboundService({ appId: appConfig.id })
+            : undefined;
         mf = await createWorkerServer(deployConfig.web!.main, {
             port: serverPort,
             kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
             vars: devVars,
             compatibilityDate: deployConfig.compatibilityDate,
             persist: true,
+            outboundService,
         });
 
         // Watch server files via esbuild (replaces chokidar)
