@@ -155,6 +155,40 @@ app.get('/api/data', async c => {
 export default app;
 ```
 
+### Server API authentication
+
+For deployed apps, server API routes under `/api/*` require a standard bearer token on the incoming request:
+
+```ts
+const token = auth.getAccessToken();
+if (!token) throw new Error('Not authenticated');
+
+const response = await fetch('/api/data', {
+    headers: { Authorization: `Bearer ${token}` },
+});
+```
+
+Dispatch validates the bearer token before your Worker runs. It then strips the `Authorization` header and passes only an internal outbound context, so app code should not read user tokens from request headers.
+
+When the server route calls Bkper, use `bkper-js` without a token provider:
+
+```ts
+import { Bkper } from 'bkper-js';
+
+app.get('/api/books', async c => {
+    const bkper = new Bkper();
+    const books = await bkper.getBooks();
+    return c.json({
+        books: books.map(book => ({
+            id: book.getId(),
+            name: book.getName(),
+        })),
+    });
+});
+```
+
+Platform outbound auth injects the validated user's OAuth token on exact Bkper API requests. Browser sessions only allow access to app web pages; they do not authorize `/api/*` server routes or create outbound auth context.
+
 ## Events handler
 
 The events package receives webhook calls from Bkper when subscribed [events](https://bkper.com/docs/build/apps/event-handlers.md) occur. It's a separate Hono app that processes events and returns responses.
@@ -280,6 +314,7 @@ Use `bkper-js` for all API calls. Do not call the REST API directly when `bkper-
 |------|-----|------------|
 | Client authentication | `@bkper/web-auth` (`BkperAuth`, `getAccessToken`) | Custom OAuth flows, manual `fetch('/auth/refresh')`, `google-auth-library` in the browser |
 | API calls from client | `bkper-js` (`Bkper`, `Book`, `Account`, `Transaction`) | Direct `fetch()` to REST endpoints |
+| API calls from app server `/api/*` route | Incoming `Authorization: Bearer <token>` + server-side `new Bkper()` | Reading OAuth tokens in server code, relying on browser sessions for API auth |
 | API calls from event handler | `bkper-js` with `oauthTokenProvider` from `bkper-oauth-token` header | Hard-coding API keys, calling REST directly |
 | Local development server | `npm run dev` (template script) | Manual `miniflare` + `cloudflared` invocations |
 | Event handler routing | `switch (event.type)` in `packages/events/src/index.ts` | Middleware frameworks, external webhook routers |
@@ -295,19 +330,22 @@ Avoid these patterns even if they seem necessary. The platform or SDK already so
 2. **Adding `/api/auth/refresh` or similar routes**
    - Token refresh is internal to `@bkper/web-auth`. Exposing it via Hono routes creates security surface area and duplicates platform functionality.
 
-3. **Modifying `packages/web/server/` for a simple UI task**
+3. **Relying on browser sessions for server API auth**
+   - Sessions let users open app web pages, but `/api/*` routes require `Authorization: Bearer <token>`. Dispatch validates bearer tokens and platform outbound uses that validated context for Bkper API calls.
+
+4. **Modifying `packages/web/server/` for a simple UI task**
    - If the user only asked for a client-side feature, do not touch the server package. The Vite dev server proxies `/api` to the Miniflare worker automatically; you do not need to add routes unless the user explicitly asks for custom backend logic.
 
-4. **Installing additional auth or HTTP libraries**
+5. **Installing additional auth or HTTP libraries**
    - `bkper-js` and `@bkper/web-auth` are the only packages you need for Bkper API access and authentication. Adding `axios`, `google-auth-library`, or similar is almost always wrong.
 
-5. **Creating event handlers when the user asked for a UI-only feature**
+6. **Creating event handlers when the user asked for a UI-only feature**
    - If the user says "show me a list of books in a popup," that is a client-only task. Do not scaffold `packages/events/` handlers or subscribe to webhooks.
 
-6. **Calling REST endpoints directly when `bkper-js` has the method**
+7. **Calling REST endpoints directly when `bkper-js` has the method**
    - If `bkper-js` exposes `book.getTransactions()`, use it. Do not `fetch('https://api.bkper.com/...')` and parse JSON manually.
 
-7. **Reverse-engineering SDK internals**
+8. **Reverse-engineering SDK internals**
    - Use the public API surface documented in the API reference. Do not read SDK source to find private methods or internal request patterns.
 
 ---
@@ -785,6 +823,8 @@ bkper auth login   # one-time setup
 
 Then `npm run dev` handles authentication automatically. The client calls `auth.getAccessToken()` and the middleware ensures the token is valid.
 
+When your client calls an app server route under `/api/*`, include that token as `Authorization: Bearer <token>` to match production dispatch behavior. Local outbound still uses your CLI credentials when the app server calls Bkper.
+
 If you see authentication errors in the browser, verify you're logged in:
 
 ```bash
@@ -864,7 +904,7 @@ Event handlers are the code that reacts to events in your Bkper Books. When a tr
 2. Bkper sends an HTTP POST to your webhook URL when those events fire
 3. Your handler processes the event and returns a response
 
-On the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md), events are routed to your `events` package automatically — including local development via tunnels. For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, you configure the webhook URL directly.
+On the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md), events are routed to your `events` package automatically — including local development via tunnels. Platform event routing uses `/events` and `/events/*` paths only. For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, you configure the webhook URL directly.
 
 ## Agent identity
 
@@ -1203,6 +1243,7 @@ Preview environments are built in — deploy to a preview URL to test before goi
 OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build.
 
 - **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Web client authentication](https://bkper.com/docs/build/apps/architecture.md#web-client-authentication).
+- **Server API routes** — Send `Authorization: Bearer <token>` to `/api/*`; dispatch validates it and platform outbound injects auth for server-side Bkper API calls. See [App Architecture → Server API authentication](https://bkper.com/docs/build/apps/architecture.md#server-api-authentication).
 - **Event handlers** — The user's OAuth token arrives in the `bkper-oauth-token` header. See [Event Handlers → Authentication](https://bkper.com/docs/build/apps/event-handlers.md#authentication).
 - **Local development** — The Vite auth middleware uses your CLI credentials. See [Development Experience → Local development authentication](https://bkper.com/docs/build/apps/development.md#local-development-authentication).
 

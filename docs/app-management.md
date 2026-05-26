@@ -53,6 +53,7 @@ bkper app install <appId> -b <bookId>
 ```
 Verify:
 - Menu appears in the book's "More" menu (if configured)
+- App server `/api/*` routes are called with `Authorization: Bearer <token>`
 - Trigger a subscribed event in the book
 - Check the Bkper activity stream for the handler response
 - If the handler writes back to the book, confirm loop prevention is in place (check `event.agent.id`)

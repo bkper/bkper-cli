@@ -122,6 +122,8 @@ const books = await bkper.getBooks();
 
 See the [@bkper/web-auth documentation](https://bkper.com/docs/api/bkper-web-auth) for more details.
 
+For Bkper Platform app server routes under `/api/*`, send `Authorization: Bearer ${auth.getAccessToken()}` from the client. The server route can use `new Bkper()` without a token provider because platform outbound auth injects the validated user's token on Bkper API calls.
+
 ### API Key (Optional)
 
 API keys are optional and only needed for dedicated quota limits. If not provided, requests use a shared managed quota via the Bkper API proxy.
