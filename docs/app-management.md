@@ -59,6 +59,28 @@ Verify:
 - `bkper app status` shows the deployed version
 - URLs in `bkper.yaml` match the deployed domain (`https://{appId}.bkper.app`)
 
+#### Preview testing with menu and events
+
+To test a preview deployment from the Bkper UI, keep production URLs unchanged and point the development URLs to the preview Worker:
+
+```yaml
+menuUrl: https://{appId}.bkper.app?bookId=${book.id}
+menuUrlDev: https://{appId}-preview.bkper.app?bookId=${book.id}
+
+webhookUrl: https://{appId}.bkper.app/events
+webhookUrlDev: https://{appId}-preview.bkper.app/events
+```
+
+Then build, sync metadata, and deploy to preview:
+
+```bash
+npm run build
+bkper app sync
+bkper app deploy --preview
+```
+
+Bkper uses `menuUrlDev` for developer menu access and `webhookUrlDev` for development-mode events. If `bkper app dev` runs later, it may replace `webhookUrlDev` with a local tunnel URL; set it back to the preview URL and run `bkper app sync` before testing preview again.
+
 ### 5. Validate
 
 ```bash
