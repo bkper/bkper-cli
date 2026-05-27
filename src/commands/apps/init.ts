@@ -123,15 +123,9 @@ export function replaceMyAppInObject(obj: unknown, appName: string): unknown {
 
 /**
  * Updates the bkper.yaml file with the new app name.
- * Also handles bkperapp.yaml for backward compatibility.
  */
 function updateBkperYaml(projectDir: string, appName: string): void {
-    // Check for bkper.yaml first, then fall back to bkperapp.yaml
-    let yamlPath = path.join(projectDir, 'bkper.yaml');
-
-    if (!fs.existsSync(yamlPath)) {
-        yamlPath = path.join(projectDir, 'bkperapp.yaml');
-    }
+    const yamlPath = path.join(projectDir, 'bkper.yaml');
 
     if (!fs.existsSync(yamlPath)) {
         throw new Error('bkper.yaml not found in template');
@@ -158,11 +152,11 @@ function updateBkperYaml(projectDir: string, appName: string): void {
 }
 
 /**
- * Replaces the placeholder app id 'my-app' in event handler source files.
+ * Replaces the placeholder app id 'my-app' in server source files.
  */
 export function updateEventHandlers(projectDir: string, appName: string): void {
-    const eventsDir = path.join(projectDir, 'packages/events/src');
-    if (!fs.existsSync(eventsDir)) {
+    const serverDir = path.join(projectDir, 'server/src');
+    if (!fs.existsSync(serverDir)) {
         return;
     }
 
@@ -174,7 +168,6 @@ export function updateEventHandlers(projectDir: string, appName: string): void {
             } else if (entry.name.endsWith('.ts')) {
                 let content = fs.readFileSync(fullPath, 'utf8');
                 const original = content;
-                // Replace both single and double quoted 'my-app' used as an identifier
                 content = content.replace(/(['"])my-app\1/g, `$1${appName}$1`);
                 if (content !== original) {
                     fs.writeFileSync(fullPath, content, 'utf8');
@@ -183,7 +176,7 @@ export function updateEventHandlers(projectDir: string, appName: string): void {
         }
     }
 
-    processDir(eventsDir);
+    processDir(serverDir);
 }
 
 /**
@@ -319,7 +312,7 @@ Done! To get started:
 
 Next steps:
   - Review bkper.yaml: update description, ownerName, ownerWebsite, and repoUrl
-  - Replace logo-light.svg and logo-dark.svg in packages/web/client/public/images/
+  - Replace logo-light.svg and logo-dark.svg in client/public/images/
   - Edit README.md to explain what your app does for end users
 `);
 }

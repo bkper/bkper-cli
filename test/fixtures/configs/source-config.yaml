@@ -1,11 +1,8 @@
 id: test-app
 name: Test App
 deployment:
-  web:
-    main: packages/web/server/src/index.ts
-    client: packages/web/client
-  events:
-    main: packages/events/src/index.ts
+  server: server/src/index.ts
+  client: client
   services:
     - KV
   secrets:

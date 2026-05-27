@@ -47,7 +47,7 @@ describe('CLI - apps undeploy Command', function () {
 
         // Create temp directory with app config
         fs.mkdirSync(testDir, { recursive: true });
-        fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'id: test-app\nname: Test App\n');
+        fs.writeFileSync(path.join(testDir, 'bkper.yaml'), 'id: test-app\nname: Test App\n');
         process.chdir(testDir);
     });
 
@@ -65,7 +65,7 @@ describe('CLI - apps undeploy Command', function () {
 
     describe('undeployApp - Config Loading', function () {
         it('should exit with error when app config is missing', async function () {
-            fs.unlinkSync(path.join(testDir, 'bkperapp.yaml'));
+            fs.unlinkSync(path.join(testDir, 'bkper.yaml'));
 
             try {
                 await undeployApp({});
@@ -78,7 +78,7 @@ describe('CLI - apps undeploy Command', function () {
         });
 
         it('should exit with error when app config has no id', async function () {
-            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'name: Test App Without ID\n');
+            fs.writeFileSync(path.join(testDir, 'bkper.yaml'), 'name: Test App Without ID\n');
 
             try {
                 await undeployApp({});

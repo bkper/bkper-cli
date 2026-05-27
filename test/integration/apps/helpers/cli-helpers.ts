@@ -160,11 +160,10 @@ export function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Assert that build artifacts exist
+ * Assert that the CLI server Worker build artifact exists.
  */
 export function assertArtifacts(rootDir: string): void {
-    expect(fs.existsSync(path.join(rootDir, 'dist/web/server/index.js'))).to.be.true;
-    expect(fs.existsSync(path.join(rootDir, 'dist/events/index.js'))).to.be.true;
+    expect(fs.existsSync(path.join(rootDir, 'dist/server/index.js'))).to.be.true;
 }
 
 /**

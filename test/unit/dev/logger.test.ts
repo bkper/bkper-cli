@@ -1,253 +1,130 @@
-import { expect } from 'chai';
-import * as sinon from 'sinon';
+import { expect, getTestPaths } from '../helpers/test-setup.js';
 
-// Import types for stubs - implementation will be imported after stubs are created
-import type { Logger, LogPrefix } from '../../../src/dev/logger.js';
+getTestPaths(import.meta.url);
 
 describe('Logger Module', function () {
-    let consoleLogStub: sinon.SinonStub;
-    let consoleWarnStub: sinon.SinonStub;
-    let consoleErrorStub: sinon.SinonStub;
+    let createLogger: typeof import('../../../src/dev/logger.js').createLogger;
+    let formatSize: typeof import('../../../src/dev/logger.js').formatSize;
+    let logDevServerBanner: typeof import('../../../src/dev/logger.js').logDevServerBanner;
+    let logBuildResults: typeof import('../../../src/dev/logger.js').logBuildResults;
 
-    // Dynamic imports to allow module to be loaded after stubs are set up
-    let createLogger: (prefix: LogPrefix) => Logger;
-    let logDevServerBanner: (options: { tunnelUrl?: string }) => void;
-    let logBuildResults: (results: {
-        webServer?: { path: string; size: number };
-        events?: { path: string; size: number };
-    }) => void;
-    let formatSize: (bytes: number) => string;
+    let consoleOutput: string[];
+    let consoleErrors: string[];
+    let consoleWarns: string[];
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const originalConsoleWarn = console.warn;
 
     before(async function () {
-        // Import the module
         const loggerModule = await import('../../../src/dev/logger.js');
         createLogger = loggerModule.createLogger;
+        formatSize = loggerModule.formatSize;
         logDevServerBanner = loggerModule.logDevServerBanner;
         logBuildResults = loggerModule.logBuildResults;
-        formatSize = loggerModule.formatSize;
     });
 
     beforeEach(function () {
-        consoleLogStub = sinon.stub(console, 'log');
-        consoleWarnStub = sinon.stub(console, 'warn');
-        consoleErrorStub = sinon.stub(console, 'error');
+        consoleOutput = [];
+        consoleErrors = [];
+        consoleWarns = [];
+        console.log = (...args: unknown[]) => consoleOutput.push(args.join(' '));
+        console.error = (...args: unknown[]) => consoleErrors.push(args.join(' '));
+        console.warn = (...args: unknown[]) => consoleWarns.push(args.join(' '));
     });
 
     afterEach(function () {
-        consoleLogStub.restore();
-        consoleWarnStub.restore();
-        consoleErrorStub.restore();
+        console.log = originalConsoleLog;
+        console.error = originalConsoleError;
+        console.warn = originalConsoleWarn;
     });
 
     describe('createLogger', function () {
-        it('should return a logger with correct prefix for "server"', function () {
+        it('should prefix messages correctly', function () {
             const logger = createLogger('server');
 
-            expect(logger).to.have.property('info');
-            expect(logger).to.have.property('success');
-            expect(logger).to.have.property('warn');
-            expect(logger).to.have.property('error');
-            expect(logger).to.have.property('debug');
+            logger.info('Starting server...');
+            logger.success('Server started');
+            logger.warn('Warning message');
+            logger.error('Error message');
+            logger.debug('Debug message');
+
+            expect(consoleOutput[0]).to.equal('[server] Starting server...');
+            expect(consoleOutput[1]).to.include('[server] ✅ Server started');
+            expect(consoleWarns[0]).to.include('[server] ⚠️  Warning message');
+            expect(consoleErrors[0]).to.include('[server] ❌ Error message');
+            expect(consoleOutput[2]).to.equal('[server] Debug message');
         });
 
-        it('should prefix info messages correctly', function () {
-            const logger = createLogger('server');
-            logger.info('test message');
+        it('should work with all current prefixes', function () {
+            const prefixes = ['server', 'client', 'build', 'types', 'shared'] as const;
 
-            expect(consoleLogStub.calledOnce).to.be.true;
-            expect(consoleLogStub.firstCall.args[0]).to.equal('[server] test message');
-        });
-
-        it('should prefix success messages with checkmark icon', function () {
-            const logger = createLogger('events');
-            logger.success('Deployed');
-
-            expect(consoleLogStub.calledOnce).to.be.true;
-            expect(consoleLogStub.firstCall.args[0]).to.include('[events]');
-            expect(consoleLogStub.firstCall.args[0]).to.include('Deployed');
-        });
-
-        it('should prefix warn messages with warning icon', function () {
-            const logger = createLogger('types');
-            logger.warn('env.d.ts is out of sync');
-
-            expect(consoleWarnStub.calledOnce).to.be.true;
-            expect(consoleWarnStub.firstCall.args[0]).to.include('[types]');
-            expect(consoleWarnStub.firstCall.args[0]).to.include('env.d.ts is out of sync');
-        });
-
-        it('should prefix error messages with error icon', function () {
-            const logger = createLogger('build');
-            logger.error('Build failed');
-
-            expect(consoleErrorStub.calledOnce).to.be.true;
-            expect(consoleErrorStub.firstCall.args[0]).to.include('[build]');
-            expect(consoleErrorStub.firstCall.args[0]).to.include('Build failed');
-        });
-
-        it('should handle debug messages', function () {
-            const logger = createLogger('client');
-            logger.debug('Debug info');
-
-            expect(consoleLogStub.calledOnce).to.be.true;
-            expect(consoleLogStub.firstCall.args[0]).to.include('[client]');
-            expect(consoleLogStub.firstCall.args[0]).to.include('Debug info');
-        });
-
-        it('should work with all valid prefixes', function () {
-            const prefixes: LogPrefix[] = [
-                'server',
-                'events',
-                'client',
-                'build',
-                'types',
-                'shared',
-            ];
-
-            prefixes.forEach(prefix => {
+            for (const prefix of prefixes) {
                 const logger = createLogger(prefix);
-                expect(logger).to.have.property('info');
-            });
+                logger.info('test');
+            }
+
+            expect(consoleOutput).to.have.length(5);
+            expect(consoleOutput[0]).to.include('[server]');
+            expect(consoleOutput[4]).to.include('[shared]');
         });
     });
 
     describe('formatSize', function () {
         it('should format bytes less than 1KB', function () {
-            expect(formatSize(500)).to.equal('500 B');
             expect(formatSize(0)).to.equal('0 B');
+            expect(formatSize(512)).to.equal('512 B');
             expect(formatSize(1023)).to.equal('1023 B');
         });
 
         it('should format bytes as KB', function () {
             expect(formatSize(1024)).to.equal('1.0 KB');
             expect(formatSize(1536)).to.equal('1.5 KB');
-            expect(formatSize(145000)).to.equal('141.6 KB');
+            expect(formatSize(1024 * 1023)).to.equal('1023.0 KB');
         });
 
         it('should format bytes as MB', function () {
-            expect(formatSize(1048576)).to.equal('1.0 MB');
-            expect(formatSize(1572864)).to.equal('1.5 MB');
-            expect(formatSize(5242880)).to.equal('5.0 MB');
-        });
-
-        it('should handle large sizes', function () {
-            expect(formatSize(10485760)).to.equal('10.0 MB');
-            expect(formatSize(104857600)).to.equal('100.0 MB');
+            expect(formatSize(1024 * 1024)).to.equal('1.0 MB');
+            expect(formatSize(1024 * 1024 * 2.5)).to.equal('2.5 MB');
         });
     });
 
     describe('logDevServerBanner', function () {
         it('should log banner with tunnel URL', function () {
-            logDevServerBanner({
-                tunnelUrl: 'https://my-tunnel.example.com',
-            });
+            logDevServerBanner({ tunnelUrl: 'https://abc.trycloudflare.com/events' });
 
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Bkper App');
-            expect(allOutput).to.include('Events:');
-            expect(allOutput).to.include('https://my-tunnel.example.com');
-            expect(allOutput).to.include('(tunneled)');
+            const allOutput = consoleOutput.join('\n');
+            expect(allOutput).to.include('Bkper App Development Server');
+            expect(allOutput).to.include('https://abc.trycloudflare.com/events');
+            expect(allOutput).to.include('Press Ctrl+C to stop');
         });
 
         it('should handle missing tunnelUrl', function () {
             logDevServerBanner({});
 
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Bkper App');
-            expect(allOutput).not.to.include('Events:');
-            expect(allOutput).not.to.include('(tunneled)');
-        });
-
-        it('should handle empty options', function () {
-            logDevServerBanner({});
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Bkper App');
+            const allOutput = consoleOutput.join('\n');
+            expect(allOutput).to.include('Bkper App Development Server');
+            expect(allOutput).to.not.include('Events:');
         });
     });
 
     describe('logBuildResults', function () {
-        it('should log all build results with sizes', function () {
-            logBuildResults({
-                webServer: { path: 'dist/web/server/', size: 23552 },
-                events: { path: 'dist/events/', size: 18432 },
-            });
+        it('should log server Worker build results with sizes', function () {
+            logBuildResults({ server: { path: 'dist/server/', size: 23552 } });
 
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('dist/web/server/');
-            expect(allOutput).to.include('dist/events/');
-        });
-
-        it('should handle partial results - only webServer', function () {
-            logBuildResults({
-                webServer: { path: 'dist/web/server/', size: 23552 },
-            });
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('dist/web/server/');
-        });
-
-        it('should handle partial results - only events', function () {
-            logBuildResults({
-                events: { path: 'dist/events/', size: 18432 },
-            });
-
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('dist/events/');
+            const allOutput = consoleOutput.join('\n');
+            expect(allOutput).to.include('Building Bkper App');
+            expect(allOutput).to.include('Server worker');
+            expect(allOutput).to.include('dist/server/');
+            expect(allOutput).to.include('23.0 KB');
+            expect(allOutput).to.include('Build complete');
         });
 
         it('should handle empty results', function () {
             logBuildResults({});
 
-            expect(consoleLogStub.called).to.be.true;
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('Build');
-        });
-
-        it('should format file sizes correctly', function () {
-            logBuildResults({
-                webServer: { path: 'dist/web/server/', size: 148480 },
-            });
-
-            const allOutput = consoleLogStub
-                .getCalls()
-                .map(call => call.args[0])
-                .join('\n');
-            expect(allOutput).to.include('145.0 KB');
+            const allOutput = consoleOutput.join('\n');
+            expect(allOutput).to.include('Building Bkper App');
+            expect(allOutput).to.include('Build complete');
         });
     });
 });

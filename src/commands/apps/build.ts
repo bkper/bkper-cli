@@ -12,8 +12,7 @@ import path from 'path';
  *
  * - Ensures types are up to date (generates env.d.ts)
  * - Builds shared package if present
- * - Builds web server worker (esbuild) if configured
- * - Builds events handler worker (esbuild) if configured
+ * - Builds the server Worker (esbuild)
  * - Reports build results with file sizes
  *
  * Note: Client build (Vite) is the template's responsibility.
@@ -34,9 +33,8 @@ export async function build(): Promise<void> {
         console.error('No deployment configuration found in bkper.yaml');
         console.error('Expected format:');
         console.error('  deployment:');
-        console.error('    web:');
-        console.error('      main: packages/web/server/src/index.ts');
-        console.error('      client: packages/web/client');
+        console.error('    server: server/src/index.ts');
+        console.error('    client: client');
         process.exit(1);
     }
 
@@ -46,7 +44,7 @@ export async function build(): Promise<void> {
         {
             services: deployConfig.services,
             secrets: deployConfig.secrets,
-            hasStaticAssets: !!deployConfig.web?.client,
+            hasStaticAssets: !!deployConfig.client,
         },
         projectRoot
     );
@@ -74,59 +72,22 @@ export async function build(): Promise<void> {
         sharedLogger.info('No shared package found');
     }
 
-    const hasWeb = !!deployConfig.web?.main;
-    const hasEvents = !!deployConfig.events?.main;
-
     console.log('\n\uD83D\uDCE6 Building Bkper App...\n');
 
-    const results: {
-        webServer?: { path: string; size: number };
-        events?: { path: string; size: number };
-    } = {};
+    buildLogger.info('Building server worker...');
 
-    // Build web server (esbuild)
-    if (hasWeb) {
-        buildLogger.info('Building web server...');
+    const serverOutDir = path.resolve(projectRoot, 'dist/server');
+    const serverOutFile = path.join(serverOutDir, 'index.js');
+    const serverEntryPoint = path.resolve(projectRoot, deployConfig.server);
 
-        const serverOutDir = path.resolve(projectRoot, 'dist/web/server');
-        const serverOutFile = path.join(serverOutDir, 'index.js');
-        const serverEntryPoint = path.resolve(projectRoot, deployConfig.web!.main);
-
-        // Ensure output directory exists
-        if (!existsSync(serverOutDir)) {
-            mkdirSync(serverOutDir, { recursive: true });
-        }
-
-        await buildWorkerToFile(serverEntryPoint, serverOutFile);
-
-        const serverSize = statSync(serverOutFile).size;
-        results.webServer = { path: 'dist/web/server/', size: serverSize };
-        console.log(
-            `   \u2713 Web server    \u2192 dist/web/server/    (${formatSize(serverSize)})`
-        );
+    if (!existsSync(serverOutDir)) {
+        mkdirSync(serverOutDir, { recursive: true });
     }
 
-    // Build events handler (esbuild)
-    if (hasEvents) {
-        buildLogger.info('Building events handler...');
+    await buildWorkerToFile(serverEntryPoint, serverOutFile);
 
-        const eventsOutDir = path.resolve(projectRoot, 'dist/events');
-        const eventsOutFile = path.join(eventsOutDir, 'index.js');
-        const eventsEntryPoint = path.resolve(projectRoot, deployConfig.events!.main);
-
-        // Ensure output directory exists
-        if (!existsSync(eventsOutDir)) {
-            mkdirSync(eventsOutDir, { recursive: true });
-        }
-
-        await buildWorkerToFile(eventsEntryPoint, eventsOutFile);
-
-        const eventsSize = statSync(eventsOutFile).size;
-        results.events = { path: 'dist/events/', size: eventsSize };
-        console.log(
-            `   \u2713 Events        \u2192 dist/events/        (${formatSize(eventsSize)})`
-        );
-    }
+    const serverSize = statSync(serverOutFile).size;
+    console.log(`   \u2713 Server worker \u2192 dist/server/       (${formatSize(serverSize)})`);
 
     console.log('\n\u2705 Build complete\n');
 }

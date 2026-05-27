@@ -61,7 +61,6 @@ export function registerAppCommands(program: Command): void {
         .command('deploy')
         .description('Deploy app to Bkper Platform')
         .option('-p, --preview', 'Deploy to preview environment')
-        .option('--events', 'Deploy events handler instead of web handler')
         .action(options =>
             withAction(
                 'deploying app',
@@ -76,7 +75,6 @@ export function registerAppCommands(program: Command): void {
         .command('undeploy')
         .description('Remove app from Bkper Platform')
         .option('-p, --preview', 'Remove from preview environment')
-        .option('--events', 'Remove events handler instead of web handler')
         .option('--delete-data', 'Permanently delete all associated data (requires confirmation)')
         .option('--force', 'Skip confirmation prompts (use with --delete-data for automation)')
         .action(options =>
@@ -91,7 +89,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('status')
-        .description('Show deployment status for all handlers')
+        .description('Show deployment status')
         .action(options =>
             withAction(
                 'getting app status',
@@ -109,8 +107,8 @@ export function registerAppCommands(program: Command): void {
         .option('--until <time>', 'ISO8601 or relative upper bound such as 5m, 1h, or 15d')
         .option('--last <n>', 'Show newest N entries after filters', value => Number.parseInt(value, 10))
         .option('-p, --preview', 'Query preview logs instead of production logs')
-        .option('-w, --web', 'Filter to the web handler')
-        .option('-e, --events', 'Filter to the events handler')
+        .option('-w, --web', 'Filter to normal web/API requests')
+        .option('-e, --events', 'Filter to /events requests')
         .option('--outcome <outcome>', 'Filter by Cloudflare worker outcome')
         .option('--status-code <code>', 'Filter by HTTP status code', value => Number.parseInt(value, 10))
         .action(options =>
@@ -127,9 +125,6 @@ export function registerAppCommands(program: Command): void {
         .command('dev')
         .description('Start the worker runtime for local development')
         .option('--sp, --server-port <port>', 'Server simulation port', '8787')
-        .option('--ep, --events-port <port>', 'Events handler port', '8791')
-        .option('-w, --web', 'Run only the web handler')
-        .option('-e, --events', 'Run only the events handler')
         .action(options =>
             withAction(
                 'starting dev server',
@@ -137,9 +132,7 @@ export function registerAppCommands(program: Command): void {
                     setupBkper();
                     await dev({
                         serverPort: parseInt(options.serverPort, 10),
-                        eventsPort: parseInt(options.eventsPort, 10),
-                        web: options.web,
-                        events: options.events,
+
                     });
                 },
                 { skipSetup: true }

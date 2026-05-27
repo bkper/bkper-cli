@@ -17,8 +17,8 @@ interface StateInfo {
  * Manages cached app directories at different lifecycle states.
  *
  * Each state represents an app that has reached a specific point in the lifecycle:
- * - 'init': App created with `bkper app init`, dependencies installed, shared types compiled
- * - 'built': App has been built with `bkper app build` (includes 'init' state)
+ * - 'init': App created with `bkper app init`, dependencies installed
+ * - 'built': App has been built with the template build flow (client assets + server Worker)
  * - 'cleaned': App has been cleaned with `bun run clean` after being built
  *
  * States are lazily created and cached across test runs for efficiency.
@@ -119,9 +119,6 @@ export class AppStateManager {
         await runCommand('bun', ['install'], appDir);
         this.linkLocalBkper(appDir);
 
-        // Compile shared types
-        await runCommand('bun', ['x', 'tsc', '-p', 'tsconfig.json'], path.join(appDir, 'packages/shared'));
-
         // Move to cache location
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });
         fs.renameSync(appDir, targetPath);
@@ -140,7 +137,7 @@ export class AppStateManager {
         this.copyDirectory(initPath, targetPath);
         this.linkLocalBkper(targetPath);
 
-        // Build client assets and worker bundles
+        // Build client assets and the server Worker bundle
         await runCommand('bun', ['x', 'vite', 'build'], targetPath);
         await runCli(['app', 'build'], targetPath);
     }
@@ -196,7 +193,18 @@ export class AppStateManager {
      * It must not depend on another workspace project being present.
      */
     private isCacheCompatible(state: AppState, cachedPath: string): boolean {
-        if (!this.hasBaseAppStructure(cachedPath) || !this.hasLocalBkperLink(cachedPath)) {
+        if (!this.hasBaseAppStructure(cachedPath)) {
+            return false;
+        }
+
+        if (state === 'cleaned') {
+            return (
+                !fs.existsSync(path.join(cachedPath, 'dist')) &&
+                !fs.existsSync(path.join(cachedPath, 'node_modules'))
+            );
+        }
+
+        if (!this.hasLocalBkperLink(cachedPath)) {
             return false;
         }
 
@@ -207,27 +215,21 @@ export class AppStateManager {
         if (state === 'built') {
             return (
                 this.hasInitTooling(cachedPath) &&
-                fs.existsSync(path.join(cachedPath, 'dist/web/server/index.js')) &&
-                fs.existsSync(path.join(cachedPath, 'dist/events/index.js')) &&
-                fs.existsSync(path.join(cachedPath, 'dist/web/client'))
+                fs.existsSync(path.join(cachedPath, 'dist/server/index.js')) &&
+                fs.existsSync(path.join(cachedPath, 'dist/client'))
             );
         }
 
-        return !fs.existsSync(path.join(cachedPath, 'dist')) && !fs.existsSync(path.join(cachedPath, 'node_modules'));
+        return false;
     }
 
     /**
      * Validates the minimal structure expected from `bkper app init`.
      */
     private hasBaseAppStructure(appDir: string): boolean {
-        return [
-            'package.json',
-            'bkper.yaml',
-            'packages/shared',
-            'packages/web/client',
-            'packages/web/server',
-            'packages/events',
-        ].every(relativePath => fs.existsSync(path.join(appDir, relativePath)));
+        return ['package.json', 'bkper.yaml', 'client', 'server'].every(relativePath =>
+            fs.existsSync(path.join(appDir, relativePath))
+        );
     }
 
     /**
@@ -238,7 +240,6 @@ export class AppStateManager {
             'node_modules',
             'node_modules/miniflare/package.json',
             'node_modules/vite/package.json',
-            'packages/shared/dist',
         ].every(relativePath => fs.existsSync(path.join(appDir, relativePath)));
     }
 

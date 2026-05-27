@@ -12,46 +12,61 @@ Build, deploy, and manage Bkper apps using the `bkper` CLI.
 When scaffolding, developing, or deploying an app, verify each step before proceeding. This prevents broken deployments and silent failures.
 
 ### 1. Init
+
 ```bash
 bkper app init my-app
 ```
+
 Verify:
-- `packages/web/client/`, `packages/web/server/`, `packages/events/`, and `packages/shared/` exist
+
+- `client/` and `server/` exist
 - `bkper.yaml` has `id`, `name`, `description`, and `developers`
 - `package.json` scripts include `dev` and `build`
 
 ### 2. Develop
+
 ```bash
 npm run dev
 ```
+
 Verify:
-- Web server responds: `curl http://localhost:8787` (or the port you configured)
+
+- Server worker responds: `curl http://localhost:8787/health` (or the port you configured)
 - Client dev server is reachable if running separately
-- Events tunnel URL is printed in terminal and registered in Bkper (check `webhookUrlDev` in app settings)
-- If any handler fails to start, fix before writing code
+- If the app declares `events`, the events tunnel URL is printed in terminal and registered in Bkper as `webhookUrlDev`
+- If the worker fails to start, fix before writing code
 
 ### 3. Build
+
 ```bash
 npm run build
 ```
+
 Verify:
-- `dist/web/server/` contains the web worker bundle
-- `dist/events/` contains the events handler bundle
+
+- `dist/server/` contains the server Worker bundle
+- `dist/client/` contains the Vite client build when `deployment.client` is configured
 - No build errors in terminal output
 
 ### 4. Sync & Deploy
+
 ```bash
 bkper app sync && bkper app deploy
 ```
+
 Verify:
+
 - `bkper app status` shows the deployed version
 - URLs in `bkper.yaml` match the deployed domain (`https://{appId}.bkper.app`)
 
 ### 5. Validate
+
 ```bash
 bkper app install <appId> -b <bookId>
 ```
+
 Verify:
+
 - Menu appears in the book's "More" menu (if configured)
 - App server `/api/*` routes are called with `Authorization: Bearer <token>`
 - Trigger a subscribed event in the book
@@ -67,11 +82,11 @@ Verify:
 bkper app init my-app
 
 # Start the worker runtime (Miniflare + tunnel + file watching)
-# In your project, use "npm run dev" to run both Vite and workers concurrently
+# In your project, use "npm run dev" to run both Vite and the worker concurrently
 bkper app dev
 
-# Build worker bundles (web server + events handler)
-# In your project, use "npm run build" to build both client (Vite) and workers
+# Build the server Worker bundle
+# In your project, use "npm run build" to build both client (Vite) and worker
 bkper app build
 
 # Sync configuration and deploy to production
@@ -80,14 +95,11 @@ bkper app sync && bkper app deploy
 # Deploy to preview environment (URL: https://{appId}-preview.bkper.app)
 bkper app deploy --preview
 
-# Deploy only the events handler
-bkper app deploy --events
-
 # Check deployment status
 bkper app status
 ```
 
-> **Note:** `bkper app dev` runs the worker runtime only — Miniflare, file watching, and the Cloudflare tunnel. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
+> **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
 
 ---
 
@@ -115,6 +127,8 @@ bkper app secrets list
 # Delete a secret
 bkper app secrets delete EXTERNAL_SERVICE_TOKEN
 ```
+
+Use `--preview` to manage preview secrets.
 
 ---
 
@@ -232,6 +246,7 @@ menuPopupHeight: 300
 # EVENT HANDLING (optional)
 # -----------------------------------------------------------------------------
 # When configured, Bkper calls your webhook URL when subscribed events occur.
+# On the Bkper Platform, /events is handled by the same Worker as /api/*.
 
 # Production webhook URL
 webhookUrl: https://${id}.bkper.app/events
@@ -324,19 +339,23 @@ propertiesSchema:
 # -----------------------------------------------------------------------------
 # For apps deployed to Bkper's Workers for Platforms infrastructure.
 deployment:
-    # Web handler (serves UI and API)
-    web:
-        bundle: packages/web/server/dist
-        # assets: packages/web/client/dist  # Static assets (when supported)
+    # Single server Worker entry point. It serves /api/* and /events.
+    server: server/src/index.ts
 
-    # Events handler (processes webhooks)
-    events:
-        bundle: packages/events/dist
+    # Optional Vite/static client root. Built assets are deployed with the same Worker.
+    client: client
 
     # Platform services available to your app (one per type, auto-provisioned)
     # See: https://developers.cloudflare.com/kv/
     services:
         - KV # Key-value storage
+
+    # Secret names managed with bkper app secrets
+    secrets:
+        - EXTERNAL_SERVICE_TOKEN
+
+    # Cloudflare Workers compatibility date
+    compatibility_date: '2026-01-28'
 ```
 
 </details>
@@ -365,30 +384,25 @@ deployment:
 -   `app init <name>` - Scaffold a new app from the template
 -   `app list` - List all apps you have access to
 -   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration (URLs, description) to Bkper API
--   `app build` - Build worker bundles for deployment
+-   `app build` - Build the server Worker bundle for deployment
 -   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
     -   `-p, --preview` - Deploy to preview environment
-    -   `--events` - Deploy events handler instead of web handler
 -   `app status` - Show deployment status
 -   `app logs` - View recent app logs
     -   `--since <time>` - ISO8601 or relative lower bound (e.g. `5m`, `1h`, `15d`)
     -   `--until <time>` - ISO8601 or relative upper bound
     -   `--last <n>` - Show newest N entries after filters (default: 100)
     -   `-p, --preview` - Query preview logs instead of production
-    -   `-w, --web` - Filter to the web handler
-    -   `-e, --events` - Filter to the events handler
+    -   `-w, --web` - Filter to normal web/API requests
+    -   `-e, --events` - Filter to `/events` requests
     -   `--outcome <outcome>` - Filter by Cloudflare worker outcome
     -   `--status-code <code>` - Filter by HTTP status code
 -   `app undeploy` - Remove app from platform
     -   `-p, --preview` - Remove from preview environment
-    -   `--events` - Remove events handler instead of web handler
     -   `--delete-data` - Permanently delete all associated data (requires confirmation)
     -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
 -   `app dev` - Start the worker runtime for local development
     -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
-    -   `--ep, --events-port <port>` - Events handler port (default: `8791`)
-    -   `-w, --web` - Run only the web handler
-    -   `-e, --events` - Run only the events handler
 
 > **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
 

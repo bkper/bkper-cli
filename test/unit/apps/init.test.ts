@@ -67,7 +67,7 @@ describe('app init helpers', function () {
         });
 
         it('should replace single-quoted my-app in event handlers', function () {
-            const eventsDir = path.join(tempDir, 'packages/events/src/handlers');
+            const eventsDir = path.join(tempDir, 'server/src/handlers');
             fs.mkdirSync(eventsDir, { recursive: true });
             const handlerPath = path.join(eventsDir, 'transaction-checked.ts');
             fs.writeFileSync(
@@ -83,7 +83,7 @@ describe('app init helpers', function () {
         });
 
         it('should replace double-quoted my-app in event handlers', function () {
-            const eventsDir = path.join(tempDir, 'packages/events/src');
+            const eventsDir = path.join(tempDir, 'server/src');
             fs.mkdirSync(eventsDir, { recursive: true });
             const handlerPath = path.join(eventsDir, 'handler.ts');
             fs.writeFileSync(
@@ -99,7 +99,7 @@ describe('app init helpers', function () {
         });
 
         it('should skip files without my-app placeholder', function () {
-            const eventsDir = path.join(tempDir, 'packages/events/src');
+            const eventsDir = path.join(tempDir, 'server/src');
             fs.mkdirSync(eventsDir, { recursive: true });
             const handlerPath = path.join(eventsDir, 'handler.ts');
             const original = 'if (agentId === "other-app") { return { result: false }; }';
@@ -111,7 +111,7 @@ describe('app init helpers', function () {
             expect(content).to.equal(original);
         });
 
-        it('should do nothing when events directory does not exist', function () {
+        it('should do nothing when server source directory does not exist', function () {
             expect(() => updateEventHandlers(tempDir, 'any-app')).to.not.throw();
         });
     });

@@ -20,7 +20,7 @@ describe('Integration: app build', function () {
         await stateManager.reset();
     });
 
-    it('should build web and events artifacts', async function () {
+    it('should build the server Worker artifact', async function () {
         this.timeout(120000);
 
         // Get initialized app
@@ -40,20 +40,19 @@ describe('Integration: app build', function () {
             appDir = await stateManager.getApp('built');
         }
 
-        const serverPath = path.join(appDir, 'dist/web/server/index.js');
+        const serverPath = path.join(appDir, 'dist/server/index.js');
         expect(fs.existsSync(serverPath)).to.be.true;
         expect(fs.statSync(serverPath).size).to.be.greaterThan(0);
     });
 
-    it('should create events worker bundle', async function () {
+    it('should not create split-worker artifact directories', async function () {
         this.timeout(5000);
 
         if (!appDir) {
             appDir = await stateManager.getApp('built');
         }
 
-        const eventsPath = path.join(appDir, 'dist/events/index.js');
-        expect(fs.existsSync(eventsPath)).to.be.true;
-        expect(fs.statSync(eventsPath).size).to.be.greaterThan(0);
+        expect(fs.existsSync(path.join(appDir, 'dist/web'))).to.be.false;
+        expect(fs.existsSync(path.join(appDir, 'dist/events'))).to.be.false;
     });
 });

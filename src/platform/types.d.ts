@@ -54,15 +54,13 @@ export interface paths {
         put?: never;
         /**
          * Deploy app script
-         * @description Deploy app code to Cloudflare Workers for Platforms. The request body should contain the bundled JavaScript code.
+         * @description Deploy app code to Cloudflare Workers for Platforms. Send bundle as multipart/form-data with optional metadata and asset manifest.
          */
         post: {
             parameters: {
                 query?: {
                     /** @description Target environment */
                     env?: 'production' | 'preview';
-                    /** @description Deployment type (web handler or events handler) */
-                    type?: 'web' | 'events';
                 };
                 header?: never;
                 path: {
@@ -73,6 +71,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
+                    'multipart/form-data': string;
                     'application/octet-stream': string;
                 };
             };
@@ -148,7 +147,7 @@ export interface paths {
         };
         /**
          * Get app deployment status
-         * @description Get the deployment status for all environments and types of an app
+         * @description Get app deployment status for production and preview environments
          */
         get: {
             parameters: {
@@ -195,15 +194,13 @@ export interface paths {
         post?: never;
         /**
          * Remove app script
-         * @description Remove app script from Cloudflare Workers for Platforms
+         * @description Remove app script from Cloudflare Workers for Platforms. Optionally delete associated data.
          */
         delete: {
             parameters: {
                 query?: {
                     /** @description Target environment */
                     env?: 'production' | 'preview';
-                    /** @description Deployment type (web handler or events handler) */
-                    type?: 'web' | 'events';
                     /** @description Permanently delete all associated data */
                     deleteData?: boolean;
                 };
@@ -610,8 +607,6 @@ export interface components {
             url: string;
             /** @enum {string} */
             environment: 'production' | 'preview';
-            /** @enum {string} */
-            type: 'web' | 'events';
             /** @example bkper-apps-prod */
             namespace: string;
             /** @example my-app-123 */
@@ -621,6 +616,8 @@ export interface components {
              * @example 2024-01-15T12:00:00.000Z
              */
             updatedAt: string;
+            /** @description Provisioned bindings with their types */
+            bindings?: Array<{ name: string; type: string }>;
         };
         ErrorResponse: {
             /** @enum {boolean} */
@@ -638,21 +635,21 @@ export interface components {
         UndeployResult: {
             /** @enum {boolean} */
             success: true;
-            /** @example App 'my-app' web handler removed from prod */
+            /** @example App 'my-app' removed from production */
             message: string;
             /** @example bkper-apps-prod */
             namespace: string;
             /** @example my-app-123 */
             scriptName: string;
+            /** @description Whether associated data was deleted */
+            dataDeleted?: boolean;
+            /** @description Names of deleted bindings */
+            deletedBindings?: string[];
         };
         AppStatus: {
             appId: string;
-            prod: components['schemas']['EnvStatus'];
-            preview: components['schemas']['EnvStatus'];
-        };
-        EnvStatus: {
-            web: components['schemas']['ScriptStatus'];
-            events: components['schemas']['ScriptStatus'];
+            prod: components['schemas']['ScriptStatus'];
+            preview: components['schemas']['ScriptStatus'];
         };
         ScriptStatus: {
             deployed: boolean;
@@ -704,6 +701,7 @@ export interface components {
         };
         SecretsListResponse: {
             secrets: string[];
+            environment: 'production' | 'preview';
         };
         SecretValueRequest: {
             value: string;
@@ -711,7 +709,8 @@ export interface components {
         SecretResponse: {
             /** @enum {boolean} */
             success: true;
-            message: string;
+            name: string;
+            environment: 'production' | 'preview';
         };
     };
     responses: never;

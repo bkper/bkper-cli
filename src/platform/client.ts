@@ -12,8 +12,8 @@
  *
  * // Deploy an app
  * const { data, error } = await client.POST('/api/apps/{appId}/deploy', {
- *   params: { path: { appId: 'my-app' }, query: { env: 'dev', type: 'web' } },
- *   body: bundleBuffer,
+ *   params: { path: { appId: 'my-app' }, query: { env: 'preview' } },
+ *   body: formData,
  * });
  * ```
  */

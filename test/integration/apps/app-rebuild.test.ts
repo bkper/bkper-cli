@@ -31,13 +31,6 @@ describe('Integration: app rebuild after clean', function () {
         // Reinstall dependencies (clean may remove them or they may be needed fresh)
         await runCommand('bun', ['install'], appDir);
 
-        // Recompile shared types
-        await runCommand(
-            'bun',
-            ['x', 'tsc', '-p', 'tsconfig.json'],
-            path.join(appDir, 'packages/shared')
-        );
-
         // Rebuild
         await runCli(['app', 'build'], appDir);
 
@@ -53,18 +46,10 @@ describe('Integration: app rebuild after clean', function () {
         }
 
         // Just verify structure is complete
-        const serverExists = fs.existsSync(path.join(appDir, 'dist/web/server/index.js'));
-        const eventsExists = fs.existsSync(path.join(appDir, 'dist/events/index.js'));
+        const serverExists = fs.existsSync(path.join(appDir, 'dist/server/index.js'));
 
-        if (!serverExists || !eventsExists) {
-            throw new Error(
-                'Rebuild did not create all expected artifacts. ' +
-                    'Server: ' +
-                    serverExists +
-                    ', ' +
-                    'Events: ' +
-                    eventsExists
-            );
+        if (!serverExists) {
+            throw new Error('Rebuild did not create the server Worker artifact. Server: false');
         }
     });
 });

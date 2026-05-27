@@ -12,87 +12,58 @@ const fixturesDir = path.join(__dirname, '../../../fixtures/configs');
 describe('CLI - apps config functions', function () {
     const originalCwd = process.cwd();
 
-    // Store references to functions we'll test
     let isSourceConfig: typeof import('../../../../src/commands/apps/config.js').isSourceConfig;
     let loadSourceDeploymentConfig: typeof import('../../../../src/commands/apps/config.js').loadSourceDeploymentConfig;
-    let loadDeploymentConfig: typeof import('../../../../src/commands/apps/config.js').loadDeploymentConfig;
+    let loadAppConfig: typeof import('../../../../src/commands/apps/config.js').loadAppConfig;
     let handleError: typeof import('../../../../src/commands/apps/config.js').handleError;
 
     before(async function () {
         const config = await import('../../../../src/commands/apps/config.js');
         isSourceConfig = config.isSourceConfig;
         loadSourceDeploymentConfig = config.loadSourceDeploymentConfig;
-        loadDeploymentConfig = config.loadDeploymentConfig;
+        loadAppConfig = config.loadAppConfig;
         handleError = config.handleError;
     });
 
     beforeEach(function () {
         setupTestEnvironment();
-        // Create temp directory
         fs.mkdirSync(testDir, { recursive: true });
     });
 
     afterEach(function () {
         sinon.restore();
         process.chdir(originalCwd);
-        // Cleanup temp directory
         if (fs.existsSync(testDir)) {
             fs.rmSync(testDir, { recursive: true });
         }
     });
 
     describe('isSourceConfig', function () {
-        it('should return true for TypeScript entry points in web.main', function () {
+        it('should return true for TypeScript entry point in deployment.server', function () {
+            expect(isSourceConfig({ server: 'server/src/index.ts', client: 'client' })).to.be.true;
+        });
+
+        it('should return false for removed split-worker deployment config', function () {
             const deployment = {
                 web: { main: 'packages/web/server/src/index.ts', client: 'packages/web/client' },
                 events: { main: 'packages/events/src/index.ts' },
             };
-            expect(isSourceConfig(deployment)).to.be.true;
-        });
-
-        it('should return true for TypeScript entry points in events.main only', function () {
-            const deployment = {
-                events: { main: 'packages/events/src/index.ts' },
-            };
-            expect(isSourceConfig(deployment)).to.be.true;
-        });
-
-        it('should return false for directory paths (legacy bundle format)', function () {
-            const deployment = {
-                web: { bundle: 'packages/web/server/dist', assets: 'packages/web/client/dist' },
-                events: { bundle: 'packages/events/dist' },
-            };
             expect(isSourceConfig(deployment)).to.be.false;
         });
 
-        it('should return false for null deployment', function () {
+        it('should return false for unsupported deployment shapes', function () {
             expect(isSourceConfig(null)).to.be.false;
-        });
-
-        it('should return false for undefined deployment', function () {
             expect(isSourceConfig(undefined)).to.be.false;
-        });
-
-        it('should return false for non-object deployment', function () {
             expect(isSourceConfig('not-an-object')).to.be.false;
             expect(isSourceConfig(123)).to.be.false;
-        });
-
-        it('should return false for empty object', function () {
             expect(isSourceConfig({})).to.be.false;
-        });
-
-        it('should return false when main is not a string', function () {
-            const deployment = {
-                web: { main: 123 },
-                events: { main: null },
-            };
-            expect(isSourceConfig(deployment)).to.be.false;
+            expect(isSourceConfig({ server: 123 })).to.be.false;
+            expect(isSourceConfig({ main: 'server/src/index.ts' })).to.be.false;
         });
     });
 
     describe('loadSourceDeploymentConfig', function () {
-        it('should parse web config correctly', function () {
+        it('should parse server and client config correctly', function () {
             const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
             fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
             process.chdir(testDir);
@@ -100,55 +71,19 @@ describe('CLI - apps config functions', function () {
             const config = loadSourceDeploymentConfig();
 
             expect(config).to.not.be.undefined;
-            expect(config?.web).to.deep.equal({
-                main: 'packages/web/server/src/index.ts',
-                client: 'packages/web/client',
-            });
+            expect(config?.server).to.equal('server/src/index.ts');
+            expect(config?.client).to.equal('client');
         });
 
-        it('should parse events config correctly', function () {
+        it('should parse services, secrets, and compatibility date', function () {
             const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
             fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
             process.chdir(testDir);
 
             const config = loadSourceDeploymentConfig();
 
-            expect(config).to.not.be.undefined;
-            expect(config?.events).to.deep.equal({
-                main: 'packages/events/src/index.ts',
-            });
-        });
-
-        it('should parse services array correctly', function () {
-            const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
-            fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
-            process.chdir(testDir);
-
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.not.be.undefined;
             expect(config?.services).to.deep.equal(['KV']);
-        });
-
-        it('should parse secrets array correctly', function () {
-            const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
-            fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
-            process.chdir(testDir);
-
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.not.be.undefined;
             expect(config?.secrets).to.deep.equal(['API_KEY']);
-        });
-
-        it('should map compatibility_date to compatibilityDate', function () {
-            const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
-            fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
-            process.chdir(testDir);
-
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.not.be.undefined;
             expect(config?.compatibilityDate).to.equal('2026-01-29');
         });
 
@@ -157,56 +92,38 @@ describe('CLI - apps config functions', function () {
             fs.copyFileSync(noDeploymentPath, path.join(testDir, 'bkper.yaml'));
             process.chdir(testDir);
 
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.be.undefined;
+            expect(loadSourceDeploymentConfig()).to.be.undefined;
         });
 
-        it('should return undefined when config file does not exist', function () {
+        it('should return undefined when bkper.yaml does not exist', function () {
             process.chdir(testDir);
-            // No config file created
 
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.be.undefined;
+            expect(loadSourceDeploymentConfig()).to.be.undefined;
         });
 
-        it('should return undefined for legacy bundle format', function () {
+        it('should return undefined for removed legacy bundle format', function () {
             const legacyConfigPath = path.join(fixturesDir, 'legacy-config.yaml');
             fs.copyFileSync(legacyConfigPath, path.join(testDir, 'bkper.yaml'));
             process.chdir(testDir);
 
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.be.undefined;
+            expect(loadSourceDeploymentConfig()).to.be.undefined;
         });
 
-        it('should check bkperapp.yaml as fallback', function () {
+        it('should not read bkperapp.yaml fallback', function () {
             const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
             fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkperapp.yaml'));
             process.chdir(testDir);
 
-            const config = loadSourceDeploymentConfig();
-
-            expect(config).to.not.be.undefined;
-            expect(config?.web?.main).to.equal('packages/web/server/src/index.ts');
+            expect(loadSourceDeploymentConfig()).to.be.undefined;
         });
+    });
 
-        it('should prefer bkper.yaml over bkperapp.yaml', function () {
-            // Create both files with different content
-            const sourceConfigPath = path.join(fixturesDir, 'source-config.yaml');
-            const eventsOnlyPath = path.join(fixturesDir, 'events-only-source-config.yaml');
-
-            fs.copyFileSync(sourceConfigPath, path.join(testDir, 'bkper.yaml'));
-            fs.copyFileSync(eventsOnlyPath, path.join(testDir, 'bkperapp.yaml'));
+    describe('loadAppConfig', function () {
+        it('should not read bkperapp.yaml fallback', function () {
+            fs.writeFileSync(path.join(testDir, 'bkperapp.yaml'), 'id: test-app\nname: Test App\n');
             process.chdir(testDir);
 
-            const config = loadSourceDeploymentConfig();
-
-            // Should have web config from bkper.yaml (source-config.yaml)
-            expect(config).to.not.be.undefined;
-            expect(config?.web).to.not.be.undefined;
-            expect(config?.web?.main).to.equal('packages/web/server/src/index.ts');
+            expect(() => loadAppConfig()).to.throw('bkper.yaml or bkper.json not found');
         });
     });
 
@@ -231,34 +148,6 @@ describe('CLI - apps config functions', function () {
 
             expect(thrownError).to.equal(exitError);
             expect(consoleErrorStub.calledWith('Error: Invalid or expired token')).to.be.true;
-        });
-    });
-
-    describe('loadDeploymentConfig - backward compatibility', function () {
-        it('should still work with legacy bundle format', function () {
-            const legacyConfigPath = path.join(fixturesDir, 'legacy-config.yaml');
-            fs.copyFileSync(legacyConfigPath, path.join(testDir, 'bkper.yaml'));
-            process.chdir(testDir);
-
-            const config = loadDeploymentConfig();
-
-            expect(config).to.not.be.undefined;
-            expect(config?.web).to.deep.equal({
-                bundle: 'packages/web/server/dist',
-                assets: 'packages/web/client/dist',
-            });
-            expect(config?.events).to.deep.equal({
-                bundle: 'packages/events/dist',
-            });
-            expect(config?.services).to.deep.equal(['KV']);
-        });
-
-        it('should return undefined when no config file exists', function () {
-            process.chdir(testDir);
-
-            const config = loadDeploymentConfig();
-
-            expect(config).to.be.undefined;
         });
     });
 });

@@ -26,17 +26,11 @@ import { runCleanupStep } from '../../dev/cleanup.js';
 export interface DevOptions {
     /** Server simulation port (default: 8787) */
     serverPort?: number;
-    /** Events handler port (default: 8791) */
-    eventsPort?: number;
-    /** Run only the web handler */
-    web?: boolean;
-    /** Run only the events handler */
-    events?: boolean;
 }
 
 /**
  * Starts the platform development environment.
- * Runs the worker runtime (Miniflare), esbuild watch, tunnel, and webhookUrlDev.
+ * Runs one Worker runtime (Miniflare), esbuild watch, and an optional tunnel to /events.
  *
  * Client tooling (Vite) is the template's responsibility — run it separately
  * via `vite dev` or the template's `npm run dev` script (which uses concurrently).
@@ -45,11 +39,9 @@ export interface DevOptions {
  */
 export async function dev(options: DevOptions = {}): Promise<void> {
     const serverLogger = createLogger('server');
-    const eventsLogger = createLogger('events');
     const typesLogger = createLogger('types');
     const sharedLogger = createLogger('shared');
 
-    // Load configuration
     const appConfig = loadAppConfig();
     const deployConfig = loadSourceDeploymentConfig();
 
@@ -57,40 +49,17 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         console.error('No deployment configuration found in bkper.yaml');
         console.error('Expected format:');
         console.error('  deployment:');
-        console.error('    web:');
-        console.error('      main: packages/web/server/src/index.ts');
-        console.error('      client: packages/web/client');
+        console.error('    server: server/src/index.ts');
+        console.error('    client: client');
         process.exit(1);
     }
 
-    // Check what's configured in bkper.yaml
-    const webConfigured = !!deployConfig.web?.main;
-    const eventsConfigured = !!deployConfig.events?.main;
-
-    // Validate flags against configuration (early validation before heavy operations)
-    if (options.web && !webConfigured) {
-        console.error('--web specified but no web handler configured in bkper.yaml');
-        process.exit(1);
-    }
-    if (options.events && !eventsConfigured) {
-        console.error('--events specified but no events handler configured in bkper.yaml');
-        process.exit(1);
-    }
-
-    // Determine what to run based on flags
-    // If no flags specified, run everything configured (backwards compatible)
-    // If flags specified, run only what's requested
-    const explicitMode = options.web || options.events;
-    const hasWeb = webConfigured && (!explicitMode || options.web);
-    const hasEvents = eventsConfigured && (!explicitMode || options.events);
-
-    // Ensure types are up to date
     typesLogger.info('Checking types...');
     ensureTypesUpToDate(
         {
             services: deployConfig.services,
             secrets: deployConfig.secrets,
-            hasStaticAssets: !!deployConfig.web?.client,
+            hasStaticAssets: !!deployConfig.client,
         },
         process.cwd()
     );
@@ -120,21 +89,16 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         sharedLogger.info('No shared package found');
     }
 
-    // Load dev vars (secrets for local development)
     const devVars = loadDevVars(process.cwd(), deployConfig.secrets || []);
-
     const serverPort = options.serverPort || 8787;
-    const eventsPort = options.eventsPort || 8791;
+    const hasEvents = Array.isArray(appConfig.events) && appConfig.events.length > 0;
 
     let mf: Miniflare | null = null;
-    let eventsMf: Miniflare | null = null;
     let eventsTunnel: TunnelHandle | null = null;
     let eventsUrl: string | undefined;
     let serverWatchHandle: WatchHandle | null = null;
-    let eventsWatchHandle: WatchHandle | null = null;
     let sharedWatcher: FSWatcher | null = null;
 
-    // Handle graceful shutdown
     let cleaningUp = false;
     let cleanupKeepAlive: ReturnType<typeof setInterval> | null = null;
     const cleanup = async () => {
@@ -149,7 +113,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         const appId = appConfig.id;
         const warnings: string[] = [];
 
-        // Run all cleanup in parallel, collect warnings
         await Promise.allSettled(
             [
                 runCleanupStep({
@@ -160,13 +123,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                     },
                 }),
                 runCleanupStep({
-                    label: 'events-watch',
-                    timeoutMs: 5000,
-                    action: async () => {
-                        if (eventsWatchHandle) await eventsWatchHandle.dispose();
-                    },
-                }),
-                runCleanupStep({
                     label: 'shared-watch',
                     timeoutMs: 5000,
                     action: async () => {
@@ -174,17 +130,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                     },
                 }),
                 runCleanupStep({
-                    label: 'web',
+                    label: 'server',
                     timeoutMs: 5000,
                     action: async () => {
                         if (mf) await stopWorkerServer(mf);
-                    },
-                }),
-                runCleanupStep({
-                    label: 'events',
-                    timeoutMs: 5000,
-                    action: async () => {
-                        if (eventsMf) await stopWorkerServer(eventsMf);
                     },
                 }),
                 runCleanupStep({
@@ -228,7 +177,6 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     });
     process.stdin.resume();
 
-    // Shared package watching (fs.watch with debounce)
     const sharedDir = path.join(process.cwd(), 'packages/shared/src');
     let sharedBuildInProgress = false;
     let sharedBuildPending = false;
@@ -258,16 +206,10 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                 sharedLogger.success('Shared package rebuilt');
             }
 
-            if (hasWeb && mf) {
+            if (mf) {
                 serverLogger.info('Reloading server after shared update...');
-                await reloadWorker(mf, deployConfig.web!.main);
+                await reloadWorker(mf, deployConfig.server);
                 serverLogger.success('Server reloaded');
-            }
-
-            if (hasEvents && eventsMf) {
-                eventsLogger.info('Reloading events after shared update...');
-                await reloadWorker(eventsMf, deployConfig.events!.main);
-                eventsLogger.success('Events reloaded');
             }
         } catch (err) {
             sharedLogger.error(`Shared rebuild failed: ${err}`);
@@ -291,83 +233,56 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         });
     }
 
-    // Start web server (Miniflare) with esbuild watch
-    if (hasWeb) {
-        serverLogger.info('Starting server...');
-        const outboundService = appConfig.id
-            ? createLocalOutboundService({ appId: appConfig.id })
-            : undefined;
-        mf = await createWorkerServer(deployConfig.web!.main, {
-            port: serverPort,
-            kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
-            vars: devVars,
-            compatibilityDate: deployConfig.compatibilityDate,
-            persist: true,
-            outboundService,
-        });
+    serverLogger.info('Starting server...');
+    const outboundService = appConfig.id
+        ? createLocalOutboundService({ appId: appConfig.id })
+        : undefined;
+    mf = await createWorkerServer(deployConfig.server, {
+        port: serverPort,
+        kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
+        vars: devVars,
+        compatibilityDate: deployConfig.compatibilityDate,
+        persist: true,
+        outboundService,
+    });
 
-        // Watch server files via esbuild (replaces chokidar)
-        serverWatchHandle = await watchWorker(deployConfig.web!.main, async code => {
-            serverLogger.info('Rebuilding server...');
-            try {
-                await updateWorkerCode(mf!, code);
-                serverLogger.success('Server reloaded');
-            } catch (err) {
-                serverLogger.error(`Reload failed: ${err}`);
-            }
-        });
-    }
+    serverWatchHandle = await watchWorker(deployConfig.server, async code => {
+        serverLogger.info('Rebuilding server...');
+        try {
+            await updateWorkerCode(mf!, code);
+            serverLogger.success('Server reloaded');
+        } catch (err) {
+            serverLogger.error(`Reload failed: ${err}`);
+        }
+    });
 
-    // Start events server (Miniflare) with esbuild watch
     if (hasEvents) {
-        eventsLogger.info('Starting events server...');
-        eventsMf = await createWorkerServer(deployConfig.events!.main, {
-            port: eventsPort,
-            kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
-            vars: devVars,
-            compatibilityDate: deployConfig.compatibilityDate,
-            persist: true,
-            persistPath: './.mf/kv-events',
-        });
-
-        // Watch events files via esbuild (replaces chokidar)
-        eventsWatchHandle = await watchWorker(deployConfig.events!.main, async code => {
-            eventsLogger.info('Rebuilding events...');
-            try {
-                await updateWorkerCode(eventsMf!, code);
-                eventsLogger.success('Events reloaded');
-            } catch (err) {
-                eventsLogger.error(`Events reload failed: ${err}`);
-            }
-        });
-
         try {
             eventsTunnel = await startCloudflaredTunnel({
-                port: eventsPort,
-                logger: eventsLogger,
+                port: serverPort,
+                logger: serverLogger,
             });
             eventsUrl = `${eventsTunnel.url}/events`;
-            eventsLogger.success('Tunnel ready');
+            serverLogger.success('Events tunnel ready');
         } catch (err) {
-            eventsLogger.error(`Tunnel failed: ${err}`);
+            serverLogger.error(`Tunnel failed: ${err}`);
             process.exit(1);
         }
 
         if (appConfig.id) {
             if (!isLoggedIn()) {
-                eventsLogger.warn('Not logged in. Skipping webhookUrlDev update.');
+                serverLogger.warn('Not logged in. Skipping webhookUrlDev update.');
             } else {
                 try {
                     await updateWebhookUrlDev(appConfig.id, eventsUrl || null);
-                    eventsLogger.success('webhookUrlDev updated');
+                    serverLogger.success('webhookUrlDev updated');
                 } catch (err) {
-                    eventsLogger.warn(`Failed to update webhookUrlDev: ${err}`);
+                    serverLogger.warn(`Failed to update webhookUrlDev: ${err}`);
                 }
             }
         }
     }
 
-    // Display status
     logDevServerBanner({
         tunnelUrl: hasEvents && eventsTunnel ? eventsUrl : undefined,
     });
@@ -383,7 +298,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         await cleanup();
     });
     process.once('uncaughtException', async err => {
-        eventsLogger.warn(
+        serverLogger.warn(
             `Uncaught exception: ${err instanceof Error ? err.message : String(err)}`
         );
         try {
@@ -393,7 +308,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         }
     });
     process.once('unhandledRejection', async reason => {
-        eventsLogger.warn(
+        serverLogger.warn(
             `Unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`
         );
         try {

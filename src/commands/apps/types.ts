@@ -19,7 +19,6 @@ export type LogOutcome = components['schemas']['LogOutcome'];
 
 export interface DeployOptions {
     preview?: boolean;
-    events?: boolean;
     deleteData?: boolean;
     force?: boolean;
 }
@@ -58,45 +57,15 @@ export type HandlerType = 'web' | 'events';
 export type Environment = 'preview' | 'production';
 
 // =============================================================================
-// Deployment Configuration
+// Source-based Deployment Configuration
 // =============================================================================
 
 /**
- * Handler-specific deployment configuration (legacy bundle-based format)
- */
-export interface HandlerDeploymentConfig {
-    bundle: string; // Path to worker bundle directory
-    assets?: string; // Path to static assets directory (web only)
-}
-
-/**
- * Deployment configuration from bkperapp.yaml (legacy bundle-based format)
- */
-export interface DeploymentConfig {
-    web: HandlerDeploymentConfig;
-    events: HandlerDeploymentConfig;
-    services?: string[]; // List of services (e.g., ['KV'])
-}
-
-// =============================================================================
-// Source-based Deployment Configuration (new format)
-// =============================================================================
-
-/**
- * Source-based handler configuration using TypeScript entry points
- */
-export interface SourceHandlerConfig {
-    main: string; // TypeScript entry point (.ts file)
-    client?: string; // Vite project root (web only)
-}
-
-/**
- * Source-based deployment configuration from bkper.yaml
- * Uses TypeScript entry points instead of pre-built bundles
+ * Source-based deployment configuration from bkper.yaml.
  */
 export interface SourceDeploymentConfig {
-    web?: SourceHandlerConfig;
-    events?: SourceHandlerConfig;
+    server: string; // TypeScript Worker entry point (.ts file)
+    client?: string; // Vite/static client root
     services?: string[]; // List of services (e.g., ['KV'])
     secrets?: string[]; // List of secret names (e.g., ['API_KEY'])
     compatibilityDate?: string; // camelCase in TS, maps from compatibility_date in YAML

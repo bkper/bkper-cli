@@ -37,6 +37,93 @@ interface BaseConfig {
 const instanceConfigs = new WeakMap<Miniflare, BaseConfig>();
 const require = createRequire(import.meta.url);
 
+interface WorkerModule {
+    type: 'ESModule';
+    path: string;
+    contents: string;
+}
+
+const APP_WORKER_MODULE_PATH = 'app-worker.js';
+const LOCAL_DISPATCH_WRAPPER_PATH = 'index.js';
+
+const localDispatchWrapper = `
+import appWorker from './${APP_WORKER_MODULE_PATH}';
+
+const PLATFORM_SESSION_COOKIE_NAMES = new Set([
+    'bkper_session',
+    'bkper_session_dev',
+    'bkper_session_local',
+]);
+
+const RESERVED_PLATFORM_REQUEST_HEADERS = [
+    'Authorization',
+    'bkper-oauth-token',
+    'bkper-agent-id',
+];
+
+function stripPlatformRequestCredentials(request) {
+    const headers = new Headers(request.headers);
+    stripPlatformCookieHeader(headers);
+    for (const header of RESERVED_PLATFORM_REQUEST_HEADERS) {
+        headers.delete(header);
+    }
+
+    return new Request(request.url, {
+        method: request.method,
+        headers,
+        body: request.body,
+        redirect: request.redirect,
+        signal: request.signal,
+    });
+}
+
+function stripPlatformCookieHeader(headers) {
+    const cookie = headers.get('Cookie');
+    if (!cookie) {
+        return;
+    }
+
+    const filtered = cookie
+        .split(';')
+        .map(part => part.trim())
+        .filter(part => part.length > 0)
+        .filter(part => !isPlatformCookiePair(part))
+        .join('; ');
+
+    if (filtered) {
+        headers.set('Cookie', filtered);
+    } else {
+        headers.delete('Cookie');
+    }
+}
+
+function isPlatformCookiePair(cookiePair) {
+    const cookieName = cookiePair.split('=', 1)[0]?.trim().toLowerCase();
+    return PLATFORM_SESSION_COOKIE_NAMES.has(cookieName);
+}
+
+export default {
+    fetch(request, env, ctx) {
+        return appWorker.fetch(stripPlatformRequestCredentials(request), env, ctx);
+    },
+};
+`;
+
+function buildWorkerModules(script: string): WorkerModule[] {
+    return [
+        {
+            type: 'ESModule',
+            path: LOCAL_DISPATCH_WRAPPER_PATH,
+            contents: localDispatchWrapper,
+        },
+        {
+            type: 'ESModule',
+            path: APP_WORKER_MODULE_PATH,
+            contents: script,
+        },
+    ];
+}
+
 /**
  * Resolves the Miniflare entry point from the app project root.
  * This allows a globally installed bkper CLI to load the app-local devDependency.
@@ -117,13 +204,7 @@ export async function createWorkerServer(
         // Use modules array format instead of script string
         // This allows Miniflare to properly handle dynamic imports of external modules
         // like cloudflare:workers that are used by libraries (e.g., Hono)
-        modules: [
-            {
-                type: 'ESModule',
-                path: 'index.js', // Virtual path for the bundled module
-                contents: script,
-            },
-        ],
+        modules: buildWorkerModules(script),
     });
 
     // Store the base config for hot reload
@@ -159,13 +240,7 @@ export async function updateWorkerCode(mf: Miniflare, code: string): Promise<voi
     if (!baseConfig) {
         // Fallback: use minimal config if no stored config (shouldn't happen normally)
         await mf.setOptions({
-            modules: [
-                {
-                    type: 'ESModule',
-                    path: 'index.js',
-                    contents: code,
-                },
-            ],
+            modules: buildWorkerModules(code),
         });
         return;
     }
@@ -173,13 +248,7 @@ export async function updateWorkerCode(mf: Miniflare, code: string): Promise<voi
     // Apply the full config with new modules
     await mf.setOptions({
         ...baseConfig,
-        modules: [
-            {
-                type: 'ESModule',
-                path: 'index.js',
-                contents: code,
-            },
-        ],
+        modules: buildWorkerModules(code),
     });
 }
 

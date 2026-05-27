@@ -2,27 +2,21 @@ import { App } from 'bkper-js';
 import fs from 'fs';
 import * as YAML from 'yaml';
 import { getErrorMessage } from '../../auth/auth-errors.js';
-import type { ErrorResponse, DeploymentConfig, SourceDeploymentConfig } from './types.js';
+import type { ErrorResponse, SourceDeploymentConfig } from './types.js';
 
 // =============================================================================
 // App Config Loading
 // =============================================================================
 
 /**
- * Loads app configuration from bkper.json, bkper.yaml, bkperapp.json, or bkperapp.yaml in current directory.
- * Checks files in priority order: bkper.json → bkper.yaml → bkperapp.json → bkperapp.yaml
+ * Loads app configuration from bkper.json or bkper.yaml in current directory.
+ * Checks files in priority order: bkper.json → bkper.yaml
  *
  * @returns App configuration object
  * @throws Error if no config file is found
  */
 export function loadAppConfig(): bkper.App {
-    // Priority order: new filenames first, legacy filenames as fallback
-    const configPaths = [
-        './bkper.json',
-        './bkper.yaml',
-        './bkperapp.json', // Legacy
-        './bkperapp.yaml', // Legacy
-    ];
+    const configPaths = ['./bkper.json', './bkper.yaml'];
 
     for (const path of configPaths) {
         if (fs.existsSync(path)) {
@@ -35,40 +29,8 @@ export function loadAppConfig(): bkper.App {
 }
 
 /**
- * Loads deployment configuration from bkper.yaml or bkperapp.yaml.
- * Checks in priority order: bkper.yaml → bkperapp.yaml
- *
- * @returns Deployment configuration or undefined if not configured
- */
-export function loadDeploymentConfig(): DeploymentConfig | undefined {
-    // Priority order: new filename first, legacy as fallback
-    const yamlPaths = ['./bkper.yaml', './bkperapp.yaml'];
-
-    for (const path of yamlPaths) {
-        if (fs.existsSync(path)) {
-            const config = YAML.parse(fs.readFileSync(path, 'utf8')) as bkper.App & {
-                deployment?: {
-                    web: { bundle: string; assets?: string };
-                    events: { bundle: string };
-                    services?: string[];
-                };
-            };
-            if (config.deployment) {
-                return {
-                    web: config.deployment.web,
-                    events: config.deployment.events,
-                    services: config.deployment.services,
-                };
-            }
-        }
-    }
-    return undefined;
-}
-
-/**
  * Checks if deployment config uses new source-based format.
- * Source format: entry points end with .ts
- * Legacy format: paths are directories (no extension)
+ * Source format: deployment.server ends with .ts
  *
  * @param deployment - The deployment configuration object to check
  * @returns true if the deployment uses source-based format, false otherwise
@@ -77,41 +39,38 @@ export function isSourceConfig(deployment: unknown): boolean {
     if (!deployment || typeof deployment !== 'object') return false;
     const d = deployment as Record<string, unknown>;
 
-    // Check if web.main or events.main ends with .ts
-    const webMain = (d.web as Record<string, unknown> | undefined)?.main;
-    const eventsMain = (d.events as Record<string, unknown> | undefined)?.main;
+    const server = d.server;
 
-    return (
-        (typeof webMain === 'string' && webMain.endsWith('.ts')) ||
-        (typeof eventsMain === 'string' && eventsMain.endsWith('.ts'))
-    );
+    return typeof server === 'string' && server.endsWith('.ts');
 }
 
 /**
  * Loads source-based deployment configuration from bkper.yaml.
  * Maps snake_case YAML keys to camelCase TypeScript properties.
- * Checks in priority order: bkper.yaml → bkperapp.yaml
  *
  * @returns Source deployment configuration or undefined if not configured
  */
 export function loadSourceDeploymentConfig(): SourceDeploymentConfig | undefined {
-    const yamlPaths = ['./bkper.yaml', './bkperapp.yaml'];
+    const yamlPaths = ['./bkper.yaml'];
 
     for (const path of yamlPaths) {
         if (fs.existsSync(path)) {
             const config = YAML.parse(fs.readFileSync(path, 'utf8')) as {
                 deployment?: {
-                    web?: { main: string; client?: string };
-                    events?: { main: string };
+                    server?: string;
+                    client?: string;
                     services?: string[];
                     secrets?: string[];
                     compatibility_date?: string;
                 };
             };
             if (config.deployment && isSourceConfig(config.deployment)) {
+                if (!config.deployment.server) {
+                    return undefined;
+                }
                 return {
-                    web: config.deployment.web,
-                    events: config.deployment.events,
+                    server: config.deployment.server,
+                    client: config.deployment.client,
                     services: config.deployment.services,
                     secrets: config.deployment.secrets,
                     // Map snake_case to camelCase
@@ -136,7 +95,7 @@ export function loadReadme(): string | undefined {
 }
 
 /**
- * Creates an App instance configured from bkper.yaml (or bkperapp.yaml) and environment variables.
+ * Creates an App instance configured from bkper.yaml and environment variables.
  *
  * @returns Configured App instance
  */

@@ -45,9 +45,8 @@ describe('Integration: app clean', function () {
 
         // Verify source files still exist
         expect(fs.existsSync(path.join(appDir, 'package.json'))).to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/web/client/src'))).to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/web/server/src'))).to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/events/src'))).to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'client/src'))).to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'server/src'))).to.be.true;
     });
 
     it('should remove node_modules', async function () {

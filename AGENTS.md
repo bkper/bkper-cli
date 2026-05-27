@@ -143,6 +143,27 @@ src/
 3. Add tests in `test/unit/commands/`
 4. Run `bun run build` to compile
 
+## Derived Resources
+
+Derived resources are read-only by default. Do not edit them during normal documentation work, and do not include them in scope unless the user explicitly asks to sync, generate, refresh, or rebuild them.
+
+| Derived path | Canonical source | Regenerate only when explicitly requested |
+| --- | --- | --- |
+| `docs/core-concepts.md` | `https://bkper.com/docs/core-concepts.md` | `bun run sync:docs` |
+| `docs/bkper-js.md` | `https://bkper.com/docs/api/bkper-js.md` | `bun run sync:docs` |
+| `docs/bkper-api-types.md` | `https://bkper.com/docs/api/bkper-api-types.md` | `bun run sync:docs` |
+| `docs/app-building.md` | `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
+| `lib/docs/**` | `docs/*.md` + `README.md` | `bun run build:copy-docs` or full build |
+| `../skills/skills/bkper/SKILL.md` | `src/agent/system-prompt.ts` | `bun run generate:skill` |
+| `../skills/skills/bkper/references/**` | `docs/*.md` | `bun run generate:skill` |
+
+Notes:
+
+- For docs changes in this repository, edit the canonical local docs only: `README.md`, `docs/app-management.md`, `docs/data-management.md`, `docs/financial-statements.md`, `docs/index.md`, or `docs/taxes.md` unless the user explicitly requests a sync.
+- `bun run build` runs `prebuild`, which executes `bun sync:docs` and `bun generate:skill`. For documentation-only work or tasks that should not refresh derived resources, do not run full `bun run build` unless the user explicitly requested regeneration. Use targeted checks such as `bun run build:compile` or `bun run test:unit` when appropriate, and report that full build was skipped to avoid derived-resource churn.
+- If a synced doc is stale or wrong, update the source in `bkper-mkt` docs first, then ask before running `bun run sync:docs` here.
+- If the skill output is stale, update `src/agent/system-prompt.ts` or the relevant canonical docs first, then ask before running `bun run generate:skill`.
+
 ## Agent Workflow Guardrails
 
 These rules are mandatory for coding agents working on this repository.

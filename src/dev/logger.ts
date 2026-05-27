@@ -3,7 +3,7 @@
  * Provides prefixed, colored output for different subsystems
  */
 
-export type LogPrefix = 'server' | 'events' | 'client' | 'build' | 'types' | 'shared';
+export type LogPrefix = 'server' | 'client' | 'build' | 'types' | 'shared';
 
 export interface Logger {
     info(message: string): void;
@@ -30,7 +30,7 @@ const icons = {
 
 /**
  * Creates a logger with a specific prefix
- * @param prefix - The prefix to show in brackets (e.g., "server", "events")
+ * @param prefix - The prefix to show in brackets (e.g., "server", "build")
  * @returns Logger instance with info, success, warn, error, and debug methods
  */
 export function createLogger(prefix: LogPrefix): Logger {
@@ -100,25 +100,16 @@ export function logDevServerBanner(options: { tunnelUrl?: string }): void {
  * @param results - Build output paths and sizes
  */
 export function logBuildResults(results: {
-    webServer?: { path: string; size: number };
-    events?: { path: string; size: number };
+    server?: { path: string; size: number };
 }): void {
     console.log('');
     console.log(`${icons.package} Building Bkper App...`);
     console.log('');
 
-    if (results.webServer) {
+    if (results.server) {
         console.log(
-            `   \u2713 Web server    \u2192 ${results.webServer.path.padEnd(20)} (${formatSize(
-                results.webServer.size
-            )})`
-        );
-    }
-
-    if (results.events) {
-        console.log(
-            `   \u2713 Events        \u2192 ${results.events.path.padEnd(20)} (${formatSize(
-                results.events.size
+            `   \u2713 Server worker \u2192 ${results.server.path.padEnd(20)} (${formatSize(
+                results.server.size
             )})`
         );
     }

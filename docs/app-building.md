@@ -86,32 +86,38 @@ source: /docs/build/apps/architecture.md
 
 # App Architecture
 
-Bkper platform apps follow a three-package monorepo pattern. Each package handles a distinct concern, all deployed to the same `{appId}.bkper.app` domain.
+Bkper platform apps use one Worker bundle per app and environment. The same Worker serves the browser client, app-defined `/api/*` routes, and Bkper event ingress at `/events`.
 
 ## Structure
 
+```txt
+my-app/
+├── client/
+│   ├── index.html
+│   └── src/       — Frontend UI (Vite + Lit)
+├── server/
+│   └── src/
+│       ├── index.ts
+│       └── handlers/
+├── bkper.yaml
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
 ```
-packages/
-├── shared/     — Shared types and utilities
-├── web/
-│   ├── client/ — Frontend UI (Vite + Lit)
-│   └── server/ — Backend API (Hono)
-└── events/     — Event handler (webhooks)
-```
 
-The packages are connected via [Bun workspaces](https://bun.sh/docs/install/workspaces). Import shared code from `@my-app/shared` in any package.
+The default template is intentionally not a monorepo. Add a shared package only when the app actually needs one.
 
-## Web client
+## Client
 
-The client package builds a browser UI with [Lit](https://lit.dev/) and [@bkper/web-design](https://www.npmjs.com/package/@bkper/web-design) for consistent Bkper styling.
+The client folder builds a browser UI with [Lit](https://lit.dev/) and [@bkper/web-design](https://www.npmjs.com/package/@bkper/web-design) for consistent Bkper styling.
 
 - Built with [Vite](https://vitejs.dev/) — configured in the project's `vite.config.ts` for fast builds and HMR during development
-- Static assets served by the web server handler
+- Built assets are deployed with the same Worker
 - Communicates with Bkper via `bkper-js`
 
 This is where your app's UI lives — book pickers, account lists, reports, forms.
 
-### Web client authentication
+### Client authentication
 
 The client authenticates users via the [`@bkper/web-auth`](https://www.npmjs.com/package/@bkper/web-auth) SDK. OAuth is pre-configured on the platform — no client IDs, redirect URIs, or consent screens to set up.
 
@@ -131,26 +137,39 @@ const bkper = new Bkper({
 });
 ```
 
-This is the canonical pattern. Do not implement custom OAuth flows, redirect handling, or token refresh — the SDK and platform handle everything. See the [@bkper/web-auth API Reference](https://bkper.com/docs/api/bkper-web-auth.md) for the full SDK documentation.
+This is the canonical browser pattern. Do not implement custom OAuth flows, redirect handling, or token refresh — the SDK and platform handle everything. See the [@bkper/web-auth API Reference](https://bkper.com/docs/api/bkper-web-auth.md) for the full SDK documentation.
 
-## Web server
+## Server Worker
 
-The server package runs on [Cloudflare Workers](https://developers.cloudflare.com/workers/) using [Hono](https://hono.dev/) as the web framework. It handles:
+The server folder runs on [Cloudflare Workers](https://developers.cloudflare.com/workers/) using [Hono](https://hono.dev/) as the web framework. It handles:
 
 - Serving the client's static assets
-- Custom API routes for your app's backend logic
+- Custom API routes for your app's backend logic under `/api/*`
+- Bkper event ingress under `/events`
 - Type-safe access to platform services (KV, secrets) via `c.env`
 
 ```ts
 import { Hono } from 'hono';
-import type { Env } from '../../../../env.js';
+import { Bkper, Book } from 'bkper-js';
+import type { Env } from '../../env.js';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/api/data', async c => {
-    const cached = await c.env.KV.get('my-key');
-    return c.json({ data: cached });
+app.get('/api/books', async c => {
+    const bkper = new Bkper();
+    const books = await bkper.getBooks();
+    return c.json({ books });
 });
+
+app.post('/events', async c => {
+    const event: bkper.Event = await c.req.json();
+    const bkper = new Bkper();
+    const book = new Book(event.book, bkper.getConfig());
+    // route by event.type
+    return c.json({ result: false });
+});
+
+app.get('*', c => c.env.ASSETS.fetch(c.req.raw));
 
 export default app;
 ```
@@ -189,29 +208,34 @@ app.get('/api/books', async c => {
 
 Platform outbound auth injects the validated user's OAuth token on exact Bkper API requests. Browser sessions only allow access to app web pages; they do not authorize `/api/*` server routes or create outbound auth context.
 
-## Events handler
+### Event handler authentication
 
-The events package receives webhook calls from Bkper when subscribed [events](https://bkper.com/docs/build/apps/event-handlers.md) occur. It's a separate Hono app that processes events and returns responses.
+On the Bkper Platform, `/events` is an internal Bkper delivery channel on the same Worker. App code must not read `bkper-oauth-token`, `bkper-agent-id`, or `Authorization` headers.
+
+Use the same server-side Bkper API pattern as `/api/*` routes:
 
 ```ts
-import { Hono } from 'hono';
-import { Bkper, Book } from 'bkper-js';
-import { handleTransactionChecked } from './handlers/transaction-checked.js';
-import type { Env } from '../../../env.js';
+const bkper = new Bkper();
+const book = new Book(event.book, bkper.getConfig());
+```
 
-const app = new Hono<{ Bindings: Env }>().basePath('/events');
+Dispatch consumes the Core-sent event access token and strips platform headers before invoking your Worker. Platform outbound auth injects the token and app agent identity when your event handler calls the Bkper API.
 
-app.post('/', async c => {
+For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) event handlers, you receive and process event auth headers directly because the platform outbound layer is not involved.
+
+## Event routing pattern
+
+A typical server routes events by type and delegates to small handlers:
+
+```ts
+app.post('/events', async c => {
     const event: bkper.Event = await c.req.json();
 
     if (!event.book) {
         return c.json({ error: 'Missing book in event payload' }, 400);
     }
 
-    const bkper = new Bkper({
-        oauthTokenProvider: async () => c.req.header('bkper-oauth-token'),
-        agentIdProvider: async () => c.req.header('bkper-agent-id'),
-    });
+    const bkper = new Bkper();
     const book = new Book(event.book, bkper.getConfig());
 
     switch (event.type) {
@@ -221,47 +245,19 @@ app.post('/', async c => {
             return c.json({ result: false });
     }
 });
-
-export default app;
 ```
 
-Event handlers run at `https://{appId}.bkper.app/events` in production. During development, a Cloudflare tunnel routes events to your local machine.
+Event handlers run at `https://{appId}.bkper.app/events` in production. During development, a Cloudflare tunnel routes events to the same local Worker.
 
 See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for patterns and details.
 
-## Shared package
-
-Common types, utilities, and constants used across packages:
-
-```ts
-// packages/shared/src/types.ts
-export interface EventResult {
-    result?: string | string[] | boolean;
-    error?: string;
-    warning?: string;
-}
-
-// packages/shared/src/constants.ts
-export const APP_NAME = 'my-app';
-```
-
-Import in any package:
-
-```ts
-import type { EventResult } from '@my-app/shared';
-```
-
-> **Note:** The `Env` type (KV bindings, secrets) lives in the root `env.d.ts` file, auto-generated from `bkper.yaml`. Import it as `import type { Env } from '../../../env.js'` — it is not part of the shared package.
-
-## When you don't need all three
+## When you don't need every part
 
 Not every app needs a UI, API, and event handler:
 
-- **Event-only app** — Just the `events` package. Automates reactions to book events without a user interface. Remove the `web` section from `bkper.yaml`.
-- **UI-only app** — Just the `web` packages. Opens via a [context menu](https://bkper.com/docs/build/apps/context-menu.md) to display data or collect input. Remove the `events` section from `bkper.yaml`.
-- **Full app** — All three packages. Interactive UI with backend logic and event-driven automation.
-
-The template includes all three by default. Remove what you don't need.
+- **Event-only app** — Keep `server/` and omit `deployment.client`. Automates reactions to book events without a user interface.
+- **UI-only app** — Use `client/` and keep a minimal server Worker for static assets. Remove the `events` list and `webhookUrl` if you do not handle events.
+- **Full app** — Client UI, `/api/*` backend logic, and `/events` automation in one Worker.
 
 ## Simple App Patterns
 
@@ -269,10 +265,10 @@ These are the minimal, canonical patterns for common app tasks. Use them as star
 
 ### Client-only UI with authentication
 
-The smallest useful app needs only the `packages/web/client/` directory. No server routes, no event handlers, no custom auth logic.
+The smallest useful app can keep all business logic in `client/`. No custom server routes, no event handlers, no custom auth logic.
 
 ```ts
-// packages/web/client/src/app.ts
+// client/src/app.ts
 import { Bkper } from 'bkper-js';
 import { BkperAuth } from '@bkper/web-auth';
 
@@ -294,6 +290,7 @@ async function render() {
 ```
 
 Key points:
+
 - `BkperAuth` handles OAuth, token refresh, and session management internally.
 - `auth.getAccessToken()` returns a valid token synchronously after `init()` resolves.
 - Do not add server-side `/auth/*` routes. Do not implement `refresh_token` logic yourself.
@@ -315,9 +312,9 @@ Use `bkper-js` for all API calls. Do not call the REST API directly when `bkper-
 | Client authentication | `@bkper/web-auth` (`BkperAuth`, `getAccessToken`) | Custom OAuth flows, manual `fetch('/auth/refresh')`, `google-auth-library` in the browser |
 | API calls from client | `bkper-js` (`Bkper`, `Book`, `Account`, `Transaction`) | Direct `fetch()` to REST endpoints |
 | API calls from app server `/api/*` route | Incoming `Authorization: Bearer <token>` + server-side `new Bkper()` | Reading OAuth tokens in server code, relying on browser sessions for API auth |
-| API calls from event handler | `bkper-js` with `oauthTokenProvider` from `bkper-oauth-token` header | Hard-coding API keys, calling REST directly |
+| API calls from platform event handler | Server-side `new Bkper()` in `/events` | Reading `bkper-oauth-token` or `bkper-agent-id` in platform app code |
 | Local development server | `npm run dev` (template script) | Manual `miniflare` + `cloudflared` invocations |
-| Event handler routing | `switch (event.type)` in `packages/events/src/index.ts` | Middleware frameworks, external webhook routers |
+| Event handler routing | `switch (event.type)` in `server/src/index.ts` or `server/src/handlers/` | Middleware frameworks, external webhook routers |
 | UI components | `@bkper/web-design` + Lit | Heavy UI frameworks unless the user explicitly requests them |
 
 ## Common Pitfalls
@@ -333,14 +330,14 @@ Avoid these patterns even if they seem necessary. The platform or SDK already so
 3. **Relying on browser sessions for server API auth**
    - Sessions let users open app web pages, but `/api/*` routes require `Authorization: Bearer <token>`. Dispatch validates bearer tokens and platform outbound uses that validated context for Bkper API calls.
 
-4. **Modifying `packages/web/server/` for a simple UI task**
-   - If the user only asked for a client-side feature, do not touch the server package. The Vite dev server proxies `/api` to the Miniflare worker automatically; you do not need to add routes unless the user explicitly asks for custom backend logic.
+4. **Modifying `server/` for a simple UI task**
+   - If the user only asked for a client-side feature, do not touch server routes. The Vite dev server proxies `/api` to the Miniflare worker automatically; you do not need to add routes unless the user explicitly asks for custom backend logic.
 
 5. **Installing additional auth or HTTP libraries**
    - `bkper-js` and `@bkper/web-auth` are the only packages you need for Bkper API access and authentication. Adding `axios`, `google-auth-library`, or similar is almost always wrong.
 
 6. **Creating event handlers when the user asked for a UI-only feature**
-   - If the user says "show me a list of books in a popup," that is a client-only task. Do not scaffold `packages/events/` handlers or subscribe to webhooks.
+   - If the user says "show me a list of books in a popup," that is a client-only task. Do not add `/events` logic or subscribe to webhooks.
 
 7. **Calling REST endpoints directly when `bkper-js` has the method**
    - If `bkper-js` exposes `book.getTransactions()`, use it. Do not `fetch('https://api.bkper.com/...')` and parse JSON manually.
@@ -398,11 +395,8 @@ events:
     - TRANSACTION_CHECKED
 
 deployment:
-    web:
-        main: packages/web/server/src/index.ts
-        client: packages/web/client
-    events:
-        main: packages/events/src/index.ts
+    server: server/src/index.ts
+    client: client
     services:
         - KV
     compatibility_date: '2026-01-28'
@@ -516,9 +510,8 @@ For apps deployed to the [Bkper Platform](https://bkper.com/docs/build/apps/over
 
 | Field                           | Description                                                                                                            |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `deployment.web.main`           | Entry point for the web handler (serves UI and API).                                                                   |
-| `deployment.web.client`         | Directory for static client assets.                                                                                    |
-| `deployment.events.main`        | Entry point for the events handler (processes webhooks).                                                               |
+| `deployment.server`             | TypeScript entry point for the single server Worker. It serves `/api/*`, `/events`, and static assets.                 |
+| `deployment.client`             | Optional Vite/static client root. Built assets are deployed with the same Worker.                                      |
 | `deployment.services`           | Platform services to provision. Currently: `KV` (key-value storage).                                                   |
 | `deployment.secrets`            | Secret names used by the app. Managed via `bkper app secrets`.                                                         |
 | `deployment.compatibility_date` | [Cloudflare Workers compatibility date](https://developers.cloudflare.com/workers/configuration/compatibility-dates/). |
@@ -612,8 +605,8 @@ source: /docs/build/apps/deploying.md
    ```
 
    This runs two build steps:
-   - Client (Vite) to static assets in `dist/web/client/`
-   - Worker bundles (esbuild) — web server to `dist/web/server/`, events handler to `dist/events/`
+   - Client (Vite) to static assets in `dist/client/`
+   - Server Worker bundle (esbuild) to `dist/server/`
 
    Build output includes size reporting so you can monitor bundle sizes.
 
@@ -659,15 +652,7 @@ Preview URLs use a dash suffix: `https://{appId}-preview.bkper.app`. For example
 
 Preview has independent secrets and KV storage from production.
 
-### Independent handler deployment
-
-Deploy only the events handler:
-
-```bash
-bkper app deploy --events
-```
-
-Useful when you've only changed the events handler and want a faster deployment. Web is deployed by default.
+There is one app deployment per environment. `/events` is handled by the same Worker as the client assets and `/api/*` routes.
 
 ## Secrets management
 
@@ -753,7 +738,7 @@ bkper app install <appId> -b <bookId>
 bkper app uninstall <appId> -b <bookId>
 ```
 
-Once installed, the app's [event handlers](https://bkper.com/docs/build/apps/event-handlers.md) receive events from that book, and the app's [context menu](https://bkper.com/docs/build/apps/context-menu.md) appears in the book's UI.
+Once installed, the app's [event handlers](https://bkper.com/docs/build/apps/event-handlers.md) receive events from that book at `/events`, and the app's [context menu](https://bkper.com/docs/build/apps/context-menu.md) appears in the book's UI.
 
 ---
 source: /docs/build/apps/development.md
@@ -772,35 +757,28 @@ The project template runs both processes via `concurrently`:
 
 1. **`vite dev`** — Client dev server with HMR. Changes to Lit components reflect instantly in the browser. Configured in `vite.config.ts`.
 2. **`bkper app dev`** — The worker runtime:
-   - **Miniflare** — Simulates the Cloudflare Workers runtime locally for the web server and events handler.
-   - **Cloudflare tunnel** — Exposes the events handler via a public URL so Bkper can route webhook events to your machine.
-   - **File watching** — Server and shared package changes trigger automatic rebuilds via esbuild.
+   - **Miniflare** — Simulates the single Cloudflare Worker locally.
+   - **Cloudflare tunnel** — Exposes `/events` via a public URL so Bkper can route webhook events to your machine.
+   - **File watching** — Server changes trigger automatic rebuilds via esbuild.
 
-You can also run them independently: `npm run dev:client` for just the UI, or `npm run dev:server` / `npm run dev:events` for specific workers.
+You can also run them independently: `npm run dev:client` for just the UI, or `npm run dev:server` for the local Worker.
 
 ## URLs
 
-| Handler | URL |
+| Endpoint | URL |
 | --- | --- |
 | Client (Vite dev server) | `http://localhost:5173` |
-| Web server (Miniflare) | `http://localhost:8787` |
-| Events (via tunnel) | `https://<random>.trycloudflare.com/events` |
+| Server Worker (Miniflare) | `http://localhost:8787` |
+| Events (via tunnel to the same Worker) | `https://<random>.trycloudflare.com/events` |
 
 The Vite dev server proxies `/api` requests to `http://localhost:8787` (configured in `vite.config.ts`). The tunnel URL is automatically registered as the `webhookUrlDev` in Bkper, so events from books where you're the developer are routed to your local machine.
 
 ## Configuration flags
 
-You can run specific handlers independently:
+There is one local Worker. Override its port when needed:
 
 ```bash
-# Start only the web worker
-bkper app dev --web
-
-# Start only the events worker
-bkper app dev --events
-
-# Override default ports
-bkper app dev --sp 8787 --ep 8791
+bkper app dev --sp 8787
 ```
 
 ## Client configuration
@@ -823,7 +801,7 @@ bkper auth login   # one-time setup
 
 Then `npm run dev` handles authentication automatically. The client calls `auth.getAccessToken()` and the middleware ensures the token is valid.
 
-When your client calls an app server route under `/api/*`, include that token as `Authorization: Bearer <token>` to match production dispatch behavior. Local outbound still uses your CLI credentials when the app server calls Bkper.
+When your client calls an app server route under `/api/*`, include that token as `Authorization: Bearer <token>` to match production dispatch behavior. Local outbound uses your CLI credentials when the app server or event handler calls Bkper.
 
 If you see authentication errors in the browser, verify you're logged in:
 
@@ -879,7 +857,7 @@ bkper app build
 1. Run `npm run dev`
 2. Edit client code — see changes instantly via Vite HMR
 3. Edit server code — auto-rebuilds and reloads via esbuild watch
-4. Trigger events in Bkper — your local handler receives them via the tunnel
+4. Trigger events in Bkper — your local Worker receives them at `/events` via the tunnel
 5. Check the activity stream in Bkper to see handler responses
 6. Iterate
 
@@ -904,7 +882,7 @@ Event handlers are the code that reacts to events in your Bkper Books. When a tr
 2. Bkper sends an HTTP POST to your webhook URL when those events fire
 3. Your handler processes the event and returns a response
 
-On the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md), events are routed to your `events` package automatically — including local development via tunnels. Platform event routing uses `/events` and `/events/*` paths only. For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, you configure the webhook URL directly.
+On the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md), events are routed to `/events` on your app's single Worker — including local development via tunnels. For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, you configure the webhook URL directly.
 
 ## Agent identity
 
@@ -980,45 +958,36 @@ This pattern is essential for any handler that writes back to the same book.
 
 ## Authentication
 
-When Bkper calls your event handler's webhook URL, it sends two headers on every request:
-
-- `bkper-oauth-token` — The OAuth access token of the user who installed the app. Use this to call the API back on behalf of the user.
-- `bkper-agent-id` — Your app's agent identifier.
-
-Pass these directly to `bkper-js`:
+Platform-hosted event handlers use the same server-side Bkper API pattern as `/api/*` routes:
 
 ```ts
-const bkper = new Bkper({
-    oauthTokenProvider: async () => c.req.header('bkper-oauth-token'),
-    agentIdProvider: async () => c.req.header('bkper-agent-id'),
-});
+const bkper = new Bkper();
 const book = new Book(event.book, bkper.getConfig());
 ```
 
-This is the canonical pattern. Do not implement custom authentication for event handlers.
+Dispatch consumes the event delivery token, strips platform headers before your Worker runs, and platform outbound auth injects the OAuth token and app agent identity on Bkper API calls.
+
+Do not read `bkper-oauth-token`, `bkper-agent-id`, or `Authorization` headers in platform app code.
 
 > **Note**
-> Both production (`webhookUrl`) and development (`webhookUrlDev`) endpoints receive OAuth tokens in the `bkper-oauth-token` header. During local development, events are routed through the Cloudflare tunnel started by `bkper app dev`.
-For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, the same headers are sent to your production `webhookUrl`.
+> During local development, events are routed through the Cloudflare tunnel started by `bkper app dev`. Local outbound uses your CLI credentials when the handler calls Bkper.
+For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, the event auth headers are sent to both `webhookUrl` and `webhookUrlDev` and must be handled directly by your infrastructure.
 
 ## Event routing pattern
 
-On the Bkper Platform, the `events` package uses [Hono](https://hono.dev) to receive webhook calls. A typical pattern routes events by type:
+On the Bkper Platform, your server Worker uses [Hono](https://hono.dev) to receive webhook calls at `/events`. A typical pattern routes events by type:
 
 ```ts
 import { Bkper, Book } from 'bkper-js';
 
-app.post('/', async c => {
+app.post('/events', async c => {
     const event: bkper.Event = await c.req.json();
 
     if (!event.book) {
         return c.json({ error: 'Missing book in event payload' }, 400);
     }
 
-    const bkper = new Bkper({
-        oauthTokenProvider: async () => c.req.header('bkper-oauth-token'),
-        agentIdProvider: async () => c.req.header('bkper-agent-id'),
-    });
+    const bkper = new Bkper();
     const book = new Book(event.book, bkper.getConfig());
 
     switch (event.type) {
@@ -1190,11 +1159,11 @@ This tutorial walks you through building and deploying a Bkper app from scratch.
 
 5. **Make a change**
 
-    Edit the handler in `packages/events/src/handlers/transaction-checked.ts` and save. The worker reloads automatically. Check another transaction to see your change.
+    Edit the handler in `server/src/handlers/transaction-checked.ts` and save. The worker reloads automatically. Check another transaction to see your change.
 
 6. **Customize your listing**
 
-    Update `bkper.yaml` with your app's description, owner details, and repository URL. Replace the placeholder logos in `packages/web/client/public/images/`. See [App Listing](https://bkper.com/docs/build/apps/app-listing.md) for publishing details.
+    Update `bkper.yaml` with your app's description, owner details, and repository URL. Replace the placeholder logos in `client/public/images/`. See [App Listing](https://bkper.com/docs/build/apps/app-listing.md) for publishing details.
 
 7. **Update the README**
 
@@ -1220,7 +1189,7 @@ This tutorial walks you through building and deploying a Bkper app from scratch.
 
 ## Next steps
 
-- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Understand the three-package pattern
+- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Understand the single Worker client/server structure
 - [App Configuration](https://bkper.com/docs/build/apps/configuration.md) — Full `bkper.yaml` reference
 - [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) — All event types and patterns
 - [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md) — Preview environments and secrets
@@ -1242,9 +1211,9 @@ Preview environments are built in — deploy to a preview URL to test before goi
 
 OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build.
 
-- **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Web client authentication](https://bkper.com/docs/build/apps/architecture.md#web-client-authentication).
+- **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Client authentication](https://bkper.com/docs/build/apps/architecture.md#client-authentication).
 - **Server API routes** — Send `Authorization: Bearer <token>` to `/api/*`; dispatch validates it and platform outbound injects auth for server-side Bkper API calls. See [App Architecture → Server API authentication](https://bkper.com/docs/build/apps/architecture.md#server-api-authentication).
-- **Event handlers** — The user's OAuth token arrives in the `bkper-oauth-token` header. See [Event Handlers → Authentication](https://bkper.com/docs/build/apps/event-handlers.md#authentication).
+- **Event handlers** — Handle `/events` in the same Worker and call Bkper with server-side `new Bkper()`; dispatch/outbound handle auth and agent identity. See [Event Handlers → Authentication](https://bkper.com/docs/build/apps/event-handlers.md#authentication).
 - **Local development** — The Vite auth middleware uses your CLI credentials. See [Development Experience → Local development authentication](https://bkper.com/docs/build/apps/development.md#local-development-authentication).
 
 ### Services
@@ -1262,7 +1231,7 @@ The project template composes the full development environment:
 npm run dev
 ```
 
-This runs two processes concurrently: `vite dev` for the client UI (HMR), and `bkper app dev` for the worker runtime (Miniflare for your server and event handlers, plus a Cloudflare tunnel so Bkper can route webhook events to your laptop). Your entire development environment, running locally.
+This runs two processes concurrently: `vite dev` for the client UI (HMR), and `bkper app dev` for the Worker runtime (Miniflare for `/api/*` and `/events`, plus a Cloudflare tunnel so Bkper can route webhook events to your laptop). Your entire development environment, running locally.
 
 ### Deployment
 
@@ -1301,7 +1270,7 @@ bkper app init my-app
 npm run dev
 ```
 
-This gives you a working app with a client UI, server API, and event handler — all running locally with full HMR and webhook tunneling.
+This gives you a working app with a client UI, server API routes, and `/events` handling in one Worker — all running locally with full HMR and webhook tunneling.
 
 See [Your First App](https://bkper.com/docs/build/apps/first-app.md) for a complete walkthrough, or continue to [App Architecture](https://bkper.com/docs/build/apps/architecture.md) to understand how platform apps are structured.
 

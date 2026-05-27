@@ -5,7 +5,14 @@ import { getStoredOAuthToken } from '../../auth/local-auth-service.js';
 import { createPlatformClient } from '../../platform/client.js';
 import { createAssetManifest, readAssetFiles } from './bundler.js';
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from './config.js';
-import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } from './types.js';
+import type { DeployOptions, Environment, SourceDeploymentConfig } from './types.js';
+
+interface PlatformDeployMetadata {
+    bindings?: {
+        kv_namespaces?: Array<{ binding: string }>;
+    };
+    compatibility_date?: string;
+}
 
 // =============================================================================
 // Deploy
@@ -14,7 +21,7 @@ import type { DeployOptions, Environment, HandlerType, SourceDeploymentConfig } 
 /**
  * Deploys the app to the Bkper Platform.
  *
- * @param options Deploy options (dev, events)
+ * @param options Deploy options
  */
 export async function deployApp(options: DeployOptions = {}): Promise<void> {
     // 1. Load bkper.yaml/json to get app ID
@@ -31,21 +38,18 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // Determine deploy type early
-    const type: HandlerType = options.events ? 'events' : 'web';
-
     // 4. Load deployment configuration from bkper.yaml
     const deploymentConfig = loadSourceDeploymentConfig();
     if (!deploymentConfig) {
         console.error('Error: No deployment configuration found in bkper.yaml');
-        console.error('Expected deployment section with web.main/events.main entry points');
+        console.error('Expected deployment section with server entry point');
         process.exit(1);
     }
 
     // 5. Resolve build outputs
     let resolvedPaths: { bundleDir: string; bundlePath: string; assetsDir?: string };
     try {
-        resolvedPaths = resolveSourceDeployPaths(type, deploymentConfig);
+        resolvedPaths = resolveSourceDeployPaths(deploymentConfig);
     } catch (error) {
         console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
         process.exit(1);
@@ -65,10 +69,10 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     const bundleSizeKB = (bundle.length / 1024).toFixed(2);
     console.log(`Bundle size: ${bundleSizeKB} KB`);
 
-    // 8. Validate and create asset manifest if configured (only for web handler)
+    // 8. Validate and create asset manifest if configured
     let assetManifest: Record<string, { hash: string; size: number }> | undefined;
     let assetFiles: Record<string, string> | undefined;
-    if (type === 'web' && assetsDir) {
+    if (assetsDir) {
         if (!fs.existsSync(assetsDir)) {
             console.error(`Error: Assets directory not found: ${assetsDir}`);
             console.error('Please ensure assets are built or update bkper.yaml');
@@ -104,20 +108,17 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
 
     // 10. Call Platform API
     const env: Environment = options.preview ? 'preview' : 'production';
-    console.log(`Deploying ${type} handler to ${env}...`);
+    console.log(`Deploying app to ${env}...`);
 
-    // Build query params, mapping services to bindings for the API
-    const bindings = deploymentConfig?.services
-        ? { kv: deploymentConfig.services.filter(s => s === 'KV') }
-        : undefined;
-    const queryParams: { env: Environment; type: HandlerType; bindings?: string } = { env, type };
-    if (bindings?.kv && bindings.kv.length > 0) {
-        queryParams.bindings = JSON.stringify(bindings);
-    }
+    const queryParams: { env: Environment } = { env };
+    const metadata = buildPlatformDeployMetadata(deploymentConfig);
 
     // Create multipart form data
     const formData = new FormData();
     formData.append('bundle', new Blob([bundle], { type: 'application/javascript+module' }));
+    if (metadata) {
+        formData.append('metadata', JSON.stringify(metadata));
+    }
     if (assetManifest) {
         formData.append('assetManifest', JSON.stringify(assetManifest));
     }
@@ -145,35 +146,42 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    console.log(`\nDeployed ${type} handler to ${env}`);
-    console.log(`  URL: ${data.url}${type === 'events' ? '/events' : ''}`);
+    console.log(`\nDeployed app to ${env}`);
+    console.log(`  URL: ${data.url}`);
     console.log(`  Script: ${data.scriptName}`);
 }
 
 export function resolveSourceDeployPaths(
-    type: HandlerType,
     deploymentConfig: SourceDeploymentConfig
 ): { bundleDir: string; bundlePath: string; assetsDir?: string } {
-    if (type === 'web') {
-        if (!deploymentConfig.web?.main) {
-            throw new Error('No web handler configured');
-        }
-
-        const bundleDir = path.resolve('dist/web/server');
-        const bundlePath = path.join(bundleDir, 'index.js');
-        const assetsDir = deploymentConfig.web.client ? path.resolve('dist/web/client') : undefined;
-
-        return { bundleDir, bundlePath, assetsDir };
+    if (!deploymentConfig.server) {
+        throw new Error('No server worker configured');
     }
 
-    if (!deploymentConfig.events?.main) {
-        throw new Error('No events handler configured');
-    }
-
-    const bundleDir = path.resolve('dist/events');
+    const bundleDir = path.resolve('dist/server');
     const bundlePath = path.join(bundleDir, 'index.js');
+    const assetsDir = deploymentConfig.client ? path.resolve('dist/client') : undefined;
 
-    return { bundleDir, bundlePath };
+    return { bundleDir, bundlePath, assetsDir };
+}
+
+export function buildPlatformDeployMetadata(
+    deploymentConfig: SourceDeploymentConfig
+): PlatformDeployMetadata | undefined {
+    const metadata: PlatformDeployMetadata = {};
+    const kvBindings = deploymentConfig.services
+        ?.filter(service => service === 'KV')
+        .map(binding => ({ binding }));
+
+    if (kvBindings && kvBindings.length > 0) {
+        metadata.bindings = { kv_namespaces: kvBindings };
+    }
+
+    if (deploymentConfig.compatibilityDate) {
+        metadata.compatibility_date = deploymentConfig.compatibilityDate;
+    }
+
+    return metadata.bindings || metadata.compatibility_date ? metadata : undefined;
 }
 
 // =============================================================================
@@ -206,7 +214,7 @@ async function confirmDeletion(appId: string): Promise<boolean> {
 /**
  * Removes the app from the Bkper Platform.
  *
- * @param options Undeploy options (dev, events, deleteData)
+ * @param options Undeploy options
  */
 export async function undeployApp(options: DeployOptions = {}): Promise<void> {
     // 1. Load bkper.yaml/json to get app ID
@@ -239,13 +247,11 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
 
     // 5. Call Platform API
     const env: Environment = options.preview ? 'preview' : 'production';
-    const type: HandlerType = options.events ? 'events' : 'web';
-    console.log(`Removing ${type} handler from ${env}...`);
+    console.log(`Removing app from ${env}...`);
 
     // Build query params
-    const queryParams: { env: Environment; type: HandlerType; deleteData?: boolean } = {
+    const queryParams: { env: Environment; deleteData?: boolean } = {
         env,
-        type,
     };
     if (options.deleteData) {
         queryParams.deleteData = true;
@@ -267,7 +273,7 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    console.log(`\nRemoved ${type} handler from ${env}`);
+    console.log(`\nRemoved app from ${env}`);
     if (options.deleteData) {
         console.log('All associated data has been permanently deleted.');
     }
@@ -322,28 +328,16 @@ export async function statusApp(): Promise<void> {
     console.log(`\nApp: ${data.appId}\n`);
 
     console.log('Production:');
-    if (data.prod.web?.deployed) {
-        console.log(`  Web:    ${data.prod.web.url} (deployed ${data.prod.web.updatedAt})`);
+    if (data.prod?.deployed) {
+        console.log(`  App: ${data.prod.url} (deployed ${data.prod.updatedAt})`);
     } else {
-        console.log('  Web:    (not deployed)');
-    }
-    if (data.prod.events?.deployed) {
-        console.log(`  Events: ${data.prod.events.url} (deployed ${data.prod.events.updatedAt})`);
-    } else {
-        console.log('  Events: (not deployed)');
+        console.log('  App: (not deployed)');
     }
 
     console.log('\nPreview:');
-    if (data.preview.web?.deployed) {
-        console.log(`  Web:    ${data.preview.web.url} (deployed ${data.preview.web.updatedAt})`);
+    if (data.preview?.deployed) {
+        console.log(`  App: ${data.preview.url} (deployed ${data.preview.updatedAt})`);
     } else {
-        console.log('  Web:    (not deployed)');
-    }
-    if (data.preview.events?.deployed) {
-        console.log(
-            `  Events: ${data.preview.events.url} (deployed ${data.preview.events.updatedAt})`
-        );
-    } else {
-        console.log('  Events: (not deployed)');
+        console.log('  App: (not deployed)');
     }
 }

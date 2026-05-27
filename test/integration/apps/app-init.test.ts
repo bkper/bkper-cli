@@ -31,10 +31,10 @@ describe('Integration: app init', function () {
         expect(fs.existsSync(appDir), 'appDir should exist').to.be.true;
         expect(fs.existsSync(path.join(appDir, 'package.json')), 'package.json should exist').to.be.true;
         expect(fs.existsSync(path.join(appDir, 'bkper.yaml')), 'bkper.yaml should exist').to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/shared')), 'packages/shared should exist').to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/web/client')), 'packages/web/client should exist').to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/web/server')), 'packages/web/server should exist').to.be.true;
-        expect(fs.existsSync(path.join(appDir, 'packages/events')), 'packages/events should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'client')), 'client should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'server')), 'server should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'client/src')), 'client/src should exist').to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'server/src')), 'server/src should exist').to.be.true;
     });
 
     it('should not include VCS metadata in the created app', async function () {
@@ -59,15 +59,13 @@ describe('Integration: app init', function () {
         expect(fs.existsSync(path.join(appDir, 'node_modules'))).to.be.true;
     });
 
-    it('should have compiled shared types', async function () {
+    it('should include generated environment types', async function () {
         this.timeout(5000);
 
         if (!appDir) {
             appDir = await stateManager.getApp('init');
         }
 
-        // Verify TypeScript output exists
-        const sharedDist = path.join(appDir, 'packages/shared/dist');
-        expect(fs.existsSync(sharedDist)).to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'env.d.ts'))).to.be.true;
     });
 });
