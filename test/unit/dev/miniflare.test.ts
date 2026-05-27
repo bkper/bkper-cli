@@ -19,6 +19,7 @@ describe('Miniflare Integration', function () {
     const simpleWorkerPath = path.join(fixturesDir, 'simple.ts');
     const withKvWorkerPath = path.join(fixturesDir, 'with-kv.ts');
     const withVarsWorkerPath = path.join(fixturesDir, 'with-vars.ts');
+    const withAssetsWorkerPath = path.join(fixturesDir, 'with-assets.ts');
     const fetchExternalWorkerPath = path.join(fixturesDir, 'fetch-external.ts');
     const headersWorkerPath = path.join(fixturesDir, 'headers.ts');
 
@@ -115,6 +116,25 @@ describe('Miniflare Integration', function () {
             // Server should start successfully with custom compatibility date
             const response = await fetch(`http://localhost:${testPort}/`);
             expect(response.ok).to.be.true;
+        });
+
+        it('should bind a local ASSETS service when configured', async function () {
+            const assetRequests: Request[] = [];
+            mf = await createWorkerServer(withAssetsWorkerPath, {
+                port: testPort,
+                assetsService: async request => {
+                    assetRequests.push(request);
+                    return new Response(`asset:${new URL(request.url).pathname}`, { status: 203 });
+                },
+            });
+
+            const response = await fetch(`http://localhost:${testPort}/client/path`);
+            const text = await response.text();
+
+            expect(response.status).to.equal(203);
+            expect(text).to.equal('asset:/client/path');
+            expect(assetRequests).to.have.length(1);
+            expect(assetRequests[0].url).to.equal(`http://localhost:${testPort}/client/path`);
         });
 
         it('should route Worker outbound fetches through a configured outbound service', async function () {

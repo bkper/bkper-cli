@@ -10,7 +10,7 @@ export const TestConfig = {
     APP_ID: 'my-app',
     PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
     FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',
-    DEV_EVENTS_URL: 'http://localhost:8791/events',
+    DEV_EVENTS_URL: 'http://localhost:8787/events',
     PREVIEW_WEB_URL: 'https://my-app-preview.bkper.app',
     PREVIEW_EVENTS_URL: 'https://my-app-preview.bkper.app/events',
     HTTP_TIMEOUT: 10000,
@@ -196,13 +196,12 @@ export async function waitForWorkerReady(
 }
 
 /**
- * Write value to KV via events worker test endpoint
+ * Write value to KV via app API test endpoint
  */
 export async function writeToKV(key: string, value: string): Promise<void> {
-    const response = await fetchWorker('/test/kv', {
+    const response = await fetchWorker('/api/test/kv', {
         method: 'POST',
         body: { key, value },
-        isEvents: true,
     });
 
     if (!response.ok) {
@@ -216,10 +215,10 @@ export async function writeToKV(key: string, value: string): Promise<void> {
 }
 
 /**
- * Read value from KV via web worker test endpoint
+ * Read value from KV via app API test endpoint
  */
 export async function readFromKV(key: string): Promise<string | null> {
-    const response = await fetchWorker(`/test/kv/${key}`);
+    const response = await fetchWorker(`/api/test/kv/${key}`);
 
     if (!response.ok) {
         throw new Error(`Failed to read from KV: ${response.status}`);
