@@ -4,23 +4,36 @@
 
 ### **May 2026**
 
+-   **App Development**
+    -   Updated app development to use a unified server Worker lifecycle for web/API requests and event handling
+    -   `bkper app build` now outputs the server Worker bundle to `dist/server`
+    -   `bkper app dev` now proxies local client assets and emulates app outbound requests locally
+    -   Added preview deployment guidance for testing app menus and events with `menuUrlDev` and `webhookUrlDev`
+-   **App Logs**
+    -   `bkper app logs` now accepts an optional app id, for example `bkper app logs my-app`
+    -   Replaced outcome filtering with `--level info|warn|error`
+-   **Authentication**
+    -   OAuth login now falls back to another local callback port when the default port is already in use
+-   **Agent Experience**
+    -   Pi management commands now pass through with `bkper agent <command>`
 -   **Data Management**
     -   Added `file upload` and `file get` commands for working with Book files from the CLI
     -   Added `transaction create --file` to attach a local file while creating a transaction
     -   Local file uploads now infer MIME types so PDFs and other known file types keep the correct `contentType`
+    -   Transaction merge now uses the canonical merge implementation from the SDK
 
 ### **April 2026**
 
 -   **App Platform**
-    -   Added [`app logs`](https://bkper.com/docs/build/tools/cli) command to view recent web and events handler logs with filtering by time, handler, outcome, and status code
+    -   Added [`app logs`](https://bkper.com/docs/build/tools/cli) command to view recent web and events handler logs with filtering by time, handler, level, and status code
 
 ### **March 2026**
 
 -   **Agent Experience**
-    -   Running `bkper` with no arguments now starts the embedded agent TUI (interactive terminals)
+    -   Running `bkper agent` now starts the embedded agent TUI (interactive terminals)
     -   Added startup maintenance for agent mode with background checks
 -   **Pi Bridge**
-    -   Added `bkper agent -- <pi-args...>` passthrough command to run Pi CLI features with Bkper defaults
+    -   Added `bkper agent <pi-args...>` passthrough command to run Pi CLI features with Bkper defaults
 
 ### **February 2026**
 
