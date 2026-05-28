@@ -11,7 +11,7 @@ export type ErrorResponse = components['schemas']['ErrorResponse'];
 export type LogsResponse = components['schemas']['LogsResponse'];
 export type LogEntry = components['schemas']['LogEntry'];
 export type LogsMeta = components['schemas']['LogsMeta'];
-export type LogOutcome = components['schemas']['LogOutcome'];
+export type LogLevel = components['schemas']['LogLevel'];
 
 // =============================================================================
 // Command Options
@@ -34,7 +34,7 @@ export interface LogsOptions {
     preview?: boolean;
     web?: boolean;
     events?: boolean;
-    outcome?: LogOutcome;
+    level?: LogLevel;
     statusCode?: number;
 }
 

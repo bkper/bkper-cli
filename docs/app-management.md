@@ -417,7 +417,7 @@ deployment:
     -   `-p, --preview` - Query preview logs instead of production
     -   `-w, --web` - Filter to normal web/API requests
     -   `-e, --events` - Filter to `/events` requests
-    -   `--outcome <outcome>` - Filter by Cloudflare worker outcome
+    -   `--level <level>` - Minimum log level threshold (`info`, `warn`, or `error`)
     -   `--status-code <code>` - Filter by HTTP status code
 -   `app undeploy` - Remove app from platform
     -   `-p, --preview` - Remove from preview environment

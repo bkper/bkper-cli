@@ -290,14 +290,14 @@ export interface paths {
                 query?: {
                     since?: string;
                     until?: string;
-                    /** @description Return the newest N rows after filters */
+                    /** @description Return the newest N requests after filters */
                     last?: number;
                     /** @description Environment filter */
                     env?: 'production' | 'preview';
                     /** @description Optional handler filter */
                     handler?: 'web' | 'events';
-                    /** @description Cloudflare worker outcome filter */
-                    outcome?: components['schemas']['LogOutcome'];
+                    /** @description Minimum log level threshold */
+                    level?: components['schemas']['LogLevel'];
                     /** @description Optional HTTP status code filter */
                     statusCode?: number;
                 };
@@ -661,6 +661,8 @@ export interface components {
             updatedAt?: string;
         } | null;
         /** @enum {string} */
+        LogLevel: 'info' | 'warn' | 'error';
+        /** @enum {string} */
         LogOutcome:
             | 'unknown'
             | 'ok'
@@ -670,11 +672,12 @@ export interface components {
             | 'scriptNotFound'
             | 'canceled'
             | 'responseStreamDisconnected';
-        LogException: {
-            /** @example Error */
-            name: string;
-            /** @example Webhook failed */
+        LogLineEntry: {
+            level: components['schemas']['LogLevel'];
+            /** @example Processing webhook... */
             message: string;
+            /** @example Error */
+            name?: string;
             /** @example Error: Webhook failed\n    at ... */
             stack?: string;
         };
@@ -683,12 +686,12 @@ export interface components {
             timestamp: string;
             environment: 'production' | 'preview';
             handler: 'web' | 'events';
+            level: components['schemas']['LogLevel'];
             outcome: components['schemas']['LogOutcome'];
             requestMethod: string | null;
             requestUrl: string | null;
             statusCode: number | null;
-            logs: string[];
-            exceptions: components['schemas']['LogException'][];
+            entries: components['schemas']['LogLineEntry'][];
         };
         LogsMeta: {
             last: number;

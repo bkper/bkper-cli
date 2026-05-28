@@ -8,6 +8,7 @@ export type {
     Environment,
     HandlerType,
     LogEntry,
+    LogLevel,
     LogsMeta,
     LogsOptions,
     LogsOutputMode,

@@ -59,7 +59,7 @@ export function buildLogsQuery(options: LogsOptions): {
     last: number;
     env: Environment;
     handler?: HandlerType;
-    outcome?: LogsOptions['outcome'];
+    level?: LogsOptions['level'];
     statusCode?: number;
 } {
     const handler = resolveLogsHandler(options);
@@ -70,7 +70,7 @@ export function buildLogsQuery(options: LogsOptions): {
         ...(handler ? { handler } : {}),
         ...(options.since ? { since: options.since } : {}),
         ...(options.until ? { until: options.until } : {}),
-        ...(options.outcome ? { outcome: options.outcome } : {}),
+        ...(options.level ? { level: options.level } : {}),
         ...(options.statusCode !== undefined ? { statusCode: options.statusCode } : {}),
     };
 }
@@ -118,17 +118,14 @@ export function renderLogsResponse(response: LogsResponse, mode: LogsOutputMode)
     const orderedLogs = [...response.logs].reverse();
     orderedLogs.forEach((entry, index) => {
         lines.push(
-            `${entry.timestamp} ${entry.environment}/${entry.handler} ${entry.outcome} ${entry.requestMethod ?? '-'} ${entry.statusCode ?? '-'} ${entry.requestUrl ?? ''}`.trim()
+            `${entry.timestamp} ${entry.environment}/${entry.handler} ${entry.level} ${entry.outcome} ${entry.requestMethod ?? '-'} ${entry.statusCode ?? '-'} ${entry.requestUrl ?? ''}`.trim()
         );
 
-        for (const logLine of entry.logs) {
-            lines.push(`  log: ${logLine}`);
-        }
-
-        for (const exception of entry.exceptions) {
-            lines.push(`  exception: ${exception.name}: ${exception.message}`);
-            if (exception.stack) {
-                for (const stackLine of exception.stack.split('\n')) {
+        for (const logEntry of entry.entries) {
+            const label = logEntry.name ? `${logEntry.name}: ${logEntry.message}` : logEntry.message;
+            lines.push(`  ${logEntry.level}: ${label}`);
+            if (logEntry.stack) {
+                for (const stackLine of logEntry.stack.split('\n')) {
                     lines.push(`    ${stackLine}`);
                 }
             }

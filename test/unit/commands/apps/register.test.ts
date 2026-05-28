@@ -34,5 +34,7 @@ describe('CLI - app command registration', function () {
         // Log flags remain as request-category filters, not deployment selectors.
         expect(optionLongNames(logs)).to.include('--web');
         expect(optionLongNames(logs)).to.include('--events');
+        expect(optionLongNames(logs)).to.include('--level');
+        expect(optionLongNames(logs)).to.not.include('--outcome');
     });
 });

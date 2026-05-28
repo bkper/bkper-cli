@@ -26,20 +26,20 @@ describe('CLI - apps logs Command', function () {
         });
     });
 
-    it('should narrow the query when preview and a single handler flag are selected', function () {
+    it('should narrow the query when preview, level, and a single handler flag are selected', function () {
         expect(
             buildLogsQuery({
                 preview: true,
                 events: true,
                 since: '5m',
-                outcome: 'exception',
+                level: 'warn',
                 statusCode: 500,
             })
         ).to.deep.equal({
             env: 'preview',
             handler: 'events',
             last: 100,
-            outcome: 'exception',
+            level: 'warn',
             since: '5m',
             statusCode: 500,
         });
@@ -116,9 +116,9 @@ describe('CLI - apps logs Command', function () {
                     outcome: 'ok',
                     requestMethod: 'GET',
                     requestUrl: 'https://app.bkper.app/',
+                    level: 'warn',
                     statusCode: 200,
-                    logs: ['second'],
-                    exceptions: [],
+                    entries: [{ level: 'warn', message: 'second' }],
                 },
                 {
                     timestamp: '2026-04-29T12:01:00.000Z',
@@ -127,9 +127,9 @@ describe('CLI - apps logs Command', function () {
                     outcome: 'ok',
                     requestMethod: 'GET',
                     requestUrl: 'https://app.bkper.app/',
+                    level: 'info',
                     statusCode: 200,
-                    logs: ['first'],
-                    exceptions: [],
+                    entries: [{ level: 'info', message: 'first' }],
                 },
             ],
             meta: { last: 100, retentionDays: 15, warnings: [] },
@@ -140,6 +140,41 @@ describe('CLI - apps logs Command', function () {
         expect(rendered.indexOf('2026-04-29T12:01:00.000Z')).to.be.lessThan(
             rendered.indexOf('2026-04-29T12:02:00.000Z')
         );
+        expect(rendered).to.include('  info: first');
+        expect(rendered).to.include('  warn: second');
+    });
+
+    it('should render error entries with structured exception details', function () {
+        const response: LogsResponse = {
+            logs: [
+                {
+                    timestamp: '2026-04-29T12:02:00.000Z',
+                    environment: 'production',
+                    handler: 'events',
+                    level: 'error',
+                    outcome: 'exception',
+                    requestMethod: 'POST',
+                    requestUrl: 'https://app.bkper.app/events',
+                    statusCode: 500,
+                    entries: [
+                        { level: 'info', message: 'received event' },
+                        {
+                            level: 'error',
+                            name: 'Error',
+                            message: 'boom',
+                            stack: 'Error: boom\n    at handler',
+                        },
+                    ],
+                },
+            ],
+            meta: { last: 100, retentionDays: 15, warnings: [] },
+        };
+
+        const rendered = renderLogsResponse(response, 'pretty');
+
+        expect(rendered).to.include('  info: received event');
+        expect(rendered).to.include('  error: Error: boom');
+        expect(rendered).to.include('    Error: boom');
     });
 
     it('should render the full API response in json mode', function () {

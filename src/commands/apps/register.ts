@@ -105,11 +105,11 @@ export function registerAppCommands(program: Command): void {
         .description('View recent app logs')
         .option('--since <time>', 'ISO8601 or relative lower bound such as 5m, 1h, or 15d')
         .option('--until <time>', 'ISO8601 or relative upper bound such as 5m, 1h, or 15d')
-        .option('--last <n>', 'Show newest N entries after filters', value => Number.parseInt(value, 10))
+        .option('--last <n>', 'Show newest N requests after filters', value => Number.parseInt(value, 10))
         .option('-p, --preview', 'Query preview logs instead of production logs')
         .option('-w, --web', 'Filter to normal web/API requests')
         .option('-e, --events', 'Filter to /events requests')
-        .option('--outcome <outcome>', 'Filter by Cloudflare worker outcome')
+        .option('--level <level>', 'Minimum log level threshold: info, warn, or error')
         .option('--status-code <code>', 'Filter by HTTP status code', value => Number.parseInt(value, 10))
         .action(options =>
             withAction(
