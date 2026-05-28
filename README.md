@@ -4,7 +4,7 @@
 
 A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
 
--   **Interactive mode** — run `bkper agent` to open the Bkper Agent TUI
+-   **Interactive mode** — run `bkper` or `bkper agent` to open the Bkper Agent TUI
 -   **Command mode** — run `bkper <command>` for explicit CLI workflows, scripts, and automation
 
 With one tool, you can build and deploy Bkper apps, and manage financial data -- books, accounts, transactions, and balances.
@@ -50,8 +50,10 @@ This is the only command that opens the browser OAuth flow. When you are done wo
 ### Interactive mode (recommended)
 
 ```bash
-bkper agent
+bkper
 ```
+
+`bkper agent` starts the same interactive experience. Bare `bkper` only opens the TUI in an interactive terminal; in non-interactive contexts it prints CLI help instead.
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
@@ -108,6 +110,7 @@ bkper agent <pi-args>
 ```
 
 If no Pi arguments are provided, `bkper agent` starts the interactive Bkper Agent experience.
+A bare `bkper` command is a convenience shortcut for the same TUI when run in an interactive terminal.
 If Pi arguments are provided, everything after `bkper agent` is passed through to Pi.
 
 Examples:

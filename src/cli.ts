@@ -14,13 +14,17 @@ import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerFileCommands } from './commands/files/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
 import { registerAgentCommands, runAgentCommand } from './commands/agent-command.js';
-import { shouldRunAgentCommand } from './agent/cli-dispatch.js';
+import {
+    getAgentCommandArgs,
+    shouldRunAgentCommand,
+    shouldShowHelpForBareInvocation,
+} from './agent/cli-dispatch.js';
 import { VERSION, autoUpgrade } from './upgrade/index.js';
 
 async function main(): Promise<void> {
     if (shouldRunAgentCommand(process.argv)) {
         try {
-            await runAgentCommand(process.argv.slice(3));
+            await runAgentCommand(getAgentCommandArgs(process.argv));
             return;
         } catch (err) {
             console.error('Error running agent command:', err);
@@ -29,6 +33,7 @@ async function main(): Promise<void> {
     }
 
     // Version
+    program.name('bkper');
     program.version(VERSION, '-v, --version');
 
     // Global output format options
@@ -57,6 +62,11 @@ async function main(): Promise<void> {
     // Trigger silent auto-upgrade in the background (non-blocking, never fails)
     if (!process.env.BKPER_DISABLE_AUTOUPDATE) {
         autoUpgrade().catch(() => {});
+    }
+
+    if (shouldShowHelpForBareInvocation(process.argv)) {
+        program.outputHelp();
+        return;
     }
 
     program.parse(process.argv);

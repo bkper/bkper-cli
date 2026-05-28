@@ -398,6 +398,7 @@ deployment:
 
 ### Agent
 
+-   `bkper` - Start the interactive Bkper Agent when run in an interactive terminal; print CLI help in non-interactive contexts
 -   `agent` - Start the interactive Bkper Agent
 -   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 

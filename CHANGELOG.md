@@ -15,6 +15,7 @@
 -   **Authentication**
     -   OAuth login now falls back to another local callback port when the default port is already in use
 -   **Agent Experience**
+    -   Running bare `bkper` now starts the Bkper Agent in interactive terminals, while non-interactive invocations print CLI help
     -   Pi management commands now pass through with `bkper agent <command>`
 -   **Data Management**
     -   Added `file upload` and `file get` commands for working with Book files from the CLI
