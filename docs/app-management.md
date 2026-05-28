@@ -410,10 +410,10 @@ deployment:
 -   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
     -   `-p, --preview` - Deploy to preview environment
 -   `app status` - Show deployment status
--   `app logs` - View recent app logs
+-   `app logs [appId]` - View recent app logs. When `appId` is omitted, the app id is read from local app config.
     -   `--since <time>` - ISO8601 or relative lower bound (e.g. `5m`, `1h`, `15d`)
     -   `--until <time>` - ISO8601 or relative upper bound
-    -   `--last <n>` - Show newest N entries after filters (default: 100)
+    -   `--last <n>` - Show newest N requests after filters (default: 100)
     -   `-p, --preview` - Query preview logs instead of production
     -   `-w, --web` - Filter to normal web/API requests
     -   `-e, --events` - Filter to `/events` requests

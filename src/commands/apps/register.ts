@@ -101,7 +101,7 @@ export function registerAppCommands(program: Command): void {
         );
 
     appCommand
-        .command('logs')
+        .command('logs [appId]')
         .description('View recent app logs')
         .option('--since <time>', 'ISO8601 or relative lower bound such as 5m, 1h, or 15d')
         .option('--until <time>', 'ISO8601 or relative upper bound such as 5m, 1h, or 15d')
@@ -111,11 +111,11 @@ export function registerAppCommands(program: Command): void {
         .option('-e, --events', 'Filter to /events requests')
         .option('--level <level>', 'Minimum log level threshold: info, warn, or error')
         .option('--status-code <code>', 'Filter by HTTP status code', value => Number.parseInt(value, 10))
-        .action(options =>
+        .action((appId: string | undefined, options, command) =>
             withAction(
                 'getting app logs',
                 async () => {
-                    await logsApp(options);
+                    await logsApp(options, {}, command, appId);
                 },
                 { skipSetup: true }
             )()

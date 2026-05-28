@@ -106,6 +106,43 @@ describe('CLI - apps logs Command', function () {
         });
     });
 
+    it('should request logs for an explicit app id without loading local config', async function () {
+        const getStub = sinon.stub().resolves({
+            data: {
+                logs: [],
+                meta: { last: 100, retentionDays: 15, warnings: [] },
+            },
+            error: undefined,
+        });
+        const loadAppConfigStub = sinon.stub().throws(new Error('should not load local config'));
+
+        await requestAppLogs(
+            { level: 'error' },
+            {
+                loadAppConfig: loadAppConfigStub,
+                getStoredOAuthToken: async () => 'token-123',
+                createPlatformClient: () => ({
+                    GET: getStub,
+                }),
+                handleError: error => {
+                    throw new Error(String(error));
+                },
+                exit(code: number): never {
+                    throw new Error(`process.exit(${code})`);
+                },
+            },
+            'remote-app'
+        );
+
+        expect(loadAppConfigStub.called).to.equal(false);
+        expect(getStub.firstCall.args[1]).to.deep.equal({
+            params: {
+                path: { appId: 'remote-app' },
+                query: { env: 'production', last: 100, level: 'error' },
+            },
+        });
+    });
+
     it('should render pretty output oldest to newest', function () {
         const response: LogsResponse = {
             logs: [

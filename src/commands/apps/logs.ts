@@ -139,11 +139,11 @@ export function renderLogsResponse(response: LogsResponse, mode: LogsOutputMode)
     return lines.join('\n');
 }
 
-export async function requestAppLogs(
-    options: LogsOptions = {},
-    overrides: Partial<LogsCommandDependencies> = {}
-): Promise<LogsResponse> {
-    const dependencies = getLogsDependencies(overrides);
+function resolveLogsAppId(appId: string | undefined, dependencies: LogsCommandDependencies): string {
+    const explicitAppId = appId?.trim();
+    if (explicitAppId) {
+        return explicitAppId;
+    }
 
     let config: bkper.App;
     try {
@@ -158,12 +158,23 @@ export async function requestAppLogs(
         return dependencies.exit(1);
     }
 
+    return config.id;
+}
+
+export async function requestAppLogs(
+    options: LogsOptions = {},
+    overrides: Partial<LogsCommandDependencies> = {},
+    appId?: string
+): Promise<LogsResponse> {
+    const dependencies = getLogsDependencies(overrides);
+    const resolvedAppId = resolveLogsAppId(appId, dependencies);
+
     const token = await dependencies.getStoredOAuthToken();
     const client = dependencies.createPlatformClient(token);
 
     const { data, error } = await client.GET('/api/apps/{appId}/logs', {
         params: {
-            path: { appId: config.id },
+            path: { appId: resolvedAppId },
             query: buildLogsQuery(options),
         },
     });
@@ -183,9 +194,10 @@ export async function requestAppLogs(
 export async function logsApp(
     options: LogsOptions = {},
     overrides: Partial<LogsCommandDependencies> = {},
-    command: Pick<Command, 'optsWithGlobals' | 'getOptionValueSourceWithGlobals'> = program
+    command: Pick<Command, 'optsWithGlobals' | 'getOptionValueSourceWithGlobals'> = program,
+    appId?: string
 ): Promise<void> {
     const outputMode = resolveLogsOutputMode(command);
-    const response = await requestAppLogs(options, overrides);
+    const response = await requestAppLogs(options, overrides, appId);
     console.log(renderLogsResponse(response, outputMode));
 }

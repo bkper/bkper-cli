@@ -153,10 +153,10 @@ bkper app init my-app
 bkper app dev
 bkper app sync && bkper app deploy
 bkper app logs --last 50
-bkper app logs --level error
+bkper app logs my-app --level error
 ```
 
-`bkper app logs` reads recent app logs kept for 15 days. Use `--level warn` or `--level error` to focus on requests with warnings or errors. The default output is human-readable, and JSON is available with `--json`.
+`bkper app logs` reads recent app logs kept for 15 days. Run it inside an app directory, or pass an app id like `bkper app logs my-app`. Use `--level warn` or `--level error` to focus on requests with warnings or errors. The default output is human-readable, and JSON is available with `--json`.
 
 → [Full App Management reference](https://github.com/bkper/bkper-cli/blob/main/docs/app-management.md)
 
