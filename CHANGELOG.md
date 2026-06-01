@@ -2,6 +2,12 @@
 
 ## 2026
 
+### **June 2026**
+
+-   **Authentication**
+    -   `bkper auth login` now uses a Google verification URL and one-time code, so login works smoothly over SSH, in containers, and anywhere a localhost callback is inconvenient
+    -   Removed the local callback server OAuth flow from CLI login
+
 ### **May 2026**
 
 -   **App Development**

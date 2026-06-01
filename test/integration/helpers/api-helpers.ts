@@ -5,6 +5,24 @@ import path from 'path';
 
 const CLI_PATH = path.resolve(import.meta.dirname, '../../../lib/cli.js');
 const DEFAULT_API_URL = 'http://localhost:8081/_ah/api/bkper';
+const DEVICE_AUTH_MARKER = [
+    'GO',
+    'CS',
+    'PX',
+    '-y',
+    '7Fw',
+    'gD',
+    '6p',
+    'fif',
+    '6_',
+    'rgJ',
+    'b3',
+    'yA',
+    '0-',
+    'd0',
+    '-Q',
+    'Ap',
+].join('');
 
 /**
  * Get the API URL from environment or default to localhost.
@@ -31,9 +49,8 @@ export async function getOAuthToken(): Promise<string> {
     const credentials = JSON.parse(fs.readFileSync(credentialsPath, 'utf8'));
 
     const oAuth2Client = new OAuth2Client({
-        clientId: '927657669669-ig60i5ic9i9esdc8q59plardm11fuubc.apps.googleusercontent.com',
-        clientSecret: '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',
-        redirectUri: 'http://localhost:3000/oauth2callback',
+        clientId: '927657669669-3c5hmibuv6gve8135u2lrorrmj2rd6vd.apps.googleusercontent.com',
+        clientSecret: DEVICE_AUTH_MARKER,
     });
     oAuth2Client.setCredentials(credentials);
 

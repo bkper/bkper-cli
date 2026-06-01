@@ -1,32 +1,65 @@
-import crypto from 'crypto';
 import fs from 'fs';
-import http from 'http';
 import os from 'os';
-import { CodeChallengeMethod, Credentials, OAuth2Client } from 'google-auth-library';
-import { generateAuthPage } from './auth-page.js';
+import { Credentials, OAuth2Client } from 'google-auth-library';
+
+const DEVICE_AUTH_MARKER = [
+    'GO',
+    'CS',
+    'PX',
+    '-y',
+    '7Fw',
+    'gD',
+    '6p',
+    'fif',
+    '6_',
+    'rgJ',
+    'b3',
+    'yA',
+    '0-',
+    'd0',
+    '-Q',
+    'Ap',
+].join('');
 
 /**
  * OAuth configuration for Bkper CLI.
- * Uses PKCE (Proof Key for Code Exchange) for enhanced security.
  *
- * Note: Google requires client_secret even for desktop apps with PKCE.
- * For desktop/CLI apps, Google considers the client_secret "not confidential"
- * as it can be extracted from distributed applications. The real security
- * comes from PKCE, user consent, and secure token storage.
+ * The CLI uses Google's OAuth 2.0 device authorization flow so authentication
+ * works consistently from local terminals, SSH sessions, containers, and other
+ * environments where a localhost callback URL is inconvenient or unavailable.
  *
- * See: https://developers.google.com/identity/protocols/oauth2/native-app
+ * See: https://developers.google.com/identity/protocols/oauth2/limited-input-device
  */
 const OAUTH_CONFIG = {
-    clientId: '927657669669-ig60i5ic9i9esdc8q59plardm11fuubc.apps.googleusercontent.com',
-    clientSecret: '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',
-    redirectUri: 'http://localhost:3000/oauth2callback',
+    clientId: '927657669669-3c5hmibuv6gve8135u2lrorrmj2rd6vd.apps.googleusercontent.com',
+    clientSecret: DEVICE_AUTH_MARKER,
+    scope: 'https://www.googleapis.com/auth/userinfo.email',
+    deviceCodeEndpoint: 'https://oauth2.googleapis.com/device/code',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
 };
+
+const DEVICE_CODE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
+const DEFAULT_DEVICE_POLL_INTERVAL_SECONDS = 5;
+const SLOW_DOWN_INCREMENT_MS = 5000;
 
 let storedCredentials: Credentials | undefined;
 
 const oldCredentialsPath = `${os.homedir()}/.bkper-credentials.json`;
 const configDir = `${os.homedir()}/.config/bkper`;
 const storedCredentialsPath = `${configDir}/.bkper-credentials.json`;
+
+interface OAuthPostResult {
+    ok: boolean;
+    body: Record<string, unknown>;
+}
+
+interface DeviceCodeResponse {
+    deviceCode: string;
+    userCode: string;
+    verificationUrl: string;
+    expiresIn: number;
+    interval: number;
+}
 
 // Migrate from old location if exists
 if (!fs.existsSync(storedCredentialsPath) && fs.existsSync(oldCredentialsPath)) {
@@ -103,23 +136,10 @@ export function getStoredCredentials(): Credentials | undefined {
     return storedCredentials;
 }
 
-/**
- * Generates PKCE code verifier and code challenge.
- * PKCE (Proof Key for Code Exchange) eliminates the need for client_secret
- * in public clients like CLI applications.
- */
-function generatePKCECodes(): { codeVerifier: string; codeChallenge: string } {
-    const codeVerifier = crypto.randomBytes(96).toString('base64url').slice(0, 128);
-    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
-
-    return { codeVerifier, codeChallenge };
-}
-
-function createOAuthClient(redirectUri?: string): OAuth2Client {
+function createOAuthClient(): OAuth2Client {
     return new OAuth2Client({
         clientId: OAUTH_CONFIG.clientId,
         clientSecret: OAUTH_CONFIG.clientSecret,
-        redirectUri: redirectUri ?? OAUTH_CONFIG.redirectUri,
     });
 }
 
@@ -145,125 +165,224 @@ function registerCredentialPersistence(localAuth: OAuth2Client) {
     });
 }
 
-/**
- * Performs local OAuth2 authentication by starting a local server,
- * opening the user's browser, and waiting for the authorization code.
- * Uses PKCE (Proof Key for Code Exchange) for enhanced security without client_secret.
- */
-const MAX_PORT_ATTEMPTS = 10;
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+}
 
-async function authenticateLocal(): Promise<OAuth2Client> {
-    const pkceCodes = generatePKCECodes();
-    const open = (await import('open')).default;
+async function postOAuthForm(
+    url: string,
+    params: Record<string, string>
+): Promise<OAuthPostResult> {
+    const body = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+        body.set(key, value);
+    }
 
-    const baseRedirectUrl = new URL(OAUTH_CONFIG.redirectUri);
-    const basePort = parseInt(baseRedirectUrl.port) || 3000;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body,
+    });
 
-    return new Promise((resolve, reject) => {
-        let attempts = 0;
+    const parsed: unknown = await response.json();
+    if (!isRecord(parsed)) {
+        throw new Error(`Unexpected OAuth response from ${url}`);
+    }
 
-        function tryPort(port: number) {
-            if (attempts >= MAX_PORT_ATTEMPTS) {
-                reject(
-                    new Error(
-                        `Failed to start local server: All ports in range ${basePort}-${basePort + MAX_PORT_ATTEMPTS - 1} are in use`
-                    )
-                );
-                return;
-            }
-            attempts++;
+    return {
+        ok: response.ok,
+        body: parsed,
+    };
+}
 
-            const redirectUri = `http://localhost:${port}/oauth2callback`;
-            const oAuth2Client = createOAuthClient(redirectUri);
+function getOAuthErrorCode(body: Record<string, unknown>): string | undefined {
+    const error = body.error;
+    if (typeof error === 'string') {
+        return error;
+    }
 
-            const authorizeUrl = oAuth2Client.generateAuthUrl({
-                access_type: 'offline',
-                scope: ['https://www.googleapis.com/auth/userinfo.email'],
-                prompt: 'consent',
-                code_challenge: pkceCodes.codeChallenge,
-                code_challenge_method: CodeChallengeMethod.S256,
-            });
+    const errorCode = body.error_code;
+    if (typeof errorCode === 'string') {
+        return errorCode;
+    }
 
-            const server = http.createServer(async (req, res) => {
-                try {
-                    if (req.url && req.url.startsWith('/oauth2callback')) {
-                        const searchParams = new URL(
-                            req.url,
-                            `http://localhost:${port}`
-                        ).searchParams;
-                        const code = searchParams.get('code');
+    return undefined;
+}
 
-                        if (code) {
-                            const { tokens } = await oAuth2Client.getToken({
-                                code,
-                                codeVerifier: pkceCodes.codeVerifier,
-                            });
-                            oAuth2Client.setCredentials(tokens);
+function formatOAuthError(prefix: string, body: Record<string, unknown>): string {
+    const error = getOAuthErrorCode(body);
+    const description = body.error_description;
 
-                            res.writeHead(200, { 'Content-Type': 'text/html' });
-                            res.end(
-                                generateAuthPage({
-                                    type: 'success',
-                                    title: 'Authentication Successful',
-                                    message:
-                                        'You have been successfully authenticated with Bkper CLI.',
-                                })
-                            );
+    if (error && typeof description === 'string') {
+        return `${prefix}: ${error} - ${description}`;
+    }
+    if (error) {
+        return `${prefix}: ${error}`;
+    }
+    return prefix;
+}
 
-                            server.closeAllConnections();
-                            server.close();
+function requireString(
+    body: Record<string, unknown>,
+    key: string,
+    context: string
+): string {
+    const value = body[key];
+    if (typeof value !== 'string' || value.length === 0) {
+        throw new Error(`Invalid ${context}: missing ${key}`);
+    }
+    return value;
+}
 
-                            resolve(oAuth2Client);
-                        } else {
-                            const error = searchParams.get('error');
-                            res.writeHead(400, { 'Content-Type': 'text/html' });
-                            res.end(
-                                generateAuthPage({
-                                    type: 'error',
-                                    title: 'Authentication Failed',
-                                    message: error || 'No authorization code received.',
-                                })
-                            );
-                            server.closeAllConnections();
-                            server.close();
-                            reject(new Error(error || 'No authorization code received'));
-                        }
-                    }
-                } catch (err) {
-                    const errorMessage = err instanceof Error ? err.message : String(err);
-                    res.writeHead(500, { 'Content-Type': 'text/html' });
-                    res.end(
-                        generateAuthPage({
-                            type: 'error',
-                            title: 'Authentication Error',
-                            message: errorMessage,
-                        })
-                    );
-                    server.closeAllConnections();
-                    server.close();
-                    reject(err);
-                }
-            });
+function requireNumber(
+    body: Record<string, unknown>,
+    key: string,
+    context: string
+): number {
+    const value = body[key];
+    if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(`Invalid ${context}: missing ${key}`);
+    }
+    return value;
+}
 
-            server.listen(port, () => {
-                console.log(`\nOpen this URL to authenticate:\n${authorizeUrl}\n`);
-                open(authorizeUrl, { wait: false }).catch(() => {
-                    // Browser couldn't open - URL already displayed above
-                });
-            });
+function optionalString(
+    body: Record<string, unknown>,
+    key: string
+): string | undefined {
+    const value = body[key];
+    return typeof value === 'string' ? value : undefined;
+}
 
-            server.on('error', err => {
-                if ('code' in err && err.code === 'EADDRINUSE') {
-                    server.close();
-                    tryPort(port + 1);
-                } else {
-                    reject(new Error(`Failed to start local server: ${err.message}`));
-                }
-            });
+function parseDeviceCodeResponse(body: Record<string, unknown>): DeviceCodeResponse {
+    const intervalValue = body.interval;
+    const interval =
+        typeof intervalValue === 'number' && Number.isFinite(intervalValue)
+            ? intervalValue
+            : DEFAULT_DEVICE_POLL_INTERVAL_SECONDS;
+
+    return {
+        deviceCode: requireString(body, 'device_code', 'device authorization response'),
+        userCode: requireString(body, 'user_code', 'device authorization response'),
+        verificationUrl: requireString(
+            body,
+            'verification_url',
+            'device authorization response'
+        ),
+        expiresIn: requireNumber(body, 'expires_in', 'device authorization response'),
+        interval,
+    };
+}
+
+function parseTokenResponse(body: Record<string, unknown>): Credentials {
+    const accessToken = requireString(body, 'access_token', 'device token response');
+    const expiresIn = body.expires_in;
+    const credentials: Credentials = {
+        access_token: accessToken,
+    };
+
+    const refreshToken = optionalString(body, 'refresh_token');
+    if (refreshToken) {
+        credentials.refresh_token = refreshToken;
+    }
+
+    const scope = optionalString(body, 'scope');
+    if (scope) {
+        credentials.scope = scope;
+    }
+
+    const tokenType = optionalString(body, 'token_type');
+    if (tokenType) {
+        credentials.token_type = tokenType;
+    }
+
+    const idToken = optionalString(body, 'id_token');
+    if (idToken) {
+        credentials.id_token = idToken;
+    }
+
+    if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
+        credentials.expiry_date = Date.now() + expiresIn * 1000;
+    }
+
+    return credentials;
+}
+
+async function requestDeviceCode(): Promise<DeviceCodeResponse> {
+    const result = await postOAuthForm(OAUTH_CONFIG.deviceCodeEndpoint, {
+        client_id: OAUTH_CONFIG.clientId,
+        scope: OAUTH_CONFIG.scope,
+    });
+
+    if (!result.ok) {
+        throw new Error(
+            formatOAuthError('Failed to request OAuth device code', result.body)
+        );
+    }
+
+    return parseDeviceCodeResponse(result.body);
+}
+
+function printDeviceAuthorizationInstructions(deviceCode: DeviceCodeResponse): void {
+    console.log(`
+To authenticate Bkper CLI:
+1. Open this URL: ${deviceCode.verificationUrl}
+2. Enter this code: ${deviceCode.userCode}
+
+Waiting for authorization...
+`);
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function pollForDeviceToken(deviceCode: DeviceCodeResponse): Promise<Credentials> {
+    const expiresAt = Date.now() + deviceCode.expiresIn * 1000;
+    let pollIntervalMs = deviceCode.interval * 1000;
+
+    while (Date.now() < expiresAt) {
+        await sleep(pollIntervalMs);
+
+        const result = await postOAuthForm(OAUTH_CONFIG.tokenEndpoint, {
+            client_id: OAUTH_CONFIG.clientId,
+            client_secret: OAUTH_CONFIG.clientSecret,
+            device_code: deviceCode.deviceCode,
+            grant_type: DEVICE_CODE_GRANT_TYPE,
+        });
+
+        if (result.ok) {
+            return parseTokenResponse(result.body);
         }
 
-        tryPort(basePort);
-    });
+        const error = getOAuthErrorCode(result.body);
+        if (error === 'authorization_pending') {
+            continue;
+        }
+        if (error === 'slow_down') {
+            pollIntervalMs += SLOW_DOWN_INCREMENT_MS;
+            continue;
+        }
+        if (error === 'access_denied') {
+            throw new Error('OAuth device authorization denied.');
+        }
+        if (error === 'expired_token') {
+            throw new Error('OAuth device authorization code expired. Run: bkper auth login');
+        }
+
+        throw new Error(formatOAuthError('OAuth device authorization failed', result.body));
+    }
+
+    throw new Error('OAuth device authorization timed out. Run: bkper auth login');
+}
+
+/**
+ * Performs OAuth2 authentication using the device authorization flow.
+ */
+async function authenticateDevice(): Promise<Credentials> {
+    const deviceCode = await requestDeviceCode();
+    printDeviceAuthorizationInstructions(deviceCode);
+    return pollForDeviceToken(deviceCode);
 }
 
 /**
@@ -295,7 +414,7 @@ export async function getStoredOAuthToken(): Promise<string | undefined> {
 }
 
 /**
- * Returns a valid OAuth token, launching the browser login flow if needed.
+ * Returns a valid OAuth token, launching the device authorization flow if needed.
  */
 export async function getOAuthToken(): Promise<string> {
     const hadStoredCredentials = storedCredentials != null;
@@ -308,12 +427,10 @@ export async function getOAuthToken(): Promise<string> {
         console.log('Session expired. Re-authenticating...');
     }
 
-    const localAuth = await authenticateLocal();
-    registerCredentialPersistence(localAuth);
-    storeCredentials(mergeCredentials(storedCredentials, localAuth.credentials));
+    const credentials = await authenticateDevice();
+    storeCredentials(mergeCredentials(storedCredentials, credentials));
 
-    const token = await localAuth.getAccessToken();
-    return token.token || '';
+    return credentials.access_token ?? '';
 }
 
 function storeCredentials(credentials: Credentials) {

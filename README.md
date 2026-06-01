@@ -41,7 +41,7 @@ yarn global add bkper
 bkper auth login
 ```
 
-This is the only command that opens the browser OAuth flow. When you are done working, run `bkper auth logout` to clear local credentials.
+This prints a Google verification URL and one-time code. Open the URL in any browser, enter the code, and the CLI stores credentials locally. When you are done working, run `bkper auth logout` to clear local credentials.
 
 ---
 
@@ -170,7 +170,7 @@ bkper app logs my-app --level error
 ### Access Token
 
 Use the access token for direct API calls from any tool.
-This requires a prior `bkper auth login`, and `bkper auth token` does not start a browser login flow:
+This requires a prior `bkper auth login`, and `bkper auth token` does not start an interactive login flow:
 
 ```bash
 # Print the current access token
