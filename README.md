@@ -99,7 +99,7 @@ Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
 
 ### Startup maintenance (non-blocking)
 
-On each agent startup, bkper performs a background CLI auto-update check (same behavior as command mode).
+On each agent startup, bkper performs a background CLI auto-update check. Normal command-mode invocations do not auto-update; use `bkper upgrade` when you want to upgrade explicitly.
 
 ### Pi passthrough
 

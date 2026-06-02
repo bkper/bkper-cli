@@ -92,7 +92,7 @@ export async function getAvailableUpgrade(
 /**
  * Runs the silent auto-upgrade check in the background.
  *
- * Called on every CLI invocation. This function:
+ * This function:
  * 1. Fetches the latest version from npm
  * 2. Compares with the current installed version
  * 3. If newer, starts a detached background upgrade using the detected install method

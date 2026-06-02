@@ -19,7 +19,7 @@ import {
     shouldRunAgentCommand,
     shouldShowHelpForBareInvocation,
 } from './agent/cli-dispatch.js';
-import { VERSION, autoUpgrade } from './upgrade/index.js';
+import { VERSION } from './upgrade/index.js';
 
 async function main(): Promise<void> {
     if (shouldRunAgentCommand(process.argv)) {
@@ -58,11 +58,6 @@ async function main(): Promise<void> {
 
     // Upgrade command
     registerUpgradeCommand(program);
-
-    // Trigger silent auto-upgrade in the background (non-blocking, never fails)
-    if (!process.env.BKPER_DISABLE_AUTOUPDATE) {
-        autoUpgrade().catch(() => {});
-    }
 
     if (shouldShowHelpForBareInvocation(process.argv)) {
         program.outputHelp();
