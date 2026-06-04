@@ -62,17 +62,26 @@ To make your app available to all Bkper users, contact us at [support@bkper.com]
 Your app's `README.md` is displayed to end users on the app listing page. Write it for the people who will install and use your app — not for developers.
 
 **README should explain:**
+
 - What the app does from a user's perspective
 - How to use it (step-by-step for non-technical users)
 - What features are available
+- API access details when the app intentionally exposes `/api/*` routes for users or integrators
+
+**API access details should stay concise:**
+
+- App base URL for production and preview
+- OpenAPI spec URL at `/openapi.json`
+- One minimal authenticated example, such as a `curl` call with `Authorization: Bearer <token>`
 
 **README should NOT contain:**
+
 - Tech stack or architecture details
 - Build commands or development setup
 - Project structure or internal file paths
-- API documentation or SDK references
+- Long API references, generated schemas, SDK internals, or route-by-route developer docs
 
-Put developer documentation in `AGENTS.md` or internal docs instead. Keep `README.md` focused on the user experience.
+Put developer documentation in `AGENTS.md` or internal docs instead. Keep `README.md` focused on the user experience and any integration entry points users need.
 
 ### Where published apps appear
 
@@ -87,6 +96,8 @@ source: /docs/build/apps/architecture.md
 # App Architecture
 
 Bkper platform apps use one Worker bundle per app and environment. The same Worker serves the browser client, app-defined `/api/*` routes, and Bkper event ingress at `/events`.
+
+Treat `/api/*` as the reusable surface for app behavior. The bundled web client is one consumer of that API; scripts, external clients, and agents can call the same routes with bearer auth.
 
 ## Structure
 
@@ -174,6 +185,47 @@ app.get('*', c => c.env.ASSETS.fetch(c.req.raw));
 export default app;
 ```
 
+### App API contract
+
+Expose reusable app behavior through `/api/*` routes when it may be called by more than one client.
+
+Use this shape:
+
+- **Routes** — Thin Hono handlers under `/api/*`.
+- **Schemas** — Typed request and response schemas for every route.
+- **Services** — Business behavior in server-side service modules.
+- **OpenAPI** — A machine-readable app API spec exposed at `/openapi.json`.
+
+The default template generates typed client code from the same OpenAPI contract used by the shipped web client. Keep that contract current so scripts, external clients, and agents can connect without reverse-engineering the UI.
+
+App API endpoints use these URLs:
+
+```txt
+Production: https://{appId}.bkper.app/api/*
+Preview:    https://{appId}-preview.bkper.app/api/*
+Local:      http://localhost:8787/api/*
+```
+
+The app OpenAPI spec lives at:
+
+```txt
+Production: https://{appId}.bkper.app/openapi.json
+Preview:    https://{appId}-preview.bkper.app/openapi.json
+Local:      http://localhost:8787/openapi.json
+```
+
+Example script call:
+
+```bash
+TOKEN="$(bkper auth token)"
+
+curl \
+  -H "Authorization: Bearer ${TOKEN}" \
+  "https://my-app.bkper.app/api/books"
+```
+
+Replace `my-app` with the app id from `bkper.yaml`.
+
 ### Server API authentication
 
 For deployed apps, server API routes under `/api/*` require a standard bearer token on the incoming request:
@@ -253,11 +305,13 @@ See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for pa
 
 ## When you don't need every part
 
-Not every app needs a UI, API, and event handler:
+The platform can host different shapes, but the default template starts as a full app because `/api/*` routes give the app a reusable contract as it grows.
 
+Use these shapes intentionally:
+
+- **Full app** — Client UI, `/api/*` backend logic, and `/events` automation in one Worker. This is the default growth path.
 - **Event-only app** — Keep `server/` and omit `deployment.client`. Automates reactions to book events without a user interface.
-- **UI-only app** — Use `client/` and keep a minimal server Worker for static assets. Remove the `events` list and `webhookUrl` if you do not handle events.
-- **Full app** — Client UI, `/api/*` backend logic, and `/events` automation in one Worker.
+- **UI-only app** — Use `client/` and keep a minimal server Worker for static assets only when the behavior is truly local to the browser. Add `/api/*` as soon as the behavior should be reusable by scripts, external clients, or agents.
 
 ## Simple App Patterns
 
@@ -265,7 +319,9 @@ These are the minimal, canonical patterns for common app tasks. Use them as star
 
 ### Client-only UI with authentication
 
-The smallest useful app can keep all business logic in `client/`. No custom server routes, no event handlers, no custom auth logic.
+The smallest useful app can keep browser-only display logic in `client/`. No custom server routes, no event handlers, no custom auth logic.
+
+If the behavior should be reused by scripts, external clients, or agents, expose it through `/api/*` instead of keeping it only in the UI.
 
 ```ts
 // client/src/app.ts
@@ -307,43 +363,43 @@ Use `bkper-js` for all API calls. Do not call the REST API directly when `bkper-
 
 ## Library Usage Reference
 
-| Task | Use | Do not use |
-|------|-----|------------|
-| Client authentication | `@bkper/web-auth` (`BkperAuth`, `getAccessToken`) | Custom OAuth flows, manual `fetch('/auth/refresh')`, `google-auth-library` in the browser |
-| API calls from client | `bkper-js` (`Bkper`, `Book`, `Account`, `Transaction`) | Direct `fetch()` to REST endpoints |
-| API calls from app server `/api/*` route | Incoming `Authorization: Bearer <token>` + server-side `new Bkper()` | Reading OAuth tokens in server code, relying on browser sessions for API auth |
-| API calls from platform event handler | Server-side `new Bkper()` in `/events` | Reading `bkper-oauth-token` or `bkper-agent-id` in platform app code |
-| Local development server | `npm run dev` (template script) | Manual `miniflare` + `cloudflared` invocations |
-| Event handler routing | `switch (event.type)` in `server/src/index.ts` or `server/src/handlers/` | Middleware frameworks, external webhook routers |
-| UI components | `@bkper/web-design` + Lit | Heavy UI frameworks unless the user explicitly requests them |
+| Task                                     | Use                                                                      | Do not use                                                                                |
+| ---------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| Client authentication                    | `@bkper/web-auth` (`BkperAuth`, `getAccessToken`)                        | Custom OAuth flows, manual `fetch('/auth/refresh')`, `google-auth-library` in the browser |
+| API calls from client                    | `bkper-js` (`Bkper`, `Book`, `Account`, `Transaction`)                   | Direct `fetch()` to REST endpoints                                                        |
+| API calls from app server `/api/*` route | Incoming `Authorization: Bearer <token>` + server-side `new Bkper()`     | Reading OAuth tokens in server code, relying on browser sessions for API auth             |
+| API calls from platform event handler    | Server-side `new Bkper()` in `/events`                                   | Reading `bkper-oauth-token` or `bkper-agent-id` in platform app code                      |
+| Local development server                 | `npm run dev` (template script)                                          | Manual `miniflare` + `cloudflared` invocations                                            |
+| Event handler routing                    | `switch (event.type)` in `server/src/index.ts` or `server/src/handlers/` | Middleware frameworks, external webhook routers                                           |
+| UI components                            | `@bkper/web-design` + Lit                                                | Heavy UI frameworks unless the user explicitly requests them                              |
 
 ## Common Pitfalls
 
 Avoid these patterns even if they seem necessary. The platform or SDK already solves the problem.
 
 1. **Implementing custom OAuth on the server**
-   - `@bkper/web-auth` manages the full OAuth lifecycle on the client. The platform handles tokens. Adding a server-side auth layer is unnecessary and will break.
+    - `@bkper/web-auth` manages the full OAuth lifecycle on the client. The platform handles tokens. Adding a server-side auth layer is unnecessary and will break.
 
 2. **Adding `/api/auth/refresh` or similar routes**
-   - Token refresh is internal to `@bkper/web-auth`. Exposing it via Hono routes creates security surface area and duplicates platform functionality.
+    - Token refresh is internal to `@bkper/web-auth`. Exposing it via Hono routes creates security surface area and duplicates platform functionality.
 
 3. **Relying on browser sessions for server API auth**
-   - Sessions let users open app web pages, but `/api/*` routes require `Authorization: Bearer <token>`. Dispatch validates bearer tokens and platform outbound uses that validated context for Bkper API calls.
+    - Sessions let users open app web pages, but `/api/*` routes require `Authorization: Bearer <token>`. Dispatch validates bearer tokens and platform outbound uses that validated context for Bkper API calls.
 
 4. **Modifying `server/` for a simple UI task**
-   - If the user only asked for a client-side feature, do not touch server routes. The Vite dev server proxies `/api` to the Miniflare worker automatically; you do not need to add routes unless the user explicitly asks for custom backend logic.
+    - If the user only asked for a client-side feature, do not touch server routes. The Vite dev server proxies `/api` to the Miniflare worker automatically. Add routes when the behavior should be reusable by the shipped client, scripts, external clients, or agents.
 
 5. **Installing additional auth or HTTP libraries**
-   - `bkper-js` and `@bkper/web-auth` are the only packages you need for Bkper API access and authentication. Adding `axios`, `google-auth-library`, or similar is almost always wrong.
+    - `bkper-js` and `@bkper/web-auth` are the only packages you need for Bkper API access and authentication. Adding `axios`, `google-auth-library`, or similar is almost always wrong.
 
 6. **Creating event handlers when the user asked for a UI-only feature**
-   - If the user says "show me a list of books in a popup," that is a client-only task. Do not add `/events` logic or subscribe to webhooks.
+    - If the user says "show me a list of books in a popup," that is a client-only task. Do not add `/events` logic or subscribe to webhooks.
 
 7. **Calling REST endpoints directly when `bkper-js` has the method**
-   - If `bkper-js` exposes `book.getTransactions()`, use it. Do not `fetch('https://api.bkper.com/...')` and parse JSON manually.
+    - If `bkper-js` exposes `book.getTransactions()`, use it. Do not `fetch('https://api.bkper.com/...')` and parse JSON manually.
 
 8. **Reverse-engineering SDK internals**
-   - Use the public API surface documented in the API reference. Do not read SDK source to find private methods or internal request patterns.
+    - Use the public API surface documented in the API reference. Do not read SDK source to find private methods or internal request patterns.
 
 ---
 source: /docs/build/apps/configuration.md
@@ -600,31 +656,31 @@ source: /docs/build/apps/deploying.md
 
 1. **Build** — Compile your code
 
-   ```bash
-   npm run build
-   ```
+    ```bash
+    npm run build
+    ```
 
-   This runs two build steps:
-   - Client (Vite) to static assets in `dist/client/`
-   - Server Worker bundle (esbuild) to `dist/server/`
+    This runs two build steps:
+    - Client (Vite) to static assets in `dist/client/`
+    - Server Worker bundle (esbuild) to `dist/server/`
 
-   Build output includes size reporting so you can monitor bundle sizes.
+    Build output includes size reporting so you can monitor bundle sizes.
 
 2. **Sync** — Update app metadata
 
-   ```bash
-   bkper app sync
-   ```
+    ```bash
+    bkper app sync
+    ```
 
-   Syncs your `bkper.yaml` configuration to Bkper — name, description, menu URLs, webhook URLs, access control, and branding. Run this whenever you change app settings.
+    Syncs your `bkper.yaml` configuration to Bkper — name, description, menu URLs, webhook URLs, access control, and branding. Run this whenever you change app settings.
 
 3. **Deploy** — Upload code to the platform
 
-   ```bash
-   bkper app deploy
-   ```
+    ```bash
+    bkper app deploy
+    ```
 
-   Deploys your pre-built code from `dist/` to the Bkper Platform. Your app is live at `https://{appId}.bkper.app`.
+    Deploys your pre-built code from `dist/` to the Bkper Platform. Your app is live at `https://{appId}.bkper.app`.
 
 The typical workflow combines all three:
 
@@ -640,6 +696,15 @@ The default deployment target. Your app runs at `https://{appId}.bkper.app`.
 bkper app deploy
 ```
 
+Production serves:
+
+```txt
+Client:       https://{appId}.bkper.app
+API routes:   https://{appId}.bkper.app/api/*
+OpenAPI spec: https://{appId}.bkper.app/openapi.json
+Events:       https://{appId}.bkper.app/events
+```
+
 ### Preview
 
 Deploy to a separate preview environment for testing before production:
@@ -649,6 +714,15 @@ bkper app deploy --preview
 ```
 
 Preview URLs use a dash suffix: `https://{appId}-preview.bkper.app`. For example, an app with `id: my-app` deploys to `https://my-app-preview.bkper.app`.
+
+Preview serves:
+
+```txt
+Client:       https://{appId}-preview.bkper.app
+API routes:   https://{appId}-preview.bkper.app/api/*
+OpenAPI spec: https://{appId}-preview.bkper.app/openapi.json
+Events:       https://{appId}-preview.bkper.app/events
+```
 
 Preview has independent secrets and KV storage from production.
 
@@ -691,7 +765,7 @@ bkper app secrets delete EXTERNAL_SERVICE_TOKEN
 Secrets are available as `c.env.SECRET_NAME` in your Hono handlers:
 
 ```ts
-app.get('/api/data', async (c) => {
+app.get('/api/data', async c => {
     const token = c.env.EXTERNAL_SERVICE_TOKEN;
     // use token
 });
@@ -757,21 +831,23 @@ The project template runs both processes via `concurrently`:
 
 1. **`vite dev`** — Client dev server with HMR. Changes to Lit components reflect instantly in the browser. Configured in `vite.config.ts`.
 2. **`bkper app dev`** — The worker runtime:
-   - **Miniflare** — Simulates the single Cloudflare Worker locally.
-   - **Cloudflare tunnel** — Exposes `/events` via a public URL so Bkper can route webhook events to your machine.
-   - **File watching** — Server changes trigger automatic rebuilds via esbuild.
+    - **Miniflare** — Simulates the single Cloudflare Worker locally.
+    - **Cloudflare tunnel** — Exposes `/events` via a public URL so Bkper can route webhook events to your machine.
+    - **File watching** — Server changes trigger automatic rebuilds via esbuild.
 
 You can also run them independently: `npm run dev:client` for just the UI, or `npm run dev:server` for the local Worker.
 
 ## URLs
 
-| Endpoint | URL |
-| --- | --- |
-| Client (Vite dev server) | `http://localhost:5173` |
-| Server Worker (Miniflare) | `http://localhost:8787` |
+| Endpoint                               | URL                                         |
+| -------------------------------------- | ------------------------------------------- |
+| Client (Vite dev server)               | `http://localhost:5173`                     |
+| Server Worker (Miniflare)              | `http://localhost:8787`                     |
+| App API routes                         | `http://localhost:8787/api/*`               |
+| App OpenAPI spec                       | `http://localhost:8787/openapi.json`        |
 | Events (via tunnel to the same Worker) | `https://<random>.trycloudflare.com/events` |
 
-The Vite dev server proxies `/api` requests to `http://localhost:8787` (configured in `vite.config.ts`). The tunnel URL is automatically registered as the `webhookUrlDev` in Bkper, so events from books where you're the developer are routed to your local machine.
+The Vite dev server proxies `/api` requests to `http://localhost:8787` (configured in `vite.config.ts`). The app OpenAPI spec is served by the Worker at `http://localhost:8787/openapi.json`. The tunnel URL is automatically registered as the `webhookUrlDev` in Bkper, so events from books where you're the developer are routed to your local machine.
 
 ## Configuration flags
 
@@ -1167,7 +1243,7 @@ This tutorial walks you through building and deploying a Bkper app from scratch.
 
 7. **Update the README**
 
-    Edit `README.md` for end users — what the app does and how to use it. Keep developer docs in `AGENTS.md`.
+    Edit `README.md` for end users — what the app does and how to use it. If your app exposes `/api/*` routes for users or integrators, include the app API base URL, `/openapi.json` URL, and one minimal authenticated example. Keep deeper developer docs in `AGENTS.md`.
 
 8. **Deploy**
 
@@ -1181,11 +1257,11 @@ This tutorial walks you through building and deploying a Bkper app from scratch.
 
 ## What you built
 
-| You wrote | Platform handled |
-| --- | --- |
-| ~30 lines of UI | OAuth, consent screen, token refresh |
-| ~40 lines of event logic | Hosting, SSL, edge routing |
-| `bkper.yaml` | Webhook tunnels, KV, type generation |
+| You wrote                | Platform handled                     |
+| ------------------------ | ------------------------------------ |
+| ~30 lines of UI          | OAuth, consent screen, token refresh |
+| ~40 lines of event logic | Hosting, SSL, edge routing           |
+| `bkper.yaml`             | Webhook tunnels, KV, type generation |
 
 ## Next steps
 
@@ -1206,6 +1282,14 @@ The Bkper Platform is a complete managed environment for building, deploying, an
 Apps are deployed to `{appId}.bkper.app` on a global edge network powered by [Cloudflare Workers for Platforms](https://developers.cloudflare.com/cloudflare-for-platforms/workers-for-platforms/). Your app runs close to your users, with zero infrastructure to manage.
 
 Preview environments are built in — deploy to a preview URL to test before going to production.
+
+### App APIs
+
+The same Worker can expose app-defined `/api/*` routes. Treat those routes as the reusable contract for your app behavior:
+
+- The bundled web client can call them.
+- Scripts, external clients, and agents can call them too.
+- The default template documents them with an app OpenAPI spec at `/openapi.json`.
 
 ### Authentication
 
@@ -1247,16 +1331,16 @@ Your app is live at `{appId}.bkper.app`. The platform handles routing, SSL, and 
 
 Without the platform, creating a Bkper app with a UI, event handling, and authentication requires:
 
-| Concern | Without the platform | With the platform |
-| --- | --- | --- |
-| **Hosting** | Provision servers, configure domains, SSL, CDN | `bkper app deploy` |
-| **Authentication** | Register OAuth client, build consent screen, handle token refresh, manage redirect URIs | `auth.getAccessToken()` |
-| **Event webhooks** | Set up a public endpoint, configure DNS, handle JWT verification | Declare in `bkper.yaml`, platform routes events |
-| **Local dev webhooks** | Install ngrok or similar, manually configure tunnel URL | `bkper app dev` starts tunnel automatically |
-| **Secrets** | Set up a secrets manager, configure access | `bkper app secrets put` |
-| **KV storage** | Deploy Redis/Memcached, manage connections | Declare `KV` in `bkper.yaml` |
-| **Preview environments** | Build a staging pipeline | `bkper app deploy --preview` |
-| **Type safety** | Manually create type definitions | `env.d.ts` auto-generated |
+| Concern                  | Without the platform                                                                    | With the platform                               |
+| ------------------------ | --------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| **Hosting**              | Provision servers, configure domains, SSL, CDN                                          | `bkper app deploy`                              |
+| **Authentication**       | Register OAuth client, build consent screen, handle token refresh, manage redirect URIs | `auth.getAccessToken()`                         |
+| **Event webhooks**       | Set up a public endpoint, configure DNS, handle JWT verification                        | Declare in `bkper.yaml`, platform routes events |
+| **Local dev webhooks**   | Install ngrok or similar, manually configure tunnel URL                                 | `bkper app dev` starts tunnel automatically     |
+| **Secrets**              | Set up a secrets manager, configure access                                              | `bkper app secrets put`                         |
+| **KV storage**           | Deploy Redis/Memcached, manage connections                                              | Declare `KV` in `bkper.yaml`                    |
+| **Preview environments** | Build a staging pipeline                                                                | `bkper app deploy --preview`                    |
+| **Type safety**          | Manually create type definitions                                                        | `env.d.ts` auto-generated                       |
 
 The platform eliminates all of this. You write business logic, the platform handles infrastructure.
 
