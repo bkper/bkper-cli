@@ -1,11 +1,14 @@
 import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import { getKeybindings, KeybindingsManager, setKeybindings } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
 import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import {
+    applyBkperSessionKeybindings,
     BkperInteractiveMode,
     createStartupSessionManager,
+    installBkperSessionKeybindings,
     registerBkperAgentStartupExtension,
     restorePersistedSessionOptions,
     runAgentMode,
@@ -54,6 +57,25 @@ function createThemeStub(): StartupTheme {
         bold: (text: string) => text,
         fg: (_color: string, text: string) => text,
     };
+}
+
+const STARTUP_TEST_KEYBINDINGS = {
+    'app.interrupt': {defaultKeys: 'escape'},
+    'app.clear': {defaultKeys: 'ctrl+c'},
+    'app.session.resume': {defaultKeys: 'ctrl+s'},
+    'app.session.fork': {defaultKeys: 'ctrl+x'},
+    'app.session.tree': {defaultKeys: 'ctrl+r'},
+} as const;
+
+function renderStartupHeaderWithKeybindings(factory: StartupHeaderFactory): string {
+    const previousKeybindings = getKeybindings();
+    setKeybindings(new KeybindingsManager(STARTUP_TEST_KEYBINDINGS));
+
+    try {
+        return factory(undefined, createThemeStub()).render(120).join('\n');
+    } finally {
+        setKeybindings(previousKeybindings);
+    }
 }
 
 function registerStartupExtension(
@@ -120,8 +142,9 @@ describe('runAgentMode', function () {
 
         expect(setHeader.called).to.be.true;
         expect(startupHeaderFactory).to.not.equal(undefined);
-        const headerText =
-            startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
+        const headerText = startupHeaderFactory
+            ? renderStartupHeaderWithKeybindings(startupHeaderFactory)
+            : '';
 
         expect(headerText).to.include('██████╗');
         expect(headerText).to.include(`pi v${PI_VERSION}`);
@@ -131,12 +154,13 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
-        expect(headerText).to.include('/resume');
+        expect(headerText).to.include('/resume (ctrl+s)');
         expect(headerText).to.include('to resume a session');
-        expect(headerText).to.include('/fork');
+        expect(headerText).to.include('/fork (ctrl+x)');
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
+        expect(headerText).to.include('/tree (ctrl+r)');
         expect(headerText).to.not.include('Pi can explain its own features and look up its docs.');
         expect(notify.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
@@ -192,8 +216,9 @@ describe('runAgentMode', function () {
         );
 
         expect(startupHeaderFactory).to.not.equal(undefined);
-        const headerText =
-            startupHeaderFactory?.(undefined, createThemeStub()).render(120).join('\n') ?? '';
+        const headerText = startupHeaderFactory
+            ? renderStartupHeaderWithKeybindings(startupHeaderFactory)
+            : '';
         expect(headerText).to.include('██████╗');
         expect(headerText).to.include(`pi v${PI_VERSION}`);
         expect(headerText).to.include('to interrupt');
@@ -202,14 +227,78 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('to exit');
         expect(headerText).to.include('for commands');
         expect(headerText).to.include('to run bash');
-        expect(headerText).to.include('/resume');
+        expect(headerText).to.include('/resume (ctrl+s)');
         expect(headerText).to.include('to resume a session');
-        expect(headerText).to.include('/fork');
+        expect(headerText).to.include('/fork (ctrl+x)');
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
+        expect(headerText).to.include('/tree (ctrl+r)');
         expect(headerText).to.include('No model provider configured. Use /login or add an API key.');
         expect(notify.called).to.be.false;
+    });
+
+    it('should add Bkper session keybindings without overwriting user bindings', function () {
+        let userBindings: Record<string, string | string[] | undefined> = {
+            'app.session.resume': 'ctrl+q',
+            'app.session.tree': [],
+        };
+        const keybindings = {
+            getUserBindings: () => userBindings,
+            setUserBindings: (nextBindings: Record<string, string | string[] | undefined>) => {
+                userBindings = nextBindings;
+            },
+        };
+
+        applyBkperSessionKeybindings(keybindings);
+
+        expect(userBindings).to.deep.equal({
+            'app.session.resume': 'ctrl+q',
+            'app.session.tree': [],
+            'app.session.fork': 'ctrl+x',
+        });
+    });
+
+    it('should skip Bkper session shortcuts claimed by user bindings', function () {
+        let userBindings: Record<string, string | string[] | undefined> = {
+            'tui.editor.cursorRight': 'ctrl+x',
+        };
+        const keybindings = {
+            getUserBindings: () => userBindings,
+            setUserBindings: (nextBindings: Record<string, string | string[] | undefined>) => {
+                userBindings = nextBindings;
+            },
+        };
+
+        applyBkperSessionKeybindings(keybindings);
+
+        expect(userBindings).to.deep.equal({
+            'tui.editor.cursorRight': 'ctrl+x',
+            'app.session.resume': 'ctrl+s',
+            'app.session.tree': 'ctrl+r',
+        });
+    });
+
+    it('should reapply Bkper session keybindings after keybindings reload', function () {
+        let userBindings: Record<string, string | string[] | undefined> = {};
+        const keybindings = {
+            getUserBindings: () => userBindings,
+            setUserBindings: (nextBindings: Record<string, string | string[] | undefined>) => {
+                userBindings = nextBindings;
+            },
+            reload: sinon.stub().callsFake(() => {
+                userBindings = {};
+            }),
+        };
+
+        installBkperSessionKeybindings(keybindings);
+        keybindings.reload();
+
+        expect(userBindings).to.deep.equal({
+            'app.session.resume': 'ctrl+s',
+            'app.session.tree': 'ctrl+r',
+            'app.session.fork': 'ctrl+x',
+        });
     });
 
     it('should create startup session manager with sessionDir from settings', function () {

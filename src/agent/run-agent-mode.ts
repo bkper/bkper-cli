@@ -62,6 +62,16 @@ type SessionManagerLike = {
     };
 };
 
+type KeybindingsConfigValue = string | string[] | undefined;
+
+type KeybindingsConfigLike = Record<string, KeybindingsConfigValue>;
+
+export type BkperKeybindingsManager = {
+    getUserBindings(): KeybindingsConfigLike;
+    setUserBindings(userBindings: KeybindingsConfigLike): void;
+    reload(): void;
+};
+
 type ScopedModel<TModel extends ModelLike = ModelLike> = {
     model: TModel;
     thinkingLevel?: ScopedThinkingLevel;
@@ -76,7 +86,16 @@ export interface RestoredPersistedSessionOptions<TModel extends ModelLike = Mode
 
 export class BkperInteractiveMode extends InteractiveMode {
     async init(): Promise<void> {
-        (this as unknown as Record<string, unknown>).getChangelogForDisplay = () => undefined;
+        const interactiveMode = this as unknown as {
+            getChangelogForDisplay: () => undefined;
+            keybindings?: BkperKeybindingsManager;
+        };
+        interactiveMode.getChangelogForDisplay = () => undefined;
+
+        if (interactiveMode.keybindings) {
+            installBkperSessionKeybindings(interactiveMode.keybindings);
+        }
+
         await super.init();
     }
 }
@@ -309,7 +328,78 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
 
 const STARTUP_LEFT_PADDING = ' ';
 
+const BKPER_SESSION_KEYBINDINGS = {
+    'app.session.resume': 'ctrl+s',
+    'app.session.tree': 'ctrl+r',
+    'app.session.fork': 'ctrl+x',
+} as const;
+
+const installedBkperKeybindingsManagers = new WeakSet<BkperKeybindingsManager>();
+
 const NO_MODELS_STARTUP_HINT = 'No model provider configured. Use /login or add an API key.';
+
+function keybindingConfigIncludesShortcut(
+    configuredBinding: KeybindingsConfigValue,
+    shortcut: string
+): boolean {
+    const normalizedShortcut = shortcut.toLowerCase();
+    const configuredShortcuts = Array.isArray(configuredBinding)
+        ? configuredBinding
+        : [configuredBinding];
+
+    return configuredShortcuts.some(
+        configuredShortcut => configuredShortcut?.toLowerCase() === normalizedShortcut
+    );
+}
+
+function isShortcutClaimedByUserBinding(
+    userBindings: KeybindingsConfigLike,
+    targetKeybinding: string,
+    shortcut: string
+): boolean {
+    return Object.entries(userBindings).some(
+        ([keybinding, configuredBinding]) =>
+            keybinding !== targetKeybinding &&
+            keybindingConfigIncludesShortcut(configuredBinding, shortcut)
+    );
+}
+
+export function applyBkperSessionKeybindings(
+    keybindings: Pick<BkperKeybindingsManager, 'getUserBindings' | 'setUserBindings'>
+): void {
+    const userBindings = keybindings.getUserBindings();
+    const nextBindings: KeybindingsConfigLike = {...userBindings};
+    let changed = false;
+
+    for (const [keybinding, shortcut] of Object.entries(BKPER_SESSION_KEYBINDINGS)) {
+        if (
+            nextBindings[keybinding] !== undefined ||
+            isShortcutClaimedByUserBinding(userBindings, keybinding, shortcut)
+        ) {
+            continue;
+        }
+
+        nextBindings[keybinding] = shortcut;
+        changed = true;
+    }
+
+    if (changed) {
+        keybindings.setUserBindings(nextBindings);
+    }
+}
+
+export function installBkperSessionKeybindings(keybindings: BkperKeybindingsManager): void {
+    if (!installedBkperKeybindingsManagers.has(keybindings)) {
+        const reload = keybindings.reload.bind(keybindings);
+        keybindings.reload = () => {
+            reload();
+            applyBkperSessionKeybindings(keybindings);
+        };
+        installedBkperKeybindingsManagers.add(keybindings);
+    }
+
+    applyBkperSessionKeybindings(keybindings);
+}
 
 function wrapStartupHeaderLine(line: string, width: number): string[] {
     const normalizedWidth = Math.max(1, width);
@@ -374,6 +464,14 @@ function formatStartupHint(theme: Theme, key: string, description: string): stri
     return theme.fg('dim', key) + theme.fg('muted', ` ${description}`);
 }
 
+function formatStartupCommandShortcut(
+    command: string,
+    keybinding: keyof typeof BKPER_SESSION_KEYBINDINGS
+): string {
+    const shortcut = keyText(keybinding);
+    return shortcut ? `${command} (${shortcut})` : command;
+}
+
 function buildStartupHeaderLines(
     theme: Theme,
     modelRegistry: Pick<ModelRegistryLike, 'getAvailable'>,
@@ -388,10 +486,22 @@ function buildStartupHeaderLines(
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
         formatStartupHint(theme, '/', 'for commands'),
         formatStartupHint(theme, '/new', 'to start new session'),
-        formatStartupHint(theme, '/resume', 'to resume a session'),
+        formatStartupHint(
+            theme,
+            formatStartupCommandShortcut('/resume', 'app.session.resume'),
+            'to resume a session'
+        ),
         formatStartupHint(theme, '/clone', 'to duplicate session'),
-        formatStartupHint(theme, '/fork', 'to branch from a message'),
-        formatStartupHint(theme, '/tree', 'for session tree'),
+        formatStartupHint(
+            theme,
+            formatStartupCommandShortcut('/fork', 'app.session.fork'),
+            'to branch from a message'
+        ),
+        formatStartupHint(
+            theme,
+            formatStartupCommandShortcut('/tree', 'app.session.tree'),
+            'for session tree'
+        ),
         formatStartupHint(theme, '!', 'to run bash'),
     ];
 
