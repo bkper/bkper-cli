@@ -166,7 +166,7 @@ import type { Env } from '../../env.js';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.get('/api/books', async c => {
+app.get('/api/v1/books', async c => {
     const bkper = new Bkper();
     const books = await bkper.getBooks();
     return c.json({ books });
@@ -196,7 +196,7 @@ Use this shape:
 - **Services** — Business behavior in server-side service modules.
 - **OpenAPI** — A machine-readable app API spec exposed at `/openapi.json`.
 
-The default template generates typed client code from the same OpenAPI contract used by the shipped web client. Keep that contract current so scripts, external clients, and agents can connect without reverse-engineering the UI.
+The default template starts public routes under `/api/v1/*` and generates typed client code from the same OpenAPI contract used by the shipped web client. Keep that contract current so scripts, external clients, and agents can connect without reverse-engineering the UI.
 
 App API endpoints use these URLs:
 
@@ -221,7 +221,7 @@ TOKEN="$(bkper auth token)"
 
 curl \
   -H "Authorization: Bearer ${TOKEN}" \
-  "https://my-app.bkper.app/api/books"
+  "https://my-app.bkper.app/api/v1/books"
 ```
 
 Replace `my-app` with the app id from `bkper.yaml`.
@@ -234,7 +234,7 @@ For deployed apps, server API routes under `/api/*` require a standard bearer to
 const token = auth.getAccessToken();
 if (!token) throw new Error('Not authenticated');
 
-const response = await fetch('/api/data', {
+const response = await fetch('/api/v1/data', {
     headers: { Authorization: `Bearer ${token}` },
 });
 ```
@@ -246,7 +246,7 @@ When the server route calls Bkper, use `bkper-js` without a token provider:
 ```ts
 import { Bkper } from 'bkper-js';
 
-app.get('/api/books', async c => {
+app.get('/api/v1/books', async c => {
     const bkper = new Bkper();
     const books = await bkper.getBooks();
     return c.json({
