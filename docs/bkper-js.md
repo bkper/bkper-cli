@@ -631,9 +631,10 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `getTransaction(id: string)` → `Promise<Transaction | undefined>` — Retrieve a transaction by id.
 - `getVisibility()` / `setVisibility(visibility: Visibility)` → `Visibility` — Gets the visibility of the book.
 - `json()` → `bkper.Book` — Gets an immutable copy of the JSON payload for this resource.
-- `listEvents(afterDate: string | null, beforeDate: string | null, onError: boolean, resourceId: string | null, limit: number, cursor?: string)` → `Promise<EventList>` — Lists events in the Book based on the provided parameters.
+- `listEvents(afterDate: string | null, beforeDate: string | null, onError: boolean | null, resourceId: string | null, limit: number, cursor?: string)` → `Promise<EventList>` — Lists events in the Book based on the provided parameters.
+- `listFiles(limit?: number, cursor?: string)` → `Promise<FileList>` — Lists files in the Book, for pagination.
 - `listTransactions(query?: string, limit?: number, cursor?: string)` → `Promise<TransactionList>` — Lists transactions in the Book based on the provided query, limit, and cursor, for pagination.
-- `mergeTransactions(transaction1: Transaction, transaction2: Transaction)` → `Promise<Transaction>` — Merge two `Transactions` into a single new canonical transaction.
+- `mergeTransactions(transaction1: string | bkper.Transaction | Transaction, transaction2: string | bkper.Transaction | Transaction)` → `Promise<Transaction>` — Merge two `Transactions` into a single new canonical transaction.
 - `parseDate(date: string)` → `Date` — Parse a date string according to date pattern and timezone of the Book. Also parse ISO yyyy-mm-dd format.
 - `parseValue(value: string)` → `Amount | undefined` — Parse a value string according to `DecimalSeparator` and fraction digits of the Book.
 - `remove()` → `Promise<Book>` — Warning!
@@ -908,6 +909,19 @@ A File can be attached to a `Transaction` or used to import data.
 - `update()` → `Promise<File>` — Perform update File, applying pending changes.
 
 *Standard property methods (deleteProperty, getProperties, getProperty, getPropertyKeys, getVisibleProperties, setProperties, setProperty, setVisibleProperties, setVisibleProperty) — see Account.*
+
+### FileList
+
+A list associated with a file query.
+
+**Constructor:** `new FileList(book: Book, payload: bkper.FileList)`
+
+**Methods:**
+
+- `getCursor()` → `string | undefined` — Gets the cursor associated with the query for pagination.
+- `getFirst()` → `File | undefined` — Gets the first File in the list.
+- `getItems()` → `File[]` — Gets the files in the list.
+- `size()` → `number` — Gets the total number of files in the list.
 
 ### Group *(extends ResourceProperty<bkper.Group>)*
 
@@ -1284,6 +1298,12 @@ Use your own API key for dedicated quota limits and project-level usage tracking
 API keys are for project identification only, not for authentication or agent attribution.
 Agent attribution is handled separately via the `agentIdProvider`.
 
+**oauthTokenProvider**
+
+If omitted or if it returns undefined, requests are sent without an Authorization header.
+This supports environments where authentication is injected outside bkper-js, such as
+Bkper Platform outbound for server-side app routes.
+
 **requestRetryHandler**
 
 This function is called when a request fails and needs to be retried.
@@ -1330,6 +1350,8 @@ Enum that represents event types.
 - `ACCOUNT_CREATED`
 - `ACCOUNT_DELETED`
 - `ACCOUNT_UPDATED`
+- `BOOK_AUDITED`
+- `BOOK_CREATED`
 - `BOOK_DELETED`
 - `BOOK_UPDATED`
 - `COLLABORATOR_ADDED`

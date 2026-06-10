@@ -96,8 +96,8 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `logoUrl?`: `string` — The App logo url
 - `logoUrlDark?`: `string` — The App logo url in dark mode
 - `menuOpenMode?`: `"SIDEBAR" | "EXPANDED" | "NEW_TAB"` — How the app menu opens. Default to SIDEBAR
-- `menuPopupHeight?`: `string` — The menu popup window height
-- `menuPopupWidth?`: `string` — The menu popup window width
+- `menuPopupHeight?`: `string` — Deprecated
+- `menuPopupWidth?`: `string` — Deprecated
 - `menuText?`: `string` — The contex menu text - default to the App name
 - `menuUrl?`: `string` — The context menu url
 - `menuUrlDev?`: `string` — The context menu url in dev mode
@@ -359,6 +359,13 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `size?`: `number` — The file size in bytes
 - `updatedAt?`: `string` — The last update timestamp, in milliseconds
 - `url?`: `string` — The file serving url
+
+### FileList
+
+**Properties:**
+
+- `cursor?`: `string` — The cursor, for pagination
+- `items?`: `bkper.File[]` — List items
 
 ### Group
 
