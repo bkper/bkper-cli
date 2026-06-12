@@ -20,14 +20,16 @@ Do not produce tax numbers from loaded rules until the rule source, tax period, 
 
 Preferred non-MCP OpenAccountants route:
 
-1. Start from `https://www.openaccountants.com/llms.txt`.
-2. Resolve the jurisdiction code, such as `BR`, `GB`, `DE`, `US-CA`, or `CA-ON`.
-3. Fetch `https://www.openaccountants.com/api/bundle/<CODE>`.
-4. Do not use MCP unless the user explicitly requests it.
+1. Resolve the jurisdiction code or name, such as `BR`, `GB`, `DE`, `US-CA`, `CA-ON`, or `brazil`.
+2. Fetch `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>`.
+3. Do not use MCP unless the user explicitly requests it.
+4. If the bundle cannot be resolved, ask the user for the exact jurisdiction or source URL instead of guessing.
 5. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations.
 6. Map rules only to user-approved Bkper Groups, Accounts, properties, or hashtags.
 
-Example: for Brazil, resolve `BR` and fetch `https://www.openaccountants.com/api/bundle/BR`, then clarify whether the scope is IRPF, Carnê-Leão, payroll, indirect tax, e-invoice compliance, or another Brazil tax area.
+Example: for Brazil, fetch `https://www.openaccountants.com/api/bundle/BR` or `https://www.openaccountants.com/api/bundle/brazil`, then clarify whether the scope is IRPF, Carnê-Leão, payroll, indirect tax, e-invoice compliance, or another Brazil tax area.
+
+For multi-layer jurisdictions, first determine whether the scope is national/federal-only, sub-jurisdiction-only, or both. Use a national/federal code such as `US` or `US-FED` for US federal-only rules. Use structured sub-jurisdiction codes such as `US-CA` for California or `CA-ON` for Ontario when state or provincial rules are relevant. If both layers matter, load and record each applicable bundle, and verify that the returned bundle title matches the requested layer.
 
 ## Bkper tax semantics
 
