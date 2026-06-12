@@ -12,6 +12,23 @@ A tax route may compute tax owed only when the applicable rules, rates, and assu
 
 Prefer existing trusted routes before creating new ones. If none exists, recommend the smallest auditable route that fits the user's context.
 
+## Loading tax rules
+
+When no trusted local tax route exists, or when the user asks to load jurisdiction rules, use external tax-rule libraries only as discovery sources. They may identify candidate rates, thresholds, deadlines, forms, classifications, and citations, but they are not a final computation route.
+
+Do not produce tax numbers from loaded rules until the rule source, tax period, assumptions, and Bkper mappings have been reviewed or approved.
+
+Preferred non-MCP OpenAccountants route:
+
+1. Start from `https://www.openaccountants.com/llms.txt`.
+2. Resolve the jurisdiction code, such as `BR`, `GB`, `DE`, `US-CA`, or `CA-ON`.
+3. Fetch `https://www.openaccountants.com/api/bundle/<CODE>`.
+4. Do not use MCP unless the user explicitly requests it.
+5. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations.
+6. Map rules only to user-approved Bkper Groups, Accounts, properties, or hashtags.
+
+Example: for Brazil, resolve `BR` and fetch `https://www.openaccountants.com/api/bundle/BR`, then clarify whether the scope is IRPF, Carnê-Leão, payroll, indirect tax, e-invoice compliance, or another Brazil tax area.
+
 ## Bkper tax semantics
 
 Tax reports usually combine period activity with tax-account positions or movements.
