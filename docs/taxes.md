@@ -14,17 +14,17 @@ Prefer existing trusted routes before creating new ones. If none exists, recomme
 
 ## Loading tax rules
 
-When no trusted local tax route exists, or when the user asks to load jurisdiction rules, use external tax-rule libraries only as discovery sources. They may identify candidate rates, thresholds, deadlines, forms, classifications, and citations, but they are not a final computation route.
+When no trusted local tax route exists, or when the user asks to load jurisdiction rules, use external tax-rule libraries only as live discovery sources. They may identify candidate rates, thresholds, deadlines, forms, classifications, and citations, but they are not a final computation route. Figures derived from bundle data remain provisional until reviewed by a local qualified accountant or advisor.
 
-Do not produce tax numbers from loaded rules until the rule source, tax period, assumptions, and Bkper mappings have been reviewed or approved.
+Do not produce tax numbers from loaded rules until the rule source, tax period, assumptions, and Bkper mappings have been reviewed or approved. If the relevant bundle or skill is not accountant-verified, or verifier status is missing or pending, surface that status to the user and label outputs exploratory / provisional.
 
 Preferred non-MCP OpenAccountants route:
 
 1. Resolve the jurisdiction code or name, such as `BR`, `GB`, `DE`, `US-CA`, `CA-ON`, or `brazil`.
-2. Fetch `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>`.
+2. Fetch `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>` live for each rule-loading run; do not compute from cached bundle content.
 3. Do not use MCP unless the user explicitly requests it.
 4. If the bundle cannot be resolved, ask the user for the exact jurisdiction or source URL instead of guessing.
-5. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations.
+5. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations, and surface the quality tier to the user.
 6. Map rules only to user-approved Bkper Groups, Accounts, properties, or hashtags.
 
 Example: for Brazil, fetch `https://www.openaccountants.com/api/bundle/BR` or `https://www.openaccountants.com/api/bundle/brazil`, then clarify whether the scope is IRPF, Carnê-Leão, payroll, indirect tax, e-invoice compliance, or another Brazil tax area.
