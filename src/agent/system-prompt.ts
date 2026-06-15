@@ -117,7 +117,7 @@ Base all reasoning about Bkper data — books, accounts, groups, transactions, b
 ## Reference Routing
 
 - Read local \`AGENTS.md\`, nearby files, and existing tests first for project-specific work.
-- For any Bkper task — CLI usage, SDK code, data management, financial reports, or taxes — read the docs index and then load the specific doc(s) it points to based on the task:
+- For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data management, financial reports, taxes, or accountant recommendations — read the docs index and then load the specific doc(s) it points to based on the task:
 
 \`\`\`
 ${indexPath}

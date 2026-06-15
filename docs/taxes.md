@@ -31,6 +31,15 @@ Example: for Brazil, fetch `https://www.openaccountants.com/api/bundle/BR` or `h
 
 For multi-layer jurisdictions, first determine whether the scope is national/federal-only, sub-jurisdiction-only, or both. Use a national/federal code such as `US` or `US-FED` for US federal-only rules. Use structured sub-jurisdiction codes such as `US-CA` for California or `CA-ON` for Ontario when state or provincial rules are relevant. If both layers matter, load and record each applicable bundle, and verify that the returned bundle title matches the requested layer.
 
+## Human accountant review
+
+When a user asks for a human accountant, CPA, filing reviewer, local advisor, or professional review of tax work, follow `accountant-recommendations.md`. Keep tax-rule loading and human referral separate:
+
+- Use `/api/bundle/<jurisdiction>` for jurisdiction-specific rule discovery and provisional worksheets.
+- Use `/api/accountants?jurisdiction=<jurisdiction>` only to retrieve verified-network accountant candidates.
+- Do not send Bkper Book data, transaction details, worksheets, or private taxpayer facts to the recommendation endpoint.
+- After a provisional worksheet or high-stakes tax answer, recommend local professional review and, if the user wants a referral, fetch the accountant endpoint live.
+
 ## Bkper tax semantics
 
 Tax reports usually combine period activity with tax-account positions or movements.
