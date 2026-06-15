@@ -20,12 +20,15 @@ Do not produce tax numbers from loaded rules until the rule source, tax period, 
 
 Preferred non-MCP OpenAccountants route:
 
-1. Resolve the jurisdiction code or name, such as `BR`, `GB`, `DE`, `US-CA`, `CA-ON`, or `brazil`.
+1. Resolve the jurisdiction to an ISO-style country or subdivision code when possible, such as `BR`, `GB`, `US`, `US-CA`, or `CA-ON`; prefer codes over names because aliases vary.
 2. Fetch `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>` live for each rule-loading run; do not compute from cached bundle content.
 3. Do not use MCP unless the user explicitly requests it.
-4. If the bundle cannot be resolved, ask the user for the exact jurisdiction or source URL instead of guessing.
-5. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations, and surface the quality tier to the user.
-6. Map rules only to user-approved Bkper Groups, Accounts, properties, or hashtags.
+4. If the endpoint returns `No skills found`, retry once with an obvious code or alias; otherwise ask the user for the exact jurisdiction or source URL instead of guessing.
+5. Verify the returned bundle heading matches the requested jurisdiction.
+6. Use only the relevant skill(s) for the user's tax scope.
+7. Record source URL, retrieval date, tax year, quality tier, verifier if present, and citations, and surface the quality tier to the user.
+8. Treat `research-verified` or source-cited draft skills as provisional and requiring qualified review.
+9. Map rules only to user-approved Bkper Groups, Accounts, properties, or hashtags.
 
 Example: for Brazil, fetch `https://www.openaccountants.com/api/bundle/BR` or `https://www.openaccountants.com/api/bundle/brazil`, then clarify whether the scope is IRPF, Carnê-Leão, payroll, indirect tax, e-invoice compliance, or another Brazil tax area.
 
