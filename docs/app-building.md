@@ -539,7 +539,9 @@ See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for de
 
 ### Properties schema
 
-The `propertiesSchema` field defines autocomplete suggestions for custom properties in the Bkper UI, helping users discover the correct property keys and values for your app:
+The `propertiesSchema` field defines autocomplete suggestions for custom properties in the Bkper UI, helping users discover the correct property keys and values for your app.
+
+Suggested keys must follow the same custom property rules as user-entered keys, including the 30-character maximum after normalization.
 
 ```yaml
 propertiesSchema:
