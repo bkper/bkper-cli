@@ -35,8 +35,8 @@ For multi-layer jurisdictions, first determine whether the scope is national/fed
 
 When a user asks for a human accountant, CPA, filing reviewer, local advisor, or professional review of tax work, follow `accountant-recommendations.md`. Keep tax-rule loading and human referral separate:
 
-- Use `/api/bundle/<jurisdiction>` for jurisdiction-specific rule discovery and provisional worksheets.
-- Use `/api/accountants?jurisdiction=<jurisdiction>` only to retrieve verified-network accountant candidates.
+- Use `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>` for jurisdiction-specific rule discovery and provisional worksheets.
+- Use `https://www.openaccountants.com/api/accountants?jurisdiction=<CODE_OR_NAME>` only to retrieve verified-network accountant candidates.
 - Do not send Bkper Book data, transaction details, worksheets, or private taxpayer facts to the recommendation endpoint.
 - After a provisional worksheet or high-stakes tax answer, recommend local professional review and, if the user wants a referral, fetch the accountant endpoint live.
 
