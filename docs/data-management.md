@@ -4,6 +4,21 @@ Interact with books, files, accounts, transactions, and balances using the `bkpe
 
 All commands that operate within a book use `-b, --book <bookId>` to specify the book context.
 
+## Bkper UI links for human review
+
+When asking a user to review or confirm Bkper data, include a browser link when the relevant IDs or query are known.
+
+Use canonical Bkper links:
+
+-   Book transactions: `https://bkper.app/books/{bookId}/transactions`
+-   Transaction: `https://bkper.app/books/{bookId}/transactions/{transactionId}`
+-   Accounts: `https://bkper.app/books/{bookId}/accounts`
+-   Account: `https://bkper.app/books/{bookId}/accounts/{accountId}`
+-   Query view: `https://bkper.app/books/{bookId}/transactions?query={encodedQuery}`
+-   Chart/report view: `https://bkper.app/books/{bookId}/transactions?query={encodedQuery}&charts=true`
+
+Encode query parameter values. Only build links from IDs and queries obtained from Bkper or provided by the user; do not invent IDs.
+
 ---
 
 ## Books
