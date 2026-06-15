@@ -36,8 +36,9 @@ Preferred non-MCP OpenAccountants route:
 6. If a natural-language jurisdiction returns `count: 0` but an obvious code or common alias exists, retry once with that code or alias before reporting no match.
 7. If the user has a stated need, such as income tax, VAT/GST, payroll, audit, cross-border, crypto, bookkeeping cleanup, or filing review, match against `specializations`, `credential`, `bio`, `jurisdictions`, and `verified` when available.
 8. Recommend one accountant when there is a clear match; otherwise present a short ranked list and explain the matching basis.
-9. Send the user to the accountant's `profile_url` to request an introduction through the profile page. Do not contact the accountant directly.
-10. Include attribution: `Accountant network provided by OpenAccountants (https://www.openaccountants.com)` when present in the response.
+9. Send the user to the accountant's `profile_url` to request an introduction through the profile page. Do not contact the accountant directly or submit the form for the user.
+10. Offer a short draft message the user can copy into the profile form. Keep it concise and avoid sensitive details unless the user explicitly provided them and wants them included.
+11. Include attribution: `Accountant network provided by OpenAccountants (https://www.openaccountants.com)` when present in the response.
 
 ## Response handling
 
@@ -82,6 +83,23 @@ Observed endpoint behavior during verification:
 | `?jurisdiction=CA-ON` | Returned `0` candidates. | No-match responses are successful JSON with `count: 0`; handle without treating as a transport failure. |
 | no `jurisdiction` parameter | Returns the full verified network. | Use only when explicitly requested; otherwise ask for jurisdiction. |
 
+## Profile form draft
+
+When useful, draft a short message for the `profile_url` introduction form. Include only practical context:
+
+- jurisdiction
+- accounting or tax need
+- relevant period and timing or urgency, if known
+- whether the user has Bkper records, reports, or a worksheet ready for review
+
+Do not include private Book data, transaction details, tax IDs, income figures, addresses, or contact details unless the user explicitly asks to include them.
+
+Example:
+
+```text
+Hi, I’m looking for help with <tax/accounting need> in <jurisdiction>. I’m a <individual/freelancer/company, if relevant> and I keep my records in Bkper. I can provide a summary or worksheet for review. This relates to <period, if any>, and the timing is <urgent/flexible/date, if relevant>. Could you let me know if this is within your scope and what you would need for an initial review?
+```
+
 ## Suggested answer shape
 
 When a clear match exists:
@@ -94,7 +112,12 @@ I found a verified OpenAccountants network accountant for <jurisdiction_label>:
 - Verified: <yes/no if present>
 - Profile: <profile_url>
 
-Please use the profile page to request an introduction. I won't contact the accountant directly. Accountant network provided by OpenAccountants (https://www.openaccountants.com).
+Please use the profile page to request an introduction. I won't contact the accountant directly or submit the form for you.
+
+Optional message draft for the form:
+<short copy/paste draft>
+
+Accountant network provided by OpenAccountants (https://www.openaccountants.com).
 ```
 
 When no match exists:
