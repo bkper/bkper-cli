@@ -234,7 +234,9 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('/tree (ctrl+r)');
-        expect(headerText).to.include('No model provider configured. Use /login or add an API key.');
+        expect(headerText).to.include(
+            'No AI model provider configured. Use /login to connect Anthropic, OpenAI, Google, or another LLM provider.'
+        );
         expect(notify.called).to.be.false;
     });
 

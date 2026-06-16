@@ -392,15 +392,17 @@ deployment:
 
 ### Authentication
 
--   `auth login` - Authenticate with Bkper, storing credentials locally
--   `auth logout` - Revoke the stored refresh token and clear local credentials
--   `auth token` - Print the current OAuth access token to stdout (requires prior login)
+-   `auth login` - Connect the CLI to your Bkper account, storing credentials locally
+-   `auth logout` - Revoke the stored Bkper refresh token and clear local credentials
+-   `auth token` - Print the current Bkper OAuth access token to stdout (requires prior login)
 
 ### Agent
 
 -   `bkper` - Start the interactive Bkper Agent when run in an interactive terminal; print CLI help in non-interactive contexts
 -   `agent` - Start the interactive Bkper Agent
 -   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
+
+Inside the interactive agent, `/login` connects an AI model provider; it is separate from `bkper auth login`, which connects the CLI to your Bkper account.
 
 ### App Lifecycle
 

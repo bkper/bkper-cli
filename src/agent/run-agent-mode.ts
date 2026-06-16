@@ -336,7 +336,9 @@ const BKPER_SESSION_KEYBINDINGS = {
 
 const installedBkperKeybindingsManagers = new WeakSet<BkperKeybindingsManager>();
 
-const NO_MODELS_STARTUP_HINT = 'No model provider configured. Use /login or add an API key.';
+const NO_MODELS_STARTUP_HINT =
+    'No AI model provider configured. Use /login to connect Anthropic, OpenAI, ' +
+    'Google, or another LLM provider.';
 
 function keybindingConfigIncludesShortcut(
     configuredBinding: KeybindingsConfigValue,

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
 import { expect } from 'chai';
 
 import {
@@ -7,6 +10,13 @@ import {
 } from '../../../src/docs-compliance/live-readme.js';
 
 describe('docs-compliance live README checks', function () {
+    it('should distinguish Bkper authentication from agent provider login', function () {
+        const readme = readFileSync(path.resolve(process.cwd(), 'README.md'), 'utf8');
+
+        expect(readme).to.include('`bkper auth login` connects the CLI to your Bkper account');
+        expect(readme).to.include('`/login` connects the agent to an AI model provider');
+    });
+
     it('should extract transaction/balance list query commands from README bash blocks', function () {
         const readme = `
 \`\`\`bash

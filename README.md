@@ -35,13 +35,13 @@ pnpm add -g bkper
 yarn global add bkper
 ```
 
-### Authenticate
+### Authenticate with Bkper
 
 ```bash
 bkper auth login
 ```
 
-This prints a Google verification URL and one-time code. Open the URL in any browser, enter the code, and the CLI stores credentials locally. When you are done working, run `bkper auth logout` to clear local credentials.
+`bkper auth login` connects the CLI to your Bkper account. It prints a Google verification URL and one-time code. Open the URL in any browser, enter the code, and the CLI stores credentials locally. When you are done working, run `bkper auth logout` to clear local credentials.
 
 ---
 
@@ -57,7 +57,7 @@ bkper
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
-On first launch, type `/login` and select a provider. We recommend [OpenCode Go](https://opencode.ai/go) for open-weights models and [OpenCode Zen](https://opencode.ai/zen) for frontier models — both give you access to high-quality models with no extra setup.
+On first launch, type `/login` and select a provider. `/login` connects the agent to an AI model provider; it is separate from `bkper auth login`, which connects the CLI to your Bkper account. We recommend [OpenCode Go](https://opencode.ai/go) for open-weights models and [OpenCode Zen](https://opencode.ai/zen) for frontier models — both give you access to high-quality models with no extra setup.
 
 Good starting prompts:
 
