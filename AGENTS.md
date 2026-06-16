@@ -170,8 +170,9 @@ These rules are mandatory for coding agents working on this repository.
 
 ### Branch and PR workflow
 
--   Start from latest `main` and use a short-lived feature branch.
--   Keep PRs small, scoped, and single-purpose.
+-   Work directly on `main` by default for this CLI repository.
+-   Create a short-lived feature branch or PR only when the user explicitly requests it, when `main` is protected/unavailable, or when a larger/riskier change warrants review and the user agrees.
+-   Keep changes small, scoped, and single-purpose.
 -   Do not bundle unrelated refactors with feature/fix work.
 
 ### Release workflow
@@ -198,7 +199,7 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 
 When adding, renaming, or significantly restructuring docs in `docs/`, update `docs/index.md` in the same commit. Keep index entries intent-descriptive and concise.
 
-Before requesting merge, always run:
+Before pushing code changes to `main`, always run:
 
 ```bash
 bun run build
