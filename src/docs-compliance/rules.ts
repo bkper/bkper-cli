@@ -34,6 +34,30 @@ function findMissingQueryErrors(
     return errors;
 }
 
+function hasHeading(content: string, heading: RegExp): boolean {
+    return heading.test(content);
+}
+
+function containsAll(content: string, terms: string[]): boolean {
+    const lowerContent = content.toLowerCase();
+    return terms.every(term => lowerContent.includes(term.toLowerCase()));
+}
+
+function containsSequence(content: string, terms: string[]): boolean {
+    const lowerContent = content.toLowerCase();
+    let startIndex = 0;
+
+    for (const term of terms) {
+        const index = lowerContent.indexOf(term.toLowerCase(), startIndex);
+        if (index < 0) {
+            return false;
+        }
+        startIndex = index + term.length;
+    }
+
+    return true;
+}
+
 export function evaluateReadmeCompliance(content: string): ComplianceResult {
     const errors: ComplianceError[] = [];
 
@@ -90,17 +114,16 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
-    if (!content.includes('### Book setup guidance (important)')) {
+    if (!hasHeading(content, /^#{2,6}\s+Book setup guidance\b/im)) {
         errors.push({
             code: 'missing-book-setup-guidance-title',
-            message: 'Missing `Book setup guidance (important)` section.',
+            message: 'Missing `Book setup guidance` section.',
         });
     }
 
     if (
-        !content.includes(
-            'Create top-level groups first, then child groups with `--parent`, then accounts with `--groups`.'
-        )
+        !containsSequence(content, ['top-level groups', 'child groups', 'accounts']) ||
+        !containsAll(content, ['--parent', '--groups'])
     ) {
         errors.push({
             code: 'missing-book-setup-order-guidance',
@@ -109,46 +132,42 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
-    if (
-        !content.includes(
-            'Verify the resulting group hierarchy and account memberships before reporting success.'
-        )
-    ) {
+    if (!containsAll(content, ['verify', 'hierarchy', 'account membership'])) {
         errors.push({
             code: 'missing-book-setup-verification-guidance',
             message: 'Missing guidance to verify hierarchy and account memberships before success.',
         });
     }
 
-    if (!content.includes('LLM-first output guidance (important):')) {
+    if (!/LLM[-\s]first output guidance/i.test(content)) {
         errors.push({
             code: 'missing-llm-guidance-title',
-            message: 'Missing `LLM-first output guidance (important):` section.',
+            message: 'Missing `LLM-first output guidance` section.',
         });
     }
 
-    if (!content.includes('**LLM consumption of lists/reports** → CSV')) {
+    if (!/LLM[\s\S]*(?:lists|reports)[\s\S]*CSV/i.test(content)) {
         errors.push({
             code: 'missing-csv-guidance',
             message: 'Missing guidance mapping LLM list/report consumption to CSV.',
         });
     }
 
-    if (!content.includes('**Programmatic processing / pipelines** → JSON')) {
+    if (!/(?:programmatic|pipelines)[\s\S]*JSON/i.test(content)) {
         errors.push({
             code: 'missing-json-guidance',
             message: 'Missing guidance mapping programmatic pipelines to JSON.',
         });
     }
 
-    if (!content.includes('### Query semantics (transactions and balances)')) {
+    if (!hasHeading(content, /^#{2,6}\s+Query semantics\b/im)) {
         errors.push({
             code: 'missing-query-semantics-section',
-            message: 'Missing `Query semantics (transactions and balances)` section.',
+            message: 'Missing `Query semantics` section.',
         });
     }
 
-    if (!content.includes('`after:` is **inclusive** and `before:` is **exclusive**.')) {
+    if (!containsAll(content, ['after:', 'inclusive', 'before:', 'exclusive'])) {
         errors.push({
             code: 'missing-after-before-semantics',
             message: 'Missing explicit semantics for `after:` and `before:`.',

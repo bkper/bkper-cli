@@ -5,18 +5,18 @@ import { evaluateReadmeCompliance } from '../../../src/docs-compliance/rules.js'
 describe('docs-compliance rules', function () {
     it('should pass when README content follows required rules', function () {
         const readme = `
-### Book setup guidance (important)
-Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
-Verify the resulting group hierarchy and account memberships before reporting success.
+### Book setup guidance
+Start with top-level groups. Add child groups using \`--parent\`, then create accounts assigned with \`--groups\`.
+Before reporting success, verify the hierarchy and account memberships.
 
-### Query semantics (transactions and balances)
+### Query semantics
 -   \`on:2025\` → full year
--   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
+-   \`after:\` is inclusive and \`before:\` is exclusive.
 
 ### Output Format
-**LLM-first output guidance (important):**
--   **LLM consumption of lists/reports** → CSV
--   **Programmatic processing / pipelines** → JSON
+**LLM-first output guidance:**
+-   For LLM consumption of lists and reports, prefer CSV.
+-   For programmatic processing and pipelines, prefer JSON.
 
 \`\`\`bash
 bkper transaction list -b abc123 -q 'on:2025'
@@ -96,16 +96,16 @@ bkper balance list -b abc123 -q 'on:2025-12-31'
 
     it('should report when README documents group stdin batch creation', function () {
         const readme = `
-### Book setup guidance (important)
-Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
-Verify the resulting group hierarchy and account memberships before reporting success.
+### Book setup guidance
+Start with top-level groups. Add child groups using \`--parent\`, then create accounts assigned with \`--groups\`.
+Before reporting success, verify the hierarchy and account memberships.
 
-### Query semantics (transactions and balances)
--   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
+### Query semantics
+-   \`after:\` is inclusive and \`before:\` is exclusive.
 
-**LLM-first output guidance (important):**
--   **LLM consumption of lists/reports** → CSV
--   **Programmatic processing / pipelines** → JSON
+**LLM-first output guidance:**
+-   For LLM consumption of lists and reports, prefer CSV.
+-   For programmatic processing and pipelines, prefer JSON.
 
 Write commands (\`account create\`, \`group create\`, \`transaction create\`) accept JSON data piped via stdin.
 \`\`\`bash
@@ -124,16 +124,16 @@ bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
 
     it('should report when README documents internal release workflow details', function () {
         const readme = `
-### Book setup guidance (important)
-Create top-level groups first, then child groups with \`--parent\`, then accounts with \`--groups\`.
-Verify the resulting group hierarchy and account memberships before reporting success.
+### Book setup guidance
+Start with top-level groups. Add child groups using \`--parent\`, then create accounts assigned with \`--groups\`.
+Before reporting success, verify the hierarchy and account memberships.
 
-### Query semantics (transactions and balances)
--   \`after:\` is **inclusive** and \`before:\` is **exclusive**.
+### Query semantics
+-   \`after:\` is inclusive and \`before:\` is exclusive.
 
-**LLM-first output guidance (important):**
--   **LLM consumption of lists/reports** → CSV
--   **Programmatic processing / pipelines** → JSON
+**LLM-first output guidance:**
+-   For LLM consumption of lists and reports, prefer CSV.
+-   For programmatic processing and pipelines, prefer JSON.
 
 Use the \`release:patch\` label on PRs. Publishing is handled by GitHub Actions and CI/CD after merge.
 `;

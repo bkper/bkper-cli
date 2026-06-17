@@ -843,6 +843,7 @@ This class defines a Connection from an `User` to an external service.
 - `getUUID()` / `setUUID(uuid: string)` → `string | undefined (set: string)` — Gets the universal unique identifier of this Connection.
 - `json()` → `bkper.Connection` — Gets an immutable copy of the JSON payload for this resource.
 - `remove()` → `Promise<Connection>` — Performs remove Connection.
+- `update()` → `Promise<Connection>` — Performs update Connection.
 
 *Standard property methods (deleteProperty, getProperties, getProperty, getPropertyKeys, getVisibleProperties, setProperties, setProperty, setVisibleProperties, setVisibleProperty) — see Account.*
 
@@ -1006,9 +1007,10 @@ This class defines a Integration from an `User` to an external service.
 - `getLogo()` → `string | undefined` — ~~Deprecated: Use getLogoUrl instead.~~ Gets the logo of the Integration.
 - `getLogoUrl()` → `string | undefined` — Gets the logo url of this Integration.
 - `getLogoUrlDark()` → `string | undefined` — Gets the logo url of this Integration in dark mode.
-- `getName()` → `string | undefined` — Gets the name of the Integration.
+- `getName()` / `setName(name: string)` → `string | undefined (set: string)` — Gets the name of the Integration.
 - `json()` → `bkper.Integration` — Gets an immutable copy of the JSON payload for this resource.
 - `remove()` → `Promise<Integration>` — Performs remove Integration.
+- `update()` → `Promise<Integration>` — Performs update Integration.
 
 *Standard property methods (deleteProperty, getProperties, getProperty, getPropertyKeys, getVisibleProperties, setProperties, setProperty, setVisibleProperties, setVisibleProperty) — see Account.*
 
