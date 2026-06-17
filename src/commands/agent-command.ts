@@ -7,16 +7,38 @@ import {
 } from '../agent/run-agent-mode.js';
 import { getBkperAgentSystemPrompt } from '../agent/system-prompt.js';
 
+export interface AgentCommandEnvironment {
+    stdinIsTTY: boolean;
+    stdoutIsTTY: boolean;
+}
+
 export interface AgentCommandDependencies {
     runPi: (args: string[]) => Promise<void>;
     runInteractiveMode: (options?: SessionOptions) => Promise<void>;
+    environment?: AgentCommandEnvironment;
 }
+
+// Unit tests and custom dependency injection historically omitted terminal state.
+// Production dependencies always provide the real process TTY state below.
+const ASSUMED_INTERACTIVE_ENVIRONMENT: AgentCommandEnvironment = {
+    stdinIsTTY: true,
+    stdoutIsTTY: true,
+};
 
 function createDefaultDependencies(): AgentCommandDependencies {
     return {
         runPi: (args: string[]) => runPiMain(args),
         runInteractiveMode: (options) => runAgentMode(createAgentModeDependencies(options)),
+        environment: {
+            stdinIsTTY: process.stdin.isTTY === true,
+            stdoutIsTTY: process.stdout.isTTY === true,
+        },
     };
+}
+
+function canRunEmbeddedInteractiveMode(dependencies: AgentCommandDependencies): boolean {
+    const environment = dependencies.environment ?? ASSUMED_INTERACTIVE_ENVIRONMENT;
+    return environment.stdinIsTTY && environment.stdoutIsTTY;
 }
 
 function hasSystemPromptArg(args: string[]): boolean {
@@ -102,7 +124,14 @@ export async function runAgentCommand(
     piArgs: string[],
     dependencies: AgentCommandDependencies = createDefaultDependencies()
 ): Promise<void> {
+    const canRunEmbeddedInteractive = canRunEmbeddedInteractiveMode(dependencies);
+
     if (piArgs.length === 0) {
+        if (!canRunEmbeddedInteractive) {
+            await dependencies.runPi(buildPiArgs(piArgs));
+            return;
+        }
+
         await dependencies.runInteractiveMode();
         return;
     }
@@ -120,9 +149,9 @@ export async function runAgentCommand(
 
     const {options, remainingArgs} = parseSessionOptions(piArgs);
 
-    if (remainingArgs.length > 0) {
-        // Unsupported interactive args (e.g. --session, --fork)
-        // Forward to pi so the user still gets a working session.
+    if (remainingArgs.length > 0 || !canRunEmbeddedInteractive) {
+        // Unsupported interactive args (e.g. --session, --fork) or non-interactive
+        // terminals are forwarded to pi for normal passthrough behavior.
         const args = buildPiArgs(piArgs);
         await dependencies.runPi(args);
         return;

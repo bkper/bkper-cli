@@ -14,6 +14,24 @@ describe('CLI - agent command', function () {
         expect(runPi.called).to.be.false;
     });
 
+    it('should forward bare agent invocation to pi when terminal is not interactive', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand([], {
+            runPi,
+            runInteractiveMode,
+            environment: {stdinIsTTY: false, stdoutIsTTY: true},
+        });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
+        ]);
+    });
+
     it('should forward pi args without requiring -- and inject bkper system prompt by default', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();
@@ -110,6 +128,25 @@ describe('CLI - agent command', function () {
         expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
             continueSession: true,
         });
+    });
+
+    it('should forward -c to pi when terminal is not interactive', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['-c'], {
+            runPi,
+            runInteractiveMode,
+            environment: {stdinIsTTY: false, stdoutIsTTY: true},
+        });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            '--system-prompt',
+            getBkperAgentSystemPrompt(),
+            '-c',
+        ]);
     });
 
     it('should route --no-session to the embedded interactive mode wrapper', async function () {

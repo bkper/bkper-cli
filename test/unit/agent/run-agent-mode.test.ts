@@ -12,6 +12,7 @@ import {
     registerBkperAgentStartupExtension,
     restorePersistedSessionOptions,
     runAgentMode,
+    suppressPiResumeHintOutput,
     type AgentModeDependencies,
     type InteractiveRuntimeHost,
 } from '../../../src/agent/run-agent-mode.js';
@@ -508,5 +509,31 @@ describe('runAgentMode', function () {
 
         expect(typeof mode.getChangelogForDisplay).to.equal('function');
         expect((mode.getChangelogForDisplay as () => unknown)()).to.equal(undefined);
+    });
+
+    it('should suppress the Pi exit resume hint', function () {
+        const originalWrite = process.stdout.write;
+        const writes: string[] = [];
+        const fakeWrite = ((chunk: string | Uint8Array) => {
+            writes.push(String(chunk));
+            return true;
+        }) as typeof process.stdout.write;
+
+        process.stdout.write = fakeWrite;
+        const restore = suppressPiResumeHintOutput();
+
+        try {
+            process.stdout.write('\x1B[2mTo resume this session:\x1B[22m pi --session abc123\n');
+            process.stdout.write('rendered chat mentions To resume this session: as text\n');
+            process.stdout.write('other output\n');
+        } finally {
+            restore();
+            process.stdout.write = originalWrite;
+        }
+
+        expect(writes).to.deep.equal([
+            'rendered chat mentions To resume this session: as text\n',
+            'other output\n',
+        ]);
     });
 });

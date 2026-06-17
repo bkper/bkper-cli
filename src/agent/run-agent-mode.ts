@@ -84,6 +84,34 @@ export interface RestoredPersistedSessionOptions<TModel extends ModelLike = Mode
     diagnostics: AgentSessionRuntimeDiagnostic[];
 }
 
+const PI_RESUME_HINT_TEXT = 'To resume this session:';
+const ANSI_PATTERN = /\x1B\[[0-?]*[ -/]*[@-~]/g;
+
+function isPiResumeHintOutput(chunk: string): boolean {
+    return chunk.replace(ANSI_PATTERN, '').trimStart().startsWith(PI_RESUME_HINT_TEXT);
+}
+
+export function suppressPiResumeHintOutput(): () => void {
+    const originalWrite = process.stdout.write;
+
+    process.stdout.write = function (
+        this: typeof process.stdout,
+        chunk: string | Uint8Array,
+        encoding?: BufferEncoding,
+        callback?: (err?: Error | null) => void
+    ): boolean {
+        if (typeof chunk === 'string' && isPiResumeHintOutput(chunk)) {
+            return true;
+        }
+
+        return originalWrite.call(this, chunk, encoding, callback);
+    } as typeof process.stdout.write;
+
+    return () => {
+        process.stdout.write = originalWrite;
+    };
+}
+
 export class BkperInteractiveMode extends InteractiveMode {
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
@@ -97,6 +125,16 @@ export class BkperInteractiveMode extends InteractiveMode {
         }
 
         await super.init();
+    }
+
+    async run(): Promise<void> {
+        const restoreResumeHintOutput = suppressPiResumeHintOutput();
+
+        try {
+            await super.run();
+        } finally {
+            restoreResumeHintOutput();
+        }
     }
 }
 
