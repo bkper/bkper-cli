@@ -97,12 +97,12 @@ describe('output', function () {
     });
 
     describe('renderListResult', function () {
-        it('should output JSON list results in an items envelope', function () {
+        it('should output JSON list results as a flat array when there is no cursor', function () {
             renderListResult({ kind: 'json', items: [{ id: 'tx-1' }] }, 'json');
 
             const output = consoleLogStub.firstCall.args[0] as string;
             const parsed = JSON.parse(output);
-            expect(parsed).to.deep.equal({ items: [{ id: 'tx-1' }] });
+            expect(parsed).to.deep.equal([{ id: 'tx-1' }]);
         });
 
         it('should include cursor in JSON list result envelope when present', function () {

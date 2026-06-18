@@ -19,10 +19,7 @@ export type ListResult =
  */
 export function renderListResult(result: ListResult, format: OutputFormat): void {
     if (result.kind === 'json') {
-        const payload: { items: unknown[]; cursor?: string } = { items: result.items };
-        if (result.cursor) {
-            payload.cursor = result.cursor;
-        }
+        const payload = result.cursor ? { items: result.items, cursor: result.cursor } : result.items;
         console.log(JSON.stringify(payload, null, 2));
         return;
     }
