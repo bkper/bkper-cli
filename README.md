@@ -139,6 +139,7 @@ Manage books, files, accounts, transactions, and balances.
 ```bash
 bkper book list
 bkper account list -b <bookId>
+bkper file list -b <bookId> --limit 100
 bkper transaction list -b <bookId> -q 'on:2025' --format csv
 bkper balance list -b <bookId> -q 'on:2025-12-31' --format csv
 ```

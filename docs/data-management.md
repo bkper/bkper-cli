@@ -175,6 +175,12 @@ Avoid using the same name for a Group and an Account in the same Book.
 Upload local files to a book and optionally route them with properties.
 
 ```bash
+# List the first page of files in a book
+bkper file list -b abc123
+
+# Fetch the next page using the cursor shown in table output or JSON
+bkper file list -b abc123 --limit 100 --cursor cursor_123
+
 # Upload a file to a book
 bkper file upload ./receipt.jpg -b abc123
 
@@ -194,6 +200,9 @@ Use `-p group_id=...` for group-based routing. The CLI infers `contentType` from
 <details>
 <summary>Command reference</summary>
 
+-   `file list -b <bookId>` - List one page of files in a book
+    -   `--limit <number>` - Page size (default `100`)
+    -   `--cursor <cursor>` - Cursor for fetching the next page
 -   `file get <fileId> -b <bookId>` - Get a file by ID
 -   `file upload <path> -b <bookId>` - Upload a local file to a book
     -   `--account <accountIdOrName>` - Resolve an account by name or id and persist canonical `account_id=<resolvedAccountId>`
@@ -231,6 +240,12 @@ bkper transaction list -b abc123 -q 'on:2025-01'
 # List with custom properties included
 bkper transaction list -b abc123 -q 'account:Sales' -p
 
+# Fetch one page of transactions explicitly
+bkper transaction list -b abc123 -q 'on:2025' --limit 100
+
+# Fetch the next transaction page
+bkper transaction list -b abc123 -q 'on:2025' --limit 100 --cursor cursor_123
+
 # Update a transaction
 bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
 
@@ -250,7 +265,9 @@ bkper transaction merge tx_123 tx_456 -b abc123
 <details>
 <summary>Command reference</summary>
 
--   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results)
+-   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results unless `--limit` or `--cursor` is provided)
+    -   `--limit <number>` - Fetch one page with up to this many transactions
+    -   `--cursor <cursor>` - Cursor for fetching the next page
     -   `-p, --properties` - Include custom properties in the output
 -   `transaction create -b <bookId>` - Create a transaction
     -   `--date <date>` - Transaction date
@@ -382,7 +399,7 @@ All commands support three output formats via the `--format` global flag:
 | Format | Flag                       | Best for                                    |
 | ------ | -------------------------- | ------------------------------------------- |
 | Table  | `--format table` (default) | Human reading in the terminal               |
-| JSON   | `--format json`            | Programmatic access, single-item detail     |
+| JSON   | `--format json`            | Programmatic access, cursors, single-item detail |
 | CSV    | `--format csv`             | LLM consumption, spreadsheets, list reports |
 
 ```bash
@@ -391,10 +408,17 @@ bkper account list -b abc123
 
 # JSON output
 bkper account list -b abc123 --format json
+# { "items": [...] }
 
 # CSV output -- raw data, no truncation, RFC 4180
 bkper account list -b abc123 --format csv
 ```
+
+**JSON list output details:**
+
+-   Resource list commands return an object with an `items` array: `{ "items": [...] }`.
+-   Paginated list commands include `cursor` only when another page is available: `{ "items": [...], "cursor": "..." }`.
+-   Use `jq '.items[]'` to iterate list output.
 
 **CSV output details:**
 
@@ -408,7 +432,7 @@ bkper account list -b abc123 --format csv
 When command output will be loaded into an LLM context (chat, prompt, memory, or agent reasoning), prefer:
 
 -   **`--format csv` for list commands** (`balance list`, `transaction list`, `account list`, etc.).
--   **`--format json` for single-item commands** (`get`, `create`, `update`) and CLI-to-CLI pipelines.
+-   **`--format json` for single-item commands** (`get`, `create`, `update`), cursor pagination, and CLI-to-CLI pipelines.
 
 CSV is significantly more token-efficient than JSON for tabular data, and for wide balance outputs it can reduce token usage by up to **95%**.
 
@@ -456,12 +480,14 @@ echo '[{"name":"Cash","type":"ASSET"}]' | \
   bkper account create -b abc123 -p "region=LATAM"
 ```
 
-**Batch output:** results are output as a flat JSON array, matching the same format as list commands:
+**Batch output:** write commands output created or updated resources as a flat JSON array:
 
 ```bash
 bkper account create -b abc123 < accounts.json
 # Output: [{"id":"acc-abc","name":"Cash",...}, {"id":"acc-def","name":"Revenue",...}]
 ```
+
+List JSON output uses an `{ "items": [...] }` envelope, and stdin batch commands unwrap that envelope automatically for CLI-to-CLI pipes.
 
 **Piping between commands:**
 

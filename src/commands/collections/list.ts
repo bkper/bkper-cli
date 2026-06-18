@@ -21,7 +21,7 @@ export async function listCollectionsFormatted(format: OutputFormat): Promise<Li
     const collections = await listCollections();
 
     if (format === 'json') {
-        return { kind: 'json', data: collections.map(c => c.json()) };
+        return { kind: 'json', items: collections.map(c => c.json()) };
     }
 
     if (collections.length === 0) {

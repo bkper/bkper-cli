@@ -20,7 +20,7 @@ export async function listAppsFormatted(format: OutputFormat): Promise<ListResul
     const apps = await listApps();
 
     if (format === 'json') {
-        return { kind: 'json', data: apps };
+        return { kind: 'json', items: apps };
     }
 
     if (apps.length === 0) {

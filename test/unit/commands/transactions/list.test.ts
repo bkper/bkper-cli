@@ -3,7 +3,9 @@ import sinon from 'sinon';
 import { setMockBkper } from '../../helpers/mock-factory.js';
 
 // Import after mock setup
-const { listTransactions } = await import('../../../../src/commands/transactions/list.js');
+const { listTransactions, listTransactionsFormatted } = await import(
+    '../../../../src/commands/transactions/list.js'
+);
 
 describe('CLI - transaction list Command', function () {
     let mockBook: any;
@@ -97,7 +99,7 @@ describe('CLI - transaction list Command', function () {
         expect(result.items[2].getId()).to.equal('tx-3');
     });
 
-    it('should not have cursor in the result', async function () {
+    it('should not have cursor in the result when auto-paginating all pages', async function () {
         mockBook = {
             listTransactions: async () => ({
                 getItems: () => [],
@@ -113,6 +115,75 @@ describe('CLI - transaction list Command', function () {
 
         const result = await listTransactions('book-123', { query: 'some query' });
         expect(result).to.not.have.property('cursor');
+    });
+
+    it('should fetch one page and expose cursor when pagination options are provided', async function () {
+        let callCount = 0;
+        let capturedQuery: string | undefined;
+        let capturedLimit: number | undefined;
+        let capturedCursor: string | undefined;
+
+        mockBook = {
+            listTransactions: async (query?: string, limit?: number, cursor?: string) => {
+                callCount++;
+                capturedQuery = query;
+                capturedLimit = limit;
+                capturedCursor = cursor;
+                return {
+                    getItems: () => [
+                        { getId: () => 'tx-1', json: () => ({ id: 'tx-1', amount: '100' }) },
+                    ],
+                    getAccount: async () => null,
+                    getCursor: () => 'page-2-cursor',
+                };
+            },
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        const result = await listTransactions('book-123', {
+            query: 'after:2024-01-01',
+            limit: 25,
+            cursor: 'page-1-cursor',
+        });
+
+        expect(callCount).to.equal(1);
+        expect(capturedQuery).to.equal('after:2024-01-01');
+        expect(capturedLimit).to.equal(25);
+        expect(capturedCursor).to.equal('page-1-cursor');
+        expect(result.items).to.have.length(1);
+        expect(result.cursor).to.equal('page-2-cursor');
+    });
+
+    it('should return JSON formatted transactions in an items envelope', async function () {
+        mockBook = {
+            listTransactions: async () => ({
+                getItems: () => [
+                    { getId: () => 'tx-1', json: () => ({ id: 'tx-1', amount: '100' }) },
+                ],
+                getAccount: async () => null,
+                getCursor: () => undefined,
+            }),
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        const result = await listTransactionsFormatted(
+            'book-123',
+            { query: 'after:2024-01-01' },
+            'json'
+        );
+
+        expect(result).to.deep.equal({
+            kind: 'json',
+            items: [{ id: 'tx-1', amount: '100' }],
+        });
     });
 
     it('should return account when available', async function () {

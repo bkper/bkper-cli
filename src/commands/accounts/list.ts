@@ -26,7 +26,7 @@ export async function listAccountsFormatted(
     const accounts = await listAccounts(bookId);
 
     if (format === 'json') {
-        return { kind: 'json', data: accounts.map(a => a.json()) };
+        return { kind: 'json', items: accounts.map(a => a.json()) };
     }
 
     const builder = new AccountsDataTableBuilder(accounts).ids(true).groups(true);

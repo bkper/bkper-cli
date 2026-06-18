@@ -25,7 +25,7 @@ export async function listBooksFormatted(
     const books = await listBooks(query);
 
     if (format === 'json') {
-        return { kind: 'json', data: books.map(b => b.json()) };
+        return { kind: 'json', items: books.map(b => b.json()) };
     }
 
     if (books.length === 0) {

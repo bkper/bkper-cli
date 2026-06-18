@@ -1,6 +1,6 @@
 import { expect } from '../../unit/helpers/test-setup.js';
 import sinon from 'sinon';
-import { renderTable, renderItem } from '../../../src/render/output.js';
+import { renderTable, renderItem, renderListResult } from '../../../src/render/output.js';
 
 describe('output', function () {
     let consoleLogStub: sinon.SinonStub;
@@ -93,6 +93,42 @@ describe('output', function () {
 
             const output = consoleLogStub.firstCall.args[0] as string;
             expect(output).to.equal('No results found.');
+        });
+    });
+
+    describe('renderListResult', function () {
+        it('should output JSON list results in an items envelope', function () {
+            renderListResult({ kind: 'json', items: [{ id: 'tx-1' }] }, 'json');
+
+            const output = consoleLogStub.firstCall.args[0] as string;
+            const parsed = JSON.parse(output);
+            expect(parsed).to.deep.equal({ items: [{ id: 'tx-1' }] });
+        });
+
+        it('should include cursor in JSON list result envelope when present', function () {
+            renderListResult({ kind: 'json', items: [{ id: 'file-1' }], cursor: 'next-page' }, 'json');
+
+            const output = consoleLogStub.firstCall.args[0] as string;
+            const parsed = JSON.parse(output);
+            expect(parsed).to.deep.equal({ items: [{ id: 'file-1' }], cursor: 'next-page' });
+        });
+
+        it('should print table footer only for table output', function () {
+            const matrix = [['ID'], ['file-1']];
+
+            renderListResult({ kind: 'matrix', matrix, footer: 'Next page command' }, 'table');
+
+            expect(consoleLogStub.callCount).to.equal(2);
+            expect(consoleLogStub.secondCall.args[0]).to.equal('Next page command');
+        });
+
+        it('should not print table footer for CSV output', function () {
+            const matrix = [['ID'], ['file-1']];
+
+            renderListResult({ kind: 'matrix', matrix, footer: 'Next page command' }, 'csv');
+
+            expect(consoleLogStub.callCount).to.equal(1);
+            expect(consoleLogStub.firstCall.args[0]).to.equal('ID\r\nfile-1');
         });
     });
 

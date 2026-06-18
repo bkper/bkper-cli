@@ -11,7 +11,7 @@ export type OutputFormat = 'table' | 'json' | 'csv';
  * without knowing how the data was built.
  */
 export type ListResult =
-    | { kind: 'json'; data: unknown }
+    | { kind: 'json'; items: unknown[]; cursor?: string }
     | { kind: 'matrix'; matrix: unknown[][]; footer?: string };
 
 /**
@@ -19,7 +19,11 @@ export type ListResult =
  */
 export function renderListResult(result: ListResult, format: OutputFormat): void {
     if (result.kind === 'json') {
-        console.log(JSON.stringify(result.data, null, 2));
+        const payload: { items: unknown[]; cursor?: string } = { items: result.items };
+        if (result.cursor) {
+            payload.cursor = result.cursor;
+        }
+        console.log(JSON.stringify(payload, null, 2));
         return;
     }
     renderTable(result.matrix, format);

@@ -29,7 +29,7 @@ export async function listGroupsFormatted(
     const groups = await listGroups(bookId);
 
     if (format === 'json') {
-        return { kind: 'json', data: groups.map(g => g.json()) };
+        return { kind: 'json', items: groups.map(g => g.json()) };
     }
 
     const builder = new GroupsDataTableBuilder(groups).ids(true).tree(true);

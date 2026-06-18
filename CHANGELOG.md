@@ -7,6 +7,10 @@
 -   **Authentication**
     -   `bkper auth login` now uses a Google verification URL and one-time code, so login works smoothly over SSH, in containers, and anywhere a localhost callback is inconvenient
     -   Removed the local callback server OAuth flow from CLI login
+-   **Data Management**
+    -   Added `file list` with `--limit` and `--cursor` for paginated Book file discovery
+    -   Added `--limit` and `--cursor` to `transaction list` for explicit one-page fetching while keeping the default full-query behavior
+    -   Breaking: resource list commands with `--format json` now return an `{ "items": [...] }` envelope, with `cursor` included only when another page is available
 
 ### **May 2026**
 

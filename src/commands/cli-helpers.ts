@@ -23,6 +23,17 @@ export function collectBook(value: string, previous: string[] | undefined): stri
 }
 
 /**
+ * Commander parser for positive integer options such as pagination limits.
+ */
+export function parsePositiveInteger(value: string): number {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+        throw new Error('Value must be a positive integer');
+    }
+    return parsed;
+}
+
+/**
  * Returns the active output format, considering both --format and --json flags.
  * --json acts as a silent alias for --format json.
  */

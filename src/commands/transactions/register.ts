@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
-import { collectProperty, collectRepeatable } from '../cli-helpers.js';
+import { collectProperty, collectRepeatable, parsePositiveInteger } from '../cli-helpers.js';
 import { renderListResult, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { parseStdinItems } from '../../input/index.js';
@@ -25,6 +25,12 @@ export function registerTransactionCommands(program: Command): void {
         .description('List transactions in a book')
         .option('-b, --book <bookId>', 'Book ID')
         .option('-q, --query <query>', 'Search query')
+        .option(
+            '--limit <limit>',
+            'Fetch one page with up to this many transactions',
+            parsePositiveInteger
+        )
+        .option('--cursor <cursor>', 'Cursor for fetching the next page')
         .option('-p, --properties', 'Include custom properties')
         .action(options =>
             withAction('listing transactions', async format => {
@@ -39,6 +45,8 @@ export function registerTransactionCommands(program: Command): void {
                     {
                         query: options.query,
                         properties: options.properties,
+                        limit: options.limit,
+                        cursor: options.cursor,
                     },
                     format
                 );
