@@ -192,6 +192,9 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 -   Dependabot tracks `@earendil-works/pi-coding-agent`.
 -   Pi update PRs stay standard dependency PRs.
 -   Do not add release labels or version bumps on Dependabot PR branches.
+-   When asked to verify an open Pi Dependabot PR, check out the PR branch and run `bun install` before testing so `bun.lock` is refreshed for Bun.
+-   If `bun install` changes `bun.lock`, commit that lockfile update to the Dependabot PR branch before merging. Do not merge a Pi bump where `package.json` and `bun.lock` disagree.
+-   Keep the dependency bump and release separate: merge the verified dependency PR first, then run the release workflow from a clean, up-to-date `main`.
 
 ### Agent docs maintenance
 
