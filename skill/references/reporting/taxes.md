@@ -36,7 +36,7 @@ For multi-layer jurisdictions, first determine whether the scope is national/fed
 
 ## Human accountant review
 
-When a user asks for a human accountant, CPA, filing reviewer, local advisor, or professional review of tax work, follow `accountant-recommendations.md`. Keep tax-rule loading and human referral separate:
+When a user asks for a human accountant, CPA, filing reviewer, local advisor, or professional review of tax work, follow `../advisory/accountant-recommendations.md`. Keep tax-rule loading and human referral separate:
 
 - Use `https://www.openaccountants.com/api/bundle/<CODE_OR_NAME>` for jurisdiction-specific rule discovery and provisional worksheets.
 - Use `https://www.openaccountants.com/api/accountants?jurisdiction=<CODE_OR_NAME>` only to retrieve verified-network accountant candidates.

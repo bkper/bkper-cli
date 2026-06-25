@@ -1,28 +1,28 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 interface DocSpec {
     url: string;
-    filename: string;
+    outputPath: string;
 }
 
 const DOCS: readonly DocSpec[] = [
     {
         url: 'https://bkper.com/docs/core-concepts.md',
-        filename: 'core-concepts.md',
+        outputPath: 'core/core-concepts.md',
     },
     {
         url: 'https://bkper.com/docs/api/bkper-js.md',
-        filename: 'bkper-js.md',
+        outputPath: 'sdk/bkper-js.md',
     },
     {
         url: 'https://bkper.com/docs/api/bkper-api-types.md',
-        filename: 'bkper-api-types.md',
+        outputPath: 'sdk/bkper-api-types.md',
     },
     {
         url: 'https://bkper.com/docs/build/apps/llms-full.txt',
-        filename: 'app-building.md',
+        outputPath: 'apps/app-building.md',
     },
 ];
 
@@ -34,13 +34,13 @@ function resolveOutputDir(): string {
 export function validateMarkdown(markdown: string, spec: DocSpec): void {
     const trimmed = markdown.trim();
     if (!trimmed) {
-        throw new Error(`${spec.filename}: fetched markdown is empty.`);
+        throw new Error(`${spec.outputPath}: fetched markdown is empty.`);
     }
 
     const lower = trimmed.toLowerCase();
     if (lower.startsWith('<!doctype html') || lower.startsWith('<html')) {
         throw new Error(
-            `${spec.filename}: fetched content looks like HTML, not markdown.`
+            `${spec.outputPath}: fetched content looks like HTML, not markdown.`
         );
     }
 }
@@ -55,7 +55,7 @@ async function fetchMarkdown(spec: DocSpec): Promise<string> {
 
     if (!response.ok) {
         throw new Error(
-            `${spec.filename}: fetch failed: ${response.status} ${response.statusText}`
+            `${spec.outputPath}: fetch failed: ${response.status} ${response.statusText}`
         );
     }
 
@@ -66,9 +66,10 @@ async function fetchMarkdown(spec: DocSpec): Promise<string> {
 
 async function syncDoc(spec: DocSpec, outputDir: string): Promise<void> {
     const markdown = await fetchMarkdown(spec);
-    const outputPath = path.join(outputDir, spec.filename);
+    const outputPath = path.join(outputDir, spec.outputPath);
+    await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(outputPath, markdown, 'utf8');
-    console.log(`✔ ${spec.filename}`);
+    console.log(`✔ ${spec.outputPath}`);
 }
 
 async function main(): Promise<void> {
@@ -91,8 +92,17 @@ async function main(): Promise<void> {
     }
 }
 
-void main().catch(error => {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(message);
-    process.exit(1);
-});
+function isDirectInvocation(): boolean {
+    const entrypoint = process.argv[1];
+    return entrypoint
+        ? import.meta.url === pathToFileURL(path.resolve(entrypoint)).href
+        : false;
+}
+
+if (isDirectInvocation()) {
+    void main().catch(error => {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(message);
+        process.exit(1);
+    });
+}

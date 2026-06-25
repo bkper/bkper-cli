@@ -12,6 +12,7 @@ function resolveBkperApiTypesDocPath(): string {
         '..',
         'skill',
         'references',
+        'sdk',
         'bkper-api-types.md'
     );
 }

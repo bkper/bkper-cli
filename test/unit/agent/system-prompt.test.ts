@@ -9,12 +9,12 @@ import { expect } from '../helpers/test-setup.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
 describe('agent system prompt', function () {
-    it('should point source-mode reference docs at skill/references', function () {
+    it('should point source-mode reference docs at the canonical skill reference bundle', function () {
         const full = getBkperAgentSystemPrompt();
 
-        expect(full).to.include(path.resolve('docs', 'index.md'));
+        expect(full).to.include(path.resolve('skill', 'references', 'index.md'));
         expect(full).to.include(path.resolve('skill', 'references'));
-        expect(full).to.include(path.resolve('skill', 'references', 'core-concepts.md'));
+        expect(full).to.include(path.resolve('skill', 'references', 'core', 'core-concepts.md'));
     });
 
     it('should assemble tool guidance from pi tool definitions', function () {

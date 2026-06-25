@@ -12,6 +12,7 @@ function resolveCoreConceptsPath(): string {
         '..',
         'skill',
         'references',
+        'core',
         'core-concepts.md'
     );
 }

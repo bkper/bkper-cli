@@ -5,7 +5,7 @@ import { expect } from '../helpers/test-setup.js';
 
 function resolveBkperJsDocPath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(thisDir, '..', '..', '..', 'skill', 'references', 'bkper-js.md');
+    return path.resolve(thisDir, '..', '..', '..', 'skill', 'references', 'sdk', 'bkper-js.md');
 }
 
 function readBkperJsDoc(): string {

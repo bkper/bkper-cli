@@ -35,11 +35,13 @@ type ToolCallEventLike = {
     input: Record<string, unknown>;
 };
 
-export function resolveBkperDocPathFromModuleDir(moduleDir: string, filename: string): string {
+export function resolveBkperDocPathFromModuleDir(
+    moduleDir: string,
+    relativePath: string
+): string {
     const candidates = [
-        path.resolve(moduleDir, '..', 'docs', filename),
-        path.resolve(moduleDir, '..', '..', 'skill', 'references', filename),
-        path.resolve(moduleDir, '..', '..', 'docs', filename),
+        path.resolve(moduleDir, '..', 'docs', relativePath),
+        path.resolve(moduleDir, '..', '..', 'skill', 'references', relativePath),
     ];
 
     for (const candidate of candidates) {
@@ -51,9 +53,9 @@ export function resolveBkperDocPathFromModuleDir(moduleDir: string, filename: st
     return candidates[0];
 }
 
-function resolveDocPath(filename: string): string {
+function resolveDocPath(relativePath: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return resolveBkperDocPathFromModuleDir(thisDir, filename);
+    return resolveBkperDocPathFromModuleDir(thisDir, relativePath);
 }
 
 function normalizePath(filePath: string): string {
@@ -66,7 +68,7 @@ function getReadToolPath(input: Record<string, unknown>): string | undefined {
 }
 
 export function getCoreConceptsDocPath(): string {
-    return resolveDocPath('core-concepts.md');
+    return resolveDocPath('core/core-concepts.md');
 }
 
 export function getDefaultCoreConceptsPreloadDefinition(): CoreConceptsPreloadDefinition {

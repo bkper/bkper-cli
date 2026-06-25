@@ -6,7 +6,7 @@ describe('sync docs validation', function () {
         expect(() =>
             validateMarkdown('# Renamed title\n\nSome content.', {
                 url: 'https://example.com/doc.md',
-                filename: 'doc.md',
+                outputPath: 'doc.md',
             })
         ).not.to.throw();
     });
@@ -15,7 +15,7 @@ describe('sync docs validation', function () {
         expect(() =>
             validateMarkdown('   \n\n', {
                 url: 'https://example.com/doc.md',
-                filename: 'doc.md',
+                outputPath: 'doc.md',
             })
         ).to.throw('doc.md: fetched markdown is empty.');
     });
@@ -24,7 +24,7 @@ describe('sync docs validation', function () {
         expect(() =>
             validateMarkdown('<!DOCTYPE html><html><body>Error</body></html>', {
                 url: 'https://example.com/doc.md',
-                filename: 'doc.md',
+                outputPath: 'doc.md',
             })
         ).to.throw('doc.md: fetched content looks like HTML, not markdown.');
     });

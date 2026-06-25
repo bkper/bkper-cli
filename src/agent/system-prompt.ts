@@ -21,16 +21,15 @@ function resolveDocsIndexPath(filename: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     return resolveFirstExistingPath([
         path.resolve(thisDir, '..', 'docs', filename),
-        path.resolve(thisDir, '..', '..', 'docs', filename),
+        path.resolve(thisDir, '..', '..', 'skill', 'references', filename),
     ]);
 }
 
-function resolveReferenceDocPath(filename: string): string {
+function resolveReferenceDocPath(relativePath: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     return resolveFirstExistingPath([
-        path.resolve(thisDir, '..', 'docs', filename),
-        path.resolve(thisDir, '..', '..', 'skill', 'references', filename),
-        path.resolve(thisDir, '..', '..', 'docs', filename),
+        path.resolve(thisDir, '..', 'docs', relativePath),
+        path.resolve(thisDir, '..', '..', 'skill', 'references', relativePath),
     ]);
 }
 
@@ -117,9 +116,9 @@ function buildToolPromptSection(): string {
 }
 
 export function getBkperAgentSystemPrompt(): string {
-    const coreConceptsPath = resolveReferenceDocPath('core-concepts.md');
+    const coreConceptsPath = resolveReferenceDocPath('core/core-concepts.md');
     const indexPath = resolveDocsIndexPath('index.md');
-    const referenceDocsDir = path.dirname(coreConceptsPath);
+    const referenceDocsDir = path.dirname(indexPath);
     const piRoot = resolvePiPackageRoot();
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');

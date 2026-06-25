@@ -111,26 +111,28 @@ describe('core concepts preload', function () {
         const rootDir = mkdtempSync(path.join(tmpdir(), 'bkper-cli-source-'));
         const moduleDir = path.join(rootDir, 'src', 'agent');
         const referencesDir = path.join(rootDir, 'skill', 'references');
+        const coreDir = path.join(referencesDir, 'core');
         mkdirSync(moduleDir, {recursive: true});
-        mkdirSync(referencesDir, {recursive: true});
-        writeFileSync(path.join(referencesDir, 'core-concepts.md'), '# Core Concepts');
+        mkdirSync(coreDir, {recursive: true});
+        writeFileSync(path.join(coreDir, 'core-concepts.md'), '# Core Concepts');
 
-        const docPath = resolveBkperDocPathFromModuleDir(moduleDir, 'core-concepts.md');
+        const docPath = resolveBkperDocPathFromModuleDir(moduleDir, 'core/core-concepts.md');
 
-        expect(docPath).to.equal(path.join(referencesDir, 'core-concepts.md'));
+        expect(docPath).to.equal(path.join(coreDir, 'core-concepts.md'));
     });
 
     it('should resolve docs from built module directories', function () {
         const rootDir = mkdtempSync(path.join(tmpdir(), 'bkper-cli-built-'));
         const moduleDir = path.join(rootDir, 'lib', 'agent');
         const docsDir = path.join(rootDir, 'lib', 'docs');
+        const coreDir = path.join(docsDir, 'core');
         mkdirSync(moduleDir, {recursive: true});
-        mkdirSync(docsDir, {recursive: true});
-        writeFileSync(path.join(docsDir, 'core-concepts.md'), '# Core Concepts');
+        mkdirSync(coreDir, {recursive: true});
+        writeFileSync(path.join(coreDir, 'core-concepts.md'), '# Core Concepts');
 
-        const docPath = resolveBkperDocPathFromModuleDir(moduleDir, 'core-concepts.md');
+        const docPath = resolveBkperDocPathFromModuleDir(moduleDir, 'core/core-concepts.md');
 
-        expect(docPath).to.equal(path.join(docsDir, 'core-concepts.md'));
+        expect(docPath).to.equal(path.join(coreDir, 'core-concepts.md'));
     });
 
     it('should build an explicit read-first instruction with the canonical doc path', function () {

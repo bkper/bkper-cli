@@ -44,7 +44,7 @@ Bkper's accounting model is intentionally non-standard. Generic accounting knowl
 Before reasoning about, designing, or modifying anything that touches Bkper data — books, accounts, groups, transactions, balances, queries, or any accounting or financial flow — read:
 
 ```
-references/core-concepts.md
+references/core/core-concepts.md
 ```
 
 This is not optional and prior accounting intuition does not substitute for it.
@@ -55,15 +55,15 @@ Read local `AGENTS.md`, nearby files, and existing tests first for project-speci
 
 For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data management, financial reports, taxes, accountant recommendations, app development, or safe `bkper` CLI operations — read the most specific reference document(s) directly:
 
-- `references/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
-- `references/data-management.md` — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, per-account balance queries, query operators, output formats, human-review Bkper UI links, batch operations via stdin/piping, collections.
-- `references/app-management.md` — CLI reference for building and deploying Bkper apps: dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference.
-- `references/app-building.md` — Full app-building reference: single Worker app architecture, client/server patterns, `/api/*` routes, `/events` handlers, deployment patterns, auth patterns, platform event handlers, and local development.
-- `references/financial-statements.md` — Deterministic reporting principles and Bkper query semantics for balance sheet and P&L: trusted routes, root reporting groups, permanent vs period date rules, and provisional query patterns.
-- `references/taxes.md` — Deterministic tax reporting principles: trusted routes, external tax-rule loading/discovery, approved tax-relevant groups/accounts, period activity queries, jurisdiction assumptions, and provisional query patterns.
-- `references/accountant-recommendations.md` — Human accountant/advisor recommendation flow using the OpenAccountants verified network endpoint: jurisdiction resolution, live JSON fetching, no-private-data handoff, profile URLs, and no-match handling.
-- `references/bkper-js.md` — bkper-js Node.js/browser SDK: Bkper, Book, Account, Transaction, Group, Balance classes, methods, getBalancesReport, OAuth configuration, library setup.
-- `references/bkper-api-types.md` — Bkper REST API TypeScript interfaces: Book, Account, Transaction, Group, Balance, Collection, File — field names and types used by the API and bkper-js.
+- `references/core/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
+- `references/cli/data-management.md` — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, per-account balance queries, query operators, output formats, human-review Bkper UI links, batch operations via stdin/piping, collections.
+- `references/cli/app-management.md` — CLI reference for building and deploying Bkper apps: dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference.
+- `references/apps/app-building.md` — Full app-building reference: single Worker app architecture, client/server patterns, `/api/*` routes, `/events` handlers, deployment patterns, auth patterns, platform event handlers, and local development.
+- `references/reporting/financial-statements.md` — Deterministic reporting principles and Bkper query semantics for balance sheet and P&L: trusted routes, root reporting groups, permanent vs period date rules, and provisional query patterns.
+- `references/reporting/taxes.md` — Deterministic tax reporting principles: trusted routes, external tax-rule loading/discovery, approved tax-relevant groups/accounts, period activity queries, jurisdiction assumptions, and provisional query patterns.
+- `references/advisory/accountant-recommendations.md` — Human accountant/advisor recommendation flow using the OpenAccountants verified network endpoint: jurisdiction resolution, live JSON fetching, no-private-data handoff, profile URLs, and no-match handling.
+- `references/sdk/bkper-js.md` — bkper-js Node.js/browser SDK: Bkper, Book, Account, Transaction, Group, Balance classes, methods, getBalancesReport, OAuth configuration, library setup.
+- `references/sdk/bkper-api-types.md` — Bkper REST API TypeScript interfaces: Book, Account, Transaction, Group, Balance, Collection, File — field names and types used by the API and bkper-js.
 
 Before running any `bkper` CLI command, read the relevant reference above. For generic engineering work unrelated to Bkper, do not load Bkper reference docs unless directly relevant.
 

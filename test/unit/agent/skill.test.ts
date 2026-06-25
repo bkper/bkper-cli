@@ -1,7 +1,8 @@
-import { expect } from '../helpers/test-setup.js';
+import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
+import { expect } from '../helpers/test-setup.js';
 
 interface SkillMarkdown {
     frontmatter: Record<string, unknown>;
@@ -29,23 +30,52 @@ function parseSkillMarkdown(content: string): SkillMarkdown {
     };
 }
 
-async function readMarkdownFiles(dir: string): Promise<string[]> {
-    const files = await readdir(dir);
-    return files.filter(file => file.endsWith('.md')).sort();
+async function readMarkdownFilesRecursively(
+    dir: string,
+    relativeDir = ''
+): Promise<string[]> {
+    const entries = await readdir(dir, {withFileTypes: true});
+    const files: string[] = [];
+
+    for (const entry of entries) {
+        const relativePath = path
+            .join(relativeDir, entry.name)
+            .replace(/\\/g, '/');
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+            files.push(
+                ...(await readMarkdownFilesRecursively(fullPath, relativePath))
+            );
+            continue;
+        }
+
+        if (entry.isFile() && entry.name.endsWith('.md')) {
+            files.push(relativePath);
+        }
+    }
+
+    return files.sort();
 }
 
 function getReferenceLinks(content: string): string[] {
-    return Array.from(content.matchAll(/references\/([A-Za-z0-9-]+\.md)/g)).map(
+    return Array.from(content.matchAll(/references\/([A-Za-z0-9-\/]+\.md)/g)).map(
         match => match[1]
     );
 }
 
+function getIndexedReferencePaths(content: string): string[] {
+    return Array.from(content.matchAll(/`([A-Za-z0-9-/]+\.md)`/g))
+        .map(match => match[1])
+        .sort();
+}
+
 describe('external agent skill', function () {
-    const docsDir = path.resolve('docs');
-    const docsIndexPath = path.join(docsDir, 'index.md');
+    const legacyDocsDir = path.resolve('docs');
     const skillDir = path.resolve('skill');
     const skillPath = path.join(skillDir, 'SKILL.md');
     const referencesDir = path.join(skillDir, 'references');
+    const referencesIndexPath = path.join(referencesDir, 'index.md');
 
     async function readSkill(): Promise<SkillMarkdown> {
         return parseSkillMarkdown(await readFile(skillPath, 'utf8'));
@@ -79,25 +109,25 @@ describe('external agent skill', function () {
         }
     });
 
-    it('should keep only the built-in routing index in docs/', async function () {
-        expect(await readMarkdownFiles(docsDir)).to.deep.equal(['index.md']);
+    it('should keep one canonical source reference bundle', async function () {
+        expect(existsSync(legacyDocsDir)).to.equal(false);
+        expect(existsSync(referencesIndexPath)).to.equal(true);
     });
 
-    it('should keep reference docs in skill/references for the built-in index', async function () {
-        const indexContent = await readFile(docsIndexPath, 'utf8');
-        const indexedDocs = Array.from(
-            indexContent.matchAll(/\*\*([A-Za-z0-9-]+\.md)\*\*/g)
-        ).map(match => match[1]);
-        const referenceDocs = await readMarkdownFiles(referencesDir);
-        const expectedDocs = [...new Set([...indexedDocs, 'core-concepts.md'])].sort();
+    it('should keep reference docs nested and covered by the bundle index', async function () {
+        const indexContent = await readFile(referencesIndexPath, 'utf8');
+        const indexedDocs = [...new Set(getIndexedReferencePaths(indexContent))].sort();
+        const referenceDocs = (await readMarkdownFilesRecursively(referencesDir)).filter(
+            doc => doc !== 'index.md'
+        );
 
-        expect(referenceDocs).to.deep.equal(expectedDocs);
-        expect(referenceDocs).not.to.include('index.md');
+        expect(referenceDocs.every(doc => doc.includes('/'))).to.equal(true);
+        expect(indexedDocs).to.deep.equal(referenceDocs);
     });
 
     it('should route directly to end reference docs without requiring an index hop', async function () {
         const content = await readFile(skillPath, 'utf8');
-        const referenceDocs = (await readMarkdownFiles(referencesDir)).filter(
+        const referenceDocs = (await readMarkdownFilesRecursively(referencesDir)).filter(
             doc => doc !== 'index.md'
         );
         const linkedDocs = new Set(getReferenceLinks(content));
@@ -110,7 +140,7 @@ describe('external agent skill', function () {
 
     it('should not create broken reference links in SKILL.md', async function () {
         const content = await readFile(skillPath, 'utf8');
-        const copiedDocs = new Set(await readMarkdownFiles(referencesDir));
+        const copiedDocs = new Set(await readMarkdownFilesRecursively(referencesDir));
         const linkedDocs = getReferenceLinks(content);
 
         expect(linkedDocs.length).to.be.greaterThan(0);
