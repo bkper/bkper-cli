@@ -37,7 +37,7 @@ async function readMarkdownFiles(dir: string): Promise<string[]> {
 
 describe('skill generation', function () {
     const docsDir = path.resolve('docs');
-    const skillDir = path.resolve('..', 'skills', 'skills', 'bkper-cli');
+    const skillDir = path.resolve('skill');
     const skillPath = path.join(skillDir, 'SKILL.md');
     const referencesDir = path.join(skillDir, 'references');
 
@@ -82,15 +82,7 @@ describe('skill generation', function () {
         expect(content).not.to.include('${');
     });
 
-    it('should remove legacy Bkper skills', async function () {
-        const skillsRoot = path.resolve('..', 'skills', 'skills');
-        const entries = await readdir(skillsRoot, { withFileTypes: true });
-        const skillDirs = entries.filter(e => e.isDirectory()).map(e => e.name);
-
-        expect(skillDirs).to.include('bkper-cli');
-        expect(skillDirs).not.to.include('bkper');
-        expect(
-            skillDirs.filter(name => name.startsWith('bkper-') && name !== 'bkper-cli')
-        ).to.deep.equal([]);
+    it('should not report external skill removals', function () {
+        expect(result.removedSkills).to.deep.equal([]);
     });
 });

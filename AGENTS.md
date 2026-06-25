@@ -154,8 +154,8 @@ Derived resources are read-only by default. Do not edit them during normal docum
 | `docs/bkper-api-types.md` | `https://bkper.com/docs/api/bkper-api-types.md` | `bun run sync:docs` |
 | `docs/app-building.md` | `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
 | `lib/docs/**` | `docs/*.md` + `README.md` | `bun run build:copy-docs` or full build |
-| `../skills/skills/bkper-cli/SKILL.md` | `src/agent/system-prompt.ts` | `bun run generate:skill` |
-| `../skills/skills/bkper-cli/references/**` | `docs/*.md` | `bun run generate:skill` |
+| `skill/SKILL.md` | `src/agent/system-prompt.ts` | `bun run generate:skill` |
+| `skill/references/**` | `docs/*.md` | `bun run generate:skill` |
 
 Notes:
 

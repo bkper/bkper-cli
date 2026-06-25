@@ -18,9 +18,7 @@ const SYSTEM_PROMPT_PATH = path.join(
     'agent',
     'system-prompt.ts'
 );
-const SKILLS_REPO = path.resolve(CLI_ROOT, '..', 'skills');
-const SKILLS_DIR = path.join(SKILLS_REPO, 'skills');
-const SKILL_DIR = path.join(SKILLS_DIR, 'bkper-cli');
+const SKILL_DIR = path.join(CLI_ROOT, 'skill');
 const REFERENCES_DIR = path.join(SKILL_DIR, 'references');
 
 const SKILL_NAME = 'bkper-cli';
@@ -127,28 +125,6 @@ async function copyDocs(): Promise<string[]> {
     return copied;
 }
 
-async function removeOldSkills(): Promise<string[]> {
-    const entries = await readdir(SKILLS_DIR, { withFileTypes: true });
-    const removed: string[] = [];
-
-    for (const entry of entries) {
-        if (!entry.isDirectory()) {
-            continue;
-        }
-        if (entry.name === SKILL_NAME) {
-            continue;
-        }
-        if (entry.name !== 'bkper' && !entry.name.startsWith('bkper-')) {
-            continue;
-        }
-        const oldDir = path.join(SKILLS_DIR, entry.name);
-        await rm(oldDir, { recursive: true, force: true });
-        removed.push(entry.name);
-    }
-
-    return removed;
-}
-
 export async function generateSkill(): Promise<{
     copiedDocs: string[];
     removedSkills: string[];
@@ -168,10 +144,7 @@ export async function generateSkill(): Promise<{
     // Copy docs
     const copiedDocs = await copyDocs();
 
-    // Remove old skills
-    const removedSkills = await removeOldSkills();
-
-    return { copiedDocs, removedSkills };
+    return { copiedDocs, removedSkills: [] };
 }
 
 async function main(): Promise<void> {

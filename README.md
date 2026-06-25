@@ -135,10 +135,10 @@ Pi-specific extensions are loaded from Pi extension folders (for example `.pi/ex
 `bkper agent` is the first-party Bkper harness. If you prefer another coding agent — Claude Code, Codex, OpenCode, OpenClaw, Hermes Agent, Cursor, or similar tools — install the Bkper CLI skill in that agent environment:
 
 ```bash
-npx skills add bkper/skills --skill bkper-cli
+npx skills add bkper/bkper-cli --skill bkper-cli
 ```
 
-The skill is generated from the Bkper CLI agent configuration and helps external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
+The skill is generated from this repository's Bkper CLI agent configuration and helps external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
 
 For general Bkper Q&A without local tool access, use the published docs and [`llms.txt`](https://bkper.com/llms.txt) instead.
 
