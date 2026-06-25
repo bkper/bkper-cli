@@ -9,7 +9,9 @@ import {
     SettingsManager,
     type AgentSessionRuntimeDiagnostic,
     type CreateAgentSessionRuntimeFactory,
+    type Extension,
     type ExtensionAPI,
+    type LoadExtensionsResult,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
 import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
@@ -31,6 +33,18 @@ type StartupHeaderComponent = {
 type StartupHeaderFactory = (_tui: unknown, theme: Theme) => StartupHeaderComponent;
 
 type StartupExtensionAPI = Pick<ExtensionAPI, 'on'>;
+
+type ExtensionLoadError = {
+    path: string;
+    error: string;
+};
+
+// Pi currently labels inline extension factories as <inline:N>.
+// Keep Bkper's label synthetic too: Pi resolves plain extension paths as files.
+const INLINE_EXTENSION_PATH_PATTERN = /^<inline:\d+>$/;
+export const BKPER_AGENT_BUILTINS_EXTENSION_NAME = 'Bkper Agent built-ins';
+export const BKPER_AGENT_BUILTINS_EXTENSION_PATH = '<inline:bkper-agent-builtins>';
+const BUILT_IN_BKPER_AGENT_FEATURE_ERROR = `${BKPER_AGENT_BUILTINS_EXTENSION_NAME} failed to start.`;
 
 type SettingsError = {
     scope: 'global' | 'project';
@@ -566,6 +580,62 @@ function createStartupHeaderFactory(
     });
 }
 
+export function isBkperAgentVerboseDiagnosticsEnabled(
+    env: Record<string, string | undefined> = process.env
+): boolean {
+    return env.BKPER_AGENT_DEBUG === '1' || env.PI_VERBOSE === '1';
+}
+
+function isBkperAgentInlineExtensionPath(path: string): boolean {
+    return INLINE_EXTENSION_PATH_PATTERN.test(path);
+}
+
+function normalizeBkperAgentExtension(extension: Extension): Extension {
+    if (!isBkperAgentInlineExtensionPath(extension.path)) {
+        return extension;
+    }
+
+    return {
+        ...extension,
+        path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+        resolvedPath: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+        sourceInfo: {
+            ...extension.sourceInfo,
+            path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+            source: 'inline',
+        },
+    };
+}
+
+export function normalizeBkperAgentExtensionErrors(
+    errors: ExtensionLoadError[],
+    options: {verbose: boolean}
+): ExtensionLoadError[] {
+    return errors.map(error => {
+        if (!isBkperAgentInlineExtensionPath(error.path)) {
+            return error;
+        }
+
+        return {
+            path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+            error: options.verbose
+                ? `${BUILT_IN_BKPER_AGENT_FEATURE_ERROR}\nDetails: ${error.path} ${error.error}`
+                : BUILT_IN_BKPER_AGENT_FEATURE_ERROR,
+        };
+    });
+}
+
+export function normalizeBkperAgentExtensions(
+    base: LoadExtensionsResult,
+    options: {verbose: boolean}
+): LoadExtensionsResult {
+    return {
+        ...base,
+        extensions: base.extensions.map(normalizeBkperAgentExtension),
+        errors: normalizeBkperAgentExtensionErrors(base.errors, options),
+    };
+}
+
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
@@ -587,6 +657,15 @@ export function registerBkperAgentStartupExtension(
             notify: (message, type) => ctx.ui.notify(message, type),
         });
     });
+}
+
+export function registerBkperAgentBuiltins(
+    pi: ExtensionAPI,
+    startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
+    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>
+): void {
+    registerBkperCoreConceptsPreloadExtension(pi);
+    registerBkperAgentStartupExtension(pi, startupMaintenance, settingsManager);
 }
 
 export interface SessionOptions {
@@ -622,16 +701,17 @@ export function createAgentModeDependencies(
                         systemPromptOverride: () => getBkperAgentSystemPrompt(),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
-                                registerBkperCoreConceptsPreloadExtension(pi);
-                            },
-                            (pi: ExtensionAPI) => {
-                                registerBkperAgentStartupExtension(
+                                registerBkperAgentBuiltins(
                                     pi,
                                     runStartupMaintenance,
                                     settingsManager
                                 );
                             },
                         ],
+                        extensionsOverride: base =>
+                            normalizeBkperAgentExtensions(base, {
+                                verbose: isBkperAgentVerboseDiagnosticsEnabled(),
+                            }),
                     },
                 });
                 const restoredSessionOptions = restorePersistedSessionOptions(

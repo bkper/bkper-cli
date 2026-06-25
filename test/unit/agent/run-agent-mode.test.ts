@@ -1,14 +1,24 @@
 import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import {
+    createExtensionRuntime,
+    VERSION as PI_VERSION,
+    type Extension,
+    type ExtensionAPI,
+} from '@earendil-works/pi-coding-agent';
 import { getKeybindings, KeybindingsManager, setKeybindings } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
-import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import {
     applyBkperSessionKeybindings,
+    BKPER_AGENT_BUILTINS_EXTENSION_NAME,
+    BKPER_AGENT_BUILTINS_EXTENSION_PATH,
     BkperInteractiveMode,
     createStartupSessionManager,
     installBkperSessionKeybindings,
+    isBkperAgentVerboseDiagnosticsEnabled,
+    normalizeBkperAgentExtensionErrors,
+    normalizeBkperAgentExtensions,
+    registerBkperAgentBuiltins,
     registerBkperAgentStartupExtension,
     restorePersistedSessionOptions,
     runAgentMode,
@@ -79,6 +89,25 @@ function renderStartupHeaderWithKeybindings(factory: StartupHeaderFactory): stri
     }
 }
 
+function createLoadedExtension(extensionPath: string): Extension {
+    return {
+        path: extensionPath,
+        resolvedPath: extensionPath,
+        sourceInfo: {
+            path: extensionPath,
+            source: extensionPath.startsWith('<inline:') ? 'inline' : 'local',
+            scope: 'temporary',
+            origin: 'top-level',
+        },
+        handlers: new Map(),
+        tools: new Map(),
+        messageRenderers: new Map(),
+        commands: new Map(),
+        flags: new Map(),
+        shortcuts: new Map(),
+    };
+}
+
 function registerStartupExtension(
     startupMaintenance = sinon.stub().resolves(),
     settingsManager?: {
@@ -111,6 +140,87 @@ function registerStartupExtension(
 }
 
 describe('runAgentMode', function () {
+    it('should register Bkper built-in agent behavior through one internal extension entrypoint', function () {
+        const registeredEvents: string[] = [];
+
+        registerBkperAgentBuiltins({
+            on: ((event: string) => {
+                registeredEvents.push(event);
+            }) as ExtensionAPI['on'],
+        } as ExtensionAPI);
+
+        expect(registeredEvents).to.deep.equal([
+            'before_agent_start',
+            'tool_call',
+            'agent_end',
+            'session_start',
+        ]);
+    });
+
+    it('should give Bkper built-in inline extensions a canonical startup display name', function () {
+        const normalized = normalizeBkperAgentExtensions(
+            {
+                extensions: [
+                    createLoadedExtension('<inline:1>'),
+                    createLoadedExtension('/tmp/user-extension.ts'),
+                ],
+                errors: [],
+                runtime: createExtensionRuntime(),
+            },
+            {verbose: false}
+        );
+
+        expect(normalized.extensions.map(extension => extension.path)).to.deep.equal([
+            BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+            '/tmp/user-extension.ts',
+        ]);
+        expect(normalized.extensions[0]?.path).to.include('bkper-agent-builtins');
+        expect(normalized.extensions[0]?.resolvedPath).to.equal(
+            BKPER_AGENT_BUILTINS_EXTENSION_PATH
+        );
+        expect(normalized.extensions[0]?.sourceInfo.path).to.equal(
+            BKPER_AGENT_BUILTINS_EXTENSION_PATH
+        );
+    });
+
+    it('should show the canonical Bkper built-in extension name in diagnostics', function () {
+        const normalized = normalizeBkperAgentExtensionErrors(
+            [
+                {path: '<inline:1>', error: 'Failed to load extension: boom'},
+                {path: '/tmp/user-extension.ts', error: 'Failed to load extension: user boom'},
+            ],
+            {verbose: false}
+        );
+
+        expect(normalized).to.deep.equal([
+            {
+                path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+                error: `${BKPER_AGENT_BUILTINS_EXTENSION_NAME} failed to start.`,
+            },
+            {path: '/tmp/user-extension.ts', error: 'Failed to load extension: user boom'},
+        ]);
+    });
+
+    it('should enable verbose diagnostics through Bkper or Pi debug environment variables', function () {
+        expect(isBkperAgentVerboseDiagnosticsEnabled({})).to.equal(false);
+        expect(isBkperAgentVerboseDiagnosticsEnabled({BKPER_AGENT_DEBUG: '1'})).to.equal(true);
+        expect(isBkperAgentVerboseDiagnosticsEnabled({PI_VERBOSE: '1'})).to.equal(true);
+    });
+
+    it('should keep internal inline extension details in verbose diagnostics', function () {
+        const normalized = normalizeBkperAgentExtensionErrors(
+            [{path: '<inline:1>', error: 'Failed to load extension: boom'}],
+            {verbose: true}
+        );
+
+        expect(normalized).to.deep.equal([
+            {
+                path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
+                error: `${BKPER_AGENT_BUILTINS_EXTENSION_NAME} failed to start.\nDetails: <inline:1> Failed to load extension: boom`,
+            },
+        ]);
+    });
+
     it('should replace the Pi startup header with basic Bkper hints and start maintenance once', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;
