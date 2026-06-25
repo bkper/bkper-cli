@@ -8,9 +8,30 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-function resolveDocPath(filename: string): string {
+function resolveFirstExistingPath(candidates: string[]): string {
+    for (const candidate of candidates) {
+        if (existsSync(candidate)) {
+            return candidate;
+        }
+    }
+    return candidates[0];
+}
+
+function resolveDocsIndexPath(filename: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(thisDir, '..', 'docs', filename);
+    return resolveFirstExistingPath([
+        path.resolve(thisDir, '..', 'docs', filename),
+        path.resolve(thisDir, '..', '..', 'docs', filename),
+    ]);
+}
+
+function resolveReferenceDocPath(filename: string): string {
+    const thisDir = path.dirname(fileURLToPath(import.meta.url));
+    return resolveFirstExistingPath([
+        path.resolve(thisDir, '..', 'docs', filename),
+        path.resolve(thisDir, '..', '..', 'skill', 'references', filename),
+        path.resolve(thisDir, '..', '..', 'docs', filename),
+    ]);
 }
 
 function resolvePiPackageRoot(): string {
@@ -96,8 +117,9 @@ function buildToolPromptSection(): string {
 }
 
 export function getBkperAgentSystemPrompt(): string {
-    const coreConceptsPath = resolveDocPath('core-concepts.md');
-    const indexPath = resolveDocPath('index.md');
+    const coreConceptsPath = resolveReferenceDocPath('core-concepts.md');
+    const indexPath = resolveDocsIndexPath('index.md');
+    const referenceDocsDir = path.dirname(coreConceptsPath);
     const piRoot = resolvePiPackageRoot();
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');
@@ -121,6 +143,11 @@ Base all reasoning about Bkper data — books, accounts, groups, transactions, b
 
 \`\`\`
 ${indexPath}
+\`\`\`
+Reference docs named by the index are available in:
+
+\`\`\`
+${referenceDocsDir}
 \`\`\`
 - ALWAYS read index docs and follow references to specific docs before running any bkper CLI command.
 - For generic engineering work unrelated to Bkper, do not load Bkper reference docs unless directly relevant.

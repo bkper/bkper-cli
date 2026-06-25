@@ -107,17 +107,17 @@ describe('core concepts preload', function () {
         ).to.equal('none');
     });
 
-    it('should resolve docs from source module directories', function () {
+    it('should resolve reference docs from source module directories', function () {
         const rootDir = mkdtempSync(path.join(tmpdir(), 'bkper-cli-source-'));
         const moduleDir = path.join(rootDir, 'src', 'agent');
-        const docsDir = path.join(rootDir, 'docs');
+        const referencesDir = path.join(rootDir, 'skill', 'references');
         mkdirSync(moduleDir, {recursive: true});
-        mkdirSync(docsDir, {recursive: true});
-        writeFileSync(path.join(docsDir, 'core-concepts.md'), '# Core Concepts');
+        mkdirSync(referencesDir, {recursive: true});
+        writeFileSync(path.join(referencesDir, 'core-concepts.md'), '# Core Concepts');
 
         const docPath = resolveBkperDocPathFromModuleDir(moduleDir, 'core-concepts.md');
 
-        expect(docPath).to.equal(path.join(docsDir, 'core-concepts.md'));
+        expect(docPath).to.equal(path.join(referencesDir, 'core-concepts.md'));
     });
 
     it('should resolve docs from built module directories', function () {

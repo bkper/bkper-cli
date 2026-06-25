@@ -5,7 +5,15 @@ import { expect } from '../helpers/test-setup.js';
 
 function resolveCoreConceptsPath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(thisDir, '..', '..', '..', 'docs', 'core-concepts.md');
+    return path.resolve(
+        thisDir,
+        '..',
+        '..',
+        '..',
+        'skill',
+        'references',
+        'core-concepts.md'
+    );
 }
 
 describe('agent core concepts', function () {

@@ -138,7 +138,7 @@ Pi-specific extensions are loaded from Pi extension folders (for example `.pi/ex
 npx skills add bkper/bkper-cli --skill bkper-cli
 ```
 
-The skill is generated from this repository's Bkper CLI agent configuration and helps external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
+The skill is maintained in this repository and helps external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
 
 For general Bkper Q&A without local tool access, use the published docs and [`llms.txt`](https://bkper.com/llms.txt) instead.
 
@@ -156,7 +156,7 @@ bkper transaction list -b <bookId> -q 'on:2025' --format csv
 bkper balance list -b <bookId> -q 'on:2025-12-31' --format csv
 ```
 
-→ [Full Data Management reference](https://github.com/bkper/bkper-cli/blob/main/docs/data-management.md)
+→ [Full Data Management reference](https://github.com/bkper/bkper-cli/blob/main/skill/references/data-management.md)
 
 ---
 
@@ -175,7 +175,7 @@ bkper app logs my-app --level error
 
 `bkper app logs` reads recent app logs kept for 15 days. Run it inside an app directory, or pass an app id like `bkper app logs my-app`. Use `--level warn` or `--level error` to focus on requests with warnings or errors. The default output is human-readable, and JSON is available with `--json`.
 
-→ [Full App Management reference](https://github.com/bkper/bkper-cli/blob/main/docs/app-management.md)
+→ [Full App Management reference](https://github.com/bkper/bkper-cli/blob/main/skill/references/app-management.md)
 
 ---
 
@@ -214,4 +214,4 @@ Bkper.setConfig({
 
 -   [Developer Docs][Developer Docs] — full platform documentation
 -   [App Template][App Template] — scaffold a Bkper app in minutes
--   [Full CLI reference](https://github.com/bkper/bkper-cli/tree/main/docs) — data management, app building, taxes, and financial statements
+-   [Full CLI reference](https://github.com/bkper/bkper-cli/tree/main/skill/references) — data management, app building, taxes, and financial statements

@@ -5,7 +5,15 @@ import { expect } from '../helpers/test-setup.js';
 
 function resolveBkperApiTypesDocPath(): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(thisDir, '..', '..', '..', 'docs', 'bkper-api-types.md');
+    return path.resolve(
+        thisDir,
+        '..',
+        '..',
+        '..',
+        'skill',
+        'references',
+        'bkper-api-types.md'
+    );
 }
 
 function readBkperApiTypesDoc(): string {

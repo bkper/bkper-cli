@@ -1,6 +1,8 @@
 # Bkper Docs Index
 
-Reference docs for Bkper tasks. Load only the specific doc(s) relevant to the task — do not load all of them. All docs are in the same directory as this index.
+Reference docs for Bkper tasks. Load only the specific doc(s) relevant to the task — do not load all of them.
+
+In source checkouts, reference docs live in `skill/references/`. In packaged CLI builds, they are copied into the same `lib/docs/` directory as this index.
 
 - **data-management.md** — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, per-account balance queries, query operators (on:, after:, before:, account:, group:), output formats (table/json/csv), human-review Bkper UI links, batch operations via stdin/piping, collections.
 - **app-management.md** — CLI reference for building and deploying Bkper apps: dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference (identity, branding, events, menu integration, deployment).

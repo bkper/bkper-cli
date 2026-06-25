@@ -28,7 +28,7 @@ const DOCS: readonly DocSpec[] = [
 
 function resolveOutputDir(): string {
     const scriptDir = path.dirname(fileURLToPath(import.meta.url));
-    return path.resolve(scriptDir, '..', 'docs');
+    return path.resolve(scriptDir, '..', 'skill', 'references');
 }
 
 export function validateMarkdown(markdown: string, spec: DocSpec): void {

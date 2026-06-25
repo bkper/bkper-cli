@@ -348,7 +348,7 @@ bkper balance list -b abc123 -q "group:'<balanceSheetRootGroup>' before:2026-01-
 bkper balance list -b abc123 -q "group:'<profitAndLossRootGroup>' after:2025-01-01 before:2026-01-01"
 ```
 
-For the full balance sheet and P&L workflow, see the [Financial Statements guide](https://github.com/bkper/bkper-cli/blob/main/docs/financial-statements.md).
+For the full balance sheet and P&L workflow, see the [Financial Statements guide](https://github.com/bkper/bkper-cli/blob/main/skill/references/financial-statements.md).
 
 ---
 

@@ -149,20 +149,18 @@ Derived resources are read-only by default. Do not edit them during normal docum
 
 | Derived path | Canonical source | Regenerate only when explicitly requested |
 | --- | --- | --- |
-| `docs/core-concepts.md` | `https://bkper.com/docs/core-concepts.md` | `bun run sync:docs` |
-| `docs/bkper-js.md` | `https://bkper.com/docs/api/bkper-js.md` | `bun run sync:docs` |
-| `docs/bkper-api-types.md` | `https://bkper.com/docs/api/bkper-api-types.md` | `bun run sync:docs` |
-| `docs/app-building.md` | `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
-| `lib/docs/**` | `docs/*.md` + `README.md` | `bun run build:copy-docs` or full build |
-| `skill/SKILL.md` | `src/agent/system-prompt.ts` | `bun run generate:skill` |
-| `skill/references/**` | `docs/*.md` | `bun run generate:skill` |
+| `skill/references/core-concepts.md` | `https://bkper.com/docs/core-concepts.md` | `bun run sync:docs` |
+| `skill/references/bkper-js.md` | `https://bkper.com/docs/api/bkper-js.md` | `bun run sync:docs` |
+| `skill/references/bkper-api-types.md` | `https://bkper.com/docs/api/bkper-api-types.md` | `bun run sync:docs` |
+| `skill/references/app-building.md` | `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
+| `lib/docs/**` | `skill/references/*.md` + `docs/index.md` + `README.md` | `bun run build:copy-docs` or full build |
 
 Notes:
 
-- For docs changes in this repository, edit the canonical local docs only: `README.md`, `docs/app-management.md`, `docs/data-management.md`, `docs/financial-statements.md`, `docs/index.md`, or `docs/taxes.md` unless the user explicitly requests a sync.
-- `bun run build` runs `prebuild`, which executes `bun sync:docs` and `bun generate:skill`. For documentation-only work or tasks that should not refresh derived resources, do not run full `bun run build` unless the user explicitly requested regeneration. Use targeted checks such as `bun run build:compile` or `bun run test:unit` when appropriate, and report that full build was skipped to avoid derived-resource churn.
+- For docs changes in this repository, edit the canonical local docs only: `README.md`, `docs/index.md`, `skill/SKILL.md`, `skill/references/accountant-recommendations.md`, `skill/references/app-management.md`, `skill/references/data-management.md`, `skill/references/financial-statements.md`, or `skill/references/taxes.md` unless the user explicitly requests a sync.
+- The external agent skill is maintained directly in `skill/SKILL.md`. The canonical reference docs live in `skill/references/**`; `docs/index.md` is only the built-in agent routing index.
+- `bun run build` runs `prebuild`, which executes `bun sync:docs`. For documentation-only work or tasks that should not refresh synced docs, do not run full `bun run build` unless the user explicitly requested regeneration. Use targeted checks such as `bun run build:compile` or `bun run test:unit` when appropriate, and report that full build was skipped to avoid derived-resource churn.
 - If a synced doc is stale or wrong, update the source in `bkper-mkt` docs first, then ask before running `bun run sync:docs` here.
-- If the skill output is stale, update `src/agent/system-prompt.ts` or the relevant canonical docs first, then ask before running `bun run generate:skill`.
 
 ## Agent Workflow Guardrails
 
@@ -198,9 +196,9 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 
 ### Agent docs maintenance
 
-`docs/index.md` is the routing index for the Bkper agent system prompt. The system prompt points to it for task routing — it is the map that tells the agent which doc to read for which intent.
+`docs/index.md` is the routing index for the Bkper agent system prompt. The system prompt points to it for task routing — it is the map that tells the agent which reference doc to read for which intent.
 
-When adding, renaming, or significantly restructuring docs in `docs/`, update `docs/index.md` in the same commit. Keep index entries intent-descriptive and concise.
+When adding, renaming, or significantly restructuring docs in `skill/references/`, update `docs/index.md` in the same commit. Keep index entries intent-descriptive and concise.
 
 Before pushing code changes to `main`, always run:
 

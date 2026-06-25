@@ -38,6 +38,7 @@ type ToolCallEventLike = {
 export function resolveBkperDocPathFromModuleDir(moduleDir: string, filename: string): string {
     const candidates = [
         path.resolve(moduleDir, '..', 'docs', filename),
+        path.resolve(moduleDir, '..', '..', 'skill', 'references', filename),
         path.resolve(moduleDir, '..', '..', 'docs', filename),
     ];
 
