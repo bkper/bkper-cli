@@ -20,12 +20,12 @@ const SYSTEM_PROMPT_PATH = path.join(
 );
 const SKILLS_REPO = path.resolve(CLI_ROOT, '..', 'skills');
 const SKILLS_DIR = path.join(SKILLS_REPO, 'skills');
-const SKILL_DIR = path.join(SKILLS_DIR, 'bkper');
+const SKILL_DIR = path.join(SKILLS_DIR, 'bkper-cli');
 const REFERENCES_DIR = path.join(SKILL_DIR, 'references');
 
-const SKILL_NAME = 'bkper';
+const SKILL_NAME = 'bkper-cli';
 const SKILL_DESCRIPTION =
-    'Comprehensive Bkper development skill covering CLI usage, SDK code (bkper-js), data management, financial reporting, app development, and support. Use for any Bkper-related task including books, accounts, transactions, groups, balances, queries, apps, automations, or integrations.';
+    'Use Bkper CLI safely from external coding agents. Covers Bkper data management, app development, SDK references, financial reporting workflows, and guardrails for tool-using agents.';
 
 async function readSystemPromptSource(): Promise<string> {
     return readFile(SYSTEM_PROMPT_PATH, 'utf8');
@@ -49,6 +49,23 @@ function stripToolSection(promptContent: string): string {
         .trim();
 }
 
+function buildSkillPurposeSection(): string {
+    return `## Skill Purpose
+
+This skill is for external coding-agent harnesses — Claude Code, Codex, OpenCode, OpenClaw, Hermes Agent, and similar tools — when they can use local tools and shell commands.
+
+Use it to help those agents operate the \`bkper\` CLI safely and understand the Bkper model while doing so.
+
+For operational tasks against live Bkper data, recommend that the user install and authenticate the CLI first:
+
+\`\`\`bash
+npm i -g bkper
+bkper auth login
+\`\`\`
+
+For general Bkper questions without local tool access, prefer published Bkper Markdown docs and \`llms.txt\` instead of relying on this skill alone.`;
+}
+
 function buildRequiredReadingSection(): string {
     return `## Required Reading
 
@@ -67,7 +84,7 @@ function buildReferenceRoutingSection(): string {
     return `## Reference Routing
 
 - Read local \`AGENTS.md\`, nearby files, and existing tests first for project-specific work.
-- For any Bkper task — CLI usage, SDK code, data management, or financial reports — read the docs index and then load the specific doc(s) it points to based on the task:
+- For any Bkper CLI or adjacent development task — CLI usage, SDK code, data management, or financial reports — read the docs index and then load the specific doc(s) it points to based on the task:
 
 \`\`\`
 references/index.md
@@ -92,9 +109,9 @@ description: ${SKILL_DESCRIPTION}
 
     const footer = `---
 
-> **Note:** This skill is auto-generated from the bkper-cli agent configuration. For the fully enforced interactive experience with conditional core-concepts preloading, use \`bkper agent\`.`;
+> **Note:** This skill is auto-generated from the Bkper CLI agent configuration for use in external coding-agent harnesses.`;
 
-    return `${frontmatter}\n\n${coreContent}\n\n${buildRequiredReadingSection()}\n\n${buildReferenceRoutingSection()}\n\n${footer}\n`;
+    return `${frontmatter}\n\n${coreContent}\n\n${buildSkillPurposeSection()}\n\n${buildRequiredReadingSection()}\n\n${buildReferenceRoutingSection()}\n\n${footer}\n`;
 }
 
 async function copyDocs(): Promise<string[]> {
@@ -118,10 +135,10 @@ async function removeOldSkills(): Promise<string[]> {
         if (!entry.isDirectory()) {
             continue;
         }
-        if (entry.name === 'bkper') {
+        if (entry.name === SKILL_NAME) {
             continue;
         }
-        if (!entry.name.startsWith('bkper-')) {
+        if (entry.name !== 'bkper' && !entry.name.startsWith('bkper-')) {
             continue;
         }
         const oldDir = path.join(SKILLS_DIR, entry.name);
