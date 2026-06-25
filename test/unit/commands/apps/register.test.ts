@@ -20,11 +20,13 @@ describe('CLI - app command registration', function () {
         registerAppCommands(program);
 
         const app = findCommand(program, 'app');
+        const get = findCommand(app, 'get');
         const deploy = findCommand(app, 'deploy');
         const undeploy = findCommand(app, 'undeploy');
         const dev = findCommand(app, 'dev');
         const logs = findCommand(app, 'logs');
 
+        expect(get.registeredArguments.map(argument => argument.name())).to.deep.equal(['appId']);
         expect(logs.registeredArguments.map(argument => argument.name())).to.deep.equal(['appId']);
         expect(optionLongNames(deploy)).to.not.include('--events');
         expect(optionLongNames(undeploy)).to.not.include('--events');

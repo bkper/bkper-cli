@@ -114,6 +114,10 @@ bkper app build
 # Sync configuration and deploy to production
 bkper app sync && bkper app deploy
 
+# Inspect a registered app by id
+bkper app get <appId>
+bkper app get <appId> --json
+
 # Deploy to preview environment (URL: https://{appId}-preview.bkper.app)
 bkper app deploy --preview
 

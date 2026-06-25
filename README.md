@@ -154,6 +154,7 @@ Build, deploy, and manage Bkper apps.
 
 ```bash
 bkper app init my-app
+bkper app get my-app --json
 bkper app dev
 bkper app sync && bkper app deploy
 bkper app logs --last 50

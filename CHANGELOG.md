@@ -4,6 +4,8 @@
 
 ### **June 2026**
 
+-   **App Development**
+    -   Added `bkper app get <appId>` to inspect a registered app by ID
 -   **Authentication**
     -   `bkper auth login` now uses a Google verification URL and one-time code, so login works smoothly over SSH, in containers, and anywhere a localhost callback is inconvenient
     -   Removed the local callback server OAuth flow from CLI login

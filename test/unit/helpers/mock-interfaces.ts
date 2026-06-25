@@ -237,6 +237,7 @@ export interface MockBkper {
     getBooks?(): Promise<MockBook[]>;
     getBook?(id: string): Promise<MockBook>;
     getApps?(): Promise<MockApp[]>;
+    getApp?(id: string): Promise<MockApp>;
     getCollections?(): Promise<any[]>;
     createCollection?(name: string): Promise<any>;
     getConfig?(): any;

@@ -5,6 +5,7 @@ import { setupBkper } from '../../bkper-factory.js';
 import { renderListResult, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import {
+    getApp,
     listAppsFormatted,
     syncApp,
     deployApp,
@@ -35,6 +36,16 @@ export function registerAppCommands(program: Command): void {
                 },
                 { skipSetup: true }
             )()
+        );
+
+    appCommand
+        .command('get <appId>')
+        .description('Get an app by ID')
+        .action((appId: string) =>
+            withAction('getting app', async format => {
+                const app = await getApp(appId);
+                renderItem(app.json(), format);
+            })()
         );
 
     appCommand
