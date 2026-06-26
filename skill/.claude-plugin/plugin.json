@@ -1,0 +1,22 @@
+{
+    "name": "bkper-cli",
+    "description": "Adds Bkper CLI guidance for safe Bkper data, reporting, app development, and accounting-support workflows in Claude Code.",
+    "version": "4.17.3",
+    "author": {
+        "name": "Bkper",
+        "email": "support@bkper.com"
+    },
+    "homepage": "https://bkper.com/docs",
+    "repository": "https://github.com/bkper/bkper-cli.git",
+    "license": "Apache-2.0",
+    "keywords": [
+        "bkper",
+        "accounting",
+        "finance",
+        "cli",
+        "agent-skills"
+    ],
+    "skills": [
+        "./"
+    ]
+}

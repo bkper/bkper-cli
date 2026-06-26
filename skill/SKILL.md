@@ -1,6 +1,6 @@
 ---
 name: bkper-cli
-description: Use for any Bkper or adjacent accounting-support task — CLI usage, SDK code, data management, financial reports, taxes, accountant recommendations, app development, or safe bkper CLI operations from external coding agents.
+description: Provides Bkper CLI guidance for Bkper and adjacent accounting-support tasks — CLI usage, SDK code, data management, financial reports, taxes, accountant recommendations, app development, and safe bkper CLI operations from external coding agents.
 ---
 
 # Bkper Context
