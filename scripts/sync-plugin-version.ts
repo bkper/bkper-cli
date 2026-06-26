@@ -5,8 +5,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 export type JsonRecord = Record<string, unknown>;
 
 interface SyncResult {
-    pluginManifest: JsonRecord;
-    marketplaceManifest: JsonRecord;
+    claudePluginManifest: JsonRecord;
+    claudeMarketplaceManifest: JsonRecord;
+    codexPluginManifest: JsonRecord;
 }
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -44,7 +45,9 @@ function normalizeMarketplacePluginEntry(
     }
 
     const isMatchingPlugin =
-        entry.name === pluginName || entry.source === './skill';
+        entry.name === pluginName ||
+        entry.source === './' ||
+        entry.source === './skill';
 
     if (!isMatchingPlugin) {
         return entry;
@@ -53,28 +56,44 @@ function normalizeMarketplacePluginEntry(
     return removeVersion(entry);
 }
 
-export function syncClaudePluginVersions(
+export function syncPluginVersions(
     packageVersion: string,
-    pluginManifest: JsonRecord,
-    marketplaceManifest: JsonRecord
+    claudePluginManifest: JsonRecord,
+    claudeMarketplaceManifest: JsonRecord,
+    codexPluginManifest: JsonRecord
 ): SyncResult {
-    const pluginName = requireString(pluginManifest.name, 'plugin manifest name');
-    const plugins = marketplaceManifest.plugins;
+    const pluginName = requireString(
+        claudePluginManifest.name,
+        'Claude plugin manifest name'
+    );
+    const codexPluginName = requireString(
+        codexPluginManifest.name,
+        'Codex plugin manifest name'
+    );
+    const plugins = claudeMarketplaceManifest.plugins;
+
+    if (codexPluginName !== pluginName) {
+        throw new Error('Claude and Codex plugin names must match');
+    }
 
     if (!Array.isArray(plugins)) {
-        throw new Error('marketplace manifest plugins must be an array');
+        throw new Error('Claude marketplace manifest plugins must be an array');
     }
 
     return {
-        pluginManifest: {
-            ...pluginManifest,
+        claudePluginManifest: {
+            ...claudePluginManifest,
             version: packageVersion,
         },
-        marketplaceManifest: {
-            ...marketplaceManifest,
+        claudeMarketplaceManifest: {
+            ...claudeMarketplaceManifest,
             plugins: plugins.map(entry =>
                 normalizeMarketplacePluginEntry(entry, pluginName)
             ),
+        },
+        codexPluginManifest: {
+            ...codexPluginManifest,
+            version: packageVersion,
         },
     };
 }
@@ -97,36 +116,49 @@ async function main(): Promise<void> {
         '..'
     );
     const packageJsonPath = path.join(rootDir, 'package.json');
-    const pluginManifestPath = path.join(
+    const claudePluginManifestPath = path.join(
         rootDir,
-        'skill',
         '.claude-plugin',
         'plugin.json'
     );
-    const marketplaceManifestPath = path.join(
+    const claudeMarketplaceManifestPath = path.join(
         rootDir,
         '.claude-plugin',
         'marketplace.json'
     );
+    const codexPluginManifestPath = path.join(
+        rootDir,
+        '.codex-plugin',
+        'plugin.json'
+    );
 
     const packageJson = await readJsonRecord(packageJsonPath);
     const packageVersion = requireString(packageJson.version, 'package version');
-    const pluginManifest = await readJsonRecord(pluginManifestPath);
-    const marketplaceManifest = await readJsonRecord(marketplaceManifestPath);
-    const result = syncClaudePluginVersions(
+    const claudePluginManifest = await readJsonRecord(claudePluginManifestPath);
+    const claudeMarketplaceManifest = await readJsonRecord(
+        claudeMarketplaceManifestPath
+    );
+    const codexPluginManifest = await readJsonRecord(codexPluginManifestPath);
+    const result = syncPluginVersions(
         packageVersion,
-        pluginManifest,
-        marketplaceManifest
+        claudePluginManifest,
+        claudeMarketplaceManifest,
+        codexPluginManifest
     );
 
     await writeFile(
-        pluginManifestPath,
-        formatJson(result.pluginManifest),
+        claudePluginManifestPath,
+        formatJson(result.claudePluginManifest),
         'utf8'
     );
     await writeFile(
-        marketplaceManifestPath,
-        formatJson(result.marketplaceManifest),
+        claudeMarketplaceManifestPath,
+        formatJson(result.claudeMarketplaceManifest),
+        'utf8'
+    );
+    await writeFile(
+        codexPluginManifestPath,
+        formatJson(result.codexPluginManifest),
         'utf8'
     );
 }

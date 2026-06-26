@@ -1,0 +1,46 @@
+{
+    "name": "bkper-cli",
+    "version": "4.17.3",
+    "description": "Adds Bkper CLI guidance for safe Bkper data, reporting, app development, and accounting-support workflows in Codex.",
+    "author": {
+        "name": "Bkper",
+        "email": "support@bkper.com",
+        "url": "https://bkper.com"
+    },
+    "homepage": "https://bkper.com/docs",
+    "repository": "https://github.com/bkper/bkper-cli.git",
+    "license": "Apache-2.0",
+    "keywords": [
+        "bkper",
+        "accounting",
+        "finance",
+        "cli",
+        "agent-skills",
+        "codex"
+    ],
+    "skills": "./skill/",
+    "interface": {
+        "displayName": "Bkper CLI",
+        "shortDescription": "Safe Bkper CLI guidance for Codex",
+        "longDescription": "Use Bkper's accounting model, reference docs, and CLI guardrails from Codex when working with Bkper data, reporting, taxes, apps, SDKs, and financial workflows.",
+        "developerName": "Bkper",
+        "category": "Productivity",
+        "capabilities": [
+            "Read",
+            "Write"
+        ],
+        "websiteURL": "https://bkper.com",
+        "privacyPolicyURL": "https://bkper.com/privacy",
+        "termsOfServiceURL": "https://bkper.com/terms",
+        "defaultPrompt": [
+            "Use the Bkper CLI plugin to explain the Bkper accounting model.",
+            "Use the Bkper CLI plugin to help me query transactions safely."
+        ],
+        "brandColor": "#5889E4",
+        "composerIcon": "./assets/bkper-cli-logo.png",
+        "logo": "./assets/bkper-cli-logo.png",
+        "screenshots": [
+            "./assets/bkper-agent-cli.png"
+        ]
+    }
+}

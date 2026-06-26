@@ -132,20 +132,26 @@ Pi-specific extensions are loaded from Pi extension folders (for example `.pi/ex
 
 ### Other agent harnesses
 
-`bkper agent` is the first-party Bkper harness. If you prefer Claude Code, install the Bkper CLI plugin from this repository's marketplace:
+`bkper agent` is the first-party Bkper harness. If you prefer Codex, add this repository as a plugin marketplace, then install the `bkper-cli` plugin from Codex's plugin directory:
+
+```bash
+codex plugin marketplace add bkper/bkper-cli
+```
+
+If you prefer Claude Code, install the Bkper CLI plugin from this repository's Claude marketplace:
 
 ```text
 /plugin marketplace add bkper/bkper-cli
 /plugin install bkper-cli@bkper
 ```
 
-For other coding agents — Codex, OpenCode, OpenClaw, Hermes Agent, Cursor, or similar tools — install the Bkper CLI skill in that agent environment:
+For other coding agents — OpenCode, OpenClaw, Hermes Agent, Cursor, or similar tools — install the Bkper CLI skill in that agent environment:
 
 ```bash
 npx skills add bkper/bkper-cli --skill bkper-cli
 ```
 
-The plugin and skill are maintained in this repository and help external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
+The plugins and skill are maintained in this repository and help external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
 
 For general Bkper Q&A without local tool access, use the published docs and [`llms.txt`](https://bkper.com/llms.txt) instead.
 

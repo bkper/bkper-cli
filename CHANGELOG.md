@@ -10,6 +10,7 @@
     -   `bkper auth login` now uses a Google verification URL and one-time code, so login works smoothly over SSH, in containers, and anywhere a localhost callback is inconvenient
     -   Removed the local callback server OAuth flow from CLI login
 -   **Agent Integrations**
+    -   Added Codex plugin marketplace metadata for installing the Bkper CLI skill from this repository
     -   Added Claude Code plugin marketplace metadata for installing the Bkper CLI skill from this repository
 -   **Data Management**
     -   Added `file list` with `--limit` and `--cursor` for paginated Book file discovery

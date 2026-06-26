@@ -1,9 +1,9 @@
 import { expect } from '../helpers/test-setup.js';
-import { syncClaudePluginVersions } from '../../../scripts/sync-plugin-version.js';
+import { syncPluginVersions } from '../../../scripts/sync-plugin-version.js';
 
-describe('sync Claude plugin version metadata', function () {
-    it('should align the skill plugin version and omit duplicate marketplace plugin versions', function () {
-        const result = syncClaudePluginVersions(
+describe('sync plugin version metadata', function () {
+    it('should align plugin versions and omit duplicate marketplace versions', function () {
+        const result = syncPluginVersions(
             '5.0.0',
             {
                 name: 'bkper-cli',
@@ -15,7 +15,7 @@ describe('sync Claude plugin version metadata', function () {
                 plugins: [
                     {
                         name: 'bkper-cli',
-                        source: './skill',
+                        source: './',
                         version: '4.17.3',
                     },
                     {
@@ -24,14 +24,20 @@ describe('sync Claude plugin version metadata', function () {
                         version: '1.0.0',
                     },
                 ],
+            },
+            {
+                name: 'bkper-cli',
+                version: '4.17.3',
+                description: 'Codex plugin description',
             }
         );
 
-        expect(result.pluginManifest.version).to.equal('5.0.0');
-        expect(result.marketplaceManifest.plugins).to.deep.equal([
+        expect(result.claudePluginManifest.version).to.equal('5.0.0');
+        expect(result.codexPluginManifest.version).to.equal('5.0.0');
+        expect(result.claudeMarketplaceManifest.plugins).to.deep.equal([
             {
                 name: 'bkper-cli',
-                source: './skill',
+                source: './',
             },
             {
                 name: 'other-plugin',
@@ -39,5 +45,16 @@ describe('sync Claude plugin version metadata', function () {
                 version: '1.0.0',
             },
         ]);
+    });
+
+    it('should reject mismatched Claude and Codex plugin names', function () {
+        expect(() =>
+            syncPluginVersions(
+                '5.0.0',
+                {name: 'bkper-cli'},
+                {plugins: []},
+                {name: 'other-plugin'}
+            )
+        ).to.throw('Claude and Codex plugin names must match');
     });
 });

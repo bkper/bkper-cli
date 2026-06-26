@@ -4,11 +4,13 @@
         "name": "Bkper",
         "email": "support@bkper.com"
     },
-    "description": "Claude Code plugins for Bkper workflows.",
+    "metadata": {
+        "description": "Claude Code plugins for Bkper workflows."
+    },
     "plugins": [
         {
             "name": "bkper-cli",
-            "source": "./skill",
+            "source": "./",
             "description": "Adds Bkper CLI guidance for safe Bkper data, reporting, app development, and accounting-support workflows in Claude Code.",
             "author": {
                 "name": "Bkper",
@@ -23,7 +25,8 @@
                 "finance",
                 "cli",
                 "agent-skills"
-            ]
+            ],
+            "category": "productivity"
         }
     ]
 }

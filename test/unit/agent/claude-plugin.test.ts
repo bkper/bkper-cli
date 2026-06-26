@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
@@ -20,7 +21,7 @@ interface PluginManifest {
     repository: string;
     license: string;
     keywords: string[];
-    skills: string[];
+    skills: string | string[];
 }
 
 interface MarketplaceManifest {
@@ -29,7 +30,10 @@ interface MarketplaceManifest {
         name: string;
         email?: string;
     };
-    description: string;
+    description?: string;
+    metadata?: {
+        description?: string;
+    };
     plugins: Array<{
         name: string;
         source: string;
@@ -68,6 +72,13 @@ async function readPackageJson(filePath: string): Promise<PackageJson> {
     };
 }
 
+function isStringOrStringArray(value: unknown): value is string | string[] {
+    return (
+        typeof value === 'string' ||
+        (Array.isArray(value) && value.every(item => typeof item === 'string'))
+    );
+}
+
 function toPluginManifest(manifest: Record<string, unknown>): PluginManifest {
     if (
         typeof manifest.name !== 'string' ||
@@ -80,8 +91,7 @@ function toPluginManifest(manifest: Record<string, unknown>): PluginManifest {
         typeof manifest.license !== 'string' ||
         !Array.isArray(manifest.keywords) ||
         !manifest.keywords.every(keyword => typeof keyword === 'string') ||
-        !Array.isArray(manifest.skills) ||
-        !manifest.skills.every(skillPath => typeof skillPath === 'string')
+        !isStringOrStringArray(manifest.skills)
     ) {
         throw new Error('Invalid Claude Code plugin manifest shape');
     }
@@ -96,7 +106,9 @@ function toMarketplaceManifest(
         typeof manifest.name !== 'string' ||
         !isRecord(manifest.owner) ||
         typeof manifest.owner.name !== 'string' ||
-        typeof manifest.description !== 'string' ||
+        (manifest.description !== undefined &&
+            typeof manifest.description !== 'string') ||
+        (manifest.metadata !== undefined && !isRecord(manifest.metadata)) ||
         !Array.isArray(manifest.plugins)
     ) {
         throw new Error('Invalid Claude Code marketplace manifest shape');
@@ -114,15 +126,27 @@ function toMarketplaceManifest(
         }
     }
 
+    if (
+        isRecord(manifest.metadata) &&
+        manifest.metadata.description !== undefined &&
+        typeof manifest.metadata.description !== 'string'
+    ) {
+        throw new Error('Invalid Claude Code marketplace metadata shape');
+    }
+
     return manifest as unknown as MarketplaceManifest;
 }
 
 describe('Claude Code plugin publishing metadata', function () {
     const packageJsonPath = path.resolve('package.json');
-    const pluginManifestPath = path.resolve('skill/.claude-plugin/plugin.json');
+    const pluginManifestPath = path.resolve('.claude-plugin/plugin.json');
+    const legacySkillPluginManifestPath = path.resolve(
+        'skill/.claude-plugin/plugin.json'
+    );
     const marketplaceManifestPath = path.resolve(
         '.claude-plugin/marketplace.json'
     );
+    const canonicalSkillPath = path.resolve('skill/SKILL.md');
 
     async function readPluginManifest(): Promise<PluginManifest> {
         return toPluginManifest(await readJsonRecord(pluginManifestPath));
@@ -143,7 +167,9 @@ describe('Claude Code plugin publishing metadata', function () {
         expect(manifest.license).to.equal(packageJson.license);
         expect(manifest.author.name).to.equal('Bkper');
         expect(manifest.homepage).to.equal('https://bkper.com/docs');
-        expect(manifest.skills).to.deep.equal(['./']);
+        expect(manifest.skills).to.equal('./skill/');
+        expect(existsSync(canonicalSkillPath)).to.equal(true);
+        expect(existsSync(legacySkillPluginManifestPath)).to.equal(false);
         expect(manifest.keywords).to.include.members([
             'bkper',
             'accounting',
@@ -152,21 +178,21 @@ describe('Claude Code plugin publishing metadata', function () {
         ]);
     });
 
-    it('should publish a marketplace entry that points at the skill plugin', async function () {
+    it('should publish a marketplace entry for the repository plugin root', async function () {
         const pluginManifest = await readPluginManifest();
         const marketplace = await readMarketplaceManifest();
 
         expect(marketplace.name).to.equal('bkper');
         expect(marketplace.owner.name).to.equal('Bkper');
-        expect(marketplace.description).to.equal(
+        expect(marketplace.description).to.equal(undefined);
+        expect(marketplace.metadata?.description).to.equal(
             'Claude Code plugins for Bkper workflows.'
         );
-        expect(marketplace).not.to.have.property('metadata');
         expect(marketplace.plugins).to.have.lengthOf(1);
 
         const [plugin] = marketplace.plugins;
         expect(plugin.name).to.equal(pluginManifest.name);
-        expect(plugin.source).to.equal('./skill');
+        expect(plugin.source).to.equal('./');
         expect(plugin.description).to.equal(pluginManifest.description);
         expect(plugin).not.to.have.property('version');
     });
