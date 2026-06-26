@@ -19,7 +19,7 @@
     },
     "type": "module",
     "engines": {
-        "node": ">=18"
+        "node": ">=22.19.0"
     },
     "files": [
         "lib/**/*"

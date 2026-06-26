@@ -12,6 +12,9 @@
 -   **Agent Integrations**
     -   Added Codex plugin marketplace metadata for installing the Bkper CLI skill from this repository
     -   Added Claude Code plugin marketplace metadata for installing the Bkper CLI skill from this repository
+    -   Agent mode now runs through a dedicated child entrypoint for cleaner CLI startup behavior
+-   **Installation**
+    -   Bkper CLI now requires Node.js `>=22.19.0` and shows a clear upgrade message on older Node.js versions
 -   **Data Management**
     -   Added `file list` with `--limit` and `--cursor` for paginated Book file discovery
     -   Added `--limit` and `--cursor` to `transaction list` for explicit one-page fetching while keeping the default full-query behavior

@@ -8,7 +8,7 @@ This guide covers the day-to-day development flow and the release automation pol
 
 ## Development setup
 
--   Node.js: `>=18`
+-   Node.js: `>=22.19.0`
 -   Package manager: `bun`
 
 Install dependencies:
