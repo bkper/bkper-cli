@@ -61,30 +61,30 @@ On first agent launch, type `/login` in the TUI if model access is not configure
 
 For frontier models, an existing [ChatGPT Plus/Pro subscription](https://chatgpt.com/pricing/) with Codex works very well. [Claude subscriptions](https://claude.com/pricing) are also supported if Claude is your preferred frontier model. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
 
-Safe starting prompts:
+### Safe starting prompts:
 
 ```text
-Show me a balance sheet as of today. Use Bkper balance queries, not manual calculations.
+Help me setup a chart of accounts for my business
 ```
 
 ```text
-Show me profit and loss for last month using this book's reporting groups.
+Find possible duplicate transactions from last month
 ```
 
 ```text
-Find possible duplicate transactions from last month. Just show me what you find. Don't change anything yet.
+Review unchecked transactions from this month and suggest what needs attention
 ```
 
 ```text
-Review unchecked transactions from this month and suggest what needs attention. Don't update, post, or check anything yet.
+Show me a balance sheet for my book for last year
 ```
 
 ```text
-Prepare an exploratory tax worksheet for 2025. Ask me to confirm tax groups and accounts first.
+Show me profit and loss for my book for last month
 ```
 
 ```text
-Before making any change in Bkper, explain the exact plan and ask for my confirmation.
+Prepare an exploratory tax worksheet for 2025
 ```
 
 ### Run CLI commands
