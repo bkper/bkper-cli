@@ -63,12 +63,29 @@ For frontier models, a standard ChatGPT Plus/Pro subscription with Codex is a pr
 
 Safe starting prompts:
 
--   `Show me a balance sheet as of today. Use Bkper balance queries, not manual calculations.`
--   `Show me profit and loss for last month using this book's reporting groups.`
--   `Find possible duplicate transactions from last month. Just show me what you find. Don't change anything yet.`
--   `Review unchecked transactions from this month and suggest what needs attention. Don't update, post, or check anything yet.`
--   `Prepare an exploratory tax worksheet for 2025. Ask me to confirm tax groups and accounts first.`
--   `Before making any change in Bkper, explain the exact plan and ask for my confirmation.`
+```text
+Show me a balance sheet as of today. Use Bkper balance queries, not manual calculations.
+```
+
+```text
+Show me profit and loss for last month using this book's reporting groups.
+```
+
+```text
+Find possible duplicate transactions from last month. Just show me what you find. Don't change anything yet.
+```
+
+```text
+Review unchecked transactions from this month and suggest what needs attention. Don't update, post, or check anything yet.
+```
+
+```text
+Prepare an exploratory tax worksheet for 2025. Ask me to confirm tax groups and accounts first.
+```
+
+```text
+Before making any change in Bkper, explain the exact plan and ask for my confirmation.
+```
 
 ### Command mode
 
