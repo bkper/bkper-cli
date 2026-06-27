@@ -1,6 +1,6 @@
 id: bkper-cli
 name: Bkper CLI
-description: Local bridge between Bkper, your terminal, and AI tools. Use the built-in agent, connect external coding agents, run direct CLI commands, manage financial data, and build or deploy Bkper apps.
+description: Use Bkper from your terminal and AI tools. Ask the built-in agent, run CLI commands, manage financial data, and build apps.
 
 logoUrl: https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-cli-logo.svg
 
