@@ -2,29 +2,30 @@
 [App Template]: https://github.com/bkper/bkper-app-template
 [Pi]: https://pi.dev/
 
-A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
+Bkper CLI is the local bridge between **[Bkper](https://bkper.com)**, your terminal, and the AI tools you already use.
 
--   **Interactive mode** — run `bkper` or `bkper agent` to open the Bkper Agent TUI
--   **Command mode** — run `bkper <command>` for explicit CLI workflows, scripts, and automation
+Use it to:
 
-With one tool, you can build and deploy Bkper apps, and manage financial data -- books, accounts, transactions, and balances.
+-   work with Bkper from the built-in interactive agent;
+-   let external agents such as Codex, Claude Code, OpenCode, OpenClaw, Hermes Agent, Cursor, and others use the local `bkper` CLI;
+-   run direct terminal commands for books, transactions, balances, files, apps, scripts, and automations.
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
-## Install & Authenticate
+## Quickstart
 
 ### Prerequisites
 
 -   [Node.js](https://nodejs.org/) >= 22.19.0
 
-### Install (choose one)
-
-```bash tab="bun"
-bun add -g bkper
-```
+### Install
 
 ```bash tab="npm"
 npm i -g bkper
+```
+
+```bash tab="bun"
+bun add -g bkper
 ```
 
 ```bash tab="pnpm"
@@ -41,119 +42,113 @@ yarn global add bkper
 bkper auth login
 ```
 
-`bkper auth login` connects the CLI to your Bkper account. It prints a Google verification URL and one-time code. Open the URL in any browser, enter the code, and the CLI stores credentials locally. When you are done working, run `bkper auth logout` to clear local credentials.
+`bkper auth login` connects the CLI to your Bkper account. The same local authentication can be used by direct CLI commands, the built-in agent, external coding agents, scripts, and local app development.
 
----
-
-## Get started
-
-### Interactive mode (recommended)
+### Start the built-in agent
 
 ```bash
 bkper
 ```
 
-`bkper agent` starts the same interactive experience. Bare `bkper` only opens the TUI in an interactive terminal; in non-interactive contexts it prints CLI help instead.
+On first agent launch, type `/login` in the TUI if model access is not configured yet.
+
+`bkper auth login` connects the CLI to your Bkper account. `/login` connects the interactive agent to an AI/model provider.
+
+For frontier models, a standard ChatGPT Plus/Pro subscription with Codex is a practical starting point. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
-On first launch, type `/login` and select a provider. `/login` connects the agent to an AI model provider; it is separate from `bkper auth login`, which connects the CLI to your Bkper account. We recommend [OpenCode Go](https://opencode.ai/go) for open-weights models and [OpenCode Zen](https://opencode.ai/zen) for frontier models — both give you access to high-quality models with no extra setup.
+---
 
-Good starting prompts:
+## Built-in Bkper Agent
 
-- `What are the main account types in Bkper?`
-- `How do I query transactions using the CLI?`
-- `What files are in this project?`
-- `Help me create a script that lists all accounts in my book`
+The CLI includes a first-party agent harness for working with Bkper from an interactive terminal.
 
-→ See [Interactive Mode](#interactive-mode-powered-by-pi) below for passthrough flags and advanced usage.
+Start with safe, read-only prompts while you learn the workflow:
 
-### Command mode
-
-```bash
-# List your books
-bkper book list
-
-# Show CLI help
-bkper --help
+```text
+Show me a balance sheet as of today. Use Bkper balance queries, not manual calculations.
 ```
 
-Pick a book and create your first transaction:
-
-```bash
-bkper transaction create -b <bookId> --description "Office supplies 123.78"
+```text
+Show me profit and loss for last month using this book's reporting groups.
 ```
 
-> Run `bkper --help` or `bkper <command> --help` for built-in documentation on any command.
+```text
+Find possible duplicate transactions from last month. Just show me what you find. Don't change anything yet.
+```
 
-→ See [Data Management](#data-management) and [App Management](#app-management) below for full command references.
+```text
+Review unchecked transactions from this month and suggest what needs attention. Don't update, post, or check anything yet.
+```
+
+```text
+Prepare an exploratory tax worksheet for 2025. First identify the tax-relevant groups and accounts, ask me to confirm them, and don't apply tax rules unless I provide or approve them.
+```
+
+For changes, ask the agent to explain the exact plan first:
+
+```text
+Before making any change in Bkper, explain the exact plan and ask for my confirmation.
+```
 
 ---
 
-## Interactive Mode (powered by Pi)
+## Use Bkper from your existing agent
 
-Bkper's agent mode is intentionally a **thin wrapper** around [Pi][Pi]:
-
--   Pi provides the core agent runtime and TUI
--   bkper adds Bkper-specific domain context and startup maintenance behavior
-
-### Startup maintenance (non-blocking)
-
-On each agent startup, bkper performs a background CLI auto-update check. Normal command-mode invocations do not auto-update; use `bkper upgrade` when you want to upgrade explicitly.
-
-### Pi passthrough
-
-Use Pi CLI features directly through bkper:
+Install and authenticate the CLI first:
 
 ```bash
-bkper agent <pi-args>
+bkper auth login
 ```
 
-If no Pi arguments are provided, `bkper agent` starts the interactive Bkper Agent experience.
-A bare `bkper` command is a convenience shortcut for the same TUI when run in an interactive terminal.
-If Pi arguments are provided, everything after `bkper agent` is passed through to Pi.
-
-Examples:
-
-```bash
-bkper agent -p "Summarize this repository"
-bkper agent --model openai/gpt-4o -c
-bkper agent install <pi-package-source>
-bkper agent --help
-```
-
-`bkper agent` keeps Bkper defaults (including the Bkper system prompt) unless you explicitly pass `--system-prompt`.
-Use `bkper help agent` for the Bkper CLI command help, and `bkper agent --help` for Pi help.
-
-For all available passthrough flags and commands, see the Pi CLI reference:
-https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent#cli-reference
-
-Pi-specific extensions are loaded from Pi extension folders (for example `.pi/extensions` and `~/.pi/agent/extensions`).
-
-### Other agent harnesses
-
-`bkper agent` is the first-party Bkper harness. If you prefer Codex, add this repository as a plugin marketplace, then install the `bkper-cli` plugin from Codex's plugin directory:
+For Codex, add this repository as a plugin marketplace, then install the `bkper-cli` plugin from Codex's plugin directory:
 
 ```bash
 codex plugin marketplace add bkper/bkper-cli
 ```
 
-If you prefer Claude Code, install the Bkper CLI plugin from this repository's Claude marketplace:
+For Claude Code, install the Bkper CLI plugin from this repository's Claude marketplace:
 
 ```text
 /plugin marketplace add bkper/bkper-cli
 /plugin install bkper-cli@bkper
 ```
 
-For other coding agents — OpenCode, OpenClaw, Hermes Agent, Cursor, or similar tools — install the Bkper CLI skill in that agent environment:
+For Agent Skills-compatible tools:
 
 ```bash
 npx skills add bkper/bkper-cli --skill bkper-cli
 ```
 
-The plugins and skill are maintained in this repository and help external agents use the local `bkper` CLI safely. Install and authenticate the CLI first with `bkper auth login` when the agent needs to read or change live Bkper data.
+These plugins and skills help external agents use the local `bkper` CLI with Bkper context, CLI references, and safety guidance.
 
 For general Bkper Q&A without local tool access, use the published docs and [`llms.txt`](https://bkper.com/llms.txt) instead.
+
+---
+
+## Direct CLI examples
+
+Use direct commands for scripts, exports, automation, and repeatable workflows.
+
+```bash
+# List your books
+bkper book list
+
+# Query transactions
+bkper transaction list -b <bookId> -q 'on:2026-06' --format csv
+
+# Query balances
+bkper balance list -b <bookId> -q 'on:2026-06-30'
+```
+
+Capture a receipt as a draft, then review and complete it in Bkper or with the agent:
+
+```bash
+bkper transaction create -b <bookId> --file ./receipt.pdf
+```
+
+Run `bkper --help` or `bkper <command> --help` for built-in command help.
 
 ---
 
@@ -165,8 +160,8 @@ Manage books, files, accounts, transactions, and balances.
 bkper book list
 bkper account list -b <bookId>
 bkper file list -b <bookId> --limit 100
-bkper transaction list -b <bookId> -q 'on:2025' --format csv
-bkper balance list -b <bookId> -q 'on:2025-12-31' --format csv
+bkper transaction list -b <bookId> -q 'on:2026' --format csv
+bkper balance list -b <bookId> -q 'on:2026-12-31' --format csv
 ```
 
 → [Full Data Management reference](https://github.com/bkper/bkper-cli/blob/main/skill/references/cli/data-management.md)
@@ -181,7 +176,8 @@ Build, deploy, and manage Bkper apps.
 bkper app init my-app
 bkper app get my-app --json
 bkper app dev
-bkper app sync && bkper app deploy
+bkper app sync
+bkper app deploy
 bkper app logs --last 50
 bkper app logs my-app --level error
 ```
@@ -194,10 +190,11 @@ bkper app logs my-app --level error
 
 ## Programmatic access
 
+Use the CLI as the authentication bridge for scripts and direct API calls.
+
 ### Access Token
 
-Use the access token for direct API calls from any tool.
-This requires a prior `bkper auth login`, and `bkper auth token` does not start an interactive login flow:
+Use the access token for direct API calls from any tool. This requires a prior `bkper auth login`, and `bkper auth token` does not start an interactive login flow:
 
 ```bash
 # Print the current access token
@@ -220,6 +217,21 @@ Bkper.setConfig({
     oauthTokenProvider: async () => getOAuthToken(),
 });
 ```
+
+---
+
+## Advanced agent options
+
+`bkper agent` starts the same built-in agent experience as `bkper`.
+
+Advanced users can pass supported agent-runtime flags through:
+
+```bash
+bkper agent <args>
+bkper agent --help
+```
+
+`bkper agent` keeps Bkper defaults, including the Bkper system prompt, unless you explicitly override them. For the underlying agent runtime reference, see [Pi][Pi].
 
 ---
 
