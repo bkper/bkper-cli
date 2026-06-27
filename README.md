@@ -2,10 +2,10 @@
 [App Template]: https://github.com/bkper/bkper-app-template
 [Pi]: https://pi.dev/
 
-A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary modes:
+A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary ways:
 
--   **Interactive mode** — run `bkper` or `bkper agent` to open the Bkper Agent TUI
--   **Command mode** — run `bkper <command>` for explicit CLI workflows, scripts, and automation
+-   **Ask the Bkper Agent** — run `bkper` for guided, interactive help in your terminal
+-   **Run CLI commands** — run `bkper <command>` for scripts, exports, automations, and app workflows
 
 With one tool, you can work with Bkper from your terminal, built-in agent, or external AI tools — managing financial data, building apps, and automating workflows.
 
@@ -47,19 +47,19 @@ bkper auth login
 
 ## Get started
 
-### Interactive mode (recommended)
+### Ask the Bkper Agent
 
 ```bash
 bkper
 ```
 
-`bkper agent` starts the same interactive experience. Bare `bkper` only opens the TUI in an interactive terminal; in non-interactive contexts it prints CLI help instead.
+Run `bkper` to open the built-in Bkper Agent in your terminal.
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
 On first agent launch, type `/login` in the TUI if model access is not configured yet. `bkper auth login` connects the CLI to your Bkper account. `/login` connects the interactive agent to an AI/model provider.
 
-For frontier models, a standard ChatGPT Plus/Pro subscription with Codex is a practical starting point. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
+For frontier models, a standard [ChatGPT Plus/Pro subscription](https://chatgpt.com/pricing/) with Codex is a practical starting point. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
 
 Safe starting prompts:
 
@@ -87,7 +87,7 @@ Prepare an exploratory tax worksheet for 2025. Ask me to confirm tax groups and 
 Before making any change in Bkper, explain the exact plan and ask for my confirmation.
 ```
 
-### Command mode
+### Run CLI commands
 
 Use direct commands for scripts, exports, automation, and repeatable workflows.
 
