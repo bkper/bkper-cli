@@ -44,7 +44,7 @@ jobs:
             group: release-${{ github.ref_name }}
             cancel-in-progress: false
         permissions:
-            contents: read
+            contents: write
             id-token: write
 
         steps:
@@ -110,8 +110,24 @@ jobs:
                   node -v
                   npm -v
 
+            - name: Generate skill discovery assets
+              run: bun run skill:package
+
             - name: Publish to npm (Trusted Publishers)
               run: npm publish --access public --provenance --verbose
+
+            - name: Publish GitHub release assets
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ github.ref_name }}
+              run: |
+                  set -euo pipefail
+
+                  if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+                    gh release upload "$RELEASE_TAG" dist/agent-skills/* --clobber
+                  else
+                    gh release create "$RELEASE_TAG" dist/agent-skills/* --verify-tag --title "$RELEASE_TAG" --notes "Bkper CLI $RELEASE_TAG"
+                  fi
 
             - name: Notify Slack
               if: always()

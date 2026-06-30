@@ -75,14 +75,22 @@ describe('github delivery workflow', function () {
         expect(getStringArray(push, 'tags')).to.deep.equal(['v*.*.*']);
         expect(getString(release, 'if')).to.match(/github\.event_name\s*==\s*'push'/);
         expect(getString(release, 'if')).to.match(/refs\/tags\/v/);
-        expect(permissions.contents).to.equal('read');
+        expect(permissions.contents).to.equal('write');
         expect(permissions['id-token']).to.equal('write');
+        expect(releaseCommands.some(command => /bun\s+run\s+skill:package\b/.test(command))).to.equal(true);
         expect(
             releaseCommands.some(
                 command =>
                     /npm\s+publish\b/.test(command) &&
                     /--provenance\b/.test(command) &&
                     /--access\s+public\b/.test(command)
+            )
+        ).to.equal(true);
+        expect(
+            releaseCommands.some(
+                command =>
+                    /gh\s+release\s+(create|upload)\b/.test(command) &&
+                    /dist\/agent-skills\/\*/.test(command)
             )
         ).to.equal(true);
     });

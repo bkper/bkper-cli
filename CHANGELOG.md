@@ -12,6 +12,7 @@
 -   **Agent Integrations**
     -   Added Codex plugin marketplace metadata for installing the Bkper CLI skill from this repository
     -   Added Claude Code plugin marketplace metadata for installing the Bkper CLI skill from this repository
+    -   Added Agent Skills discovery artifacts for the Bkper CLI skill
     -   Agent mode now runs through a dedicated child entrypoint for cleaner CLI startup behavior
 -   **Installation**
     -   Bkper CLI now requires Node.js `>=22.19.0` and shows a clear upgrade message on older Node.js versions

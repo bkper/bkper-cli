@@ -32,6 +32,7 @@
         "build:clean": "gts clean && rimraf temp",
         "build:compile": "tsc",
         "build:copy-docs": "mkdir -p lib && rm -rf lib/docs && cp -R skill/references lib/docs",
+        "skill:package": "bun ./scripts/generate-skill-distribution.ts",
         "api:platform": "openapi-typescript https://platform.bkper.app/openapi.json -o src/platform/types.d.ts",
         "api:platform:local": "openapi-typescript http://localhost:8790/openapi.json -o src/platform/types.d.ts",
         "predev": "bun run build",
