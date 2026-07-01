@@ -15,7 +15,10 @@ When scaffolding, developing, or deploying an app, verify each step before proce
 
 ```bash
 bkper app init my-app
+cd my-app
 ```
+
+`bkper app init <name>` creates and scaffolds `./<name>` using the same value as the app id. Run `bkper app init` with no name inside an existing empty or VCS-only directory to use the current folder name as the app id.
 
 Verify:
 
@@ -102,6 +105,7 @@ Verify:
 ```bash
 # Scaffold a new app from the template
 bkper app init my-app
+cd my-app
 
 # Start the worker runtime (Miniflare + tunnel + file watching)
 # In your project, use "npm run dev" to run both Vite and the worker concurrently
@@ -410,7 +414,7 @@ Inside the interactive agent, `/login` connects an AI model provider; it is sepa
 
 ### App Lifecycle
 
--   `app init <name>` - Scaffold a new app from the template
+-   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name.
 -   `app list` - List all apps you have access to
 -   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration (URLs, description) to Bkper API
 -   `app build` - Build the server Worker bundle for deployment

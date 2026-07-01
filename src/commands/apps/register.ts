@@ -26,9 +26,11 @@ export function registerAppCommands(program: Command): void {
     const appCommand = program.command('app').description('Manage Bkper Apps');
 
     appCommand
-        .command('init <name>')
-        .description('Create a new Bkper app from template')
-        .action((name: string) =>
+        .command('init [name]')
+        .description(
+            'Create a new Bkper app (creates ./<name>, or uses current directory when omitted)'
+        )
+        .action((name: string | undefined) =>
             withAction(
                 'initializing app',
                 async () => {

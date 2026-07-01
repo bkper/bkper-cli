@@ -12,6 +12,59 @@ import * as YAML from 'yaml';
 const TEMPLATE_REPO = 'bkper/bkper-app-template';
 const TEMPLATE_BRANCH = 'main';
 
+export interface AppInitTarget {
+    appName: string;
+    targetDir: string;
+    displayTarget: string;
+}
+
+const ALLOWED_CURRENT_DIRECTORY_ENTRIES = new Set(['.git', '.gitignore', '.gitattributes', '.pi']);
+const TEMPLATE_LOCKFILES = ['bun.lock', 'bun.lockb'];
+
+export function resolveInitTarget(name: string | undefined, cwd = process.cwd()): AppInitTarget {
+    if (name) {
+        return {
+            appName: name,
+            targetDir: path.resolve(cwd, name),
+            displayTarget: name,
+        };
+    }
+
+    const targetDir = path.resolve(cwd);
+    return {
+        appName: path.basename(targetDir),
+        targetDir,
+        displayTarget: '.',
+    };
+}
+
+export function assertInitTargetAvailable(target: AppInitTarget): void {
+    if (!fs.existsSync(target.targetDir)) {
+        return;
+    }
+
+    const unsafeEntries = fs
+        .readdirSync(target.targetDir)
+        .filter(entry => !ALLOWED_CURRENT_DIRECTORY_ENTRIES.has(entry))
+        .sort();
+
+    if (unsafeEntries.length > 0) {
+        const targetLabel =
+            target.displayTarget === '.'
+                ? 'Current directory'
+                : `Directory '${target.displayTarget}'`;
+        throw new Error(
+            `${targetLabel} contains files that are not safe to overwrite: ${unsafeEntries.join(', ')}`
+        );
+    }
+}
+
+export function removeTemplateLockfiles(projectDir: string): void {
+    for (const lockfile of TEMPLATE_LOCKFILES) {
+        fs.rmSync(path.join(projectDir, lockfile), { force: true });
+    }
+}
+
 // =============================================================================
 // Validation
 // =============================================================================
@@ -89,6 +142,7 @@ async function downloadTemplate(targetDir: string): Promise<void> {
             .pipe(
                 tar.extract({
                     cwd: targetDir,
+                    keep: true,
                     strip: 1, // Remove the "bkper-app-template-main" prefix
                 })
             )
@@ -233,43 +287,49 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
 /**
  * Initializes a new Bkper app from the template.
  *
- * @param name - The name of the new app (used as directory name and app id)
+ * @param name - Optional name of the new app (used as app id). Defaults to the current directory name.
  */
-export async function initApp(name: string): Promise<void> {
+export async function initApp(name?: string): Promise<void> {
+    const initTarget = resolveInitTarget(name);
+
     // 1. Validate app name
-    const validation = validateAppName(name);
+    const validation = validateAppName(initTarget.appName);
     if (!validation.valid) {
         console.error(`Error: ${validation.error}`);
         process.exit(1);
     }
 
-    // 2. Check if directory already exists
-    const targetDir = path.resolve(process.cwd(), name);
-    if (fs.existsSync(targetDir)) {
-        console.error(
-            `Error: Directory '${name}' already exists. Choose a different name or remove it first.`
-        );
+    // 2. Check target safety
+    try {
+        assertInitTargetAvailable(initTarget);
+    } catch (err) {
+        console.error('Error:', err instanceof Error ? err.message : err);
         process.exit(1);
     }
 
-    console.log(`\nCreating Bkper app '${name}'...\n`);
+    const targetExistsBeforeDownload = fs.existsSync(initTarget.targetDir);
+    const targetDescription =
+        initTarget.displayTarget === '.'
+            ? 'the current directory'
+            : `./${initTarget.displayTarget}`;
+    console.log(`\nCreating Bkper app '${initTarget.appName}' in ${targetDescription}...\n`);
 
     // 3. Download template
     try {
-        await downloadTemplate(targetDir);
+        await downloadTemplate(initTarget.targetDir);
+        removeTemplateLockfiles(initTarget.targetDir);
         console.log('  Downloaded template');
     } catch (err) {
         console.error('Error downloading template:', err instanceof Error ? err.message : err);
-        // Clean up on failure
-        if (fs.existsSync(targetDir)) {
-            fs.rmSync(targetDir, { recursive: true });
+        if (!targetExistsBeforeDownload && fs.existsSync(initTarget.targetDir)) {
+            fs.rmSync(initTarget.targetDir, { recursive: true, force: true });
         }
         process.exit(1);
     }
 
     // 4. Update bkper.yaml
     try {
-        updateBkperYaml(targetDir, name);
+        updateBkperYaml(initTarget.targetDir, initTarget.appName);
         console.log('  Updated bkper.yaml');
     } catch (err) {
         console.error('Error updating bkper.yaml:', err instanceof Error ? err.message : err);
@@ -278,7 +338,7 @@ export async function initApp(name: string): Promise<void> {
 
     // 5. Update event handler loop guards
     try {
-        updateEventHandlers(targetDir, name);
+        updateEventHandlers(initTarget.targetDir, initTarget.appName);
         console.log('  Updated event handlers');
     } catch (err) {
         console.error('Error updating event handlers:', err instanceof Error ? err.message : err);
@@ -287,7 +347,7 @@ export async function initApp(name: string): Promise<void> {
 
     // 6. Update package.json
     try {
-        updatePackageJson(targetDir, name);
+        updatePackageJson(initTarget.targetDir, initTarget.appName);
         console.log('  Updated package.json');
     } catch (err) {
         console.error('Error updating package.json:', err instanceof Error ? err.message : err);
@@ -297,18 +357,21 @@ export async function initApp(name: string): Promise<void> {
     // 7. Install dependencies
     console.log('  Installing dependencies...');
     try {
-        await runCommand('bun', ['install'], targetDir);
+        await runCommand('bun', ['install'], initTarget.targetDir);
         console.log('  Installed dependencies');
     } catch (err) {
         console.log('  Warning: Could not install dependencies. Run "bun install" manually.');
     }
 
+    const startCommands = initTarget.displayTarget === '.'
+        ? '  bun run dev'
+        : `  cd ${initTarget.displayTarget}\n  bun run dev`;
+
     // 8. Print success message
     console.log(`
 Done! To get started:
 
-  cd ${name}
-  bun run dev
+${startCommands}
 
 Next steps:
   - Review bkper.yaml: update description, ownerName, ownerWebsite, and repoUrl

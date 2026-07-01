@@ -184,6 +184,7 @@ Build, deploy, and manage Bkper apps.
 
 ```bash
 bkper app init my-app
+cd my-app
 bkper app get my-app --json
 bkper app dev
 bkper app sync
