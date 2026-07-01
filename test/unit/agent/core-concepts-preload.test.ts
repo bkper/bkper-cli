@@ -32,13 +32,6 @@ type RegisteredToolCallHandler = (
     }
 ) => Promise<{block: true; reason?: string} | void> | {block: true; reason?: string} | void;
 
-type RegisteredAgentEndHandler = (
-    event: unknown,
-    context: {
-        cwd: string;
-    }
-) => Promise<void> | void;
-
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
 const WORKSPACE_ROOT = path.dirname(REPO_ROOT);
 const REVIEW_PROMPT = `review tax bot on ${WORKSPACE_ROOT}, check code and spot any inconsistency`;
@@ -47,7 +40,6 @@ const FIND_WORKSPACE_COMMAND = `find ${WORKSPACE_ROOT} -maxdepth 2`;
 function registerPreloadExtension() {
     let beforeAgentStartHandler: RegisteredBeforeAgentStartHandler | undefined;
     let toolCallHandler: RegisteredToolCallHandler | undefined;
-    let agentEndHandler: RegisteredAgentEndHandler | undefined;
 
     registerBkperCoreConceptsPreloadExtension({
         on: ((event: string, handler: unknown) => {
@@ -57,20 +49,15 @@ function registerPreloadExtension() {
             if (event === 'tool_call') {
                 toolCallHandler = handler as RegisteredToolCallHandler;
             }
-            if (event === 'agent_end') {
-                agentEndHandler = handler as RegisteredAgentEndHandler;
-            }
         }) as ExtensionAPI['on'],
     });
 
     expect(beforeAgentStartHandler).to.not.equal(undefined);
     expect(toolCallHandler).to.not.equal(undefined);
-    expect(agentEndHandler).to.not.equal(undefined);
 
     return {
         beforeAgentStartHandler: beforeAgentStartHandler as RegisteredBeforeAgentStartHandler,
         toolCallHandler: toolCallHandler as RegisteredToolCallHandler,
-        agentEndHandler: agentEndHandler as RegisteredAgentEndHandler,
     };
 }
 
@@ -162,7 +149,7 @@ describe('core concepts preload', function () {
         expect(result?.systemPrompt).to.include('Before doing anything else for this task');
     });
 
-    it('should block non-read tools until core concepts are read', async function () {
+    it('should not block non-read tools while core concepts read is pending', async function () {
         const {beforeAgentStartHandler, toolCallHandler} = registerPreloadExtension();
 
         await beforeAgentStartHandler(
@@ -185,10 +172,7 @@ describe('core concepts preload', function () {
             }
         );
 
-        expect(result).to.deep.equal({
-            block: true,
-            reason: `First use read on ${getCoreConceptsDocPath()} before other tools.`,
-        });
+        expect(result).to.equal(undefined);
     });
 
     it('should allow the canonical core concepts read and then allow other tools', async function () {
@@ -264,8 +248,8 @@ describe('core concepts preload', function () {
         expect(result).to.equal(undefined);
     });
 
-    it('should clear pending enforcement after the turn ends without contaminating the next unrelated turn', async function () {
-        const {beforeAgentStartHandler, toolCallHandler, agentEndHandler} = registerPreloadExtension();
+    it('should keep appending read instructions on relevant turns until core concepts are read', async function () {
+        const {beforeAgentStartHandler} = registerPreloadExtension();
 
         await beforeAgentStartHandler(
             {
@@ -277,18 +261,16 @@ describe('core concepts preload', function () {
             }
         );
 
-        await agentEndHandler({}, {cwd: REPO_ROOT});
-
-        const result = await toolCallHandler(
+        const result = await beforeAgentStartHandler(
             {
-                toolName: 'bash',
-                input: {command: 'pwd'},
+                prompt: REVIEW_PROMPT,
+                systemPrompt: 'Base prompt',
             },
             {
                 cwd: REPO_ROOT,
             }
         );
 
-        expect(result).to.equal(undefined);
+        expect(result?.systemPrompt).to.include(getCoreConceptsDocPath());
     });
 });

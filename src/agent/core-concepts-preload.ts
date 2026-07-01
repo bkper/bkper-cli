@@ -125,36 +125,20 @@ export function registerBkperCoreConceptsPreloadExtension(
     definition: CoreConceptsPreloadDefinition = getDefaultCoreConceptsPreloadDefinition()
 ): void {
     let hasLoadedCoreConcepts = false;
-    let pendingCoreConceptsRead = false;
 
     pi.on('before_agent_start', event => {
         if (hasLoadedCoreConcepts || detectCoreConceptsPreloadLevel({prompt: event.prompt}) === 'none') {
-            pendingCoreConceptsRead = false;
             return undefined;
         }
 
-        pendingCoreConceptsRead = true;
         return buildCoreConceptsPreloadResult(event.systemPrompt, definition);
     });
 
     pi.on('tool_call', event => {
-        if (!pendingCoreConceptsRead) {
-            return undefined;
-        }
-
         if (shouldAllowReadToolCall(event, definition)) {
-            pendingCoreConceptsRead = false;
             hasLoadedCoreConcepts = true;
-            return undefined;
         }
 
-        return {
-            block: true as const,
-            reason: `First use read on ${definition.docPath} before other tools.`,
-        };
-    });
-
-    pi.on('agent_end', () => {
-        pendingCoreConceptsRead = false;
+        return undefined;
     });
 }

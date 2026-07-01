@@ -152,7 +152,6 @@ describe('runAgentMode', function () {
         expect(registeredEvents).to.deep.equal([
             'before_agent_start',
             'tool_call',
-            'agent_end',
             'session_start',
         ]);
     });
