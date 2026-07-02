@@ -138,6 +138,11 @@ export function registerAppCommands(program: Command): void {
         .command('dev')
         .description('Start the worker runtime for local development')
         .option('--sp, --server-port <port>', 'Server simulation port', '8787')
+        .option(
+            '--cp, --client-port <port>',
+            'Client dev server port for local static assets',
+            '5173'
+        )
         .action(options =>
             withAction(
                 'starting dev server',
@@ -145,7 +150,7 @@ export function registerAppCommands(program: Command): void {
                     setupBkper();
                     await dev({
                         serverPort: parseInt(options.serverPort, 10),
-
+                        clientPort: parseInt(options.clientPort, 10),
                     });
                 },
                 { skipSetup: true }

@@ -179,6 +179,39 @@ describe('Miniflare Integration', function () {
                 customHeader: 'visible',
             });
         });
+
+        it('should redirect browser navigation from Worker root to the client dev server', async function () {
+            mf = await createWorkerServer(simpleWorkerPath, {
+                port: testPort,
+                clientOrigin: 'http://localhost:5173',
+            });
+
+            const response = await fetch(`http://localhost:${testPort}/?bookId=book-1`, {
+                headers: { Accept: 'text/html' },
+                redirect: 'manual',
+            });
+
+            expect(response.status).to.equal(302);
+            expect(response.headers.get('location')).to.equal(
+                'http://localhost:5173/?bookId=book-1'
+            );
+        });
+
+        it('should keep Worker endpoints on the Worker port when client redirect is configured', async function () {
+            mf = await createWorkerServer(simpleWorkerPath, {
+                port: testPort,
+                clientOrigin: 'http://localhost:5173',
+            });
+
+            const response = await fetch(`http://localhost:${testPort}/health`, {
+                headers: { Accept: 'text/html' },
+                redirect: 'manual',
+            });
+
+            expect(response.status).to.equal(200);
+            expect(response.headers.get('location')).to.equal(null);
+            expect(await response.text()).to.equal('Hello from Worker!');
+        });
     });
 
     describe('reloadWorker', function () {

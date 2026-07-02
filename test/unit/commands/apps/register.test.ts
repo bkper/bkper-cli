@@ -33,6 +33,7 @@ describe('CLI - app command registration', function () {
         expect(optionLongNames(dev)).to.not.include('--events');
         expect(optionLongNames(dev)).to.not.include('--web');
         expect(optionLongNames(dev)).to.not.include('--events-port');
+        expect(optionLongNames(dev)).to.include('--client-port');
 
         // Log flags remain as request-category filters, not deployment selectors.
         expect(optionLongNames(logs)).to.include('--web');

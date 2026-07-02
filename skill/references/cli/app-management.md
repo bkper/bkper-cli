@@ -111,6 +111,12 @@ cd my-app
 # In your project, use "npm run dev" to run both Vite and the worker concurrently
 bkper app dev
 
+# If your Vite dev server uses a non-default port, point ASSETS at it
+bkper app dev --cp 5177
+
+# In the browser, open the "Open app" URL printed by the command
+# (normally http://localhost:5173), not the Worker/API URL.
+
 # Build the server Worker bundle
 # In your project, use "npm run build" to build both client (Vite) and worker
 bkper app build
@@ -129,7 +135,7 @@ bkper app deploy --preview
 bkper app status
 ```
 
-> **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
+> **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. Open the printed `Open app` URL in your browser; the `Worker/API` URL is for `/api`, `/health`, `/openapi.json`, and events. If your Vite server uses a port other than `5173`, pass that port with `--cp, --client-port` so the local `ASSETS` binding can reach it. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
 
 ---
 
@@ -436,6 +442,7 @@ Inside the interactive agent, `/login` connects an AI model provider; it is sepa
     -   `--force` - Skip confirmation prompts (use with `--delete-data` for automation)
 -   `app dev` - Start the worker runtime for local development
     -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
+    -   `--cp, --client-port <port>` - Client dev server port for local static assets (default: `5173`)
 
 > **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
 

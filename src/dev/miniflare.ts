@@ -14,6 +14,7 @@ export interface WorkerServerOptions {
     persistPath?: string;
     assetsService?: LocalAssetsService;
     outboundService?: LocalOutboundService;
+    clientOrigin?: string;
 }
 
 /**
@@ -31,6 +32,7 @@ interface BaseConfig {
     bindings?: Record<string, string>;
     serviceBindings?: Record<string, LocalAssetsService>;
     outboundService?: LocalOutboundService;
+    clientOrigin?: string;
 }
 
 /**
@@ -49,9 +51,13 @@ interface WorkerModule {
 const APP_WORKER_MODULE_PATH = 'app-worker.js';
 const LOCAL_DISPATCH_WRAPPER_PATH = 'index.js';
 
-const localDispatchWrapper = `
+function createLocalDispatchWrapper(clientOrigin: string | undefined): string {
+    const serializedClientOrigin = JSON.stringify(clientOrigin ?? '');
+
+    return `
 import appWorker from './${APP_WORKER_MODULE_PATH}';
 
+const CLIENT_ORIGIN = ${serializedClientOrigin};
 const PLATFORM_SESSION_COOKIE_NAMES = new Set([
     'bkper_session',
     'bkper_session_dev',
@@ -63,6 +69,44 @@ const RESERVED_PLATFORM_REQUEST_HEADERS = [
     'bkper-oauth-token',
     'bkper-agent-id',
 ];
+
+const WORKER_BROWSER_ENDPOINTS = new Set([
+    '/health',
+    '/openapi.json',
+]);
+
+function shouldRedirectToClient(request) {
+    if (!CLIENT_ORIGIN || (request.method !== 'GET' && request.method !== 'HEAD')) {
+        return false;
+    }
+
+    const url = new URL(request.url);
+    if (isWorkerEndpoint(url.pathname)) {
+        return false;
+    }
+
+    const accept = request.headers.get('Accept') || '';
+    const fetchMode = request.headers.get('Sec-Fetch-Mode') || '';
+    return fetchMode === 'navigate' || accept.includes('text/html') || accept === '';
+}
+
+function isWorkerEndpoint(pathname) {
+    return (
+        WORKER_BROWSER_ENDPOINTS.has(pathname) ||
+        pathname === '/events' ||
+        pathname.startsWith('/events/') ||
+        pathname === '/api' ||
+        pathname.startsWith('/api/')
+    );
+}
+
+function buildClientRedirectUrl(request) {
+    const targetUrl = new URL(request.url);
+    const clientUrl = new URL(CLIENT_ORIGIN);
+    targetUrl.protocol = clientUrl.protocol;
+    targetUrl.host = clientUrl.host;
+    return targetUrl.toString();
+}
 
 function stripPlatformRequestCredentials(request) {
     const headers = new Headers(request.headers);
@@ -107,17 +151,22 @@ function isPlatformCookiePair(cookiePair) {
 
 export default {
     fetch(request, env, ctx) {
+        if (shouldRedirectToClient(request)) {
+            return Response.redirect(buildClientRedirectUrl(request), 302);
+        }
+
         return appWorker.fetch(stripPlatformRequestCredentials(request), env, ctx);
     },
 };
 `;
+}
 
-function buildWorkerModules(script: string): WorkerModule[] {
+function buildWorkerModules(script: string, clientOrigin?: string): WorkerModule[] {
     return [
         {
             type: 'ESModule',
             path: LOCAL_DISPATCH_WRAPPER_PATH,
-            contents: localDispatchWrapper,
+            contents: createLocalDispatchWrapper(clientOrigin),
         },
         {
             type: 'ESModule',
@@ -203,14 +252,18 @@ export async function createWorkerServer(
 
         // Local outbound service emulates Workers for Platforms egress policies.
         outboundService: options.outboundService,
+
+        // Client browser origin used to redirect accidental Worker-root navigations.
+        clientOrigin: options.clientOrigin,
     };
 
+    const { clientOrigin, ...miniflareBaseConfig } = baseConfig;
     const mf = new MiniflareClass({
-        ...baseConfig,
+        ...miniflareBaseConfig,
         // Use modules array format instead of script string
         // This allows Miniflare to properly handle dynamic imports of external modules
         // like cloudflare:workers that are used by libraries (e.g., Hono)
-        modules: buildWorkerModules(script),
+        modules: buildWorkerModules(script, clientOrigin),
     });
 
     // Store the base config for hot reload
@@ -251,10 +304,12 @@ export async function updateWorkerCode(mf: Miniflare, code: string): Promise<voi
         return;
     }
 
+    const { clientOrigin, ...miniflareBaseConfig } = baseConfig;
+
     // Apply the full config with new modules
     await mf.setOptions({
-        ...baseConfig,
-        modules: buildWorkerModules(code),
+        ...miniflareBaseConfig,
+        modules: buildWorkerModules(code, clientOrigin),
     });
 }
 

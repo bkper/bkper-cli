@@ -27,6 +27,8 @@ import { runCleanupStep } from '../../dev/cleanup.js';
 export interface DevOptions {
     /** Server simulation port (default: 8787) */
     serverPort?: number;
+    /** Client dev server port for local static assets (default: 5173) */
+    clientPort?: number;
 }
 
 /**
@@ -92,6 +94,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
 
     const devVars = loadDevVars(process.cwd(), deployConfig.secrets || []);
     const serverPort = options.serverPort || 8787;
+    const clientPort = options.clientPort || 5173;
+    const clientUrl = deployConfig.client ? `http://localhost:${clientPort}` : undefined;
+    const workerUrl = `http://127.0.0.1:${serverPort}`;
     const hasEvents = Array.isArray(appConfig.events) && appConfig.events.length > 0;
 
     let mf: Miniflare | null = null;
@@ -238,7 +243,9 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     const outboundService = appConfig.id
         ? createLocalOutboundService({ appId: appConfig.id })
         : undefined;
-    const assetsService = deployConfig.client ? createLocalAssetsService() : undefined;
+    const assetsService = deployConfig.client
+        ? createLocalAssetsService({ port: clientPort })
+        : undefined;
     mf = await createWorkerServer(deployConfig.server, {
         port: serverPort,
         kvNamespaces: deployConfig.services?.includes('KV') ? ['KV'] : [],
@@ -247,6 +254,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         persist: true,
         assetsService,
         outboundService,
+        clientOrigin: clientUrl,
     });
 
     serverWatchHandle = await watchWorker(deployConfig.server, async code => {
@@ -287,6 +295,8 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     }
 
     logDevServerBanner({
+        clientUrl,
+        workerUrl,
         tunnelUrl: hasEvents && eventsTunnel ? eventsUrl : undefined,
     });
 

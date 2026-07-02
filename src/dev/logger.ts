@@ -79,15 +79,33 @@ export function formatSize(bytes: number): string {
 
 /**
  * Logs startup banner for the dev server
- * @param options - URLs for tunnel endpoint
+ * @param options - URLs for client, Worker/API, and tunnel endpoints
  */
-export function logDevServerBanner(options: { tunnelUrl?: string }): void {
+export function logDevServerBanner(options: {
+    clientUrl?: string;
+    workerUrl?: string;
+    tunnelUrl?: string;
+}): void {
     console.log('');
     console.log(`${icons.rocket} Bkper App Development Server`);
     console.log('');
 
+    if (options.clientUrl) {
+        console.log(`   Open app:    ${options.clientUrl}`);
+    }
+
+    if (options.workerUrl) {
+        console.log(`   Worker/API:  ${options.workerUrl}`);
+    }
+
     if (options.tunnelUrl) {
-        console.log(`   Events:  ${options.tunnelUrl} (tunneled)`);
+        console.log(`   Events:      ${options.tunnelUrl} (tunneled)`);
+    }
+
+    if (options.clientUrl) {
+        console.log('');
+        console.log('   Open the app URL in your browser.');
+        console.log('   The Worker/API URL is for /api, /health, /openapi.json, and events.');
     }
 
     console.log('');

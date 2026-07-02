@@ -89,20 +89,30 @@ describe('Logger Module', function () {
     });
 
     describe('logDevServerBanner', function () {
-        it('should log banner with tunnel URL', function () {
-            logDevServerBanner({ tunnelUrl: 'https://abc.trycloudflare.com/events' });
+        it('should log browser app and Worker URLs with tunnel URL', function () {
+            logDevServerBanner({
+                clientUrl: 'http://localhost:5173',
+                workerUrl: 'http://127.0.0.1:8787',
+                tunnelUrl: 'https://abc.trycloudflare.com/events',
+            });
 
             const allOutput = consoleOutput.join('\n');
             expect(allOutput).to.include('Bkper App Development Server');
+            expect(allOutput).to.include('Open app:');
+            expect(allOutput).to.include('http://localhost:5173');
+            expect(allOutput).to.include('Worker/API:');
+            expect(allOutput).to.include('http://127.0.0.1:8787');
             expect(allOutput).to.include('https://abc.trycloudflare.com/events');
+            expect(allOutput).to.include('Open the app URL in your browser');
             expect(allOutput).to.include('Press Ctrl+C to stop');
         });
 
         it('should handle missing tunnelUrl', function () {
-            logDevServerBanner({});
+            logDevServerBanner({ workerUrl: 'http://127.0.0.1:8787' });
 
             const allOutput = consoleOutput.join('\n');
             expect(allOutput).to.include('Bkper App Development Server');
+            expect(allOutput).to.include('Worker/API:');
             expect(allOutput).to.not.include('Events:');
         });
     });
