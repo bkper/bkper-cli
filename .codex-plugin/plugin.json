@@ -1,6 +1,6 @@
 {
     "name": "bkper-cli",
-    "version": "4.18.2",
+    "version": "4.18.3",
     "description": "Adds Bkper CLI guidance for safe Bkper data, reporting, app development, and accounting-support workflows in Codex.",
     "author": {
         "name": "Bkper",
