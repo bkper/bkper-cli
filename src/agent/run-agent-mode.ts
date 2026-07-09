@@ -433,6 +433,38 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 maxTokensField: 'max_tokens',
             },
         },
+        {
+            id: 'openai/gpt-5.5',
+            name: 'GPT-5.5',
+            reasoning: true,
+            thinkingLevelMap: {off: null, xhigh: 'xhigh'},
+            input: ['text', 'image'],
+            contextWindow: 1_000_000,
+            maxTokens: 16_384,
+            cost: {input: 5, output: 30, cacheRead: 0.5, cacheWrite: 0},
+            compat: {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: false,
+                supportsUsageInStreaming: true,
+                maxTokensField: 'max_tokens',
+            },
+        },
+        {
+            id: 'anthropic/claude-fable-5',
+            name: 'Claude Fable 5',
+            reasoning: true,
+            thinkingLevelMap: {off: null, xhigh: 'xhigh'},
+            input: ['text', 'image'],
+            contextWindow: 1_000_000,
+            maxTokens: 128_000,
+            cost: {input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5},
+            compat: {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: false,
+                supportsUsageInStreaming: true,
+                maxTokensField: 'max_tokens',
+            },
+        },
     ],
 };
 

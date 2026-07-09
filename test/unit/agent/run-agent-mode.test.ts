@@ -177,10 +177,14 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
             '@cf/moonshotai/kimi-k2.7-code',
             '@cf/zai-org/glm-5.2',
+            'openai/gpt-5.5',
+            'anthropic/claude-fable-5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
             'Kimi K2.7 Code',
             'GLM 5.2',
+            'GPT-5.5',
+            'Claude Fable 5',
         ]);
     });
 
