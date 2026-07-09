@@ -5,6 +5,7 @@ import {
     VERSION as PI_VERSION,
     type Extension,
     type ExtensionAPI,
+    type ProviderConfig,
 } from '@earendil-works/pi-coding-agent';
 import { getKeybindings, KeybindingsManager, setKeybindings } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
@@ -147,12 +148,39 @@ describe('runAgentMode', function () {
             on: ((event: string) => {
                 registeredEvents.push(event);
             }) as ExtensionAPI['on'],
-        } as ExtensionAPI);
+            registerProvider: sinon.stub(),
+        } as unknown as ExtensionAPI);
 
         expect(registeredEvents).to.deep.equal([
             'before_agent_start',
             'tool_call',
             'session_start',
+        ]);
+    });
+
+    it('should register Bkper AI as a built-in OpenAI-compatible provider', function () {
+        const providers: Array<{name: string; config: ProviderConfig}> = [];
+
+        registerBkperAgentBuiltins({
+            on: sinon.stub() as unknown as ExtensionAPI['on'],
+            registerProvider: (name: string, config: ProviderConfig) => {
+                providers.push({name, config});
+            },
+        } as unknown as ExtensionAPI);
+
+        expect(providers).to.have.length(1);
+        expect(providers[0]?.name).to.equal('bkper');
+        expect(providers[0]?.config.name).to.equal('Bkper AI');
+        expect(providers[0]?.config.baseUrl).to.equal('https://ai.bkper.app/v1');
+        expect(providers[0]?.config.apiKey).to.equal('!bkper auth token');
+        expect(providers[0]?.config.authHeader).to.equal(true);
+        expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
+            '@cf/moonshotai/kimi-k2.7-code',
+            '@cf/zai-org/glm-5.2',
+        ]);
+        expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
+            'Kimi K2.7 Code',
+            'GLM 5.2',
         ]);
     });
 
@@ -344,9 +372,7 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('/tree (ctrl+r)');
-        expect(headerText).to.include(
-            'No AI model provider configured. Use /login to connect Anthropic, OpenAI, Google, or another LLM provider.'
-        );
+        expect(headerText).to.include('Run bkper auth login to use Bkper AI');
         expect(notify.called).to.be.false;
     });
 

@@ -12,6 +12,7 @@ import {
     type Extension,
     type ExtensionAPI,
     type LoadExtensionsResult,
+    type ProviderConfig,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
 import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
@@ -33,6 +34,7 @@ type StartupHeaderComponent = {
 type StartupHeaderFactory = (_tui: unknown, theme: Theme) => StartupHeaderComponent;
 
 type StartupExtensionAPI = Pick<ExtensionAPI, 'on'>;
+type ProviderRegistrationAPI = Pick<ExtensionAPI, 'registerProvider'>;
 
 type ExtensionLoadError = {
     path: string;
@@ -389,8 +391,50 @@ const BKPER_SESSION_KEYBINDINGS = {
 const installedBkperKeybindingsManagers = new WeakSet<BkperKeybindingsManager>();
 
 const NO_MODELS_STARTUP_HINT =
-    'No AI model provider configured. Use /login to connect Anthropic, OpenAI, ' +
-    'Google, or another LLM provider.';
+    'No AI model provider configured. Run bkper auth login to use Bkper AI, or use ' +
+    '/login to connect another LLM provider.';
+
+export const BKPER_AI_PROVIDER_ID = 'bkper';
+
+const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
+    name: 'Bkper AI',
+    baseUrl: 'https://ai.bkper.app/v1',
+    apiKey: '!bkper auth token',
+    authHeader: true,
+    api: 'openai-completions',
+    models: [
+        {
+            id: '@cf/moonshotai/kimi-k2.7-code',
+            name: 'Kimi K2.7 Code',
+            reasoning: true,
+            input: ['text', 'image'],
+            contextWindow: 262_144,
+            maxTokens: 32_768,
+            cost: {input: 0.95, output: 4, cacheRead: 0.19, cacheWrite: 0},
+            compat: {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: false,
+                supportsUsageInStreaming: true,
+                maxTokensField: 'max_tokens',
+            },
+        },
+        {
+            id: '@cf/zai-org/glm-5.2',
+            name: 'GLM 5.2',
+            reasoning: true,
+            input: ['text'],
+            contextWindow: 262_144,
+            maxTokens: 32_768,
+            cost: {input: 1.4, output: 4.4, cacheRead: 0.26, cacheWrite: 0},
+            compat: {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: false,
+                supportsUsageInStreaming: true,
+                maxTokensField: 'max_tokens',
+            },
+        },
+    ],
+};
 
 function keybindingConfigIncludesShortcut(
     configuredBinding: KeybindingsConfigValue,
@@ -659,6 +703,10 @@ export function registerBkperAgentStartupExtension(
     });
 }
 
+export function registerBkperAiProvider(pi: ProviderRegistrationAPI): void {
+    pi.registerProvider(BKPER_AI_PROVIDER_ID, BKPER_AI_PROVIDER_CONFIG);
+}
+
 export function registerBkperAgentBuiltins(
     pi: ExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
@@ -666,6 +714,7 @@ export function registerBkperAgentBuiltins(
 ): void {
     registerBkperCoreConceptsPreloadExtension(pi);
     registerBkperAgentStartupExtension(pi, startupMaintenance, settingsManager);
+    registerBkperAiProvider(pi);
 }
 
 export interface SessionOptions {
