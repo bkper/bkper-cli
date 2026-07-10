@@ -179,31 +179,26 @@ describe('runAgentMode', function () {
             'openai/gpt-5.6-terra',
             'openai/gpt-5.6-sol',
             'anthropic/claude-fable-5',
-            'xai/grok-4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
             'GPT-5.6 Luna',
             'GPT-5.6 Terra',
             'GPT-5.6 Sol',
             'Claude Fable 5',
-            'Grok 4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
             200000,
             200000,
             200000,
             1000000,
-            200000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
             {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
             {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
             {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
             {off: null, minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
-            {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
         expect(providers[0]?.config.models?.map(model => model.compat?.sendSessionAffinityHeaders)).to.deep.equal([
-            true,
             true,
             true,
             true,
