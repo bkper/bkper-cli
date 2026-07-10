@@ -175,16 +175,32 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.apiKey).to.equal('!bkper auth token');
         expect(providers[0]?.config.authHeader).to.equal(true);
         expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
-            '@cf/moonshotai/kimi-k2.7-code',
-            '@cf/zai-org/glm-5.2',
-            'openai/gpt-5.5',
+            'openai/gpt-5.6-luna',
+            'openai/gpt-5.6-terra',
+            'openai/gpt-5.6-sol',
             'anthropic/claude-fable-5',
+            'xai/grok-4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
-            'Kimi K2.7 Code',
-            'GLM 5.2',
-            'GPT-5.5',
+            'GPT-5.6 Luna',
+            'GPT-5.6 Terra',
+            'GPT-5.6 Sol',
             'Claude Fable 5',
+            'Grok 4.5',
+        ]);
+        expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
+            200000,
+            200000,
+            200000,
+            1000000,
+            200000,
+        ]);
+        expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
+            {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
+            {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
+            {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {off: null, minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
+            {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
     });
 
