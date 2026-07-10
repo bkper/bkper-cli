@@ -202,6 +202,13 @@ describe('runAgentMode', function () {
             {off: null, minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
             {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
+        expect(providers[0]?.config.models?.map(model => model.compat?.sendSessionAffinityHeaders)).to.deep.equal([
+            true,
+            true,
+            true,
+            true,
+            true,
+        ]);
     });
 
     it('should give Bkper built-in inline extensions a canonical startup display name', function () {

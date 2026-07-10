@@ -425,6 +425,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 supportsReasoningEffort: true,
                 supportsUsageInStreaming: true,
                 maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
             },
         },
         {
@@ -449,6 +450,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 supportsReasoningEffort: true,
                 supportsUsageInStreaming: true,
                 maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
             },
         },
         {
@@ -473,6 +475,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 supportsReasoningEffort: true,
                 supportsUsageInStreaming: true,
                 maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
             },
         },
         {
@@ -497,6 +500,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 supportsReasoningEffort: true,
                 supportsUsageInStreaming: true,
                 maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
             },
         },
         {
@@ -521,6 +525,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 supportsReasoningEffort: true,
                 supportsUsageInStreaming: true,
                 maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
             },
         },
     ],
