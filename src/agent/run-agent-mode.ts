@@ -247,6 +247,15 @@ function globToRegExp(pattern: string): RegExp {
     return new RegExp(regex, 'i');
 }
 
+function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel | undefined {
+    if (model.provider !== BKPER_AI_PROVIDER_ID) {
+        return undefined;
+    }
+    return model.id === 'openai/gpt-5.6-sol' || model.id === 'anthropic/claude-fable-5'
+        ? 'medium'
+        : undefined;
+}
+
 function resolvePatternMatches<TModel extends ModelLike>(
     rawPattern: string,
     availableModels: TModel[]
@@ -306,15 +315,35 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
     modelRegistry: ModelRegistryLike<TModel>,
     sessionManager: SessionManagerLike
 ): RestoredPersistedSessionOptions<TModel> {
+    const availableModels = modelRegistry.getAvailable();
+    const hasSessionMessages = sessionManager.buildSessionContext().messages.length > 0;
     const enabledModels = settingsManager.getEnabledModels();
     if (!enabledModels || enabledModels.length === 0) {
+        if (hasSessionMessages) {
+            return {
+                scopedModels: [],
+                diagnostics: [],
+            };
+        }
+
+        const defaultProvider = settingsManager.getDefaultProvider();
+        const defaultModelId = settingsManager.getDefaultModel();
+        const defaultModel =
+            defaultProvider && defaultModelId
+                ? modelRegistry.find(defaultProvider, defaultModelId)
+                : undefined;
+        const defaultThinkingLevel = defaultModel
+            ? getBkperAiDefaultThinkingLevel(defaultModel)
+            : undefined;
+
         return {
+            model: defaultThinkingLevel ? defaultModel : undefined,
+            thinkingLevel: defaultThinkingLevel,
             scopedModels: [],
             diagnostics: [],
         };
     }
 
-    const availableModels = modelRegistry.getAvailable();
     const scopedModels: Array<ScopedModel<TModel>> = [];
     const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
 
@@ -336,12 +365,12 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
 
             scopedModels.push({
                 model,
-                thinkingLevel,
+                thinkingLevel: thinkingLevel ?? getBkperAiDefaultThinkingLevel(model),
             });
         }
     }
 
-    if (scopedModels.length === 0 || sessionManager.buildSessionContext().messages.length > 0) {
+    if (scopedModels.length === 0 || hasSessionMessages) {
         return {
             scopedModels,
             diagnostics,
@@ -408,10 +437,9 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             name: 'GPT-5.6 Luna',
             reasoning: true,
             thinkingLevelMap: {
-                off: null,
                 minimal: null,
                 low: null,
-                medium: null,
+                medium: 'medium',
                 high: 'high',
                 xhigh: null,
                 max: null,
@@ -433,10 +461,9 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             name: 'GPT-5.6 Terra',
             reasoning: true,
             thinkingLevelMap: {
-                off: null,
                 minimal: null,
                 low: null,
-                medium: null,
+                medium: 'medium',
                 high: 'high',
                 xhigh: null,
                 max: null,
@@ -458,7 +485,6 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             name: 'GPT-5.6 Sol',
             reasoning: true,
             thinkingLevelMap: {
-                off: null,
                 minimal: null,
                 low: null,
                 medium: 'medium',
@@ -483,11 +509,10 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             name: 'Claude Fable 5',
             reasoning: true,
             thinkingLevelMap: {
-                off: null,
                 minimal: null,
-                low: 'low',
+                low: null,
                 medium: 'medium',
-                high: null,
+                high: 'high',
                 xhigh: null,
                 max: null,
             },
@@ -503,32 +528,30 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 sendSessionAffinityHeaders: true,
             },
         },
-        // TODO: Re-enable when Cloudflare AI Gateway finishes rolling out xai/grok-4.5.
-        // {
-        //     id: 'xai/grok-4.5',
-        //     name: 'Grok 4.5',
-        //     reasoning: true,
-        //     thinkingLevelMap: {
-        //         off: null,
-        //         minimal: null,
-        //         low: null,
-        //         medium: 'medium',
-        //         high: 'high',
-        //         xhigh: null,
-        //         max: null,
-        //     },
-        //     input: ['text', 'image'],
-        //     contextWindow: 200_000,
-        //     maxTokens: 500_000,
-        //     cost: {input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0},
-        //     compat: {
-        //         supportsDeveloperRole: false,
-        //         supportsReasoningEffort: true,
-        //         supportsUsageInStreaming: true,
-        //         maxTokensField: 'max_tokens',
-        //         sendSessionAffinityHeaders: true,
-        //     },
-        // },
+        {
+            id: 'xai/grok-4.5',
+            name: 'Grok 4.5',
+            reasoning: true,
+            thinkingLevelMap: {
+                minimal: null,
+                low: null,
+                medium: 'medium',
+                high: 'high',
+                xhigh: null,
+                max: null,
+            },
+            input: ['text', 'image'],
+            contextWindow: 200_000,
+            maxTokens: 500_000,
+            cost: {input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0},
+            compat: {
+                supportsDeveloperRole: false,
+                supportsReasoningEffort: true,
+                supportsUsageInStreaming: true,
+                maxTokensField: 'max_tokens',
+                sendSessionAffinityHeaders: true,
+            },
+        },
     ],
 };
 

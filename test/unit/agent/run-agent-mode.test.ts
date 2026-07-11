@@ -179,26 +179,31 @@ describe('runAgentMode', function () {
             'openai/gpt-5.6-terra',
             'openai/gpt-5.6-sol',
             'anthropic/claude-fable-5',
+            'xai/grok-4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
             'GPT-5.6 Luna',
             'GPT-5.6 Terra',
             'GPT-5.6 Sol',
             'Claude Fable 5',
+            'Grok 4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
             200000,
             200000,
             200000,
             1000000,
+            200000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
-            {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
-            {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
-            {off: null, minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
-            {off: null, minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
+            {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
         expect(providers[0]?.config.models?.map(model => model.compat?.sendSessionAffinityHeaders)).to.deep.equal([
+            true,
             true,
             true,
             true,
@@ -476,6 +481,31 @@ describe('runAgentMode', function () {
         expect(sessionManager).to.equal(createSessionManager.firstCall.returnValue);
     });
 
+    it('should default expensive Bkper AI saved default models to medium without enabled model scoping', function () {
+        const sol = {provider: 'bkper', id: 'openai/gpt-5.6-sol'};
+        const models = [sol];
+
+        const restored = restorePersistedSessionOptions(
+            {
+                getEnabledModels: () => undefined,
+                getDefaultProvider: () => 'bkper',
+                getDefaultModel: () => 'openai/gpt-5.6-sol',
+            },
+            {
+                getAvailable: () => models,
+                find: (provider: string, modelId: string) =>
+                    models.find(model => model.provider === provider && model.id === modelId),
+            },
+            {
+                buildSessionContext: () => ({messages: []}),
+            }
+        );
+
+        expect(restored.model).to.equal(sol);
+        expect(restored.thinkingLevel).to.equal('medium');
+        expect(restored.scopedModels).to.deep.equal([]);
+    });
+
     it('should restore persisted scoped models and reuse the saved default model when it is in scope', function () {
         const claude = {provider: 'anthropic', id: 'claude-sonnet-4'};
         const gemini = {provider: 'google', id: 'gemini-2.5-pro'};
@@ -505,6 +535,41 @@ describe('runAgentMode', function () {
         expect(restored.model).to.equal(gemini);
         expect(restored.thinkingLevel).to.equal(undefined);
         expect(restored.diagnostics).to.deep.equal([]);
+    });
+
+    it('should default expensive Bkper AI scoped models to medium thinking when no thinking is explicit', function () {
+        const luna = {provider: 'bkper', id: 'openai/gpt-5.6-luna'};
+        const sol = {provider: 'bkper', id: 'openai/gpt-5.6-sol'};
+        const fable = {provider: 'bkper', id: 'anthropic/claude-fable-5'};
+        const models = [luna, sol, fable];
+
+        const restored = restorePersistedSessionOptions(
+            {
+                getEnabledModels: () => [
+                    'bkper/openai/gpt-5.6-luna',
+                    'bkper/openai/gpt-5.6-sol',
+                    'bkper/anthropic/claude-fable-5',
+                ],
+                getDefaultProvider: () => 'bkper',
+                getDefaultModel: () => 'openai/gpt-5.6-sol',
+            },
+            {
+                getAvailable: () => models,
+                find: (provider: string, modelId: string) =>
+                    models.find(model => model.provider === provider && model.id === modelId),
+            },
+            {
+                buildSessionContext: () => ({messages: []}),
+            }
+        );
+
+        expect(restored.model).to.equal(sol);
+        expect(restored.thinkingLevel).to.equal('medium');
+        expect(restored.scopedModels.map(scopedModel => scopedModel.thinkingLevel)).to.deep.equal([
+            undefined,
+            'medium',
+            'medium',
+        ]);
     });
 
     it('should restore the first scoped model when the saved default model is outside scope', function () {
