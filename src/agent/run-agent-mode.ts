@@ -251,9 +251,7 @@ function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel |
     if (model.provider !== BKPER_AI_PROVIDER_ID) {
         return undefined;
     }
-    return model.id === 'openai/gpt-5.6-sol' || model.id === 'anthropic/claude-fable-5'
-        ? 'medium'
-        : undefined;
+    return model.id === 'openai/gpt-5.6-sol' ? 'medium' : undefined;
 }
 
 function resolvePatternMatches<TModel extends ModelLike>(
@@ -496,30 +494,6 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             contextWindow: 200_000,
             maxTokens: 128_000,
             cost: {input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25},
-            compat: {
-                supportsDeveloperRole: false,
-                supportsReasoningEffort: true,
-                supportsUsageInStreaming: true,
-                maxTokensField: 'max_tokens',
-                sendSessionAffinityHeaders: true,
-            },
-        },
-        {
-            id: 'anthropic/claude-fable-5',
-            name: 'Claude Fable 5',
-            reasoning: true,
-            thinkingLevelMap: {
-                minimal: null,
-                low: null,
-                medium: 'medium',
-                high: 'high',
-                xhigh: null,
-                max: null,
-            },
-            input: ['text', 'image'],
-            contextWindow: 1_000_000,
-            maxTokens: 128_000,
-            cost: {input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5},
             compat: {
                 supportsDeveloperRole: false,
                 supportsReasoningEffort: true,
