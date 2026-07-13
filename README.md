@@ -164,13 +164,14 @@ bkper agent --help
 
 ## Data Management
 
-Manage books, files, accounts, transactions, and balances.
+Manage books, files, accounts, transactions, events, and balances.
 
 ```bash
 bkper book list
 bkper account list -b <bookId>
 bkper file list -b <bookId> --limit 100
 bkper transaction list -b <bookId> -q 'on:2026' --format csv
+bkper event list -b <bookId> --error --json
 bkper balance list -b <bookId> -q 'on:2026-12-31' --format csv
 ```
 

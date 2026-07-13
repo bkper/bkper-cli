@@ -12,6 +12,7 @@ import { registerTransactionCommands } from './commands/transactions/register.js
 import { registerBalanceCommands } from './commands/balances/register.js';
 import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerFileCommands } from './commands/files/register.js';
+import { registerEventCommands } from './commands/events/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
 import {
     getAgentCommandArgs,
@@ -67,6 +68,7 @@ async function main(): Promise<void> {
     registerBalanceCommands(program);
     registerCollectionCommands(program);
     registerFileCommands(program);
+    registerEventCommands(program);
 
     // Agent bridge command
     registerAgentCommands(program);

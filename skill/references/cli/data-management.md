@@ -1,6 +1,6 @@
 # Data Management
 
-Interact with books, files, accounts, transactions, and balances using the `bkper` CLI.
+Interact with books, files, accounts, transactions, events, and balances using the `bkper` CLI.
 
 All commands that operate within a book use `-b, --book <bookId>` to specify the book context.
 
@@ -295,6 +295,49 @@ bkper transaction merge tx_123 tx_456 -b abc123
 
 </details>
 
+
+---
+
+## Events
+
+Inspect book events and bot responses — useful for debugging automations and recovering from intermittent bot errors.
+
+```bash
+# List recent events (one page, default limit 50)
+bkper event list -b abc123
+
+# List only events with error bot responses, as JSON (includes full botResponses)
+bkper event list -b abc123 --error --json
+
+# Filter by resource (transaction, account, or group id)
+bkper event list -b abc123 --resource tx_456 --json
+
+# Filter by event type and date range
+bkper event list -b abc123 --type TRANSACTION_POSTED --after 2026-01-01T00:00:00Z
+
+# Fetch the next page
+bkper event list -b abc123 --limit 50 --cursor cursor_123
+
+# Replay one bot response after inspecting an error
+bkper event replay evt_789 -b abc123 --agent-id tax-bot --json
+```
+
+<details>
+<summary>Command reference</summary>
+
+-   `event list -b <bookId>` - List one page of events in a book (includes bot responses in JSON)
+    -   `--after <date>` - Start date inclusive (RFC3339)
+    -   `--before <date>` - End date exclusive (RFC3339)
+    -   `--resource <resourceId>` - Filter by resource ID (Transaction, Account, or Group). When set, `--error` and `--type` are ignored by the API
+    -   `--error` - Only events with at least one error bot response. When set, `--type` is ignored by the API
+    -   `--type <type>` - Filter by event type (e.g. `TRANSACTION_POSTED`, `ACCOUNT_CREATED`)
+    -   `--limit <number>` - Fetch one page with up to this many events (default `50`, max `200`)
+    -   `--cursor <cursor>` - Cursor for fetching the next page
+-   `event replay <eventId> -b <bookId> --agent-id <agentId>` - Replay one bot response for an event (returns the updated event with bot responses)
+
+JSON output includes the full event payload, including nested `botResponses` (`agentId`, `type`, `message`, `createdAt`), for LLM-assisted debugging.
+
+</details>
 
 ---
 
