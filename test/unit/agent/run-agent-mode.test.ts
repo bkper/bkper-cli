@@ -174,6 +174,9 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.baseUrl).to.equal('https://ai.bkper.app/v1');
         expect(providers[0]?.config.apiKey).to.equal('!bkper auth token');
         expect(providers[0]?.config.authHeader).to.equal(true);
+        expect(providers[0]?.config.headers).to.deep.equal({
+            'bkper-agent-id': 'bkper-cli',
+        });
         expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
             'openai/gpt-5.6-luna',
             'openai/gpt-5.6-terra',
@@ -478,6 +481,33 @@ describe('runAgentMode', function () {
 
         expect(createSessionManager.calledOnceWithExactly(REPO_ROOT, '.pi/sessions')).to.be.true;
         expect(sessionManager).to.equal(createSessionManager.firstCall.returnValue);
+    });
+
+    it('should start an unconfigured session with Grok at medium thinking', function () {
+        const claude = {provider: 'anthropic', id: 'claude-sonnet-4'};
+        const grok = {provider: 'bkper', id: 'xai/grok-4.5'};
+        const models = [claude, grok];
+
+        const restored = restorePersistedSessionOptions(
+            {
+                getEnabledModels: () => undefined,
+                getDefaultProvider: () => undefined,
+                getDefaultModel: () => undefined,
+            },
+            {
+                getAvailable: () => models,
+                find: (provider: string, modelId: string) =>
+                    models.find(model => model.provider === provider && model.id === modelId),
+            },
+            {
+                buildSessionContext: () => ({messages: []}),
+            }
+        );
+
+        expect(restored.model).to.equal(grok);
+        expect(restored.thinkingLevel).to.equal('medium');
+        expect(restored.scopedModels).to.deep.equal([]);
+        expect(restored.diagnostics).to.deep.equal([]);
     });
 
     it('should default expensive Bkper AI saved default models to medium without enabled model scoping', function () {

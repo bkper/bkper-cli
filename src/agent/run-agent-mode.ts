@@ -333,10 +333,18 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
         const defaultThinkingLevel = defaultModel
             ? getBkperAiDefaultThinkingLevel(defaultModel)
             : undefined;
+        const startupDefaultModel =
+            !defaultProvider && !defaultModelId
+                ? availableModels.find(
+                      model =>
+                          model.provider === BKPER_AI_PROVIDER_ID &&
+                          model.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
+                  )
+                : undefined;
 
         return {
-            model: defaultThinkingLevel ? defaultModel : undefined,
-            thinkingLevel: defaultThinkingLevel,
+            model: defaultThinkingLevel ? defaultModel : startupDefaultModel,
+            thinkingLevel: defaultThinkingLevel ?? (startupDefaultModel ? 'medium' : undefined),
             scopedModels: [],
             diagnostics: [],
         };
@@ -423,11 +431,16 @@ const NO_MODELS_STARTUP_HINT =
 
 export const BKPER_AI_PROVIDER_ID = 'bkper';
 
+const BKPER_AI_STARTUP_DEFAULT_MODEL_ID = 'xai/grok-4.5';
+
 const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
     name: 'Bkper AI',
     baseUrl: 'https://ai.bkper.app/v1',
     apiKey: '!bkper auth token',
     authHeader: true,
+    headers: {
+        'bkper-agent-id': 'bkper-cli',
+    },
     api: 'openai-completions',
     models: [
         {
@@ -503,7 +516,7 @@ const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             },
         },
         {
-            id: 'xai/grok-4.5',
+            id: BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
             name: 'Grok 4.5',
             reasoning: true,
             thinkingLevelMap: {
