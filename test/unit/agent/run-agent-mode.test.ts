@@ -202,11 +202,11 @@ describe('runAgentMode', function () {
             200000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.maxTokens)).to.deep.equal([
-            128000,
-            128000,
-            128000,
             32000,
-            500000,
+            32000,
+            32000,
+            32000,
+            32000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
