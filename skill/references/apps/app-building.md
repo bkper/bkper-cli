@@ -1217,7 +1217,7 @@ This tutorial walks you through building and deploying a Bkper app from scratch.
     cd my-app
     ```
 
-    The CLI sets your app ID, package name, URLs, and event-handler loop guards automatically. See [App Configuration](https://bkper.com/docs/build/apps/configuration.md) for the full `bkper.yaml` reference.
+    `bkper app init my-app` creates `./my-app` and uses `my-app` as the app id. The CLI sets your package name, URLs, and event-handler loop guards automatically. See [App Configuration](https://bkper.com/docs/build/apps/configuration.md) for the full `bkper.yaml` reference.
 
 2. **Start developing**
 
@@ -1351,6 +1351,7 @@ The platform eliminates all of this. You write business logic, the platform hand
 ```bash
 # Create a new app from the template
 bkper app init my-app
+cd my-app
 
 # Start developing
 npm run dev

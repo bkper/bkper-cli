@@ -631,7 +631,7 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `getTransaction(id: string)` → `Promise<Transaction | undefined>` — Retrieve a transaction by id.
 - `getVisibility()` / `setVisibility(visibility: Visibility)` → `Visibility` — Gets the visibility of the book.
 - `json()` → `bkper.Book` — Gets an immutable copy of the JSON payload for this resource.
-- `listEvents(afterDate: string | null, beforeDate: string | null, onError: boolean | null, resourceId: string | null, limit: number, cursor?: string)` → `Promise<EventList>` — Lists events in the Book based on the provided parameters.
+- `listEvents(options: ListEventsOptions)` → `Promise<EventList>` — Lists events in the Book based on the provided options.
 - `listFiles(limit?: number, cursor?: string)` → `Promise<FileList>` — Lists files in the Book, for pagination.
 - `listTransactions(query?: string, limit?: number, cursor?: string)` → `Promise<TransactionList>` — Lists transactions in the Book based on the provided query, limit, and cursor, for pagination.
 - `mergeTransactions(transaction1: string | bkper.Transaction | Transaction, transaction2: string | bkper.Transaction | Transaction)` → `Promise<Transaction>` — Merge two `Transactions` into a single new canonical transaction.
@@ -786,6 +786,7 @@ A Collaborator represents a user that has been granted access to a Book with spe
 **Methods:**
 
 - `create(message?: string)` → `Promise<Collaborator>` — Performs create new Collaborator.
+- `getAvatarUrl()` → `string | undefined` — Gets the public avatar url of the Collaborator.
 - `getEmail()` / `setEmail(email: string)` → `string | undefined (set: string)` — Gets the Collaborator email address.
 - `getId()` → `string | undefined` — Gets the Collaborator internal id.
 - `getPermission()` / `setPermission(permission: Permission)` → `Permission | undefined (set: Permission)` — Gets the permission level of the Collaborator.
@@ -902,6 +903,7 @@ A File can be attached to a `Transaction` or used to import data.
 - `getBook()` → `Book` — Gets the Book this File belongs to.
 - `getContent()` / `setContent(content: string)` → `Promise<string | undefined> (set: string)` — Gets the file content Base64 encoded.
 - `getContentType()` / `setContentType(contentType: string)` → `string | undefined (set: string)` — Gets the File content type.
+- `getCreatedAt()` → `Date | undefined` — Gets the date the File was created.
 - `getId()` → `string | undefined` — Gets the File id.
 - `getName()` / `setName(name: string)` → `string | undefined (set: string)` — Gets the File name.
 - `getSize()` → `number | undefined` — Gets the file size in bytes.
@@ -1310,6 +1312,40 @@ Bkper Platform outbound for server-side app routes.
 
 This function is called when a request fails and needs to be retried.
 It provides the HTTP status code, error message, and the number of retry attempts made so far.
+
+### ListEventsOptions
+
+Options for listing events in a Book.
+
+**Properties:**
+
+- `afterDate?`: `string` — The start date (inclusive) for the events search range, in [RFC3339](https://en.wikipedia.org/wiki/ISO_8601#RFC_3339) format.
+- `beforeDate?`: `string` — The end date (exclusive) for the events search range, in [RFC3339](https://en.wikipedia.org/wiki/ISO_8601#RFC_3339) format.
+- `cursor?`: `string` — The cursor for pagination.
+- `limit`: `number` — The maximum number of events to return.
+- `onError?`: `boolean` — Whether to filter events by error responses.
+- `resourceId?`: `string` — The ID of the event's resource (Transaction, Account, or Group).
+- `type?`: `EventType` — The event type to filter by.
+
+**limit**
+
+Defaults to `50`, maximum is `200`.
+
+**onError**
+
+`true` returns events with at least one error response.
+`false` returns events with no error responses.
+`null` or `undefined` includes events regardless of error responses.
+
+Ignored when `resourceId` is set. When set, `type` is ignored.
+
+**resourceId**
+
+When set, `onError` and `type` are ignored.
+
+**type**
+
+Ignored when `resourceId` or `onError` is set.
 
 ## Enums
 

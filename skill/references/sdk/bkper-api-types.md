@@ -244,6 +244,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 **Properties:**
 
 - `agentId?`: `string` — The id of agent that created the resource
+- `avatarUrl?`: `string` — The Collaborator public avatar url
 - `createdAt?`: `string` — The creation timestamp, in milliseconds
 - `email?`: `string` — The email of the Collaborator
 - `id?`: `string` — The unique id that identifies the Collaborator in the Book
@@ -534,6 +535,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `billingAdminEmail?`: `string` — The billing admin email for this user's billing account
 - `billingEnabled?`: `boolean` — True if billing is enabled for the user
 - `daysLeftInTrial?`: `number` — How many days left in trial
+- `domain?`: `bkper.Domain`
 - `email?`: `string` — The user email
 - `free?`: `boolean` — True if user is in the free plan
 - `fullName?`: `string` — The user full name
