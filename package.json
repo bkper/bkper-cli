@@ -43,7 +43,7 @@
         "test:integration": "TS_NODE_TRANSPILE_ONLY=true BKPER_API_URL=${BKPER_API_URL:-http://localhost:8081/_ah/api/bkper} TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.integration.json",
         "test:deploy": "TS_NODE_TRANSPILE_ONLY=true BKPER_PLATFORM_URL=http://localhost:8790 BKPER_API_URL=https://api-dev.bkper.app TS_NODE_PROJECT=tsconfig.test.json mocha --config .mocharc.deploy.json",
         "test:all": "bun run test:unit && bun run test:integration",
-        "version": "bun ./scripts/sync-plugin-version.ts",
+        "version": "bun ./scripts/sync-plugin-version.ts && git add .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json",
         "release:patch": "npm version patch -m \"chore(release): v%s\"",
         "release:minor": "npm version minor -m \"chore(release): v%s\"",
         "release:major": "npm version major -m \"chore(release): v%s\"",
