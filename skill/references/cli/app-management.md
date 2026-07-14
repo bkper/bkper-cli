@@ -416,7 +416,12 @@ deployment:
 -   `agent` - Start the interactive Bkper Agent
 -   `agent <pi-args...>` - Run Pi CLI with Bkper defaults (system prompt/resources)
 
-Inside the interactive agent, `/login` connects an AI model provider; it is separate from `bkper auth login`, which connects the CLI to your Bkper account.
+Inside the interactive agent:
+
+-   `/login` connects to Bkper and enables the included Bkper AI models. It uses the same local credentials as `bkper auth login`.
+-   `/logout` revokes and clears Bkper authentication.
+-   `/connect [provider]` connects an external model provider through a subscription or API key.
+-   `/disconnect [provider]` removes credentials stored by `/connect`. Environment variables and model configuration remain unchanged.
 
 ### App Lifecycle
 

@@ -12,10 +12,18 @@ import {
     type Extension,
     type ExtensionAPI,
     type LoadExtensionsResult,
-    type ProviderConfig,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
 import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
+import {
+    installBkperAuthCommandRouting,
+    registerBkperAgentAuthExtension,
+} from './auth-commands.js';
+import {
+    BKPER_AI_PROVIDER_ID,
+    BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
+    registerBkperAiProvider,
+} from './bkper-ai-provider.js';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
@@ -34,7 +42,6 @@ type StartupHeaderComponent = {
 type StartupHeaderFactory = (_tui: unknown, theme: Theme) => StartupHeaderComponent;
 
 type StartupExtensionAPI = Pick<ExtensionAPI, 'on'>;
-type ProviderRegistrationAPI = Pick<ExtensionAPI, 'registerProvider'>;
 
 type ExtensionLoadError = {
     path: string;
@@ -141,6 +148,37 @@ export class BkperInteractiveMode extends InteractiveMode {
         }
 
         await super.init();
+
+        const authRoutingMode = this as unknown as {
+            defaultEditor?: {
+                onSubmit?: (text: string) => void | Promise<void>;
+            };
+            editor?: {
+                onSubmit?: (text: string) => void | Promise<void>;
+            };
+            session?: {
+                modelRegistry: {
+                    unregisterProvider(name: string): void;
+                    registerProvider(
+                        name: string,
+                        config: Parameters<ExtensionAPI['registerProvider']>[1]
+                    ): void;
+                };
+            };
+        };
+        if (authRoutingMode.session) {
+            const editors = new Set(
+                [authRoutingMode.defaultEditor, authRoutingMode.editor].filter(
+                    editor => editor !== undefined
+                )
+            );
+            for (const editor of editors) {
+                installBkperAuthCommandRouting(
+                    editor,
+                    authRoutingMode.session.modelRegistry
+                );
+            }
+        }
     }
 
     async run(): Promise<void> {
@@ -426,121 +464,8 @@ const BKPER_SESSION_KEYBINDINGS = {
 const installedBkperKeybindingsManagers = new WeakSet<BkperKeybindingsManager>();
 
 const NO_MODELS_STARTUP_HINT =
-    'No AI model provider configured. Run bkper auth login to use Bkper AI, or use ' +
-    '/login to connect another LLM provider.';
-
-export const BKPER_AI_PROVIDER_ID = 'bkper';
-
-const BKPER_AI_STARTUP_DEFAULT_MODEL_ID = 'xai/grok-4.5';
-
-const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
-    name: 'Bkper AI',
-    baseUrl: 'https://ai.bkper.app/v1',
-    apiKey: '!bkper auth token',
-    authHeader: true,
-    headers: {
-        'bkper-agent-id': 'bkper-cli',
-    },
-    api: 'openai-completions',
-    models: [
-        {
-            id: 'openai/gpt-5.6-luna',
-            name: 'GPT-5.6 Luna',
-            reasoning: true,
-            thinkingLevelMap: {
-                minimal: null,
-                low: null,
-                medium: 'medium',
-                high: 'high',
-                xhigh: null,
-                max: null,
-            },
-            input: ['text', 'image'],
-            contextWindow: 200_000,
-            maxTokens: 128_000,
-            cost: {input: 1, output: 6, cacheRead: 0.1, cacheWrite: 1.25},
-            compat: {
-                supportsDeveloperRole: false,
-                supportsReasoningEffort: true,
-                supportsUsageInStreaming: true,
-                maxTokensField: 'max_tokens',
-                sendSessionAffinityHeaders: true,
-            },
-        },
-        {
-            id: 'openai/gpt-5.6-terra',
-            name: 'GPT-5.6 Terra',
-            reasoning: true,
-            thinkingLevelMap: {
-                minimal: null,
-                low: null,
-                medium: 'medium',
-                high: 'high',
-                xhigh: null,
-                max: null,
-            },
-            input: ['text', 'image'],
-            contextWindow: 200_000,
-            maxTokens: 128_000,
-            cost: {input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 3.125},
-            compat: {
-                supportsDeveloperRole: false,
-                supportsReasoningEffort: true,
-                supportsUsageInStreaming: true,
-                maxTokensField: 'max_tokens',
-                sendSessionAffinityHeaders: true,
-            },
-        },
-        {
-            id: 'openai/gpt-5.6-sol',
-            name: 'GPT-5.6 Sol',
-            reasoning: true,
-            thinkingLevelMap: {
-                minimal: null,
-                low: null,
-                medium: 'medium',
-                high: 'high',
-                xhigh: null,
-                max: null,
-            },
-            input: ['text', 'image'],
-            contextWindow: 200_000,
-            maxTokens: 128_000,
-            cost: {input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25},
-            compat: {
-                supportsDeveloperRole: false,
-                supportsReasoningEffort: true,
-                supportsUsageInStreaming: true,
-                maxTokensField: 'max_tokens',
-                sendSessionAffinityHeaders: true,
-            },
-        },
-        {
-            id: BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
-            name: 'Grok 4.5',
-            reasoning: true,
-            thinkingLevelMap: {
-                minimal: null,
-                low: null,
-                medium: 'medium',
-                high: 'high',
-                xhigh: null,
-                max: null,
-            },
-            input: ['text', 'image'],
-            contextWindow: 200_000,
-            maxTokens: 500_000,
-            cost: {input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0},
-            compat: {
-                supportsDeveloperRole: false,
-                supportsReasoningEffort: true,
-                supportsUsageInStreaming: true,
-                maxTokensField: 'max_tokens',
-                sendSessionAffinityHeaders: true,
-            },
-        },
-    ],
-};
+    'No AI model provider configured. Use /login for Bkper AI or /connect for another ' +
+    'model provider.';
 
 function keybindingConfigIncludesShortcut(
     configuredBinding: KeybindingsConfigValue,
@@ -809,10 +734,6 @@ export function registerBkperAgentStartupExtension(
     });
 }
 
-export function registerBkperAiProvider(pi: ProviderRegistrationAPI): void {
-    pi.registerProvider(BKPER_AI_PROVIDER_ID, BKPER_AI_PROVIDER_CONFIG);
-}
-
 export function registerBkperAgentBuiltins(
     pi: ExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
@@ -820,6 +741,7 @@ export function registerBkperAgentBuiltins(
 ): void {
     registerBkperCoreConceptsPreloadExtension(pi);
     registerBkperAgentStartupExtension(pi, startupMaintenance, settingsManager);
+    registerBkperAgentAuthExtension(pi);
     registerBkperAiProvider(pi);
 }
 

@@ -2,6 +2,14 @@
 
 ## 2026
 
+### **July 2026**
+
+-   **Authentication**
+    -   `bkper auth login` now identifies the authenticated account by email when available
+-   **Agent Experience**
+    -   `/login` and `/logout` now manage Bkper authentication, while `/connect` and `/disconnect` manage external model providers
+    -   Bkper authentication now enables the included Bkper AI models by default
+
 ### **June 2026**
 
 -   **App Development**

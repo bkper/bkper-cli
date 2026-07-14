@@ -148,12 +148,14 @@ describe('runAgentMode', function () {
             on: ((event: string) => {
                 registeredEvents.push(event);
             }) as ExtensionAPI['on'],
+            registerCommand: sinon.stub(),
             registerProvider: sinon.stub(),
         } as unknown as ExtensionAPI);
 
         expect(registeredEvents).to.deep.equal([
             'before_agent_start',
             'tool_call',
+            'session_start',
             'session_start',
         ]);
     });
@@ -163,6 +165,7 @@ describe('runAgentMode', function () {
 
         registerBkperAgentBuiltins({
             on: sinon.stub() as unknown as ExtensionAPI['on'],
+            registerCommand: sinon.stub(),
             registerProvider: (name: string, config: ProviderConfig) => {
                 providers.push({name, config});
             },
@@ -401,7 +404,8 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('/tree (ctrl+r)');
-        expect(headerText).to.include('Run bkper auth login to use Bkper AI');
+        expect(headerText).to.include('Use /login for Bkper AI');
+        expect(headerText).to.include('/connect for another model provider');
         expect(notify.called).to.be.false;
     });
 

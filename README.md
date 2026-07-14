@@ -57,9 +57,11 @@ Run `bkper` to open the built-in Bkper Agent in your terminal.
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
-On first agent launch, type `/login` in the TUI if model access is not configured yet. `bkper auth login` connects the CLI to your Bkper account. `/login` connects the interactive agent to an AI/model provider.
+`bkper auth login` and `/login` inside the agent both connect to your Bkper account and enable the included Bkper AI models. Both flows show which account email is authenticated.
 
-For frontier models, an existing [ChatGPT Plus/Pro subscription](https://chatgpt.com/pricing/) with Codex works very well. [Claude subscriptions](https://claude.com/pricing) are also supported if Claude is your preferred frontier model. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
+To use another model provider, type `/connect` and choose a subscription or API-key provider. You can also target one directly, such as `/connect openai` or `/connect anthropic`. Use `/disconnect` for external providers; `/logout` signs out of Bkper.
+
+For external frontier models, an existing [ChatGPT Plus/Pro subscription](https://chatgpt.com/pricing/) with Codex works very well. [Claude subscriptions](https://claude.com/pricing) are also supported if Claude is your preferred frontier model. For open-weights models, [OpenCode Go](https://opencode.ai/go) is a great option.
 
 ### Safe starting prompts:
 

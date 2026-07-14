@@ -61,6 +61,30 @@ interface DeviceCodeResponse {
     interval: number;
 }
 
+export interface DeviceAuthorizationInfo {
+    userCode: string;
+    verificationUrl: string;
+    expiresIn: number;
+    interval: number;
+}
+
+export interface OAuthInteractionOptions {
+    onDeviceCode?: (info: DeviceAuthorizationInfo) => void;
+    onStatus?: (message: string) => void;
+    signal?: AbortSignal;
+}
+
+export interface BkperAuthenticationResult {
+    accessToken: string;
+    email?: string;
+    alreadyLoggedIn: boolean;
+}
+
+export interface BkperLogoutResult {
+    remoteAccessRevoked: boolean;
+    warning?: string;
+}
+
 // Migrate from old location if exists
 if (!fs.existsSync(storedCredentialsPath) && fs.existsSync(oldCredentialsPath)) {
     try {
@@ -86,17 +110,17 @@ try {
  * Initiates the OAuth login flow. If already logged in, notifies the user
  * and refreshes the token.
  */
-export async function login() {
-    if (storedCredentials) {
-        console.log('Bkper already logged in.');
-    }
-    await getOAuthToken();
+export async function login(): Promise<void> {
+    const result = await authenticateBkper();
+    const state = result.alreadyLoggedIn ? 'Already logged in' : 'Logged in';
+    const identity = result.email ? ` as ${result.email}` : '';
+    console.log(`${state} to Bkper${identity}.`);
 }
 
 /**
  * Logs out by revoking remote access when possible and always removing local credentials.
  */
-export async function logout(): Promise<void> {
+export async function logoutBkper(): Promise<BkperLogoutResult> {
     const tokenToRevoke = storedCredentials?.refresh_token ?? storedCredentials?.access_token;
 
     try {
@@ -104,19 +128,31 @@ export async function logout(): Promise<void> {
             const localAuth = createOAuthClient();
             await localAuth.revokeToken(tokenToRevoke);
             clearCredentials();
-            console.log('Bkper logged out. Remote access revoked and local credentials cleared.');
-            return;
+            return {remoteAccessRevoked: true};
         }
     } catch (err) {
         clearCredentials();
         const message = err instanceof Error ? err.message : String(err);
-        console.warn(
-            `Bkper logged out locally, but remote token revocation failed: ${message}`
-        );
-        return;
+        return {
+            remoteAccessRevoked: false,
+            warning: `Remote token revocation failed: ${message}`,
+        };
     }
 
     clearCredentials();
+    return {remoteAccessRevoked: false};
+}
+
+export async function logout(): Promise<void> {
+    const result = await logoutBkper();
+    if (result.warning) {
+        console.warn(`Bkper logged out locally, but ${result.warning.toLowerCase()}`);
+        return;
+    }
+    if (result.remoteAccessRevoked) {
+        console.log('Bkper logged out. Remote access revoked and local credentials cleared.');
+        return;
+    }
     console.log('Bkper logged out. Local credentials cleared.');
 }
 
@@ -171,7 +207,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 async function postOAuthForm(
     url: string,
-    params: Record<string, string>
+    params: Record<string, string>,
+    signal?: AbortSignal
 ): Promise<OAuthPostResult> {
     const body = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -182,6 +219,7 @@ async function postOAuthForm(
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body,
+        signal,
     });
 
     const parsed: unknown = await response.json();
@@ -308,11 +346,15 @@ function parseTokenResponse(body: Record<string, unknown>): Credentials {
     return credentials;
 }
 
-async function requestDeviceCode(): Promise<DeviceCodeResponse> {
-    const result = await postOAuthForm(OAUTH_CONFIG.deviceCodeEndpoint, {
-        client_id: OAUTH_CONFIG.clientId,
-        scope: OAUTH_CONFIG.scope,
-    });
+async function requestDeviceCode(signal?: AbortSignal): Promise<DeviceCodeResponse> {
+    const result = await postOAuthForm(
+        OAUTH_CONFIG.deviceCodeEndpoint,
+        {
+            client_id: OAUTH_CONFIG.clientId,
+            scope: OAUTH_CONFIG.scope,
+        },
+        signal
+    );
 
     if (!result.ok) {
         throw new Error(
@@ -333,23 +375,45 @@ Waiting for authorization...
 `);
 }
 
-function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (signal?.aborted) {
+            reject(new Error('Login cancelled'));
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            signal?.removeEventListener('abort', cancel);
+            resolve();
+        }, ms);
+        const cancel = () => {
+            clearTimeout(timeout);
+            reject(new Error('Login cancelled'));
+        };
+        signal?.addEventListener('abort', cancel, {once: true});
+    });
 }
 
-async function pollForDeviceToken(deviceCode: DeviceCodeResponse): Promise<Credentials> {
+async function pollForDeviceToken(
+    deviceCode: DeviceCodeResponse,
+    signal?: AbortSignal
+): Promise<Credentials> {
     const expiresAt = Date.now() + deviceCode.expiresIn * 1000;
     let pollIntervalMs = deviceCode.interval * 1000;
 
     while (Date.now() < expiresAt) {
-        await sleep(pollIntervalMs);
+        await sleep(pollIntervalMs, signal);
 
-        const result = await postOAuthForm(OAUTH_CONFIG.tokenEndpoint, {
-            client_id: OAUTH_CONFIG.clientId,
-            client_secret: OAUTH_CONFIG.clientSecret,
-            device_code: deviceCode.deviceCode,
-            grant_type: DEVICE_CODE_GRANT_TYPE,
-        });
+        const result = await postOAuthForm(
+            OAUTH_CONFIG.tokenEndpoint,
+            {
+                client_id: OAUTH_CONFIG.clientId,
+                client_secret: OAUTH_CONFIG.clientSecret,
+                device_code: deviceCode.deviceCode,
+                grant_type: DEVICE_CODE_GRANT_TYPE,
+            },
+            signal
+        );
 
         if (result.ok) {
             return parseTokenResponse(result.body);
@@ -379,10 +443,21 @@ async function pollForDeviceToken(deviceCode: DeviceCodeResponse): Promise<Crede
 /**
  * Performs OAuth2 authentication using the device authorization flow.
  */
-async function authenticateDevice(): Promise<Credentials> {
-    const deviceCode = await requestDeviceCode();
-    printDeviceAuthorizationInstructions(deviceCode);
-    return pollForDeviceToken(deviceCode);
+async function authenticateDevice(
+    options: OAuthInteractionOptions = {}
+): Promise<Credentials> {
+    const deviceCode = await requestDeviceCode(options.signal);
+    if (options.onDeviceCode) {
+        options.onDeviceCode({
+            userCode: deviceCode.userCode,
+            verificationUrl: deviceCode.verificationUrl,
+            expiresIn: deviceCode.expiresIn,
+            interval: deviceCode.interval,
+        });
+    } else {
+        printDeviceAuthorizationInstructions(deviceCode);
+    }
+    return pollForDeviceToken(deviceCode, options.signal);
 }
 
 /**
@@ -416,21 +491,55 @@ export async function getStoredOAuthToken(): Promise<string | undefined> {
 /**
  * Returns a valid OAuth token, launching the device authorization flow if needed.
  */
-export async function getOAuthToken(): Promise<string> {
+async function resolveOAuthToken(
+    options: OAuthInteractionOptions = {}
+): Promise<{accessToken: string; alreadyLoggedIn: boolean}> {
     const hadStoredCredentials = storedCredentials != null;
     const storedToken = await getStoredOAuthToken();
     if (storedToken) {
-        return storedToken;
+        return {accessToken: storedToken, alreadyLoggedIn: true};
     }
 
     if (hadStoredCredentials) {
-        console.log('Session expired. Re-authenticating...');
+        if (options.onStatus) {
+            options.onStatus('Session expired. Re-authenticating...');
+        } else if (!options.onDeviceCode) {
+            console.log('Session expired. Re-authenticating...');
+        }
     }
 
-    const credentials = await authenticateDevice();
+    const credentials = await authenticateDevice(options);
     storeCredentials(mergeCredentials(storedCredentials, credentials));
 
-    return credentials.access_token ?? '';
+    return {
+        accessToken: credentials.access_token ?? '',
+        alreadyLoggedIn: false,
+    };
+}
+
+async function getAuthenticatedEmail(accessToken: string): Promise<string | undefined> {
+    try {
+        const tokenInfo = await createOAuthClient().getTokenInfo(accessToken);
+        return tokenInfo.email;
+    } catch {
+        return undefined;
+    }
+}
+
+export async function authenticateBkper(
+    options: OAuthInteractionOptions = {}
+): Promise<BkperAuthenticationResult> {
+    const result = await resolveOAuthToken(options);
+    return {
+        ...result,
+        email: await getAuthenticatedEmail(result.accessToken),
+    };
+}
+
+export async function getOAuthToken(
+    options: OAuthInteractionOptions = {}
+): Promise<string> {
+    return (await resolveOAuthToken(options)).accessToken;
 }
 
 function storeCredentials(credentials: Credentials) {

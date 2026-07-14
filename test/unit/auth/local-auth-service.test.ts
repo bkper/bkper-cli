@@ -5,9 +5,18 @@ import path from 'path';
 import sinon from 'sinon';
 import { OAuth2Client } from 'google-auth-library';
 
+interface DeviceAuthorizationInfo {
+    userCode: string;
+    verificationUrl: string;
+}
+
 interface AuthServiceModule {
+    login(): Promise<void>;
     logout(): Promise<void>;
-    getOAuthToken(): Promise<string>;
+    getOAuthToken(options?: {
+        onDeviceCode?: (info: DeviceAuthorizationInfo) => void;
+        signal?: AbortSignal;
+    }): Promise<string>;
 }
 
 interface FetchResponse {
@@ -118,6 +127,56 @@ describe('auth/local-auth-service', function () {
         expect(String(consoleWarnStub.firstCall.args[0])).to.match(/revocation failed/i);
     });
 
+    it('should show the authenticated email during standard login', async function () {
+        fs.writeFileSync(
+            credentialsPath,
+            JSON.stringify({
+                access_token: 'stored-access-token',
+                refresh_token: 'stored-refresh-token',
+            }),
+            'utf8'
+        );
+        sinon
+            .stub(OAuth2Client.prototype, 'getAccessToken')
+            .resolves({token: 'stored-access-token'});
+        sinon
+            .stub(OAuth2Client.prototype, 'getTokenInfo')
+            .resolves({
+                aud: 'bkper-cli',
+                scopes: ['https://www.googleapis.com/auth/userinfo.email'],
+                expiry_date: Date.now() + 3600000,
+                email: 'user@example.com',
+            });
+        const consoleLogStub = sinon.stub(console, 'log');
+
+        const authService = await importAuthService();
+        await authService.login();
+
+        expect(consoleLogStub.calledWithExactly('Already logged in to Bkper as user@example.com.'))
+            .to.equal(true);
+    });
+
+    it('should keep login successful when authenticated email lookup fails', async function () {
+        fs.writeFileSync(
+            credentialsPath,
+            JSON.stringify({
+                access_token: 'stored-access-token',
+                refresh_token: 'stored-refresh-token',
+            }),
+            'utf8'
+        );
+        sinon
+            .stub(OAuth2Client.prototype, 'getAccessToken')
+            .resolves({token: 'stored-access-token'});
+        sinon.stub(OAuth2Client.prototype, 'getTokenInfo').rejects(new Error('offline'));
+        const consoleLogStub = sinon.stub(console, 'log');
+
+        const authService = await importAuthService();
+        await authService.login();
+
+        expect(consoleLogStub.calledWithExactly('Already logged in to Bkper.')).to.equal(true);
+    });
+
     it('should authenticate with the OAuth device code flow', async function () {
         const calls = stubFetchResponses([
             {
@@ -184,6 +243,42 @@ describe('auth/local-auth-service', function () {
         expect(storedCredentials.refresh_token).to.equal('device-refresh-token');
         expect(storedCredentials.expiry_date).to.be.at.least(beforeAuth + 3600000);
         expect(storedCredentials.expiry_date).to.be.at.most(afterAuth + 3600000);
+    });
+
+    it('should report device authorization through an interaction callback', async function () {
+        stubFetchResponses([
+            {
+                status: 200,
+                body: {
+                    device_code: 'device-code-123',
+                    user_code: 'USER-CODE',
+                    verification_url: 'https://www.google.com/device',
+                    expires_in: 1800,
+                    interval: 0,
+                },
+            },
+            {
+                status: 200,
+                body: {
+                    access_token: 'device-access-token',
+                    refresh_token: 'device-refresh-token',
+                    expires_in: 3600,
+                },
+            },
+        ]);
+        const onDeviceCode = sinon.stub();
+        const consoleLogStub = sinon.stub(console, 'log');
+
+        const authService = await importAuthService();
+        await authService.getOAuthToken({onDeviceCode});
+
+        expect(onDeviceCode.calledOnceWithExactly({
+            userCode: 'USER-CODE',
+            verificationUrl: 'https://www.google.com/device',
+            expiresIn: 1800,
+            interval: 0,
+        })).to.equal(true);
+        expect(consoleLogStub.called).to.equal(false);
     });
 
     it('should fail device authorization when access is denied', async function () {
