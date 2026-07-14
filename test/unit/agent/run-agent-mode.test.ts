@@ -212,7 +212,7 @@ describe('runAgentMode', function () {
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
-            {off: null, minimal: null, low: 'low', medium: null, high: null, xhigh: null, max: null},
+            {off: 'off', minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
         expect(providers[0]?.config.models?.find(

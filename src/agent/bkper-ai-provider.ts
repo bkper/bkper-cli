@@ -90,10 +90,10 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             name: 'Claude Fable 5',
             reasoning: true,
             thinkingLevelMap: {
-                off: null,
+                off: 'off',
                 minimal: null,
                 low: 'low',
-                medium: null,
+                medium: 'medium',
                 high: null,
                 xhigh: null,
                 max: null,
