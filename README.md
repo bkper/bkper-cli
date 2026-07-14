@@ -16,6 +16,7 @@ With one tool, you can work with Bkper from your terminal, built-in agent, or ex
 ### Prerequisites
 
 -   [Node.js](https://nodejs.org/) >= 22.19.0
+-   **Windows:** use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) — the agent relies on Linux tooling that doesn't work reliably in PowerShell
 
 ### Install (choose one)
 
