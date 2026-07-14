@@ -8,7 +8,12 @@
     -   `bkper auth login` now identifies the authenticated account by email when available
 -   **Agent Experience**
     -   `/login` and `/logout` now manage Bkper authentication, while `/connect` and `/disconnect` manage external model providers
-    -   Bkper authentication now enables the included Bkper AI models by default
+    -   Bkper authentication now enables the included Bkper AI models by default: GPT-5.6 Luna, GPT-5.6 Terra, GPT-5.6 Sol, Claude Fable 5, and Grok 4.5
+    -   New agent sessions now default to Grok 4.5 with high thinking, with model-specific thinking defaults for GPT-5.6 Sol and Claude Fable 5
+    -   Bkper AI model responses are capped at 32,000 output tokens
+-   **Events**
+    -   Added `bkper event list` to inspect Book events and bot responses, with date, resource, error, and event-type filters plus cursor pagination
+    -   Added `bkper event replay <eventId>` to replay a bot response for a specific agent
 
 ### **June 2026**
 
