@@ -184,12 +184,14 @@ describe('runAgentMode', function () {
             'openai/gpt-5.6-luna',
             'openai/gpt-5.6-terra',
             'openai/gpt-5.6-sol',
+            'anthropic/claude-fable-5',
             'xai/grok-4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
             'GPT-5.6 Luna',
             'GPT-5.6 Terra',
             'GPT-5.6 Sol',
+            'Claude Fable 5',
             'Grok 4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
@@ -197,18 +199,33 @@ describe('runAgentMode', function () {
             200000,
             200000,
             200000,
+            200000,
+        ]);
+        expect(providers[0]?.config.models?.map(model => model.maxTokens)).to.deep.equal([
+            128000,
+            128000,
+            128000,
+            32000,
+            500000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
+            {off: null, minimal: null, low: 'low', medium: null, high: null, xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
+        expect(providers[0]?.config.models?.find(
+            model => model.id === 'anthropic/claude-fable-5'
+        )?.compat).to.include({
+            supportsLongCacheRetention: false,
+        });
         expect(providers[0]?.config.models?.map(model =>
             model.compat && 'sendSessionAffinityHeaders' in model.compat
                 ? model.compat.sendSessionAffinityHeaders
                 : undefined
         )).to.deep.equal([
+            true,
             true,
             true,
             true,
@@ -537,6 +554,29 @@ describe('runAgentMode', function () {
         expect(restored.model).to.equal(sol);
         expect(restored.thinkingLevel).to.equal('medium');
         expect(restored.scopedModels).to.deep.equal([]);
+    });
+
+    it('should default a saved Fable model to low thinking', function () {
+        const fable = {provider: 'bkper', id: 'anthropic/claude-fable-5'};
+
+        const restored = restorePersistedSessionOptions(
+            {
+                getEnabledModels: () => undefined,
+                getDefaultProvider: () => 'bkper',
+                getDefaultModel: () => 'anthropic/claude-fable-5',
+            },
+            {
+                getAvailable: () => [fable],
+                find: (provider: string, modelId: string) =>
+                    provider === fable.provider && modelId === fable.id ? fable : undefined,
+            },
+            {
+                buildSessionContext: () => ({messages: []}),
+            }
+        );
+
+        expect(restored.model).to.equal(fable);
+        expect(restored.thinkingLevel).to.equal('low');
     });
 
     it('should restore persisted scoped models and reuse the saved default model when it is in scope', function () {

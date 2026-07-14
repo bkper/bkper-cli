@@ -289,7 +289,10 @@ function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel |
     if (model.provider !== BKPER_AI_PROVIDER_ID) {
         return undefined;
     }
-    return model.id === 'openai/gpt-5.6-sol' ? 'medium' : undefined;
+    if (model.id === 'openai/gpt-5.6-sol') {
+        return 'medium';
+    }
+    return model.id === 'anthropic/claude-fable-5' ? 'low' : undefined;
 }
 
 function resolvePatternMatches<TModel extends ModelLike>(
