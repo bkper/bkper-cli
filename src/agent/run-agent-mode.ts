@@ -344,7 +344,7 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
 
         return {
             model: defaultThinkingLevel ? defaultModel : startupDefaultModel,
-            thinkingLevel: defaultThinkingLevel ?? (startupDefaultModel ? 'medium' : undefined),
+            thinkingLevel: defaultThinkingLevel ?? (startupDefaultModel ? 'high' : undefined),
             scopedModels: [],
             diagnostics: [],
         };

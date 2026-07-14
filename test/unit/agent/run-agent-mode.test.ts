@@ -483,7 +483,7 @@ describe('runAgentMode', function () {
         expect(sessionManager).to.equal(createSessionManager.firstCall.returnValue);
     });
 
-    it('should start an unconfigured session with Grok at medium thinking', function () {
+    it('should start an unconfigured session with Grok at high thinking', function () {
         const claude = {provider: 'anthropic', id: 'claude-sonnet-4'};
         const grok = {provider: 'bkper', id: 'xai/grok-4.5'};
         const models = [claude, grok];
@@ -505,7 +505,7 @@ describe('runAgentMode', function () {
         );
 
         expect(restored.model).to.equal(grok);
-        expect(restored.thinkingLevel).to.equal('medium');
+        expect(restored.thinkingLevel).to.equal('high');
         expect(restored.scopedModels).to.deep.equal([]);
         expect(restored.diagnostics).to.deep.equal([]);
     });
