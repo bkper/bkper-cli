@@ -1,7 +1,7 @@
 {
     "name": "bkper-cli",
     "description": "Adds Bkper CLI guidance for safe Bkper data, reporting, app development, and accounting-support workflows in Claude Code.",
-    "version": "4.18.4",
+    "version": "4.19.0",
     "author": {
         "name": "Bkper",
         "email": "support@bkper.com",
