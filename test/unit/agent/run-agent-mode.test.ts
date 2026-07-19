@@ -14,6 +14,7 @@ import {
     BKPER_AGENT_BUILTINS_EXTENSION_NAME,
     BKPER_AGENT_BUILTINS_EXTENSION_PATH,
     BkperInteractiveMode,
+    createAgentModeDependencies,
     createStartupSessionManager,
     installBkperSessionKeybindings,
     isBkperAgentVerboseDiagnosticsEnabled,
@@ -113,7 +114,8 @@ function registerStartupExtension(
     startupMaintenance = sinon.stub().resolves(),
     settingsManager?: {
         getQuietStartup: () => boolean;
-    }
+    },
+    bkperAiBaseUrlOverride?: string
 ): {
     sessionStartHandler: RegisteredSessionStartHandler;
     startupMaintenance: typeof startupMaintenance;
@@ -129,7 +131,8 @@ function registerStartupExtension(
             }) as unknown as ExtensionAPI['on'],
         },
         startupMaintenance,
-        settingsManager
+        settingsManager,
+        bkperAiBaseUrlOverride
     );
 
     expect(sessionStartHandler).to.not.equal(undefined);
@@ -160,16 +163,21 @@ describe('runAgentMode', function () {
         ]);
     });
 
-    it('should register Bkper AI as a built-in OpenAI-compatible provider', function () {
+    it('should register Bkper AI through Pi standard OpenAI Responses transport', function () {
         const providers: Array<{name: string; config: ProviderConfig}> = [];
 
-        registerBkperAgentBuiltins({
-            on: sinon.stub() as unknown as ExtensionAPI['on'],
-            registerCommand: sinon.stub(),
-            registerProvider: (name: string, config: ProviderConfig) => {
-                providers.push({name, config});
-            },
-        } as unknown as ExtensionAPI);
+        registerBkperAgentBuiltins(
+            {
+                on: sinon.stub() as unknown as ExtensionAPI['on'],
+                registerCommand: sinon.stub(),
+                registerProvider: (name: string, config: ProviderConfig) => {
+                    providers.push({name, config});
+                },
+            } as unknown as ExtensionAPI,
+            sinon.stub().resolves(),
+            undefined,
+            {}
+        );
 
         expect(providers).to.have.length(1);
         expect(providers[0]?.name).to.equal('bkper');
@@ -177,8 +185,11 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.baseUrl).to.equal('https://ai.bkper.app/v1');
         expect(providers[0]?.config.apiKey).to.equal('!bkper auth token');
         expect(providers[0]?.config.authHeader).to.equal(true);
+        expect(providers[0]?.config.api).to.equal('openai-responses');
+        expect(providers[0]?.config.streamSimple).to.equal(undefined);
         expect(providers[0]?.config.headers).to.deep.equal({
             'bkper-agent-id': 'bkper-cli',
+            'User-Agent': 'bkper-cli',
         });
         expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
             'openai/gpt-5.6-luna',
@@ -215,23 +226,59 @@ describe('runAgentMode', function () {
             {off: 'off', minimal: null, low: 'low', medium: 'medium', high: null, xhigh: null, max: null},
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
-        expect(providers[0]?.config.models?.find(
-            model => model.id === 'anthropic/claude-fable-5'
-        )?.compat).to.include({
-            supportsLongCacheRetention: false,
-        });
-        expect(providers[0]?.config.models?.map(model =>
-            model.compat && 'sendSessionAffinityHeaders' in model.compat
-                ? model.compat.sendSessionAffinityHeaders
-                : undefined
-        )).to.deep.equal([
-            true,
-            true,
-            true,
-            true,
-            true,
+        expect(providers[0]?.config.models?.map(model => model.compat)).to.deep.equal([
+            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
         ]);
     });
+
+    it('should allow a full Bkper AI path override on the development host', function () {
+        const registerProvider = sinon.stub();
+
+        registerBkperAgentBuiltins(
+            {
+                on: sinon.stub() as unknown as ExtensionAPI['on'],
+                registerCommand: sinon.stub(),
+                registerProvider,
+            } as unknown as ExtensionAPI,
+            sinon.stub().resolves(),
+            undefined,
+            {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/experimental/v2'}
+        );
+
+        expect(registerProvider.firstCall.args[1].baseUrl).to.equal(
+            'https://ai-dev.bkper.app/experimental/v2'
+        );
+    });
+
+    for (const unsafeBaseUrl of [
+        '',
+        'not-a-url',
+        'http://ai-dev.bkper.app/v2',
+        'https://ai-dev.bkper.app.evil.example/v2',
+        'https://user:password@ai-dev.bkper.app/v2',
+        'https://ai-dev.bkper.app:8443/v2',
+        'https://ai-dev.bkper.app/v2?target=other',
+        'https://ai-dev.bkper.app/v2#fragment',
+    ]) {
+        it(`should reject unsafe Bkper AI override ${JSON.stringify(unsafeBaseUrl)}`, function () {
+            expect(() =>
+                registerBkperAgentBuiltins(
+                    {
+                        on: sinon.stub() as unknown as ExtensionAPI['on'],
+                        registerCommand: sinon.stub(),
+                        registerProvider: sinon.stub(),
+                    } as unknown as ExtensionAPI,
+                    sinon.stub().resolves(),
+                    undefined,
+                    {BKPER_AI_BASE_URL: unsafeBaseUrl}
+                )
+            ).to.throw(/BKPER_AI_BASE_URL/);
+        });
+    }
 
     it('should give Bkper built-in inline extensions a canonical startup display name', function () {
         const normalized = normalizeBkperAgentExtensions(
@@ -379,6 +426,33 @@ describe('runAgentMode', function () {
         expect(notify.called).to.be.false;
         expect(setHeader.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
+    });
+
+    it('should warn about a Bkper AI endpoint override even during quiet startup', async function () {
+        const notify = sinon.stub();
+        const setHeader = sinon.stub();
+
+        const {sessionStartHandler} = registerStartupExtension(
+            sinon.stub().resolves(),
+            {getQuietStartup: () => true},
+            'https://ai-dev.bkper.app/v2'
+        );
+
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify, setHeader},
+                modelRegistry: {getAvailable: () => []},
+            }
+        );
+
+        expect(setHeader.called).to.be.false;
+        expect(
+            notify.calledWithExactly(
+                'Bkper AI endpoint override active: https://ai-dev.bkper.app/v2',
+                'warning'
+            )
+        ).to.be.true;
     });
 
     it('should show a setup hint in the startup header when no models are available', async function () {
@@ -670,6 +744,27 @@ describe('runAgentMode', function () {
         expect(restored.thinkingLevel).to.equal('high');
         expect(restored.scopedModels[0]?.thinkingLevel).to.equal('high');
         expect(restored.scopedModels[1]?.thinkingLevel).to.equal(undefined);
+    });
+
+    it('should fail runtime creation clearly for an unsafe Bkper AI override', async function () {
+        const previousBaseUrl = process.env.BKPER_AI_BASE_URL;
+        process.env.BKPER_AI_BASE_URL = 'https://attacker.example/v2';
+
+        let startupError: unknown;
+        try {
+            await createAgentModeDependencies({noSession: true}).createRuntime();
+        } catch (error) {
+            startupError = error;
+        } finally {
+            if (previousBaseUrl === undefined) {
+                delete process.env.BKPER_AI_BASE_URL;
+            } else {
+                process.env.BKPER_AI_BASE_URL = previousBaseUrl;
+            }
+        }
+
+        expect(startupError).to.be.instanceOf(Error);
+        expect((startupError as Error).message).to.include('BKPER_AI_BASE_URL');
     });
 
     it('should create runtime and run interactive mode', async function () {

@@ -19,9 +19,9 @@ import {
     type OAuthInteractionOptions,
 } from '../auth/local-auth-service.js';
 import {
-    BKPER_AI_PROVIDER_CONFIG,
     BKPER_AI_PROVIDER_ID,
     BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
+    getBkperAiProviderConfig,
 } from './bkper-ai-provider.js';
 
 export const BKPER_AGENT_LOGIN_COMMAND = 'bkper-agent-login';
@@ -72,7 +72,7 @@ export function installBkperAuthCommandRouting(
         if (!bkperProviderSuspended) {
             return;
         }
-        modelRegistry.registerProvider(BKPER_AI_PROVIDER_ID, BKPER_AI_PROVIDER_CONFIG);
+        modelRegistry.registerProvider(BKPER_AI_PROVIDER_ID, getBkperAiProviderConfig());
         bkperProviderSuspended = false;
     };
 
@@ -127,7 +127,7 @@ export function installBkperAuthCommandRouting(
         try {
             await submit(`/login ${parsed.args}`);
         } finally {
-            modelRegistry.registerProvider(BKPER_AI_PROVIDER_ID, BKPER_AI_PROVIDER_CONFIG);
+            modelRegistry.registerProvider(BKPER_AI_PROVIDER_ID, getBkperAiProviderConfig());
         }
     };
 }

@@ -22,6 +22,7 @@ import {
 import {
     BKPER_AI_PROVIDER_ID,
     BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
+    getBkperAiBaseUrlOverride,
     registerBkperAiProvider,
 } from './bkper-ai-provider.js';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
@@ -717,7 +718,8 @@ export function normalizeBkperAgentExtensions(
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
-    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>
+    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>,
+    bkperAiBaseUrlOverride?: string
 ): void {
     let startupMaintenanceTriggered = false;
 
@@ -731,6 +733,13 @@ export function registerBkperAgentStartupExtension(
         }
         startupMaintenanceTriggered = true;
 
+        if (bkperAiBaseUrlOverride) {
+            ctx.ui.notify(
+                `Bkper AI endpoint override active: ${bkperAiBaseUrlOverride}`,
+                'warning'
+            );
+        }
+
         void startupMaintenance({
             notify: (message, type) => ctx.ui.notify(message, type),
         });
@@ -740,12 +749,20 @@ export function registerBkperAgentStartupExtension(
 export function registerBkperAgentBuiltins(
     pi: ExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
-    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>
+    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>,
+    env: Record<string, string | undefined> = process.env
 ): void {
+    const bkperAiBaseUrlOverride = getBkperAiBaseUrlOverride(env);
+
     registerBkperCoreConceptsPreloadExtension(pi);
-    registerBkperAgentStartupExtension(pi, startupMaintenance, settingsManager);
+    registerBkperAgentStartupExtension(
+        pi,
+        startupMaintenance,
+        settingsManager,
+        bkperAiBaseUrlOverride
+    );
     registerBkperAgentAuthExtension(pi);
-    registerBkperAiProvider(pi);
+    registerBkperAiProvider(pi, env);
 }
 
 export interface SessionOptions {
@@ -758,6 +775,8 @@ export function createAgentModeDependencies(
 ): AgentModeDependencies {
     return {
         createRuntime: async () => {
+            getBkperAiBaseUrlOverride();
+
             const cwd = process.cwd();
             const agentDir = getAgentDir();
             const startupSettingsManager = SettingsManager.create(cwd, agentDir);
