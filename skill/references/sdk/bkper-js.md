@@ -909,6 +909,7 @@ A File can be attached to a `Transaction` or used to import data.
 - `getSize()` → `number | undefined` — Gets the file size in bytes.
 - `getUrl()` → `string | undefined` — Gets the file serving url for accessing via browser.
 - `json()` → `bkper.File` — Gets an immutable copy of the JSON payload for this resource.
+- `remove()` → `Promise<File>` — Perform delete File.
 - `update()` → `Promise<File>` — Perform update File, applying pending changes.
 
 *Standard property methods (deleteProperty, getProperties, getProperty, getPropertyKeys, getVisibleProperties, setProperties, setProperty, setVisibleProperties, setVisibleProperty) — see Account.*
@@ -1204,6 +1205,7 @@ Each User has a unique identity, subscription plan details, and access permissio
 - `getHostedDomain()` → `string | undefined` — Gets the hosted domain of the User.
 - `getId()` → `string | undefined` — Gets the id of the User.
 - `getName()` → `string | undefined` — Gets the name of the User.
+- `getPlanCycle()` → `"MONTHLY" | "YEARLY" | undefined` — Gets the billing cycle of the User's current plan.
 - `getUsername()` → `string | undefined` — Gets the username of the User.
 - `hasUsedConnections()` → `boolean | undefined` — Tells if the User has already used `Connections`.
 - `json()` → `bkper.User` — Gets an immutable copy of the JSON payload for this resource.
@@ -1398,6 +1400,7 @@ Enum that represents event types.
 - `COMMENT_CREATED`
 - `COMMENT_DELETED`
 - `FILE_CREATED`
+- `FILE_DELETED`
 - `FILE_UPDATED`
 - `GROUP_CREATED`
 - `GROUP_DELETED`

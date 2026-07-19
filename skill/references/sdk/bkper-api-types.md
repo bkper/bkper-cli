@@ -89,7 +89,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `deprecated?`: `boolean` — Whether the app is deprecated
 - `description?`: `string` — The App description
 - `developers?`: `string` — The developers (usernames and domain patterns), comma or space separated
-- `events?`: `("FILE_CREATED" | "FILE_UPDATED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_UPDATED" | "BOOK_DELETED")[]` — Event types the App listen to
+- `events?`: `("FILE_CREATED" | "FILE_UPDATED" | "FILE_DELETED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_UPDATED" | "BOOK_DELETED")[]` — Event types the App listen to
 - `filePatterns?`: `string[]` — File patterns the App handles - wildcard accepted. E.g. *.pdf, *-bank.csv
 - `id?`: `string` — The unique agent id of the App - this can't be changed after created
 - `installable?`: `boolean` — Whether this app is installable in a book
@@ -329,7 +329,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `data?`: `bkper.EventData`
 - `id?`: `string` — The unique id that identifies the Event
 - `resource?`: `string` — The resource associated to the Event
-- `type?`: `"FILE_CREATED" | "FILE_UPDATED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_UPDATED" | "BOOK_DELETED"` — The type of the Event
+- `type?`: `"FILE_CREATED" | "FILE_UPDATED" | "FILE_DELETED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_UPDATED" | "BOOK_DELETED"` — The type of the Event
 - `user?`: `bkper.User`
 
 ### EventData
@@ -545,6 +545,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `id?`: `string` — The user unique id
 - `name?`: `string` — The user display name
 - `plan?`: `string` — The user plan
+- `planCycle?`: `"MONTHLY" | "YEARLY"` — The user plan billing cycle
 - `planOverdue?`: `boolean` — True if subscription payment is overdue
 - `startedTrial?`: `boolean` — True if user started trial
 - `totalTransactionsThisMonth?`: `number` — User-level total transactions this month
