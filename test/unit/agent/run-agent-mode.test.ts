@@ -227,11 +227,11 @@ describe('runAgentMode', function () {
             {minimal: null, low: null, medium: 'medium', high: 'high', xhigh: null, max: null},
         ]);
         expect(providers[0]?.config.models?.map(model => model.compat)).to.deep.equal([
-            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
-            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
-            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
-            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
-            {supportsDeveloperRole: false, sendSessionIdHeader: true, supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
+            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
         ]);
     });
 

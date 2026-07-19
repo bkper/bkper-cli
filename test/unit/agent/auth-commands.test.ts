@@ -153,19 +153,17 @@ describe('agent/auth-commands', function () {
             },
             setModel,
         } as unknown as ExtensionAPI;
-        const logoutProvider = sinon.stub();
-        const refresh = sinon.stub();
+        const logoutProvider = sinon.stub().resolves();
+        const listCredentials = sinon
+            .stub()
+            .resolves([{providerId: 'anthropic', type: 'oauth' as const}]);
+        const refresh = sinon.stub().resolves();
         const notify = sinon.stub();
         const anthropic = {provider: 'anthropic', id: 'claude-sonnet-4'};
         const openai = {provider: 'openai', id: 'gpt-5'};
         const context = {
             model: anthropic,
             modelRegistry: {
-                authStorage: {
-                    list: () => ['anthropic'],
-                    get: () => ({type: 'oauth'}),
-                    logout: logoutProvider,
-                },
                 getProviderDisplayName: () => 'Anthropic',
                 getProviderAuthStatus: () => ({configured: false}),
                 getApiKeyForProvider: async () => undefined,
@@ -175,12 +173,16 @@ describe('agent/auth-commands', function () {
             ui: {notify},
         } as unknown as ExtensionCommandContext;
 
-        registerBkperAgentAuthExtension(pi, {
-            authenticateBkper: sinon.stub(),
-            logoutBkper: sinon.stub(),
-            isBkperLoggedIn: () => false,
-            openBrowser: sinon.stub(),
-        });
+        registerBkperAgentAuthExtension(
+            pi,
+            {
+                authenticateBkper: sinon.stub(),
+                logoutBkper: sinon.stub(),
+                isBkperLoggedIn: () => false,
+                openBrowser: sinon.stub(),
+            },
+            {listCredentials, logout: logoutProvider}
+        );
         const command = commands.get(BKPER_AGENT_DISCONNECT_COMMAND);
         expect(command).to.not.equal(undefined);
 

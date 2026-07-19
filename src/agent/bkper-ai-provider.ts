@@ -36,7 +36,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             cost: {input: 1, output: 6, cacheRead: 0.1, cacheWrite: 1.25},
             compat: {
                 supportsDeveloperRole: false,
-                sendSessionIdHeader: true,
+                sessionAffinityFormat: 'openai',
                 supportsLongCacheRetention: false,
             },
         },
@@ -58,7 +58,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             cost: {input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 3.125},
             compat: {
                 supportsDeveloperRole: false,
-                sendSessionIdHeader: true,
+                sessionAffinityFormat: 'openai',
                 supportsLongCacheRetention: false,
             },
         },
@@ -80,7 +80,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             cost: {input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25},
             compat: {
                 supportsDeveloperRole: false,
-                sendSessionIdHeader: true,
+                sessionAffinityFormat: 'openai',
                 supportsLongCacheRetention: false,
             },
         },
@@ -103,7 +103,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             cost: {input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5},
             compat: {
                 supportsDeveloperRole: false,
-                sendSessionIdHeader: true,
+                sessionAffinityFormat: 'openai',
                 supportsLongCacheRetention: false,
             },
         },
@@ -125,7 +125,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
             cost: {input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0},
             compat: {
                 supportsDeveloperRole: false,
-                sendSessionIdHeader: true,
+                sessionAffinityFormat: 'openai',
                 supportsLongCacheRetention: false,
             },
         },
