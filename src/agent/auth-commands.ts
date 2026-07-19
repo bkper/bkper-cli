@@ -175,6 +175,11 @@ export interface BkperAuthCommandDependencies {
     openBrowser(url: string): void;
 }
 
+export interface ProviderCredentialManager {
+    listCredentials(): Promise<readonly {providerId: string}[]>;
+    logout(providerId: string): Promise<void>;
+}
+
 const defaultAuthCommandDependencies: BkperAuthCommandDependencies = {
     authenticateBkper,
     logoutBkper,
@@ -283,7 +288,7 @@ async function handleBkperLogin(
                 if (dialog.signal.aborted) {
                     return;
                 }
-                ctx.modelRegistry.refresh();
+                await ctx.modelRegistry.refresh();
                 const currentModel = ctx.model;
                 const currentModelAvailable = currentModel
                     ? ctx.modelRegistry
@@ -330,7 +335,7 @@ async function handleBkperLogout(
     }
 
     const result = await dependencies.logoutBkper();
-    ctx.modelRegistry.refresh();
+    await ctx.modelRegistry.refresh();
     const switched =
         ctx.model?.provider === BKPER_AI_PROVIDER_ID
             ? await switchToAuthFallback(pi, ctx, dependencies, BKPER_AI_PROVIDER_ID)
@@ -346,10 +351,11 @@ async function handleBkperLogout(
 
 async function resolveProviderToDisconnect(
     providerRef: string,
-    ctx: ExtensionCommandContext
+    ctx: ExtensionCommandContext,
+    credentialManager?: ProviderCredentialManager
 ): Promise<string | undefined> {
-    const storedProviders = ctx.modelRegistry.authStorage
-        .list()
+    const storedProviders = (await credentialManager?.listCredentials() ?? [])
+        .map(credential => credential.providerId)
         .filter(provider => provider !== BKPER_AI_PROVIDER_ID);
     if (providerRef.trim()) {
         return findStoredProvider(
@@ -375,14 +381,15 @@ async function handleProviderDisconnect(
     args: string,
     pi: ExtensionAPI,
     ctx: ExtensionCommandContext,
-    dependencies: BkperAuthCommandDependencies
+    dependencies: BkperAuthCommandDependencies,
+    credentialManager?: ProviderCredentialManager
 ): Promise<void> {
     if (isBkperProviderReference(args)) {
         ctx.ui.notify('Use /logout for Bkper.', 'warning');
         return;
     }
 
-    const provider = await resolveProviderToDisconnect(args, ctx);
+    const provider = await resolveProviderToDisconnect(args, ctx, credentialManager);
     if (!provider) {
         const message = args.trim()
             ? `No credentials saved by /connect for "${args.trim()}".`
@@ -392,8 +399,8 @@ async function handleProviderDisconnect(
     }
 
     const displayName = ctx.modelRegistry.getProviderDisplayName(provider);
-    ctx.modelRegistry.authStorage.logout(provider);
-    ctx.modelRegistry.refresh();
+    await credentialManager?.logout(provider);
+    await ctx.modelRegistry.refresh();
 
     const remainingKey = await ctx.modelRegistry.getApiKeyForProvider(provider);
     if (remainingKey) {
@@ -426,7 +433,8 @@ function matchesCommandPrefix(command: string, prefix: string): boolean {
 
 function createAuthAutocompleteProvider(
     current: AutocompleteProvider,
-    ctx: Pick<ExtensionCommandContext, 'modelRegistry'>
+    ctx: Pick<ExtensionCommandContext, 'modelRegistry'>,
+    credentialManager?: ProviderCredentialManager
 ): AutocompleteProvider {
     const getSuggestions = async (
         lines: string[],
@@ -468,8 +476,8 @@ function createAuthAutocompleteProvider(
         const disconnectMatch = /^\/disconnect\s(.*)$/.exec(beforeCursor);
         if (disconnectMatch) {
             const argument = (disconnectMatch[1] ?? '').toLowerCase();
-            const items = ctx.modelRegistry.authStorage
-                .list()
+            const items = (await credentialManager?.listCredentials() ?? [])
+                .map(credential => credential.providerId)
                 .filter(provider => provider !== BKPER_AI_PROVIDER_ID)
                 .map(provider => ({
                     value: provider,
@@ -531,7 +539,8 @@ function createAuthAutocompleteProvider(
 
 export function registerBkperAgentAuthExtension(
     pi: ExtensionAPI,
-    dependencies: BkperAuthCommandDependencies = defaultAuthCommandDependencies
+    dependencies: BkperAuthCommandDependencies = defaultAuthCommandDependencies,
+    credentialManager?: ProviderCredentialManager
 ): void {
     pi.registerCommand(BKPER_AGENT_LOGIN_COMMAND, {
         handler: (args, ctx) => handleBkperLogin(args, pi, ctx, dependencies),
@@ -540,11 +549,12 @@ export function registerBkperAgentAuthExtension(
         handler: (args, ctx) => handleBkperLogout(args, pi, ctx, dependencies),
     });
     pi.registerCommand(BKPER_AGENT_DISCONNECT_COMMAND, {
-        handler: (args, ctx) => handleProviderDisconnect(args, pi, ctx, dependencies),
+        handler: (args, ctx) =>
+            handleProviderDisconnect(args, pi, ctx, dependencies, credentialManager),
     });
     pi.on('session_start', (_event, ctx) => {
         ctx.ui.addAutocompleteProvider(current =>
-            createAuthAutocompleteProvider(current, ctx)
+            createAuthAutocompleteProvider(current, ctx, credentialManager)
         );
     });
 }

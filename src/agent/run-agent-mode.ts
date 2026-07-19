@@ -1,3 +1,4 @@
+import {join} from 'node:path';
 import {
     createAgentSessionFromServices,
     createAgentSessionRuntime,
@@ -5,6 +6,7 @@ import {
     getAgentDir,
     InteractiveMode,
     keyText,
+    ModelRuntime,
     SessionManager,
     SettingsManager,
     type AgentSessionRuntimeDiagnostic,
@@ -18,6 +20,7 @@ import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import {
     installBkperAuthCommandRouting,
     registerBkperAgentAuthExtension,
+    type ProviderCredentialManager,
 } from './auth-commands.js';
 import {
     BKPER_AI_PROVIDER_ID,
@@ -750,7 +753,8 @@ export function registerBkperAgentBuiltins(
     pi: ExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
     settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>,
-    env: Record<string, string | undefined> = process.env
+    env: Record<string, string | undefined> = process.env,
+    credentialManager?: ProviderCredentialManager
 ): void {
     const bkperAiBaseUrlOverride = getBkperAiBaseUrlOverride(env);
 
@@ -761,7 +765,7 @@ export function registerBkperAgentBuiltins(
         settingsManager,
         bkperAiBaseUrlOverride
     );
-    registerBkperAgentAuthExtension(pi);
+    registerBkperAgentAuthExtension(pi, undefined, credentialManager);
     registerBkperAiProvider(pi, env);
 }
 
@@ -792,10 +796,15 @@ export function createAgentModeDependencies(
                 sessionStartEvent,
             }) => {
                 const settingsManager = SettingsManager.create(cwd, agentDir);
+                const modelRuntime = await ModelRuntime.create({
+                    authPath: join(agentDir, 'auth.json'),
+                    modelsPath: join(agentDir, 'models.json'),
+                });
                 const services = await createAgentSessionServices({
                     cwd,
                     agentDir,
                     settingsManager,
+                    modelRuntime,
                     resourceLoaderOptions: {
                         systemPromptOverride: () => getBkperAgentSystemPrompt(),
                         extensionFactories: [
@@ -803,7 +812,9 @@ export function createAgentModeDependencies(
                                 registerBkperAgentBuiltins(
                                     pi,
                                     runStartupMaintenance,
-                                    settingsManager
+                                    settingsManager,
+                                    process.env,
+                                    modelRuntime
                                 );
                             },
                         ],
@@ -815,7 +826,11 @@ export function createAgentModeDependencies(
                 });
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,
-                    services.modelRegistry,
+                    {
+                        getAvailable: () => [...services.modelRuntime.getAvailableSnapshot()],
+                        find: (provider, modelId) =>
+                            services.modelRuntime.getModel(provider, modelId),
+                    },
                     sessionManager
                 );
 
