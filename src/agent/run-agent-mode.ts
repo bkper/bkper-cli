@@ -86,6 +86,10 @@ type ModelRegistryLike<TModel extends ModelLike = ModelLike> = {
 type SessionManagerLike = {
     buildSessionContext(): {
         messages: unknown[];
+        model?: {
+            provider: string;
+            modelId: string;
+        } | null;
     };
 };
 
@@ -296,7 +300,14 @@ function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel |
     if (model.id === 'openai/gpt-5.6-sol') {
         return 'medium';
     }
-    return model.id === 'anthropic/claude-fable-5' ? 'low' : undefined;
+    if (
+        model.id === 'openai/gpt-5.6-luna' ||
+        model.id === 'openai/gpt-5.6-terra' ||
+        model.id === 'xai/grok-4.5'
+    ) {
+        return 'high';
+    }
+    return undefined;
 }
 
 function resolvePatternMatches<TModel extends ModelLike>(
@@ -359,11 +370,25 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
     sessionManager: SessionManagerLike
 ): RestoredPersistedSessionOptions<TModel> {
     const availableModels = modelRegistry.getAvailable();
-    const hasSessionMessages = sessionManager.buildSessionContext().messages.length > 0;
+    const sessionContext = sessionManager.buildSessionContext();
+    const hasSessionMessages = sessionContext.messages.length > 0;
+    const startupDefaultModel = availableModels.find(
+        model =>
+            model.provider === BKPER_AI_PROVIDER_ID &&
+            model.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
+    );
+    const unavailableBkperSessionModel =
+        sessionContext.model?.provider === BKPER_AI_PROVIDER_ID &&
+        modelRegistry.find(sessionContext.model.provider, sessionContext.model.modelId) === undefined;
     const enabledModels = settingsManager.getEnabledModels();
     if (!enabledModels || enabledModels.length === 0) {
         if (hasSessionMessages) {
             return {
+                model: unavailableBkperSessionModel ? startupDefaultModel : undefined,
+                thinkingLevel:
+                    unavailableBkperSessionModel && startupDefaultModel
+                        ? getBkperAiDefaultThinkingLevel(startupDefaultModel)
+                        : undefined,
                 scopedModels: [],
                 diagnostics: [],
             };
@@ -378,18 +403,22 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
         const defaultThinkingLevel = defaultModel
             ? getBkperAiDefaultThinkingLevel(defaultModel)
             : undefined;
-        const startupDefaultModel =
-            !defaultProvider && !defaultModelId
-                ? availableModels.find(
-                      model =>
-                          model.provider === BKPER_AI_PROVIDER_ID &&
-                          model.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
-                  )
+        const unavailableBkperDefault =
+            defaultProvider === BKPER_AI_PROVIDER_ID &&
+            defaultModelId !== undefined &&
+            defaultModel === undefined;
+        const fallbackStartupModel =
+            (!defaultProvider && !defaultModelId) || unavailableBkperDefault
+                ? startupDefaultModel
                 : undefined;
 
         return {
-            model: defaultThinkingLevel ? defaultModel : startupDefaultModel,
-            thinkingLevel: defaultThinkingLevel ?? (startupDefaultModel ? 'high' : undefined),
+            model: defaultThinkingLevel ? defaultModel : fallbackStartupModel,
+            thinkingLevel:
+                defaultThinkingLevel ??
+                (fallbackStartupModel
+                    ? getBkperAiDefaultThinkingLevel(fallbackStartupModel)
+                    : undefined),
             scopedModels: [],
             diagnostics: [],
         };
@@ -414,14 +443,27 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
                 continue;
             }
 
+            const fixedBkperThinkingLevel = getBkperAiDefaultThinkingLevel(model);
             scopedModels.push({
                 model,
-                thinkingLevel: thinkingLevel ?? getBkperAiDefaultThinkingLevel(model),
+                thinkingLevel: fixedBkperThinkingLevel ?? thinkingLevel,
             });
         }
     }
 
-    if (scopedModels.length === 0 || hasSessionMessages) {
+    if (hasSessionMessages) {
+        return {
+            model: unavailableBkperSessionModel ? startupDefaultModel : undefined,
+            thinkingLevel:
+                unavailableBkperSessionModel && startupDefaultModel
+                    ? getBkperAiDefaultThinkingLevel(startupDefaultModel)
+                    : undefined,
+            scopedModels,
+            diagnostics,
+        };
+    }
+
+    if (scopedModels.length === 0) {
         return {
             scopedModels,
             diagnostics,

@@ -195,7 +195,7 @@ describe('agent/auth-commands', function () {
     });
 
     it('prefers Bkper when authenticated and otherwise selects another provider', function () {
-        const bkper = {provider: 'bkper', id: 'xai/grok-4.5'};
+        const bkper = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
         const anthropic = {provider: 'anthropic', id: 'claude-sonnet-4'};
         const openai = {provider: 'openai', id: 'gpt-5'};
         const models = [anthropic, bkper, openai];
