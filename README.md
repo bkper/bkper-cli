@@ -16,7 +16,7 @@ With one tool, you can work with Bkper from your terminal, built-in agent, or ex
 ### Prerequisites
 
 -   [Node.js](https://nodejs.org/) >= 22.19.0
--   **Windows:** use [WSL](https://learn.microsoft.com/en-us/windows/wsl/install) — the agent relies on Linux tooling that doesn't work reliably in PowerShell
+-   **Windows:** [install with WSL](#install-on-windows-with-wsl) — the agent relies on Linux tooling that doesn't work reliably in PowerShell
 
 ### Install (choose one)
 
@@ -35,6 +35,41 @@ pnpm add -g bkper
 ```bash tab="yarn"
 yarn global add bkper
 ```
+
+### Install on Windows with WSL
+
+Run Bkper inside WSL rather than PowerShell. If WSL is not set up yet:
+
+1. Open **PowerShell as Administrator** and install WSL:
+
+    ```powershell
+    wsl --install
+    ```
+
+    Restart Windows if prompted, then open **Ubuntu** from the Start menu and create your Linux username and password.
+
+    Reference: [Install WSL](https://learn.microsoft.com/en-us/windows/wsl/install).
+
+2. In the **Ubuntu terminal**, install Node.js:
+
+    ```bash
+    sudo apt update
+    sudo apt install -y curl
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh | bash
+    source ~/.bashrc
+    nvm install --lts
+    ```
+
+    Reference: [Set up Node.js on WSL](https://learn.microsoft.com/en-us/windows/dev-environment/javascript/nodejs-on-wsl).
+
+3. Still in the **Ubuntu terminal**, install and open Bkper:
+
+    ```bash
+    npm i -g bkper
+    bkper
+    ```
+
+If the Bkper Agent opens, the installation is working.
 
 ### Authenticate with Bkper
 
