@@ -32,7 +32,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 max: null,
             },
             input: ['text', 'image'],
-            contextWindow: 200_000,
+            contextWindow: 272_000,
             maxTokens: 32_000,
             cost: {input: 1, output: 6, cacheRead: 0.1, cacheWrite: 1.25},
             compat: {
@@ -55,7 +55,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 max: null,
             },
             input: ['text', 'image'],
-            contextWindow: 200_000,
+            contextWindow: 272_000,
             maxTokens: 32_000,
             cost: {input: 2.5, output: 15, cacheRead: 0.25, cacheWrite: 3.125},
             compat: {
@@ -78,7 +78,7 @@ export const BKPER_AI_PROVIDER_CONFIG: ProviderConfig = {
                 max: null,
             },
             input: ['text', 'image'],
-            contextWindow: 200_000,
+            contextWindow: 272_000,
             maxTokens: 32_000,
             cost: {input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25},
             compat: {

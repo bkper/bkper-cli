@@ -204,9 +204,9 @@ describe('runAgentMode', function () {
             'Grok 4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
-            200000,
-            200000,
-            200000,
+            272000,
+            272000,
+            272000,
             200000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.maxTokens)).to.deep.equal([
