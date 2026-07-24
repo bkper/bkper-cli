@@ -52,7 +52,7 @@
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {
-        "@earendil-works/pi-coding-agent": "0.80.10",
+        "@earendil-works/pi-coding-agent": "0.81.1",
         "bkper-js": "^2.40.1",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
