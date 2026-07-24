@@ -194,17 +194,14 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.models?.map(model => model.id)).to.deep.equal([
             'openai/gpt-5.6-luna',
             'openai/gpt-5.6-terra',
-            'openai/gpt-5.6-sol',
             'xai/grok-4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.name)).to.deep.equal([
             'GPT-5.6 Luna',
             'GPT-5.6 Terra',
-            'GPT-5.6 Sol',
             'Grok 4.5',
         ]);
         expect(providers[0]?.config.models?.map(model => model.contextWindow)).to.deep.equal([
-            272000,
             272000,
             272000,
             200000,
@@ -213,16 +210,13 @@ describe('runAgentMode', function () {
             32000,
             32000,
             32000,
-            32000,
         ]);
         expect(providers[0]?.config.models?.map(model => model.thinkingLevelMap)).to.deep.equal([
             {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
             {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
-            {off: null, minimal: null, low: null, medium: 'medium', high: null, xhigh: null, max: null},
             {off: null, minimal: null, low: null, medium: null, high: 'high', xhigh: null, max: null},
         ]);
         expect(providers[0]?.config.models?.map(model => model.compat)).to.deep.equal([
-            {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
             {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
             {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
             {supportsDeveloperRole: false, sessionAffinityFormat: 'openai', supportsLongCacheRetention: false},
@@ -599,39 +593,14 @@ describe('runAgentMode', function () {
         expect(restored.diagnostics).to.deep.equal([]);
     });
 
-    it('should default expensive Bkper AI saved default models to medium without enabled model scoping', function () {
-        const sol = {provider: 'bkper', id: 'openai/gpt-5.6-sol'};
-        const models = [sol];
-
-        const restored = restorePersistedSessionOptions(
-            {
-                getEnabledModels: () => undefined,
-                getDefaultProvider: () => 'bkper',
-                getDefaultModel: () => 'openai/gpt-5.6-sol',
-            },
-            {
-                getAvailable: () => models,
-                find: (provider: string, modelId: string) =>
-                    models.find(model => model.provider === provider && model.id === modelId),
-            },
-            {
-                buildSessionContext: () => ({messages: []}),
-            }
-        );
-
-        expect(restored.model).to.equal(sol);
-        expect(restored.thinkingLevel).to.equal('medium');
-        expect(restored.scopedModels).to.deep.equal([]);
-    });
-
-    it('should fall back a removed saved Bkper default to Terra at high thinking', function () {
+    it('should silently fall back a saved Sol default to Terra at high thinking', function () {
         const terra = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
 
         const restored = restorePersistedSessionOptions(
             {
                 getEnabledModels: () => undefined,
                 getDefaultProvider: () => 'bkper',
-                getDefaultModel: () => 'anthropic/claude-fable-5',
+                getDefaultModel: () => 'openai/gpt-5.6-sol',
             },
             {
                 getAvailable: () => [terra],
@@ -645,16 +614,17 @@ describe('runAgentMode', function () {
 
         expect(restored.model).to.equal(terra);
         expect(restored.thinkingLevel).to.equal('high');
+        expect(restored.diagnostics).to.deep.equal([]);
     });
 
-    it('should fall back removed Bkper models in existing sessions to Terra at high thinking', function () {
+    it('should silently fall back existing Sol sessions to Terra at high thinking', function () {
         const terra = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
 
         const restored = restorePersistedSessionOptions(
             {
                 getEnabledModels: () => undefined,
                 getDefaultProvider: () => 'bkper',
-                getDefaultModel: () => 'anthropic/claude-fable-5',
+                getDefaultModel: () => 'openai/gpt-5.6-sol',
             },
             {
                 getAvailable: () => [terra],
@@ -664,13 +634,14 @@ describe('runAgentMode', function () {
             {
                 buildSessionContext: () => ({
                     messages: [{role: 'user'}],
-                    model: {provider: 'bkper', modelId: 'anthropic/claude-fable-5'},
+                    model: {provider: 'bkper', modelId: 'openai/gpt-5.6-sol'},
                 }),
             }
         );
 
         expect(restored.model).to.equal(terra);
         expect(restored.thinkingLevel).to.equal('high');
+        expect(restored.diagnostics).to.deep.equal([]);
     });
 
     it('should restore persisted scoped models and reuse the saved default model when it is in scope', function () {
@@ -706,19 +677,19 @@ describe('runAgentMode', function () {
 
     it('should apply fixed Bkper AI thinking levels to scoped models', function () {
         const luna = {provider: 'bkper', id: 'openai/gpt-5.6-luna'};
-        const sol = {provider: 'bkper', id: 'openai/gpt-5.6-sol'};
+        const terra = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
         const grok = {provider: 'bkper', id: 'xai/grok-4.5'};
-        const models = [luna, sol, grok];
+        const models = [luna, terra, grok];
 
         const restored = restorePersistedSessionOptions(
             {
                 getEnabledModels: () => [
                     'bkper/openai/gpt-5.6-luna:off',
-                    'bkper/openai/gpt-5.6-sol',
+                    'bkper/openai/gpt-5.6-terra',
                     'bkper/xai/grok-4.5',
                 ],
                 getDefaultProvider: () => 'bkper',
-                getDefaultModel: () => 'openai/gpt-5.6-sol',
+                getDefaultModel: () => 'openai/gpt-5.6-terra',
             },
             {
                 getAvailable: () => models,
@@ -730,11 +701,11 @@ describe('runAgentMode', function () {
             }
         );
 
-        expect(restored.model).to.equal(sol);
-        expect(restored.thinkingLevel).to.equal('medium');
+        expect(restored.model).to.equal(terra);
+        expect(restored.thinkingLevel).to.equal('high');
         expect(restored.scopedModels.map(scopedModel => scopedModel.thinkingLevel)).to.deep.equal([
             'high',
-            'medium',
+            'high',
             'high',
         ]);
     });

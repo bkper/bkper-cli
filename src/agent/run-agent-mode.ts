@@ -297,9 +297,6 @@ function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel |
     if (model.provider !== BKPER_AI_PROVIDER_ID) {
         return undefined;
     }
-    if (model.id === 'openai/gpt-5.6-sol') {
-        return 'medium';
-    }
     if (
         model.id === 'openai/gpt-5.6-luna' ||
         model.id === 'openai/gpt-5.6-terra' ||
