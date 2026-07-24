@@ -8,9 +8,9 @@
     -   `bkper auth login` now identifies the authenticated account by email when available
 -   **Agent Experience**
     -   `/login` and `/logout` now manage Bkper authentication, while `/connect` and `/disconnect` manage external model providers
-    -   Bkper authentication now enables the included Bkper AI models by default: GPT-5.6 Luna, GPT-5.6 Terra, GPT-5.6 Sol, and Grok 4.5
+    -   Bkper authentication now enables the included Bkper AI models by default: GPT-5.6 Luna, GPT-5.6 Terra, and Grok 4.5
     -   New agent sessions now default to GPT-5.6 Terra with high thinking
-    -   GPT-5.6 models now use a 272,000-token context window to stay within the short-context pricing tier
+    -   Included Bkper AI models now use a 200,000-token managed context window to keep usage costs controlled
     -   Bkper AI models now use fixed thinking levels to preserve consistent session caching; external providers remain configurable
     -   Bkper AI model responses are capped at 32,000 output tokens
 -   **Events**
