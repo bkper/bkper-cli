@@ -187,6 +187,9 @@ bkper file upload ./receipt.jpg -b abc123
 # Get a file by id
 bkper file get file_123 -b abc123
 
+# Delete a file by id
+bkper file delete file_123 -b abc123
+
 # Upload and resolve an account to canonical account_id
 bkper file upload ./statement.pdf -b abc123 --account "Credit Card"
 
@@ -204,6 +207,7 @@ Use `-p group_id=...` for group-based routing. The CLI infers `contentType` from
     -   `--limit <number>` - Page size (default `100`)
     -   `--cursor <cursor>` - Cursor for fetching the next page
 -   `file get <fileId> -b <bookId>` - Get a file by ID
+-   `file delete <fileId> -b <bookId>` - Delete a file by ID
 -   `file upload <path> -b <bookId>` - Upload a local file to a book
     -   `--account <accountIdOrName>` - Resolve an account by name or id and persist canonical `account_id=<resolvedAccountId>`
     -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)

@@ -16,6 +16,8 @@
 -   **Events**
     -   Added `bkper event list` to inspect Book events and bot responses, with date, resource, error, and event-type filters plus cursor pagination
     -   Added `bkper event replay <eventId>` to replay a bot response for a specific agent
+-   **Data Management**
+    -   Added `bkper file delete <fileId>` to delete a Book file by ID
 
 ### **June 2026**
 

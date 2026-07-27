@@ -155,6 +155,7 @@ export interface AccountBalanceData {
 export interface MockBook {
     json(): BookData;
     getAccounts?(): Promise<MockAccount[]>;
+    getFile?(id: string): Promise<MockFile | undefined>;
     getBalancesReport?(query?: string): Promise<MockBalanceReport>;
     listTransactions?(
         query?: string,
@@ -167,6 +168,12 @@ export interface MockBook {
 
 export interface MockTransaction {
     json(): TransactionData;
+}
+
+export interface MockFile {
+    getId(): string;
+    remove(): Promise<MockFile>;
+    json(): { id?: string; name?: string };
 }
 
 export interface MockBalance {
