@@ -3,7 +3,7 @@ import { withAction } from '../action.js';
 import { collectProperty, parsePositiveInteger } from '../cli-helpers.js';
 import { renderItem, renderListResult } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
-import { getFile, listFilesFormatted, uploadFile } from './index.js';
+import { deleteFile, getFile, listFilesFormatted, uploadFile } from './index.js';
 
 export function registerFileCommands(program: Command): void {
     const fileCommand = program.command('file').description('Manage Files');
@@ -38,6 +38,18 @@ export function registerFileCommands(program: Command): void {
             withAction('getting file', async format => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const file = await getFile(options.book, fileId);
+                renderItem(file.json(), format);
+            })()
+        );
+
+    fileCommand
+        .command('delete <fileId>')
+        .description('Delete a file by ID')
+        .option('-b, --book <bookId>', 'Book ID')
+        .action((fileId: string, options) =>
+            withAction('deleting file', async format => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
+                const file = await deleteFile(options.book, fileId);
                 renderItem(file.json(), format);
             })()
         );
