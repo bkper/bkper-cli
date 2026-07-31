@@ -20,8 +20,10 @@ import {
 } from '../auth/local-auth-service.js';
 import {
     BKPER_AI_PROVIDER_ID,
-    BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
+    findDefaultBkperAiModel,
+    getBkperAiDefaultThinkingLevel,
     getBkperAiProviderConfig,
+    type BkperAiThinkingLevel,
 } from './bkper-ai-provider.js';
 
 export const BKPER_AGENT_LOGIN_COMMAND = 'bkper-agent-login';
@@ -40,6 +42,8 @@ interface ProviderRegistry {
 interface ModelLike {
     provider: string;
     id: string;
+    bkperDefault?: boolean;
+    bkperDefaultThinkingLevel?: BkperAiThinkingLevel;
 }
 
 function parseCommand(text: string): {command: string; args: string} | undefined {
@@ -153,11 +157,7 @@ export function selectAuthFallbackModel<TModel extends ModelLike>(
     const candidates = availableModels.filter(model => model.provider !== excludedProvider);
 
     if (bkperLoggedIn) {
-        const defaultBkperModel = candidates.find(
-            model =>
-                model.provider === BKPER_AI_PROVIDER_ID &&
-                model.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
-        );
+        const defaultBkperModel = findDefaultBkperAiModel(candidates);
         if (defaultBkperModel) {
             return defaultBkperModel;
         }
@@ -223,12 +223,9 @@ async function switchToAuthFallback(
     }
 
     const changed = await pi.setModel(fallback);
-    if (
-        changed &&
-        fallback.provider === BKPER_AI_PROVIDER_ID &&
-        fallback.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
-    ) {
-        pi.setThinkingLevel('high');
+    const defaultThinkingLevel = getBkperAiDefaultThinkingLevel(fallback);
+    if (changed && defaultThinkingLevel) {
+        pi.setThinkingLevel(defaultThinkingLevel);
     }
     return changed;
 }

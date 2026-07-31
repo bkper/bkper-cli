@@ -24,9 +24,11 @@ import {
 } from './auth-commands.js';
 import {
     BKPER_AI_PROVIDER_ID,
-    BKPER_AI_STARTUP_DEFAULT_MODEL_ID,
+    findDefaultBkperAiModel,
     getBkperAiBaseUrlOverride,
+    getBkperAiDefaultThinkingLevel,
     registerBkperAiProvider,
+    type BkperAiThinkingLevel,
 } from './bkper-ai-provider.js';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
@@ -35,7 +37,7 @@ import { getBkperAgentSystemPrompt } from './system-prompt.js';
 export type InteractiveRuntimeHost = ConstructorParameters<typeof InteractiveMode>[0];
 
 type NotificationType = 'info' | 'warning' | 'error';
-type ScopedThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+type ScopedThinkingLevel = BkperAiThinkingLevel;
 
 type StartupHeaderComponent = {
     render: (width: number) => string[];
@@ -76,6 +78,8 @@ type SettingsManagerLike = {
 type ModelLike = {
     provider: string;
     id: string;
+    bkperDefault?: boolean;
+    bkperDefaultThinkingLevel?: BkperAiThinkingLevel;
 };
 
 type ModelRegistryLike<TModel extends ModelLike = ModelLike> = {
@@ -237,7 +241,7 @@ function isSameModel(left: ModelLike, right: ModelLike): boolean {
 }
 
 function isThinkingLevel(value: string): value is ScopedThinkingLevel {
-    return ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(value);
+    return ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].includes(value);
 }
 
 function findExactModelMatch<TModel extends ModelLike>(
@@ -291,20 +295,6 @@ function globToRegExp(pattern: string): RegExp {
 
     regex += '$';
     return new RegExp(regex, 'i');
-}
-
-function getBkperAiDefaultThinkingLevel(model: ModelLike): ScopedThinkingLevel | undefined {
-    if (model.provider !== BKPER_AI_PROVIDER_ID) {
-        return undefined;
-    }
-    if (
-        model.id === 'openai/gpt-5.6-luna' ||
-        model.id === 'openai/gpt-5.6-terra' ||
-        model.id === 'xai/grok-4.5'
-    ) {
-        return 'high';
-    }
-    return undefined;
 }
 
 function resolvePatternMatches<TModel extends ModelLike>(
@@ -369,11 +359,7 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
     const availableModels = modelRegistry.getAvailable();
     const sessionContext = sessionManager.buildSessionContext();
     const hasSessionMessages = sessionContext.messages.length > 0;
-    const startupDefaultModel = availableModels.find(
-        model =>
-            model.provider === BKPER_AI_PROVIDER_ID &&
-            model.id === BKPER_AI_STARTUP_DEFAULT_MODEL_ID
-    );
+    const startupDefaultModel = findDefaultBkperAiModel(availableModels);
     const unavailableBkperSessionModel =
         sessionContext.model?.provider === BKPER_AI_PROVIDER_ID &&
         modelRegistry.find(sessionContext.model.provider, sessionContext.model.modelId) === undefined;
@@ -440,10 +426,10 @@ export function restorePersistedSessionOptions<TModel extends ModelLike>(
                 continue;
             }
 
-            const fixedBkperThinkingLevel = getBkperAiDefaultThinkingLevel(model);
+            const catalogThinkingLevel = getBkperAiDefaultThinkingLevel(model);
             scopedModels.push({
                 model,
-                thinkingLevel: fixedBkperThinkingLevel ?? thinkingLevel,
+                thinkingLevel: thinkingLevel ?? catalogThinkingLevel,
             });
         }
     }

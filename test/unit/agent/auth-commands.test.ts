@@ -194,14 +194,20 @@ describe('agent/auth-commands', function () {
         expect(notify.calledWithExactly('Disconnected Anthropic.', 'info')).to.equal(true);
     });
 
-    it('prefers Bkper when authenticated and otherwise selects another provider', function () {
-        const bkper = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
+    it('prefers the Bkper catalog default when authenticated', function () {
+        const terra = {provider: 'bkper', id: 'openai/gpt-5.6-terra'};
+        const luna = {
+            provider: 'bkper',
+            id: 'openai/gpt-5.6-luna',
+            bkperDefault: true,
+            bkperDefaultThinkingLevel: 'xhigh' as const,
+        };
         const anthropic = {provider: 'anthropic', id: 'claude-sonnet-4'};
         const openai = {provider: 'openai', id: 'gpt-5'};
-        const models = [anthropic, bkper, openai];
+        const models = [anthropic, terra, luna, openai];
 
-        expect(selectAuthFallbackModel(models, true, 'anthropic')).to.equal(bkper);
+        expect(selectAuthFallbackModel(models, true, 'anthropic')).to.equal(luna);
         expect(selectAuthFallbackModel(models, false, 'anthropic')).to.equal(openai);
-        expect(selectAuthFallbackModel([bkper], false, 'anthropic')).to.equal(undefined);
+        expect(selectAuthFallbackModel([luna], false, 'anthropic')).to.equal(undefined);
     });
 });
