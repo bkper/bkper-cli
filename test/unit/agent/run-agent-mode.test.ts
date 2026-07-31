@@ -10,6 +10,7 @@ import {
 import { getKeybindings, KeybindingsManager, setKeybindings } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
 import {
+    applyBkperAgentSettingsDefaults,
     applyBkperSessionKeybindings,
     BKPER_AGENT_BUILTINS_EXTENSION_NAME,
     BKPER_AGENT_BUILTINS_EXTENSION_PATH,
@@ -144,6 +145,42 @@ function registerStartupExtension(
 }
 
 describe('runAgentMode', function () {
+    it('should persist cache miss notices when no user setting is present', function () {
+        const setShowCacheMissNotices = sinon.stub();
+
+        applyBkperAgentSettingsDefaults({
+            getGlobalSettings: () => ({}),
+            getProjectSettings: () => ({}),
+            setShowCacheMissNotices,
+        });
+
+        expect(setShowCacheMissNotices.calledOnceWithExactly(true)).to.be.true;
+    });
+
+    it('should preserve an explicit cache miss notices setting', function () {
+        const setShowCacheMissNotices = sinon.stub();
+
+        applyBkperAgentSettingsDefaults({
+            getGlobalSettings: () => ({showCacheMissNotices: false}),
+            getProjectSettings: () => ({}),
+            setShowCacheMissNotices,
+        });
+
+        expect(setShowCacheMissNotices.called).to.be.false;
+    });
+
+    it('should preserve an explicit project cache miss notices setting', function () {
+        const setShowCacheMissNotices = sinon.stub();
+
+        applyBkperAgentSettingsDefaults({
+            getGlobalSettings: () => ({}),
+            getProjectSettings: () => ({showCacheMissNotices: false}),
+            setShowCacheMissNotices,
+        });
+
+        expect(setShowCacheMissNotices.called).to.be.false;
+    });
+
     it('should register Bkper built-in agent behavior through one internal extension entrypoint', function () {
         const registeredEvents: string[] = [];
 

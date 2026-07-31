@@ -68,6 +68,13 @@ type SettingsError = {
 
 type SettingsManagerLike = {
     drainErrors(): SettingsError[];
+    getGlobalSettings(): {
+        showCacheMissNotices?: boolean;
+    };
+    getProjectSettings(): {
+        showCacheMissNotices?: boolean;
+    };
+    setShowCacheMissNotices(show: boolean): void;
     getSessionDir(): string | undefined;
     getEnabledModels(): string[] | undefined;
     getDefaultProvider(): string | undefined;
@@ -216,6 +223,24 @@ export interface AgentModeDependencies {
     ) => {
         run(): Promise<void>;
     };
+}
+
+type BkperAgentSettingsDefaultsManager = Pick<
+    SettingsManagerLike,
+    'getGlobalSettings' | 'getProjectSettings' | 'setShowCacheMissNotices'
+>;
+
+export function applyBkperAgentSettingsDefaults(
+    settingsManager: BkperAgentSettingsDefaultsManager
+): void {
+    const hasExplicitSetting = [
+        settingsManager.getGlobalSettings().showCacheMissNotices,
+        settingsManager.getProjectSettings().showCacheMissNotices,
+    ].some(value => value !== undefined);
+
+    if (!hasExplicitSetting) {
+        settingsManager.setShowCacheMissNotices(true);
+    }
 }
 
 export function collectSettingsDiagnostics(
@@ -849,6 +874,7 @@ export function createAgentModeDependencies(
                             }),
                     },
                 });
+                applyBkperAgentSettingsDefaults(settingsManager);
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,
                     {
