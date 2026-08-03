@@ -532,6 +532,7 @@ Creates a new Bkper instance with the provided configuration.
 - `getConfig()` → `Config` — Gets the current instance configuration.
 - `getTemplates()` → `Promise<Template[]>` — Gets all `Templates` available for the user.
 - `getUser()` → `Promise<User>` — Gets the current logged `User`.
+- `requestBookAccess(bookId: string, permission: Permission, message?: string)` → `Promise<void>` — Requests access to a Book the current user cannot access.
 - `static setConfig(config: Config)` → `void` — Sets the global API configuration for all Bkper operations.
 
 **setConfig**
@@ -638,6 +639,7 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `parseDate(date: string)` → `Date` — Parse a date string according to date pattern and timezone of the Book. Also parse ISO yyyy-mm-dd format.
 - `parseValue(value: string)` → `Amount | undefined` — Parse a value string according to `DecimalSeparator` and fraction digits of the Book.
 - `remove()` → `Promise<Book>` — Warning!
+- `resolveAccessRequest(accessRequestId: string)` → `Promise<Collaborator>` — Resolves an access request for this Book.
 - `round(value: number | Amount)` → `Amount` — Rounds a value according to the number of fraction digits of the Book.
 - `update()` → `Promise<Book>` — Perform update Book, applying pending changes.
 - `updateIntegration(integration: bkper.Integration)` → `Promise<Integration>` — Updates an existing `Integration` in the Book.
@@ -737,6 +739,11 @@ originals is scheduled asynchronously by the backend.
 **remove**
 
 Deletes this Book and all its data (transactions, accounts, groups). Book owner only.
+
+**resolveAccessRequest**
+
+Resolving the request does not grant access. Call Collaborator.create
+on the returned Collaborator to grant access to the Book.
 
 ### BooksDataTableBuilder
 
