@@ -200,7 +200,7 @@ export function getBkperAiProviderConfig(
         apiKey: '!bkper auth token',
         authHeader: true,
         headers: {
-            'bkper-agent-id': 'bkper-cli',
+            'bkper-ai-source': 'bkper-cli',
             'User-Agent': 'bkper-cli',
         },
         api: 'openai-responses',

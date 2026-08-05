@@ -225,7 +225,7 @@ describe('runAgentMode', function () {
         expect(providers[0]?.config.api).to.equal('openai-responses');
         expect(providers[0]?.config.streamSimple).to.equal(undefined);
         expect(providers[0]?.config.headers).to.deep.equal({
-            'bkper-agent-id': 'bkper-cli',
+            'bkper-ai-source': 'bkper-cli',
             'User-Agent': 'bkper-cli',
         });
         expect(providers[0]?.config.models).to.deep.equal([]);
