@@ -26,7 +26,9 @@ export function createLocalOutboundService(options: LocalOutboundOptions): Local
 
     return async (request: Request): Promise<Response> => {
         if (!isAllowedBkperApiRequest(request)) {
-            return forwardFetch(request);
+            return forwardFetch(
+                createForwardRequest(request, new Headers(request.headers), request.redirect)
+            );
         }
 
         const accessToken = normalizeBearerToken(await getAccessToken());
@@ -42,15 +44,19 @@ export function createLocalOutboundService(options: LocalOutboundOptions): Local
         headers.set('bkper-agent-id', options.appId);
         stripPlatformCookieHeaders(headers);
 
-        return forwardFetch(createForwardRequest(request, headers));
+        return forwardFetch(createForwardRequest(request, headers, 'manual'));
     };
 }
 
-function createForwardRequest(request: Request, headers: Headers): Request {
+function createForwardRequest(
+    request: Request,
+    headers: Headers,
+    redirect: Request['redirect']
+): Request {
     const init: RequestInitWithDuplex = {
         method: request.method,
         headers,
-        redirect: 'manual',
+        redirect,
     };
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
