@@ -198,6 +198,8 @@ bkper agent --help
 
 `bkper agent` keeps Bkper defaults, including the Bkper system prompt, unless you explicitly override them. For the underlying agent runtime reference, see [Pi][Pi].
 
+When the selected model cannot read images, the agent briefly uses Bkper's default model to transcribe attached or opened images, then continues with the selected model; a status message is shown while this happens.
+
 ---
 
 ## Data Management

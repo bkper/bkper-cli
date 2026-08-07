@@ -197,6 +197,8 @@ describe('runAgentMode', function () {
             'tool_call',
             'session_start',
             'session_start',
+            'input',
+            'tool_result',
         ]);
     });
 

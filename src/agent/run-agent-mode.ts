@@ -31,6 +31,7 @@ import {
     type BkperAiThinkingLevel,
 } from './bkper-ai-provider.js';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
+import { registerBkperImageFallbackExtension } from './image-fallback.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
 
@@ -817,6 +818,7 @@ export function registerBkperAgentBuiltins(
     );
     registerBkperAgentAuthExtension(pi, undefined, credentialManager);
     registerBkperAiProvider(pi, env);
+    registerBkperImageFallbackExtension(pi);
 }
 
 export interface SessionOptions {
