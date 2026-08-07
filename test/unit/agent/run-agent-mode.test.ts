@@ -145,40 +145,49 @@ function registerStartupExtension(
 }
 
 describe('runAgentMode', function () {
-    it('should persist cache miss notices when no user setting is present', function () {
+    it('should persist Bkper agent defaults when no user settings are present', function () {
         const setShowCacheMissNotices = sinon.stub();
+        const setTuiMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
             getProjectSettings: () => ({}),
             setShowCacheMissNotices,
+            setTuiMode,
         });
 
         expect(setShowCacheMissNotices.calledOnceWithExactly(true)).to.be.true;
+        expect(setTuiMode.calledOnceWithExactly('fullscreen')).to.be.true;
     });
 
-    it('should preserve an explicit cache miss notices setting', function () {
+    it('should preserve explicit global Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
+        const setTuiMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
-            getGlobalSettings: () => ({showCacheMissNotices: false}),
+            getGlobalSettings: () => ({showCacheMissNotices: false, tuiMode: 'regular'}),
             getProjectSettings: () => ({}),
             setShowCacheMissNotices,
+            setTuiMode,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;
+        expect(setTuiMode.called).to.be.false;
     });
 
-    it('should preserve an explicit project cache miss notices setting', function () {
+    it('should preserve explicit project Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
+        const setTuiMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
-            getProjectSettings: () => ({showCacheMissNotices: false}),
+            getProjectSettings: () => ({showCacheMissNotices: false, tuiMode: 'regular'}),
             setShowCacheMissNotices,
+            setTuiMode,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;
+        expect(setTuiMode.called).to.be.false;
     });
 
     it('should register Bkper built-in agent behavior through one internal extension entrypoint', function () {

@@ -15,6 +15,7 @@ import {
     type ExtensionAPI,
     type LoadExtensionsResult,
     type Theme,
+    type TuiMode,
 } from '@earendil-works/pi-coding-agent';
 import { VERSION as PI_VERSION } from '@earendil-works/pi-coding-agent';
 import {
@@ -71,11 +72,14 @@ type SettingsManagerLike = {
     drainErrors(): SettingsError[];
     getGlobalSettings(): {
         showCacheMissNotices?: boolean;
+        tuiMode?: TuiMode;
     };
     getProjectSettings(): {
         showCacheMissNotices?: boolean;
+        tuiMode?: TuiMode;
     };
     setShowCacheMissNotices(show: boolean): void;
+    setTuiMode(mode: TuiMode): void;
     getSessionDir(): string | undefined;
     getEnabledModels(): string[] | undefined;
     getDefaultProvider(): string | undefined;
@@ -228,19 +232,28 @@ export interface AgentModeDependencies {
 
 type BkperAgentSettingsDefaultsManager = Pick<
     SettingsManagerLike,
-    'getGlobalSettings' | 'getProjectSettings' | 'setShowCacheMissNotices'
+    'getGlobalSettings' | 'getProjectSettings' | 'setShowCacheMissNotices' | 'setTuiMode'
 >;
 
 export function applyBkperAgentSettingsDefaults(
     settingsManager: BkperAgentSettingsDefaultsManager
 ): void {
-    const hasExplicitSetting = [
-        settingsManager.getGlobalSettings().showCacheMissNotices,
-        settingsManager.getProjectSettings().showCacheMissNotices,
+    const globalSettings = settingsManager.getGlobalSettings();
+    const projectSettings = settingsManager.getProjectSettings();
+    const hasExplicitCacheMissNotices = [
+        globalSettings.showCacheMissNotices,
+        projectSettings.showCacheMissNotices,
     ].some(value => value !== undefined);
+    const hasExplicitTuiMode = [globalSettings.tuiMode, projectSettings.tuiMode].some(
+        value => value !== undefined
+    );
 
-    if (!hasExplicitSetting) {
+    if (!hasExplicitCacheMissNotices) {
         settingsManager.setShowCacheMissNotices(true);
+    }
+
+    if (!hasExplicitTuiMode) {
+        settingsManager.setTuiMode('fullscreen');
     }
 }
 
