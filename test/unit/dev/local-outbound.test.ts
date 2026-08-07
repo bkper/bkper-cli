@@ -13,11 +13,17 @@ describe('local-outbound', function () {
         });
     }
 
-    it('passes through non-Bkper API requests without reading local auth', async function () {
+    it('rebuilds non-Bkper API requests without reading local auth', async function () {
         let tokenRead = false;
         const forwardedRequests: Request[] = [];
         const originalRequest = new Request('https://example.com/data', {
-            headers: { Authorization: 'Bearer caller-token' },
+            method: 'POST',
+            headers: {
+                Authorization: 'Bearer caller-token',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({ amount: '10' }),
+            redirect: 'follow',
         });
         const service = createLocalOutboundService({
             appId: 'my-app',
@@ -35,7 +41,15 @@ describe('local-outbound', function () {
 
         expect(response.status).to.equal(200);
         expect(tokenRead).to.be.false;
-        expect(forwardedRequests[0]).to.equal(originalRequest);
+        expect(forwardedRequests).to.have.length(1);
+        expect(forwardedRequests[0]).not.to.equal(originalRequest);
+        expect(forwardedRequests[0].url).to.equal('https://example.com/data');
+        expect(forwardedRequests[0].method).to.equal('POST');
+        expect(forwardedRequests[0].headers.get('Authorization')).to.equal(
+            'Bearer caller-token'
+        );
+        expect(forwardedRequests[0].redirect).to.equal('follow');
+        expect(await forwardedRequests[0].text()).to.equal('{"amount":"10"}');
     });
 
     it('injects local OAuth and agent headers for exact Bkper API requests', async function () {
