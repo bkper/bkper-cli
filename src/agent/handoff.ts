@@ -402,7 +402,6 @@ export function registerBkperHandoffExtension(
                 return;
             }
 
-            await context.waitForIdle();
             let goal = args.trim();
             if (!goal && pendingConfirmedGoal) {
                 goal = pendingConfirmedGoal;
@@ -417,6 +416,7 @@ export function registerBkperHandoffExtension(
                 goal = editedGoal.trim();
             }
 
+            await context.waitForIdle();
             await performHandoff(goal, context, dependencies);
         },
     });

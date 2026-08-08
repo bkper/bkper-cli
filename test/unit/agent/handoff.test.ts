@@ -29,7 +29,7 @@ interface TestContext {
         notify: sinon.SinonStub;
     };
     sessionManager: {
-        buildContextEntries: () => unknown[];
+        buildContextEntries: sinon.SinonStub;
         getSessionFile: () => string;
     };
     getContextUsage: () => {
@@ -77,7 +77,7 @@ function createContext(tokens = 100_000): TestContext {
             notify: sinon.stub(),
         },
         sessionManager: {
-            buildContextEntries: () => [
+            buildContextEntries: sinon.stub().returns([
                 {
                     type: 'message',
                     id: 'user-entry',
@@ -111,7 +111,7 @@ function createContext(tokens = 100_000): TestContext {
                         timestamp: 2,
                     },
                 },
-            ],
+            ]),
             getSessionFile: () => '/sessions/parent.jsonl',
         },
         getContextUsage: () => ({
@@ -264,6 +264,9 @@ describe('agent handoff', function () {
 
         expect(context.waitForIdle.calledOnce).to.equal(true);
         expect(context.ui.editor.called).to.equal(false);
+        expect(context.waitForIdle.calledBefore(context.sessionManager.buildContextEntries)).to.equal(
+            true
+        );
         expect(generatePrompt.calledOnce).to.equal(true);
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Implement phase two');
         expect(generatePrompt.firstCall.args[0].conversation).to.include(
@@ -294,20 +297,33 @@ describe('agent handoff', function () {
         await command('', context);
 
         expect(context.ui.editor.calledOnceWithExactly('Handoff goal', '')).to.equal(true);
+        expect(context.ui.editor.calledBefore(context.waitForIdle)).to.equal(true);
+        expect(context.waitForIdle.calledBefore(context.sessionManager.buildContextEntries)).to.equal(
+            true
+        );
+        expect(context.sessionManager.buildContextEntries.calledBefore(generatePrompt)).to.equal(
+            true
+        );
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Use my custom goal');
     });
 
-    it('cancels without a model call when the goal is empty', async function () {
-        const {dependencies, generatePrompt} = createDependencies();
-        const {command} = registerHandoff(createMemorySettings(), dependencies);
-        const context = createCommandContext();
-        context.ui.editor.resolves('');
+    for (const cancelledGoal of [undefined, '   ']) {
+        it(`cancels without waiting when the goal is ${
+            cancelledGoal === undefined ? 'cancelled' : 'empty'
+        }`, async function () {
+            const {dependencies, generatePrompt} = createDependencies();
+            const {command} = registerHandoff(createMemorySettings(), dependencies);
+            const context = createCommandContext();
+            context.ui.editor.resolves(cancelledGoal);
 
-        await command('', context);
+            await command('', context);
 
-        expect(generatePrompt.called).to.equal(false);
-        expect(context.newSession.called).to.equal(false);
-    });
+            expect(context.waitForIdle.called).to.equal(false);
+            expect(context.sessionManager.buildContextEntries.called).to.equal(false);
+            expect(generatePrompt.called).to.equal(false);
+            expect(context.newSession.called).to.equal(false);
+        });
+    }
 
     it('offers auto-handoff at the adaptive threshold and reuses the confirmed goal', async function () {
         const {dependencies} = createDependencies();
