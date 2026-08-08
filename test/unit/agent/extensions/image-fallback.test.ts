@@ -4,12 +4,12 @@ import type {
     InputEventResult,
 } from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
-import {expect} from '../helpers/test-setup.js';
+import {expect} from '../../helpers/test-setup.js';
 import {
     findDefaultBkperVisionModel,
     registerBkperImageFallbackExtension,
     type ImageFallbackDependencies,
-} from '../../../src/agent/image-fallback.js';
+} from '../../../../src/agent/extensions/image-fallback.js';
 
 type ImageContent = NonNullable<InputEvent['images']>[number];
 

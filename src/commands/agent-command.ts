@@ -4,7 +4,7 @@ import {
     createAgentModeDependencies,
     runAgentMode,
     type SessionOptions,
-} from '../agent/run-agent-mode.js';
+} from '../agent/interactive/run-agent-mode.js';
 import { getBkperAgentSystemPrompt } from '../agent/system-prompt.js';
 
 export interface AgentCommandEnvironment {

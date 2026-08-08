@@ -1,11 +1,11 @@
-import {expect} from '../helpers/test-setup.js';
+import {expect} from '../../helpers/test-setup.js';
 import type {ProviderConfig} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {
     findDefaultBkperAiModel,
     getBkperAiDefaultThinkingLevel,
     getBkperAiProviderConfig,
-} from '../../../src/agent/bkper-ai-provider.js';
+} from '../../../../src/agent/extensions/bkper-ai-provider.js';
 
 function createRefreshContext(): Parameters<
     NonNullable<ProviderConfig['refreshModels']>

@@ -11,9 +11,10 @@ import {
     type ExtensionContext,
     type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
-import type {SettingItem} from '@earendil-works/pi-tui';
+import {matchesKey, type KeyId, type SettingItem} from '@earendil-works/pi-tui';
 
 export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
+const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
 const AUTO_HANDOFF_SETTING_ID = 'auto-handoff';
 const MAX_SESSION_NAME_LENGTH = 80;
 
@@ -70,6 +71,21 @@ export interface AutoHandoffSettingsHost {
     };
 }
 
+type KeybindingsConfigValue = string | string[] | undefined;
+type KeybindingsConfig = Record<string, KeybindingsConfigValue>;
+
+export interface BkperHandoffShortcutHost {
+    defaultEditor: {
+        onExtensionShortcut?: (data: string) => boolean;
+    };
+    keybindings: {
+        getResolvedBindings(): KeybindingsConfig;
+    };
+    session: {
+        prompt(text: string): Promise<void>;
+    };
+}
+
 type GenerationOutcome =
     | {status: 'completed'; text: string}
     | {status: 'cancelled'}
@@ -90,6 +106,58 @@ function normalizeError(error: unknown): Error {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function keybindingConfigIncludesShortcut(
+    configuredBinding: KeybindingsConfigValue,
+    shortcut: string
+): boolean {
+    const normalizedShortcut = shortcut.toLowerCase();
+    const configuredShortcuts = Array.isArray(configuredBinding)
+        ? configuredBinding
+        : [configuredBinding];
+
+    return configuredShortcuts.some(
+        configuredShortcut => configuredShortcut?.toLowerCase() === normalizedShortcut
+    );
+}
+
+function isShortcutClaimedByBindings(
+    bindings: KeybindingsConfig,
+    shortcut: string
+): boolean {
+    return Object.values(bindings).some(binding =>
+        keybindingConfigIncludesShortcut(binding, shortcut)
+    );
+}
+
+export function getBkperHandoffShortcut(
+    bindings: KeybindingsConfig
+): KeyId | undefined {
+    return isShortcutClaimedByBindings(bindings, BKPER_HANDOFF_SHORTCUT)
+        ? undefined
+        : BKPER_HANDOFF_SHORTCUT;
+}
+
+export function installBkperHandoffShortcut(host: BkperHandoffShortcutHost): void {
+    const shortcut = getBkperHandoffShortcut(host.keybindings.getResolvedBindings());
+    if (!shortcut) {
+        return;
+    }
+
+    const originalShortcut = host.defaultEditor.onExtensionShortcut;
+    host.defaultEditor.onExtensionShortcut = data => {
+        if (originalShortcut?.call(host.defaultEditor, data)) {
+            return true;
+        }
+        if (!matchesKey(data, shortcut)) {
+            return false;
+        }
+
+        // Session prompt dispatch executes extension commands immediately, even mid-turn.
+        void host.session.prompt('/handoff');
+        return true;
+    };
 }
 
 function readStoredSettings(filePath: string): StoredBkperSettings {

@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import type {ExtensionAPI, ExtensionContext} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
-import {expect} from '../helpers/test-setup.js';
+import {expect} from '../../helpers/test-setup.js';
 import {
     AUTO_HANDOFF_LEAD_TOKENS,
     addAutoHandoffSetting,
@@ -12,11 +12,12 @@ import {
     getAutoHandoffSettingsPath,
     getHandoffReminderThreshold,
     installAutoHandoffSettingsIntegration,
+    installBkperHandoffShortcut,
     registerBkperHandoffExtension,
     type AutoHandoffSettings,
     type HandoffDependencies,
     type MutableSettingsList,
-} from '../../../src/agent/handoff.js';
+} from '../../../../src/agent/extensions/handoff.js';
 
 type EventHandler = (event: unknown, context: TestContext) => Promise<unknown> | unknown;
 type CommandHandler = (args: string, context: TestCommandContext) => Promise<void>;
@@ -174,6 +175,42 @@ function registerHandoff(
 }
 
 describe('agent handoff', function () {
+    it('launches handoff from Ctrl+H while preserving other extension shortcuts', function () {
+        const prompt = sinon.stub().resolves();
+        const previousShortcut = sinon.stub().callsFake((data: string) => data === '\x01');
+        const host = {
+            defaultEditor: {onExtensionShortcut: previousShortcut},
+            keybindings: {getResolvedBindings: () => ({})},
+            session: {prompt},
+        };
+
+        installBkperHandoffShortcut(host);
+
+        expect(host.defaultEditor.onExtensionShortcut?.('\x08')).to.equal(true);
+        expect(prompt.calledOnceWithExactly('/handoff')).to.equal(true);
+        expect(host.defaultEditor.onExtensionShortcut?.('\x01')).to.equal(true);
+        expect(prompt.calledOnce).to.equal(true);
+    });
+
+    it('preserves a user binding that claims Ctrl+H', function () {
+        const prompt = sinon.stub().resolves();
+        const previousShortcut = sinon.stub().returns(false);
+        const host = {
+            defaultEditor: {onExtensionShortcut: previousShortcut},
+            keybindings: {
+                getResolvedBindings: () => ({
+                    'tui.editor.deleteCharBackward': ['backspace', 'ctrl+h'],
+                }),
+            },
+            session: {prompt},
+        };
+
+        installBkperHandoffShortcut(host);
+
+        expect(host.defaultEditor.onExtensionShortcut).to.equal(previousShortcut);
+        expect(prompt.called).to.equal(false);
+    });
+
     it('places auto-handoff one lead window before auto-compaction', function () {
         expect(calculateAutoHandoffThreshold(128_000, 16_384)).to.equal(103_424);
         expect(getHandoffReminderThreshold(103_424)).to.equal(

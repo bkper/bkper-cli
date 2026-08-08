@@ -17,7 +17,7 @@ import {
     type BkperAuthenticationResult,
     type BkperLogoutResult,
     type OAuthInteractionOptions,
-} from '../auth/local-auth-service.js';
+} from '../../auth/local-auth-service.js';
 import {
     BKPER_AI_PROVIDER_ID,
     findDefaultBkperAiModel,

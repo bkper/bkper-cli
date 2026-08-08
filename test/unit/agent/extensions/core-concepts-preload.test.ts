@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
-import { expect } from '../helpers/test-setup.js';
+import { expect } from '../../helpers/test-setup.js';
 import {
     buildCoreConceptsReadInstruction,
     detectCoreConceptsPreloadLevel,
@@ -10,7 +10,7 @@ import {
     registerBkperCoreConceptsPreloadExtension,
     resolveBkperDocPathFromModuleDir,
     type CoreConceptsPreloadResult,
-} from '../../../src/agent/core-concepts-preload.js';
+} from '../../../../src/agent/extensions/core-concepts-preload.js';
 
 type RegisteredBeforeAgentStartHandler = (
     event: {
@@ -32,7 +32,7 @@ type RegisteredToolCallHandler = (
     }
 ) => Promise<{block: true; reason?: string} | void> | {block: true; reason?: string} | void;
 
-const REPO_ROOT = path.resolve(import.meta.dirname, '../../..');
+const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const WORKSPACE_ROOT = path.dirname(REPO_ROOT);
 const REVIEW_PROMPT = `review tax bot on ${WORKSPACE_ROOT}, check code and spot any inconsistency`;
 const FIND_WORKSPACE_COMMAND = `find ${WORKSPACE_ROOT} -maxdepth 2`;
@@ -96,7 +96,7 @@ describe('core concepts preload', function () {
 
     it('should resolve reference docs from source module directories', function () {
         const rootDir = mkdtempSync(path.join(tmpdir(), 'bkper-cli-source-'));
-        const moduleDir = path.join(rootDir, 'src', 'agent');
+        const moduleDir = path.join(rootDir, 'src', 'agent', 'extensions');
         const referencesDir = path.join(rootDir, 'skill', 'references');
         const coreDir = path.join(referencesDir, 'core');
         mkdirSync(moduleDir, {recursive: true});
@@ -110,7 +110,7 @@ describe('core concepts preload', function () {
 
     it('should resolve docs from built module directories', function () {
         const rootDir = mkdtempSync(path.join(tmpdir(), 'bkper-cli-built-'));
-        const moduleDir = path.join(rootDir, 'lib', 'agent');
+        const moduleDir = path.join(rootDir, 'lib', 'agent', 'extensions');
         const docsDir = path.join(rootDir, 'lib', 'docs');
         const coreDir = path.join(docsDir, 'core');
         mkdirSync(moduleDir, {recursive: true});

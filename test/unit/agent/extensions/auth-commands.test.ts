@@ -1,4 +1,4 @@
-import { expect, setupTestEnvironment } from '../helpers/test-setup.js';
+import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import type {
     ExtensionAPI,
     ExtensionCommandContext,
@@ -12,7 +12,7 @@ import {
     installBkperAuthCommandRouting,
     registerBkperAgentAuthExtension,
     selectAuthFallbackModel,
-} from '../../../src/agent/auth-commands.js';
+} from '../../../../src/agent/extensions/auth-commands.js';
 
 describe('agent/auth-commands', function () {
     beforeEach(function () {

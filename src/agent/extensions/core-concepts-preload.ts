@@ -40,8 +40,8 @@ export function resolveBkperDocPathFromModuleDir(
     relativePath: string
 ): string {
     const candidates = [
-        path.resolve(moduleDir, '..', 'docs', relativePath),
-        path.resolve(moduleDir, '..', '..', 'skill', 'references', relativePath),
+        path.resolve(moduleDir, '..', '..', 'docs', relativePath),
+        path.resolve(moduleDir, '..', '..', '..', 'skill', 'references', relativePath),
     ];
 
     for (const candidate of candidates) {
