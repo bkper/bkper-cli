@@ -43,7 +43,8 @@ interface TestCommandContext extends TestContext {
     waitForIdle: sinon.SinonStub;
     newSession: sinon.SinonStub;
     appendSessionInfo: sinon.SinonStub;
-    sendUserMessage: sinon.SinonStub;
+    setEditorText: sinon.SinonStub;
+    replacementNotify: sinon.SinonStub;
 }
 
 function createMemorySettings(enabled = true): AutoHandoffSettings {
@@ -128,10 +129,16 @@ function createCommandContext(tokens = 100_000): TestCommandContext {
     const context = createContext(tokens) as TestCommandContext;
     context.waitForIdle = sinon.stub().resolves();
     context.appendSessionInfo = sinon.stub();
-    context.sendUserMessage = sinon.stub().resolves();
+    context.setEditorText = sinon.stub();
+    context.replacementNotify = sinon.stub();
     context.newSession = sinon.stub().callsFake(async options => {
         await options.setup?.({appendSessionInfo: context.appendSessionInfo});
-        await options.withSession?.({sendUserMessage: context.sendUserMessage});
+        await options.withSession?.({
+            ui: {
+                setEditorText: context.setEditorText,
+                notify: context.replacementNotify,
+            },
+        });
         return {cancelled: false};
     });
     return context;
@@ -273,8 +280,12 @@ describe('agent handoff', function () {
         expect(context.appendSessionInfo.calledOnceWithExactly('Implement phase two')).to.equal(
             true
         );
-        expect(context.sendUserMessage.calledOnceWithExactly(
+        expect(context.setEditorText.calledOnceWithExactly(
             '## Context\nExisting work\n\n## Task\nFinish it'
+        )).to.equal(true);
+        expect(context.replacementNotify.calledOnceWithExactly(
+            'Handoff ready. Submit when ready.',
+            'info'
         )).to.equal(true);
     });
 

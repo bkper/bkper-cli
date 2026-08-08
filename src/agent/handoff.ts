@@ -428,7 +428,8 @@ async function performHandoff(
             sessionManager.appendSessionInfo(sessionNameFromGoal(goal));
         },
         withSession: async replacementContext => {
-            await replacementContext.sendUserMessage(prompt);
+            replacementContext.ui.setEditorText(prompt);
+            replacementContext.ui.notify('Handoff ready. Submit when ready.', 'info');
         },
     });
     if (result.cancelled) {
