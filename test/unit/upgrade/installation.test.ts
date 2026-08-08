@@ -1,3 +1,4 @@
+import {readFileSync} from 'node:fs';
 import { expect } from '../helpers/test-setup.js';
 import {
     detectMethodAsync,
@@ -8,6 +9,18 @@ import {
 import type { InstallMethod } from '../../../src/upgrade/installation.js';
 
 describe('installation', function () {
+    describe('runtime dependencies', function () {
+        it('should directly install the Pi TUI version used by the embedded agent', function () {
+            const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
+                dependencies: Record<string, string>;
+            };
+
+            expect(packageJson.dependencies['@earendil-works/pi-tui']).to.equal(
+                packageJson.dependencies['@earendil-works/pi-coding-agent']
+            );
+        });
+    });
+
     describe('VERSION', function () {
         it('should be a valid semver string', function () {
             expect(VERSION).to.match(/^\d+\.\d+\.\d+/);

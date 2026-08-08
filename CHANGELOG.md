@@ -7,6 +7,7 @@
 -   **Agent Experience**
     -   Added `/handoff <goal>` and `Ctrl+H` to continue work in a linked, focused session with a generated context draft
     -   Added automatic handoff prompts before context compaction, enabled by default and independently configurable from `/settings`
+    -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
 
 ### **July 2026**
 
