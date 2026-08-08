@@ -17,6 +17,7 @@ import {
     BkperInteractiveMode,
     createAgentModeDependencies,
     createStartupSessionManager,
+    installBkperHandoffShortcut,
     installBkperSessionKeybindings,
     isBkperAgentVerboseDiagnosticsEnabled,
     normalizeBkperAgentExtensionErrors,
@@ -76,14 +77,18 @@ function createThemeStub(): StartupTheme {
 const STARTUP_TEST_KEYBINDINGS = {
     'app.interrupt': {defaultKeys: 'escape'},
     'app.clear': {defaultKeys: 'ctrl+c'},
+    'app.editor.external': {defaultKeys: 'ctrl+g'},
     'app.session.resume': {defaultKeys: 'ctrl+s'},
     'app.session.fork': {defaultKeys: 'ctrl+x'},
     'app.session.tree': {defaultKeys: 'ctrl+r'},
 } as const;
 
-function renderStartupHeaderWithKeybindings(factory: StartupHeaderFactory): string {
+function renderStartupHeaderWithKeybindings(
+    factory: StartupHeaderFactory,
+    userBindings: Record<string, string | string[]> = {}
+): string {
     const previousKeybindings = getKeybindings();
-    setKeybindings(new KeybindingsManager(STARTUP_TEST_KEYBINDINGS));
+    setKeybindings(new KeybindingsManager(STARTUP_TEST_KEYBINDINGS, userBindings));
 
     try {
         return factory(undefined, createThemeStub()).render(120).join('\n');
@@ -406,6 +411,14 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('/tree (ctrl+r)');
+        expect(headerText).to.include('/handoff (ctrl+h)');
+        expect(
+            startupHeaderFactory
+                ? renderStartupHeaderWithKeybindings(startupHeaderFactory, {
+                      'app.editor.external': 'ctrl+h',
+                  })
+                : ''
+        ).to.not.include('/handoff (ctrl+h)');
         expect(headerText).to.not.include('Pi can explain its own features and look up its docs.');
         expect(notify.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
@@ -509,6 +522,42 @@ describe('runAgentMode', function () {
         expect(headerText).to.include('Use /login for Bkper AI');
         expect(headerText).to.include('/connect for another model provider');
         expect(notify.called).to.be.false;
+    });
+
+    it('should launch handoff from Ctrl+H while preserving other extension shortcuts', function () {
+        const prompt = sinon.stub().resolves();
+        const previousShortcut = sinon.stub().callsFake((data: string) => data === '\x01');
+        const host = {
+            defaultEditor: {onExtensionShortcut: previousShortcut},
+            keybindings: {getResolvedBindings: () => ({})},
+            session: {prompt},
+        };
+
+        installBkperHandoffShortcut(host);
+
+        expect(host.defaultEditor.onExtensionShortcut?.('\x08')).to.equal(true);
+        expect(prompt.calledOnceWithExactly('/handoff')).to.equal(true);
+        expect(host.defaultEditor.onExtensionShortcut?.('\x01')).to.equal(true);
+        expect(prompt.calledOnce).to.equal(true);
+    });
+
+    it('should preserve a user binding that claims Ctrl+H', function () {
+        const prompt = sinon.stub().resolves();
+        const previousShortcut = sinon.stub().returns(false);
+        const host = {
+            defaultEditor: {onExtensionShortcut: previousShortcut},
+            keybindings: {
+                getResolvedBindings: () => ({
+                    'tui.editor.deleteCharBackward': ['backspace', 'ctrl+h'],
+                }),
+            },
+            session: {prompt},
+        };
+
+        installBkperHandoffShortcut(host);
+
+        expect(host.defaultEditor.onExtensionShortcut).to.equal(previousShortcut);
+        expect(prompt.called).to.equal(false);
     });
 
     it('should add Bkper session keybindings without overwriting user bindings', function () {

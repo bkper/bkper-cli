@@ -1,4 +1,5 @@
 import {join} from 'node:path';
+import {getKeybindings, matchesKey} from '@earendil-works/pi-tui';
 import {
     createAgentSessionFromServices,
     createAgentSessionRuntime,
@@ -127,6 +128,43 @@ export type BkperKeybindingsManager = {
     reload(): void;
 };
 
+export interface BkperHandoffShortcutHost {
+    defaultEditor: {
+        onExtensionShortcut?: (data: string) => boolean;
+    };
+    keybindings: {
+        getResolvedBindings(): KeybindingsConfigLike;
+    };
+    session: {
+        prompt(text: string): Promise<void>;
+    };
+}
+
+export function installBkperHandoffShortcut(host: BkperHandoffShortcutHost): void {
+    if (
+        isShortcutClaimedByBindings(
+            host.keybindings.getResolvedBindings(),
+            BKPER_HANDOFF_SHORTCUT
+        )
+    ) {
+        return;
+    }
+
+    const originalShortcut = host.defaultEditor.onExtensionShortcut;
+    host.defaultEditor.onExtensionShortcut = data => {
+        if (originalShortcut?.call(host.defaultEditor, data)) {
+            return true;
+        }
+        if (!matchesKey(data, BKPER_HANDOFF_SHORTCUT)) {
+            return false;
+        }
+
+        // Session prompt dispatch executes extension commands immediately, even mid-turn.
+        void host.session.prompt('/handoff');
+        return true;
+    };
+}
+
 type ScopedModel<TModel extends ModelLike = ModelLike> = {
     model: TModel;
     thinkingLevel?: ScopedThinkingLevel;
@@ -171,7 +209,12 @@ export class BkperInteractiveMode extends InteractiveMode {
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
             getChangelogForDisplay: () => undefined;
-            keybindings?: BkperKeybindingsManager;
+            keybindings?: BkperKeybindingsManager & {
+                getResolvedBindings(): KeybindingsConfigLike;
+            };
+            session?: {
+                prompt(text: string): Promise<void>;
+            };
         };
         interactiveMode.getChangelogForDisplay = () => undefined;
 
@@ -184,6 +227,7 @@ export class BkperInteractiveMode extends InteractiveMode {
         const authRoutingMode = this as unknown as {
             defaultEditor?: {
                 onSubmit?: (text: string) => void | Promise<void>;
+                onExtensionShortcut?: (data: string) => boolean;
             };
             editor?: {
                 onSubmit?: (text: string) => void | Promise<void>;
@@ -202,6 +246,18 @@ export class BkperInteractiveMode extends InteractiveMode {
                 };
             };
         };
+        if (
+            authRoutingMode.defaultEditor &&
+            interactiveMode.keybindings &&
+            interactiveMode.session
+        ) {
+            installBkperHandoffShortcut({
+                defaultEditor: authRoutingMode.defaultEditor,
+                keybindings: interactiveMode.keybindings,
+                session: interactiveMode.session,
+            });
+        }
+
         if (authRoutingMode.editorContainer && authRoutingMode.showSettingsSelector) {
             installAutoHandoffSettingsIntegration(
                 authRoutingMode as unknown as AutoHandoffSettingsHost,
@@ -545,6 +601,8 @@ function reportDiagnostics(diagnostics: AgentSessionRuntimeDiagnostic[]): void {
 
 const STARTUP_LEFT_PADDING = ' ';
 
+const BKPER_HANDOFF_SHORTCUT = 'ctrl+h';
+
 const BKPER_SESSION_KEYBINDINGS = {
     'app.session.resume': 'ctrl+s',
     'app.session.tree': 'ctrl+r',
@@ -568,6 +626,15 @@ function keybindingConfigIncludesShortcut(
 
     return configuredShortcuts.some(
         configuredShortcut => configuredShortcut?.toLowerCase() === normalizedShortcut
+    );
+}
+
+function isShortcutClaimedByBindings(
+    bindings: KeybindingsConfigLike,
+    shortcut: string
+): boolean {
+    return Object.values(bindings).some(binding =>
+        keybindingConfigIncludesShortcut(binding, shortcut)
     );
 }
 
@@ -691,6 +758,15 @@ function formatStartupCommandShortcut(
     return shortcut ? `${command} (${shortcut})` : command;
 }
 
+function formatHandoffStartupCommand(): string {
+    return isShortcutClaimedByBindings(
+        getKeybindings().getResolvedBindings(),
+        BKPER_HANDOFF_SHORTCUT
+    )
+        ? '/handoff'
+        : `/handoff (${BKPER_HANDOFF_SHORTCUT})`;
+}
+
 function buildStartupHeaderLines(
     theme: Theme,
     modelRegistry: Pick<ModelRegistryLike, 'getAvailable'>,
@@ -720,6 +796,11 @@ function buildStartupHeaderLines(
             theme,
             formatStartupCommandShortcut('/tree', 'app.session.tree'),
             'for session tree'
+        ),
+        formatStartupHint(
+            theme,
+            formatHandoffStartupCommand(),
+            'to continue in a focused session'
         ),
         formatStartupHint(theme, '!', 'to run bash'),
     ];
