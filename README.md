@@ -200,6 +200,10 @@ bkper agent --help
 
 When the selected model cannot read images, the agent briefly uses Bkper's default model to transcribe attached or opened images, then continues with the selected model; a status message is shown while this happens.
 
+Use `/handoff <goal>` to continue long-running work in a new focused session. If you omit the goal, the agent suggests one for you to confirm or edit. The new session is linked to the original and starts automatically with the relevant context.
+
+Auto-handoff is enabled by default and offers a handoff shortly before context compaction. Auto-handoff and Auto-compact are independent and can each be turned on or off from `/settings`.
+
 ---
 
 ## Data Management

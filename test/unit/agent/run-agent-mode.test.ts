@@ -208,6 +208,9 @@ describe('runAgentMode', function () {
             'session_start',
             'input',
             'tool_result',
+            'session_start',
+            'session_compact',
+            'agent_settled',
         ]);
     });
 

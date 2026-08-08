@@ -32,6 +32,13 @@ import {
     type BkperAiThinkingLevel,
 } from './bkper-ai-provider.js';
 import { registerBkperCoreConceptsPreloadExtension } from './core-concepts-preload.js';
+import {
+    FileAutoHandoffSettings,
+    getAutoHandoffSettingsPath,
+    installAutoHandoffSettingsIntegration,
+    registerBkperHandoffExtension,
+    type AutoHandoffSettingsHost,
+} from './handoff.js';
 import { registerBkperImageFallbackExtension } from './image-fallback.js';
 import { runStartupMaintenance } from './startup-maintenance.js';
 import { getBkperAgentSystemPrompt } from './system-prompt.js';
@@ -85,6 +92,7 @@ type SettingsManagerLike = {
     getDefaultProvider(): string | undefined;
     getDefaultModel(): string | undefined;
     getQuietStartup(): boolean;
+    getCompactionReserveTokens(): number;
 };
 
 type ModelLike = {
@@ -180,6 +188,10 @@ export class BkperInteractiveMode extends InteractiveMode {
             editor?: {
                 onSubmit?: (text: string) => void | Promise<void>;
             };
+            editorContainer?: {
+                children: unknown[];
+            };
+            showSettingsSelector?: () => void;
             session?: {
                 modelRegistry: {
                     unregisterProvider(name: string): void;
@@ -190,6 +202,13 @@ export class BkperInteractiveMode extends InteractiveMode {
                 };
             };
         };
+        if (authRoutingMode.editorContainer && authRoutingMode.showSettingsSelector) {
+            installAutoHandoffSettingsIntegration(
+                authRoutingMode as unknown as AutoHandoffSettingsHost,
+                new FileAutoHandoffSettings(getAutoHandoffSettingsPath(getAgentDir()))
+            );
+        }
+
         if (authRoutingMode.session) {
             const editors = new Set(
                 [authRoutingMode.defaultEditor, authRoutingMode.editor].filter(
@@ -816,7 +835,10 @@ export function registerBkperAgentStartupExtension(
 export function registerBkperAgentBuiltins(
     pi: ExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
-    settingsManager?: Pick<SettingsManagerLike, 'getQuietStartup'>,
+    settingsManager?: Pick<
+        SettingsManagerLike,
+        'getQuietStartup' | 'getCompactionReserveTokens'
+    >,
     env: Record<string, string | undefined> = process.env,
     credentialManager?: ProviderCredentialManager
 ): void {
@@ -832,6 +854,11 @@ export function registerBkperAgentBuiltins(
     registerBkperAgentAuthExtension(pi, undefined, credentialManager);
     registerBkperAiProvider(pi, env);
     registerBkperImageFallbackExtension(pi);
+    registerBkperHandoffExtension(
+        pi,
+        new FileAutoHandoffSettings(getAutoHandoffSettingsPath(getAgentDir())),
+        () => settingsManager?.getCompactionReserveTokens() ?? 16384
+    );
 }
 
 export interface SessionOptions {
