@@ -17,10 +17,6 @@ export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const AUTO_HANDOFF_SETTING_ID = 'auto-handoff';
 const MAX_SESSION_NAME_LENGTH = 80;
 
-const SUGGEST_GOAL_SYSTEM_PROMPT = `You suggest the next concrete goal for a new focused coding-agent session.
-
-Read the conversation and return one concise goal describing the unfinished work that should continue. Preserve the user's intent and important scope. Return only the goal, without a label, preamble, markdown, or explanation.`;
-
 const HANDOFF_SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
 
 1. Summarizes only the context relevant to the goal, including decisions, approaches, and key findings.
@@ -55,10 +51,6 @@ export interface HandoffGenerationRequest {
 }
 
 export interface HandoffDependencies {
-    suggestGoal(
-        request: HandoffGenerationRequest,
-        context: ExtensionContext
-    ): Promise<string>;
     generatePrompt(
         request: HandoffGenerationRequest,
         context: ExtensionContext
@@ -225,25 +217,6 @@ export class FileAutoHandoffSettings implements AutoHandoffSettings {
     }
 }
 
-function textFromContent(content: unknown): string {
-    if (typeof content === 'string') {
-        return content.trim();
-    }
-    if (!Array.isArray(content)) {
-        return '';
-    }
-    return content
-        .map(item => {
-            if (!isRecord(item) || item.type !== 'text' || typeof item.text !== 'string') {
-                return '';
-            }
-            return item.text;
-        })
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-}
-
 function entryToMessage(entry: SessionEntry): AgentMessage | undefined {
     if (entry.type === 'message') {
         return entry.message;
@@ -264,21 +237,6 @@ function contextMessages(context: ExtensionContext): AgentMessage[] {
         .buildContextEntries()
         .map(entryToMessage)
         .filter(message => message !== undefined);
-}
-
-function latestUserRequest(context: ExtensionContext): string {
-    const messages = contextMessages(context);
-    for (let index = messages.length - 1; index >= 0; index--) {
-        const message = messages[index];
-        if (message?.role !== 'user') {
-            continue;
-        }
-        const text = textFromContent(message.content);
-        if (text) {
-            return text;
-        }
-    }
-    return '';
 }
 
 function serializeCurrentConversation(context: ExtensionContext): string {
@@ -359,13 +317,6 @@ async function generateWithCurrentModel(
 }
 
 const defaultDependencies: HandoffDependencies = {
-    suggestGoal: (request, context) =>
-        generateWithCurrentModel(
-            context,
-            SUGGEST_GOAL_SYSTEM_PROMPT,
-            `## Conversation History\n\n${request.conversation}`,
-            'Suggesting handoff goal...'
-        ),
     generatePrompt: (request, context) =>
         generateWithCurrentModel(
             context,
@@ -374,21 +325,6 @@ const defaultDependencies: HandoffDependencies = {
             'Preparing handoff...'
         ),
 };
-
-async function suggestGoal(
-    conversation: string,
-    context: ExtensionContext,
-    dependencies: HandoffDependencies
-): Promise<string | undefined> {
-    try {
-        return (await dependencies.suggestGoal({conversation}, context)).trim();
-    } catch (error) {
-        if (error instanceof HandoffCancelledError) {
-            return undefined;
-        }
-        return latestUserRequest(context);
-    }
-}
 
 function sessionNameFromGoal(goal: string): string {
     const normalized = goal.replace(/\s+/g, ' ').trim();
@@ -467,19 +403,13 @@ export function registerBkperHandoffExtension(
             }
 
             await context.waitForIdle();
-            const conversation = serializeCurrentConversation(context);
             let goal = args.trim();
             if (!goal && pendingConfirmedGoal) {
                 goal = pendingConfirmedGoal;
                 pendingConfirmedGoal = undefined;
             }
             if (!goal) {
-                const suggestion = await suggestGoal(conversation, context, dependencies);
-                if (suggestion === undefined) {
-                    context.ui.notify('Handoff cancelled.', 'info');
-                    return;
-                }
-                const editedGoal = await context.ui.editor('Handoff goal', suggestion);
+                const editedGoal = await context.ui.editor('Handoff goal', '');
                 if (editedGoal === undefined || !editedGoal.trim()) {
                     context.ui.notify('Handoff cancelled.', 'info');
                     return;
@@ -508,15 +438,7 @@ export function registerBkperHandoffExtension(
         }
         lastPromptTokens = usage.tokens;
 
-        const conversation = serializeCurrentConversation(context);
-        if (!conversation) {
-            return;
-        }
-        const suggestion = await suggestGoal(conversation, context, dependencies);
-        if (suggestion === undefined) {
-            return;
-        }
-        const goal = await context.ui.editor('Handoff goal', suggestion);
+        const goal = await context.ui.editor('Handoff goal', '');
         if (goal === undefined || !goal.trim()) {
             return;
         }

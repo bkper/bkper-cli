@@ -59,14 +59,11 @@ function createMemorySettings(enabled = true): AutoHandoffSettings {
 
 function createDependencies(): {
     dependencies: HandoffDependencies;
-    suggestGoal: sinon.SinonStub;
     generatePrompt: sinon.SinonStub;
 } {
-    const suggestGoal = sinon.stub().resolves('Finish the handoff feature');
     const generatePrompt = sinon.stub().resolves('## Context\nExisting work\n\n## Task\nFinish it');
     return {
-        dependencies: {suggestGoal, generatePrompt},
-        suggestGoal,
+        dependencies: {generatePrompt},
         generatePrompt,
     };
 }
@@ -259,14 +256,13 @@ describe('agent handoff', function () {
     });
 
     it('uses an explicit goal without opening the goal editor', async function () {
-        const {dependencies, suggestGoal, generatePrompt} = createDependencies();
+        const {dependencies, generatePrompt} = createDependencies();
         const {command} = registerHandoff(createMemorySettings(), dependencies);
         const context = createCommandContext();
 
         await command('Implement phase two', context);
 
         expect(context.waitForIdle.calledOnce).to.equal(true);
-        expect(suggestGoal.called).to.equal(false);
         expect(context.ui.editor.called).to.equal(false);
         expect(generatePrompt.calledOnce).to.equal(true);
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Implement phase two');
@@ -289,38 +285,32 @@ describe('agent handoff', function () {
         )).to.equal(true);
     });
 
-    it('suggests an editable goal when /handoff has no goal', async function () {
-        const {dependencies, suggestGoal, generatePrompt} = createDependencies();
+    it('opens an empty goal editor when /handoff has no goal', async function () {
+        const {dependencies, generatePrompt} = createDependencies();
         const {command} = registerHandoff(createMemorySettings(), dependencies);
         const context = createCommandContext();
         context.ui.editor.resolves('Use my custom goal');
 
         await command('', context);
 
-        expect(suggestGoal.calledOnce).to.equal(true);
-        expect(context.ui.editor.calledOnceWithExactly(
-            'Handoff goal',
-            'Finish the handoff feature'
-        )).to.equal(true);
+        expect(context.ui.editor.calledOnceWithExactly('Handoff goal', '')).to.equal(true);
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Use my custom goal');
     });
 
-    it('falls back to the latest user request when goal suggestion fails', async function () {
-        const {dependencies, suggestGoal} = createDependencies();
-        suggestGoal.rejects(new Error('model unavailable'));
+    it('cancels without a model call when the goal is empty', async function () {
+        const {dependencies, generatePrompt} = createDependencies();
         const {command} = registerHandoff(createMemorySettings(), dependencies);
         const context = createCommandContext();
+        context.ui.editor.resolves('');
 
         await command('', context);
 
-        expect(context.ui.editor.firstCall.args).to.deep.equal([
-            'Handoff goal',
-            'Please implement handoff support',
-        ]);
+        expect(generatePrompt.called).to.equal(false);
+        expect(context.newSession.called).to.equal(false);
     });
 
     it('offers auto-handoff at the adaptive threshold and reuses the confirmed goal', async function () {
-        const {dependencies, suggestGoal} = createDependencies();
+        const {dependencies} = createDependencies();
         const {handlers, command, sendUserMessage} = registerHandoff(
             createMemorySettings(),
             dependencies
@@ -329,35 +319,38 @@ describe('agent handoff', function () {
 
         await handlers.get('agent_settled')?.({}, context);
 
-        expect(suggestGoal.calledOnce).to.equal(true);
-        expect(context.ui.editor.calledOnce).to.equal(true);
+        expect(context.ui.editor.calledOnceWithExactly('Handoff goal', '')).to.equal(true);
         expect(sendUserMessage.calledOnceWithExactly('/handoff')).to.equal(true);
 
         const commandContext = createCommandContext(103_424);
         await command('', commandContext);
-        expect(suggestGoal.calledOnce).to.equal(true);
     });
 
     it('snoozes auto-handoff for another lead window after dismissal', async function () {
-        const {dependencies, suggestGoal} = createDependencies();
+        const {dependencies} = createDependencies();
         const {handlers} = registerHandoff(createMemorySettings(), dependencies);
         const context = createContext(103_424);
-        context.ui.editor.onFirstCall().resolves(undefined);
-        context.ui.editor.onSecondCall().resolves('Continue in a new session');
+        context.ui.editor.resolves(undefined);
+        const belowReminder = createContext(110_000);
+        const reminder = createContext(111_616);
+        reminder.ui.editor.resolves('Continue in a new session');
 
         await handlers.get('agent_settled')?.({}, context);
-        await handlers.get('agent_settled')?.({}, createContext(110_000));
-        await handlers.get('agent_settled')?.({}, createContext(111_616));
+        await handlers.get('agent_settled')?.({}, belowReminder);
+        await handlers.get('agent_settled')?.({}, reminder);
 
-        expect(suggestGoal.callCount).to.equal(2);
+        expect(context.ui.editor.calledOnce).to.equal(true);
+        expect(belowReminder.ui.editor.called).to.equal(false);
+        expect(reminder.ui.editor.calledOnce).to.equal(true);
     });
 
     it('does not offer automatic handoff when disabled', async function () {
-        const {dependencies, suggestGoal} = createDependencies();
+        const {dependencies} = createDependencies();
         const {handlers} = registerHandoff(createMemorySettings(false), dependencies);
+        const context = createContext(120_000);
 
-        await handlers.get('agent_settled')?.({}, createContext(120_000));
+        await handlers.get('agent_settled')?.({}, context);
 
-        expect(suggestGoal.called).to.equal(false);
+        expect(context.ui.editor.called).to.equal(false);
     });
 });
