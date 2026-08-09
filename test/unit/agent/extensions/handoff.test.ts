@@ -372,7 +372,12 @@ describe('agent handoff', function () {
 
         await handlers.get('agent_settled')?.({}, context);
 
-        expect(context.ui.editor.calledOnceWithExactly('Handoff goal', '')).to.equal(true);
+        expect(
+            context.ui.editor.calledOnceWithExactly(
+                'Next session goal',
+                'Continue the current work'
+            )
+        ).to.equal(true);
         expect(sendUserMessage.calledOnceWithExactly('/handoff')).to.equal(true);
 
         const commandContext = createCommandContext(103_424);

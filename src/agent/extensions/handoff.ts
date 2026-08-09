@@ -1,7 +1,7 @@
-import {randomUUID} from 'node:crypto';
-import {mkdirSync, readFileSync, renameSync, rmSync, writeFileSync} from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import type {AgentMessage} from '@earendil-works/pi-agent-core';
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import {
     BorderedLoader,
     convertToLlm,
@@ -11,7 +11,7 @@ import {
     type ExtensionContext,
     type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
-import {matchesKey, type KeyId, type SettingItem} from '@earendil-works/pi-tui';
+import { matchesKey, type KeyId, type SettingItem } from '@earendil-works/pi-tui';
 
 export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
@@ -52,10 +52,7 @@ export interface HandoffGenerationRequest {
 }
 
 export interface HandoffDependencies {
-    generatePrompt(
-        request: HandoffGenerationRequest,
-        context: ExtensionContext
-    ): Promise<string>;
+    generatePrompt(request: HandoffGenerationRequest, context: ExtensionContext): Promise<string>;
 }
 
 export interface MutableSettingsList {
@@ -87,9 +84,9 @@ export interface BkperHandoffShortcutHost {
 }
 
 type GenerationOutcome =
-    | {status: 'completed'; text: string}
-    | {status: 'cancelled'}
-    | {status: 'failed'; error: Error};
+    | { status: 'completed'; text: string }
+    | { status: 'cancelled' }
+    | { status: 'failed'; error: Error };
 
 type StoredBkperSettings = {
     autoHandoff?: {
@@ -122,18 +119,13 @@ function keybindingConfigIncludesShortcut(
     );
 }
 
-function isShortcutClaimedByBindings(
-    bindings: KeybindingsConfig,
-    shortcut: string
-): boolean {
+function isShortcutClaimedByBindings(bindings: KeybindingsConfig, shortcut: string): boolean {
     return Object.values(bindings).some(binding =>
         keybindingConfigIncludesShortcut(binding, shortcut)
     );
 }
 
-export function getBkperHandoffShortcut(
-    bindings: KeybindingsConfig
-): KeyId | undefined {
+export function getBkperHandoffShortcut(bindings: KeybindingsConfig): KeyId | undefined {
     return isShortcutClaimedByBindings(bindings, BKPER_HANDOFF_SHORTCUT)
         ? undefined
         : BKPER_HANDOFF_SHORTCUT;
@@ -234,9 +226,7 @@ export function addAutoHandoffSetting(
     };
 }
 
-function hasSettingsList(
-    value: unknown
-): value is {getSettingsList(): MutableSettingsList} {
+function hasSettingsList(value: unknown): value is { getSettingsList(): MutableSettingsList } {
     return isRecord(value) && typeof value.getSettingsList === 'function';
 }
 
@@ -274,13 +264,13 @@ export class FileAutoHandoffSettings implements AutoHandoffSettings {
                 enabled,
             },
         };
-        mkdirSync(path.dirname(this.filePath), {recursive: true});
+        mkdirSync(path.dirname(this.filePath), { recursive: true });
         const temporaryPath = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
         try {
             writeFileSync(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
             renameSync(temporaryPath, this.filePath);
         } finally {
-            rmSync(temporaryPath, {force: true});
+            rmSync(temporaryPath, { force: true });
         }
     }
 }
@@ -323,7 +313,7 @@ async function generateWithCurrentModel(
 
     const outcome = await context.ui.custom<GenerationOutcome>((tui, theme, _keybindings, done) => {
         const loader = new BorderedLoader(tui, theme, loadingMessage);
-        loader.onAbort = () => done({status: 'cancelled'});
+        loader.onAbort = () => done({ status: 'cancelled' });
 
         void context.modelRegistry
             .complete(
@@ -333,7 +323,7 @@ async function generateWithCurrentModel(
                     messages: [
                         {
                             role: 'user',
-                            content: [{type: 'text', text: prompt}],
+                            content: [{ type: 'text', text: prompt }],
                             timestamp: Date.now(),
                         },
                     ],
@@ -346,7 +336,7 @@ async function generateWithCurrentModel(
             )
             .then(response => {
                 if (response.stopReason === 'aborted') {
-                    done({status: 'cancelled'});
+                    done({ status: 'cancelled' });
                     return;
                 }
                 if (response.stopReason === 'error') {
@@ -358,19 +348,19 @@ async function generateWithCurrentModel(
                 }
                 const text = response.content
                     .filter(
-                        (content): content is {type: 'text'; text: string} =>
+                        (content): content is { type: 'text'; text: string } =>
                             content.type === 'text'
                     )
                     .map(content => content.text)
                     .join('\n')
                     .trim();
                 if (!text) {
-                    done({status: 'failed', error: new Error('Handoff generation was empty.')});
+                    done({ status: 'failed', error: new Error('Handoff generation was empty.') });
                     return;
                 }
-                done({status: 'completed', text});
+                done({ status: 'completed', text });
             })
-            .catch(error => done({status: 'failed', error: normalizeError(error)}));
+            .catch(error => done({ status: 'failed', error: normalizeError(error) }));
 
         return loader;
     });
@@ -389,7 +379,9 @@ const defaultDependencies: HandoffDependencies = {
         generateWithCurrentModel(
             context,
             HANDOFF_SYSTEM_PROMPT,
-            `## Conversation History\n\n${request.conversation}\n\n## Goal for New Session\n\n${request.goal ?? ''}`,
+            `## Conversation History\n\n${request.conversation}\n\n## Goal for New Session\n\n${
+                request.goal ?? ''
+            }`,
             'Preparing handoff...'
         ),
 };
@@ -415,7 +407,7 @@ async function performHandoff(
 
     let prompt: string;
     try {
-        prompt = await dependencies.generatePrompt({conversation, goal}, context);
+        prompt = await dependencies.generatePrompt({ conversation, goal }, context);
     } catch (error) {
         if (error instanceof HandoffCancelledError) {
             context.ui.notify('Handoff cancelled.', 'info');
@@ -506,7 +498,10 @@ export function registerBkperHandoffExtension(
         }
         lastPromptTokens = usage.tokens;
 
-        const goal = await context.ui.editor('Handoff goal', '');
+        const goal = await context.ui.editor(
+            'Next session goal',
+            'Continue the current work'
+        );
         if (goal === undefined || !goal.trim()) {
             return;
         }
