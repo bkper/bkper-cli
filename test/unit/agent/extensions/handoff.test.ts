@@ -365,7 +365,7 @@ describe('agent handoff', function () {
 
         await command('', context);
 
-        expect(context.ui.editor.calledOnceWithExactly('Handoff goal', '')).to.equal(true);
+        expect(context.ui.editor.calledOnceWithExactly('Next session goal', '')).to.equal(true);
         expect(context.ui.editor.calledBefore(context.waitForIdle)).to.equal(true);
         expect(context.waitForIdle.calledBefore(context.sessionManager.buildContextEntries)).to.equal(
             true
@@ -413,7 +413,7 @@ describe('agent handoff', function () {
 
         expect(
             commandContext.ui.editor.calledOnceWithExactly(
-                'Handoff goal',
+                'Next session goal',
                 'Continue the current work'
             )
         ).to.equal(true);

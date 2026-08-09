@@ -488,7 +488,7 @@ export function registerBkperHandoffExtension(
             if (!goal) {
                 const goalPrefill = pendingGoalPrefill ?? '';
                 pendingGoalPrefill = undefined;
-                const editedGoal = await context.ui.editor('Handoff goal', goalPrefill);
+                const editedGoal = await context.ui.editor('Next session goal', goalPrefill);
                 if (editedGoal === undefined || !editedGoal.trim()) {
                     context.ui.notify('Handoff cancelled.', 'info');
                     return;
