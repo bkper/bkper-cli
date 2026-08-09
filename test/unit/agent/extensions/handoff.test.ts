@@ -145,15 +145,16 @@ function createCommandContext(tokens = 100_000): TestCommandContext {
 function registerHandoff(
     settings = createMemorySettings(),
     dependencies = createDependencies().dependencies,
-    reserveTokens = 16_384
+    reserveTokens = 16_384,
+    env: Record<string, string | undefined> = {}
 ): {
     handlers: Map<string, EventHandler>;
     command: CommandHandler;
-    sendUserMessage: sinon.SinonStub;
+    dispatchCommand: sinon.SinonStub;
 } {
     const handlers = new Map<string, EventHandler>();
     let command: CommandHandler | undefined;
-    const sendUserMessage = sinon.stub();
+    const dispatchCommand = sinon.stub().resolves();
 
     registerBkperHandoffExtension(
         {
@@ -163,15 +164,16 @@ function registerHandoff(
             registerCommand: ((_name: string, options: {handler: CommandHandler}) => {
                 command = options.handler;
             }) as unknown as ExtensionAPI['registerCommand'],
-            sendUserMessage,
         },
         settings,
         () => reserveTokens,
-        dependencies
+        dependencies,
+        env,
+        dispatchCommand
     );
 
     expect(command).to.not.equal(undefined);
-    return {handlers, command: command as CommandHandler, sendUserMessage};
+    return {handlers, command: command as CommandHandler, dispatchCommand};
 }
 
 describe('agent handoff', function () {
@@ -216,6 +218,36 @@ describe('agent handoff', function () {
         expect(getHandoffReminderThreshold(103_424)).to.equal(
             103_424 + AUTO_HANDOFF_LEAD_TOKENS
         );
+    });
+
+    it('uses a token threshold override from the environment', async function () {
+        const {dependencies} = createDependencies();
+        const {handlers, dispatchCommand} = registerHandoff(
+            createMemorySettings(),
+            dependencies,
+            16_384,
+            {BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS: '10000'}
+        );
+        const belowThreshold = createContext(9_999);
+        const atThreshold = createContext(10_000);
+
+        await handlers.get('agent_settled')?.({}, belowThreshold);
+        await handlers.get('agent_settled')?.({}, atThreshold);
+
+        expect(belowThreshold.ui.editor.called).to.equal(false);
+        expect(atThreshold.ui.editor.called).to.equal(false);
+        expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
+    });
+
+    it('rejects an invalid token threshold override', function () {
+        expect(() =>
+            registerHandoff(
+                createMemorySettings(),
+                createDependencies().dependencies,
+                16_384,
+                {BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS: 'soon'}
+            )
+        ).to.throw('BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS must be a non-negative integer');
     });
 
     it('adds an independent auto-handoff toggle to settings', function () {
@@ -362,9 +394,9 @@ describe('agent handoff', function () {
         });
     }
 
-    it('offers auto-handoff at the adaptive threshold and reuses the confirmed goal', async function () {
-        const {dependencies} = createDependencies();
-        const {handlers, command, sendUserMessage} = registerHandoff(
+    it('runs the normal handoff command with a one-shot automatic prefill', async function () {
+        const {dependencies, generatePrompt} = createDependencies();
+        const {handlers, command, dispatchCommand} = registerHandoff(
             createMemorySettings(),
             dependencies
         );
@@ -372,34 +404,44 @@ describe('agent handoff', function () {
 
         await handlers.get('agent_settled')?.({}, context);
 
+        expect(context.ui.editor.called).to.equal(false);
+        expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
+
+        const commandContext = createCommandContext(103_424);
+        commandContext.ui.editor.resolves('Edited automatic goal');
+        await command('', commandContext);
+
         expect(
-            context.ui.editor.calledOnceWithExactly(
-                'Next session goal',
+            commandContext.ui.editor.calledOnceWithExactly(
+                'Handoff goal',
                 'Continue the current work'
             )
         ).to.equal(true);
-        expect(sendUserMessage.calledOnceWithExactly('/handoff')).to.equal(true);
-
-        const commandContext = createCommandContext(103_424);
-        await command('', commandContext);
+        expect(generatePrompt.firstCall.args[0].goal).to.equal('Edited automatic goal');
     });
 
     it('snoozes auto-handoff for another lead window after dismissal', async function () {
         const {dependencies} = createDependencies();
-        const {handlers} = registerHandoff(createMemorySettings(), dependencies);
+        const {handlers, command, dispatchCommand} = registerHandoff(
+            createMemorySettings(),
+            dependencies
+        );
         const context = createContext(103_424);
-        context.ui.editor.resolves(undefined);
         const belowReminder = createContext(110_000);
         const reminder = createContext(111_616);
-        reminder.ui.editor.resolves('Continue in a new session');
 
         await handlers.get('agent_settled')?.({}, context);
-        await handlers.get('agent_settled')?.({}, belowReminder);
-        await handlers.get('agent_settled')?.({}, reminder);
+        expect(dispatchCommand.callCount).to.equal(1);
 
-        expect(context.ui.editor.calledOnce).to.equal(true);
-        expect(belowReminder.ui.editor.called).to.equal(false);
-        expect(reminder.ui.editor.calledOnce).to.equal(true);
+        const commandContext = createCommandContext(103_424);
+        commandContext.ui.editor.resolves(undefined);
+        await command('', commandContext);
+
+        await handlers.get('agent_settled')?.({}, belowReminder);
+        expect(dispatchCommand.callCount).to.equal(1);
+
+        await handlers.get('agent_settled')?.({}, reminder);
+        expect(dispatchCommand.callCount).to.equal(2);
     });
 
     it('does not offer automatic handoff when disabled', async function () {

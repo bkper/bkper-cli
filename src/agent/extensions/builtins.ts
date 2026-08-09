@@ -18,6 +18,7 @@ import {
     FileAutoHandoffSettings,
     getAutoHandoffSettingsPath,
     registerBkperHandoffExtension,
+    type HandoffCommandDispatcher,
 } from './handoff.js';
 import {registerBkperImageFallbackExtension} from './image-fallback.js';
 import {registerBkperAgentStartupExtension} from './startup.js';
@@ -100,7 +101,8 @@ export function registerBkperAgentBuiltins(
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
     settingsManager?: BuiltinsSettings,
     env: Record<string, string | undefined> = process.env,
-    credentialManager?: ProviderCredentialManager
+    credentialManager?: ProviderCredentialManager,
+    dispatchHandoffCommand?: HandoffCommandDispatcher
 ): void {
     const bkperAiBaseUrlOverride = getBkperAiBaseUrlOverride(env);
 
@@ -117,6 +119,9 @@ export function registerBkperAgentBuiltins(
     registerBkperHandoffExtension(
         pi,
         new FileAutoHandoffSettings(getAutoHandoffSettingsPath(getAgentDir())),
-        () => settingsManager?.getCompactionReserveTokens() ?? 16384
+        () => settingsManager?.getCompactionReserveTokens() ?? 16384,
+        undefined,
+        env,
+        dispatchHandoffCommand
     );
 }

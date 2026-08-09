@@ -87,6 +87,13 @@ export function createAgentModeDependencies(
                     authPath: join(agentDir, 'auth.json'),
                     modelsPath: join(agentDir, 'models.json'),
                 });
+                let promptHandoffCommand: ((command: string) => Promise<void>) | undefined;
+                const dispatchHandoffCommand = async (command: string): Promise<void> => {
+                    if (!promptHandoffCommand) {
+                        throw new Error('Handoff command dispatch is not ready.');
+                    }
+                    await promptHandoffCommand(command);
+                };
                 const services = await createAgentSessionServices({
                     cwd,
                     agentDir,
@@ -101,7 +108,8 @@ export function createAgentModeDependencies(
                                     runStartupMaintenance,
                                     settingsManager,
                                     process.env,
-                                    modelRuntime
+                                    modelRuntime,
+                                    dispatchHandoffCommand
                                 );
                             },
                         ],
@@ -122,15 +130,18 @@ export function createAgentModeDependencies(
                     sessionManager
                 );
 
+                const sessionResult = await createAgentSessionFromServices({
+                    services,
+                    sessionManager,
+                    sessionStartEvent,
+                    model: restoredSessionOptions.model,
+                    thinkingLevel: restoredSessionOptions.thinkingLevel,
+                    scopedModels: restoredSessionOptions.scopedModels,
+                });
+                promptHandoffCommand = command => sessionResult.session.prompt(command);
+
                 return {
-                    ...(await createAgentSessionFromServices({
-                        services,
-                        sessionManager,
-                        sessionStartEvent,
-                        model: restoredSessionOptions.model,
-                        thinkingLevel: restoredSessionOptions.thinkingLevel,
-                        scopedModels: restoredSessionOptions.scopedModels,
-                    })),
+                    ...sessionResult,
                     services,
                     diagnostics: [
                         ...services.diagnostics,

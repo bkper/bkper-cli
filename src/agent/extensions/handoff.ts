@@ -16,6 +16,8 @@ import { matchesKey, type KeyId, type SettingItem } from '@earendil-works/pi-tui
 export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
 const AUTO_HANDOFF_SETTING_ID = 'auto-handoff';
+const AUTO_HANDOFF_THRESHOLD_ENV_VAR = 'BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS';
+const DEFAULT_AUTO_HANDOFF_GOAL = 'Continue the current work';
 const MAX_SESSION_NAME_LENGTH = 80;
 
 const HANDOFF_SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
@@ -54,6 +56,8 @@ export interface HandoffGenerationRequest {
 export interface HandoffDependencies {
     generatePrompt(request: HandoffGenerationRequest, context: ExtensionContext): Promise<string>;
 }
+
+export type HandoffCommandDispatcher = (command: string) => Promise<void>;
 
 export interface MutableSettingsList {
     items: SettingItem[];
@@ -190,6 +194,21 @@ export function calculateAutoHandoffThreshold(
 
 export function getHandoffReminderThreshold(lastPromptTokens: number): number {
     return lastPromptTokens + AUTO_HANDOFF_LEAD_TOKENS;
+}
+
+function getAutoHandoffThresholdOverride(
+    env: Record<string, string | undefined>
+): number | undefined {
+    const configured = env[AUTO_HANDOFF_THRESHOLD_ENV_VAR];
+    if (configured === undefined) {
+        return undefined;
+    }
+
+    const threshold = Number(configured);
+    if (configured.trim() === '' || !Number.isSafeInteger(threshold) || threshold < 0) {
+        throw new Error(`${AUTO_HANDOFF_THRESHOLD_ENV_VAR} must be a non-negative integer.`);
+    }
+    return threshold;
 }
 
 function insertSetting(items: SettingItem[], setting: SettingItem): void {
@@ -434,17 +453,20 @@ async function performHandoff(
 }
 
 export function registerBkperHandoffExtension(
-    pi: Pick<ExtensionAPI, 'on' | 'registerCommand' | 'sendUserMessage'>,
+    pi: Pick<ExtensionAPI, 'on' | 'registerCommand'>,
     settings: AutoHandoffSettings,
     reserveTokens: () => number,
-    dependencies: HandoffDependencies = defaultDependencies
+    dependencies: HandoffDependencies = defaultDependencies,
+    env: Record<string, string | undefined> = process.env,
+    dispatchCommand?: HandoffCommandDispatcher
 ): void {
+    const thresholdOverride = getAutoHandoffThresholdOverride(env);
     let lastPromptTokens: number | undefined;
-    let pendingConfirmedGoal: string | undefined;
+    let pendingGoalPrefill: string | undefined;
 
     const resetAutomaticState = () => {
         lastPromptTokens = undefined;
-        pendingConfirmedGoal = undefined;
+        pendingGoalPrefill = undefined;
     };
 
     pi.on('session_start', resetAutomaticState);
@@ -463,12 +485,10 @@ export function registerBkperHandoffExtension(
             }
 
             let goal = args.trim();
-            if (!goal && pendingConfirmedGoal) {
-                goal = pendingConfirmedGoal;
-                pendingConfirmedGoal = undefined;
-            }
             if (!goal) {
-                const editedGoal = await context.ui.editor('Handoff goal', '');
+                const goalPrefill = pendingGoalPrefill ?? '';
+                pendingGoalPrefill = undefined;
+                const editedGoal = await context.ui.editor('Handoff goal', goalPrefill);
                 if (editedGoal === undefined || !editedGoal.trim()) {
                     context.ui.notify('Handoff cancelled.', 'info');
                     return;
@@ -491,22 +511,23 @@ export function registerBkperHandoffExtension(
         }
         const threshold =
             lastPromptTokens === undefined
-                ? calculateAutoHandoffThreshold(usage.contextWindow, reserveTokens())
+                ? (thresholdOverride ??
+                  calculateAutoHandoffThreshold(usage.contextWindow, reserveTokens()))
                 : getHandoffReminderThreshold(lastPromptTokens);
         if (usage.tokens < threshold) {
             return;
         }
         lastPromptTokens = usage.tokens;
 
-        const goal = await context.ui.editor(
-            'Next session goal',
-            'Continue the current work'
-        );
-        if (goal === undefined || !goal.trim()) {
+        if (!dispatchCommand) {
+            context.ui.notify('Automatic handoff command dispatch is unavailable.', 'error');
             return;
         }
 
-        pendingConfirmedGoal = goal.trim();
-        pi.sendUserMessage('/handoff');
+        pendingGoalPrefill = DEFAULT_AUTO_HANDOFF_GOAL;
+        void dispatchCommand('/handoff').catch(error => {
+            pendingGoalPrefill = undefined;
+            context.ui.notify(`Automatic handoff failed: ${normalizeError(error).message}`, 'error');
+        });
     });
 }
