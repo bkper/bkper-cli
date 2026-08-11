@@ -17,6 +17,7 @@ import {registerBkperCoreConceptsPreloadExtension} from './core-concepts-preload
 import {
     FileAutoHandoffSettings,
     getAutoHandoffSettingsPath,
+    getBkperHandoffShortcutFromFile,
     registerBkperHandoffExtension,
     type HandoffCommandDispatcher,
 } from './handoff.js';
@@ -122,6 +123,7 @@ export function registerBkperAgentBuiltins(
         () => settingsManager?.getCompactionReserveTokens() ?? 16384,
         undefined,
         env,
-        dispatchHandoffCommand
+        dispatchHandoffCommand,
+        getBkperHandoffShortcutFromFile(getAgentDir())
     );
 }

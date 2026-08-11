@@ -8,13 +8,11 @@ import {
     FileAutoHandoffSettings,
     getAutoHandoffSettingsPath,
     installAutoHandoffSettingsIntegration,
-    installBkperHandoffShortcut,
     type AutoHandoffSettingsHost,
 } from '../extensions/handoff.js';
 import {
     installBkperSessionKeybindings,
     type BkperKeybindingsManager,
-    type KeybindingsConfigLike,
 } from './session-keybindings.js';
 
 export type InteractiveRuntimeHost = ConstructorParameters<typeof InteractiveMode>[0];
@@ -51,12 +49,7 @@ export class BkperInteractiveMode extends InteractiveMode {
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
             getChangelogForDisplay: () => undefined;
-            keybindings?: BkperKeybindingsManager & {
-                getResolvedBindings(): KeybindingsConfigLike;
-            };
-            session?: {
-                prompt(text: string): Promise<void>;
-            };
+            keybindings?: BkperKeybindingsManager;
         };
         interactiveMode.getChangelogForDisplay = () => undefined;
 
@@ -69,7 +62,6 @@ export class BkperInteractiveMode extends InteractiveMode {
         const authRoutingMode = this as unknown as {
             defaultEditor?: {
                 onSubmit?: (text: string) => void | Promise<void>;
-                onExtensionShortcut?: (data: string) => boolean;
             };
             editor?: {
                 onSubmit?: (text: string) => void | Promise<void>;
@@ -88,18 +80,6 @@ export class BkperInteractiveMode extends InteractiveMode {
                 };
             };
         };
-        if (
-            authRoutingMode.defaultEditor &&
-            interactiveMode.keybindings &&
-            interactiveMode.session
-        ) {
-            installBkperHandoffShortcut({
-                defaultEditor: authRoutingMode.defaultEditor,
-                keybindings: interactiveMode.keybindings,
-                session: interactiveMode.session,
-            });
-        }
-
         if (authRoutingMode.editorContainer && authRoutingMode.showSettingsSelector) {
             installAutoHandoffSettingsIntegration(
                 authRoutingMode as unknown as AutoHandoffSettingsHost,

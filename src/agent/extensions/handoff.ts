@@ -11,7 +11,7 @@ import {
     type ExtensionContext,
     type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
-import { matchesKey, type KeyId, type SettingItem } from '@earendil-works/pi-tui';
+import {type KeyId, type SettingItem} from '@earendil-works/pi-tui';
 
 export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
@@ -75,18 +75,6 @@ export interface AutoHandoffSettingsHost {
 type KeybindingsConfigValue = string | string[] | undefined;
 type KeybindingsConfig = Record<string, KeybindingsConfigValue>;
 
-export interface BkperHandoffShortcutHost {
-    defaultEditor: {
-        onExtensionShortcut?: (data: string) => boolean;
-    };
-    keybindings: {
-        getResolvedBindings(): KeybindingsConfig;
-    };
-    session: {
-        prompt(text: string): Promise<void>;
-    };
-}
-
 type GenerationOutcome =
     | { status: 'completed'; text: string }
     | { status: 'cancelled' }
@@ -135,25 +123,30 @@ export function getBkperHandoffShortcut(bindings: KeybindingsConfig): KeyId | un
         : BKPER_HANDOFF_SHORTCUT;
 }
 
-export function installBkperHandoffShortcut(host: BkperHandoffShortcutHost): void {
-    const shortcut = getBkperHandoffShortcut(host.keybindings.getResolvedBindings());
-    if (!shortcut) {
-        return;
+export function getBkperHandoffShortcutFromFile(agentDir: string): KeyId | undefined {
+    try {
+        const parsed: unknown = JSON.parse(
+            readFileSync(path.join(agentDir, 'keybindings.json'), 'utf8')
+        );
+        if (!isRecord(parsed)) {
+            return BKPER_HANDOFF_SHORTCUT;
+        }
+
+        const bindings: KeybindingsConfig = {};
+        for (const [keybinding, binding] of Object.entries(parsed)) {
+            if (typeof binding === 'string') {
+                bindings[keybinding] = binding;
+            } else if (
+                Array.isArray(binding) &&
+                binding.every(shortcut => typeof shortcut === 'string')
+            ) {
+                bindings[keybinding] = binding;
+            }
+        }
+        return getBkperHandoffShortcut(bindings);
+    } catch {
+        return BKPER_HANDOFF_SHORTCUT;
     }
-
-    const originalShortcut = host.defaultEditor.onExtensionShortcut;
-    host.defaultEditor.onExtensionShortcut = data => {
-        if (originalShortcut?.call(host.defaultEditor, data)) {
-            return true;
-        }
-        if (!matchesKey(data, shortcut)) {
-            return false;
-        }
-
-        // Session prompt dispatch executes extension commands immediately, even mid-turn.
-        void host.session.prompt('/handoff');
-        return true;
-    };
 }
 
 function readStoredSettings(filePath: string): StoredBkperSettings {
@@ -453,12 +446,13 @@ async function performHandoff(
 }
 
 export function registerBkperHandoffExtension(
-    pi: Pick<ExtensionAPI, 'on' | 'registerCommand'>,
+    pi: Pick<ExtensionAPI, 'on' | 'registerCommand' | 'registerShortcut'>,
     settings: AutoHandoffSettings,
     reserveTokens: () => number,
     dependencies: HandoffDependencies = defaultDependencies,
-    env: Record<string, string | undefined> = process.env,
-    dispatchCommand?: HandoffCommandDispatcher
+    env: Record<string, string | undefined>,
+    dispatchCommand: HandoffCommandDispatcher | undefined,
+    handoffShortcut: KeyId | undefined
 ): void {
     const thresholdOverride = getAutoHandoffThresholdOverride(env);
     let lastPromptTokens: number | undefined;
@@ -471,6 +465,26 @@ export function registerBkperHandoffExtension(
 
     pi.on('session_start', resetAutomaticState);
     pi.on('session_compact', resetAutomaticState);
+
+    if (handoffShortcut) {
+        pi.registerShortcut(handoffShortcut, {
+            description: 'Continue the current work in a focused new session',
+            handler: async context => {
+                if (!dispatchCommand) {
+                    context.ui.notify('Handoff shortcut dispatch is unavailable.', 'error');
+                    return;
+                }
+                try {
+                    await dispatchCommand('/handoff');
+                } catch (error) {
+                    context.ui.notify(
+                        `Handoff shortcut failed: ${normalizeError(error).message}`,
+                        'error'
+                    );
+                }
+            },
+        });
+    }
 
     pi.registerCommand('handoff', {
         description: 'Continue the current work in a focused new session',

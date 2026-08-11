@@ -1,4 +1,4 @@
-import {mkdtempSync, readFileSync} from 'node:fs';
+import {mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import type {ExtensionAPI, ExtensionContext} from '@earendil-works/pi-coding-agent';
@@ -10,9 +10,10 @@ import {
     calculateAutoHandoffThreshold,
     FileAutoHandoffSettings,
     getAutoHandoffSettingsPath,
+    getBkperHandoffShortcut,
+    getBkperHandoffShortcutFromFile,
     getHandoffReminderThreshold,
     installAutoHandoffSettingsIntegration,
-    installBkperHandoffShortcut,
     registerBkperHandoffExtension,
     type AutoHandoffSettings,
     type HandoffDependencies,
@@ -150,10 +151,12 @@ function registerHandoff(
 ): {
     handlers: Map<string, EventHandler>;
     command: CommandHandler;
+    shortcutHandler: (context: TestContext) => Promise<void> | void;
     dispatchCommand: sinon.SinonStub;
 } {
     const handlers = new Map<string, EventHandler>();
     let command: CommandHandler | undefined;
+    let shortcutHandler: ((context: TestContext) => Promise<void> | void) | undefined;
     const dispatchCommand = sinon.stub().resolves();
 
     registerBkperHandoffExtension(
@@ -164,53 +167,65 @@ function registerHandoff(
             registerCommand: ((_name: string, options: {handler: CommandHandler}) => {
                 command = options.handler;
             }) as unknown as ExtensionAPI['registerCommand'],
+            registerShortcut: ((_shortcut: string, options: {handler: typeof shortcutHandler}) => {
+                shortcutHandler = options.handler;
+            }) as unknown as ExtensionAPI['registerShortcut'],
         },
         settings,
         () => reserveTokens,
         dependencies,
         env,
-        dispatchCommand
+        dispatchCommand,
+        'ctrl+h'
     );
 
     expect(command).to.not.equal(undefined);
-    return {handlers, command: command as CommandHandler, dispatchCommand};
+    expect(shortcutHandler).to.not.equal(undefined);
+    return {
+        handlers,
+        command: command as CommandHandler,
+        shortcutHandler: shortcutHandler as (context: TestContext) => Promise<void> | void,
+        dispatchCommand,
+    };
 }
 
 describe('agent handoff', function () {
-    it('launches handoff from Ctrl+H while preserving other extension shortcuts', function () {
-        const prompt = sinon.stub().resolves();
-        const previousShortcut = sinon.stub().callsFake((data: string) => data === '\x01');
-        const host = {
-            defaultEditor: {onExtensionShortcut: previousShortcut},
-            keybindings: {getResolvedBindings: () => ({})},
-            session: {prompt},
-        };
+    it('registers Ctrl+H through Pi shortcut lifecycle', async function () {
+        const {shortcutHandler, dispatchCommand} = registerHandoff();
 
-        installBkperHandoffShortcut(host);
+        await shortcutHandler(createContext());
 
-        expect(host.defaultEditor.onExtensionShortcut?.('\x08')).to.equal(true);
-        expect(prompt.calledOnceWithExactly('/handoff')).to.equal(true);
-        expect(host.defaultEditor.onExtensionShortcut?.('\x01')).to.equal(true);
-        expect(prompt.calledOnce).to.equal(true);
+        expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
     });
 
     it('preserves a user binding that claims Ctrl+H', function () {
-        const prompt = sinon.stub().resolves();
-        const previousShortcut = sinon.stub().returns(false);
-        const host = {
-            defaultEditor: {onExtensionShortcut: previousShortcut},
-            keybindings: {
-                getResolvedBindings: () => ({
-                    'tui.editor.deleteCharBackward': ['backspace', 'ctrl+h'],
-                }),
+        const directory = mkdtempSync(path.join(tmpdir(), 'bkper-keybindings-'));
+        writeFileSync(
+            path.join(directory, 'keybindings.json'),
+            JSON.stringify({
+                'tui.editor.deleteCharBackward': ['backspace', 'ctrl+h'],
+            })
+        );
+
+        const shortcut = getBkperHandoffShortcutFromFile(directory);
+        const registerShortcut = sinon.stub();
+        registerBkperHandoffExtension(
+            {
+                on: sinon.stub() as unknown as ExtensionAPI['on'],
+                registerCommand: sinon.stub(),
+                registerShortcut,
             },
-            session: {prompt},
-        };
+            createMemorySettings(),
+            () => 16_384,
+            createDependencies().dependencies,
+            {},
+            sinon.stub().resolves(),
+            shortcut
+        );
 
-        installBkperHandoffShortcut(host);
-
-        expect(host.defaultEditor.onExtensionShortcut).to.equal(previousShortcut);
-        expect(prompt.called).to.equal(false);
+        expect(shortcut).to.equal(undefined);
+        expect(registerShortcut.called).to.equal(false);
+        expect(getBkperHandoffShortcut({})).to.equal('ctrl+h');
     });
 
     it('places auto-handoff one lead window before auto-compaction', function () {
