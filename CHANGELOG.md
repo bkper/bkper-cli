@@ -7,7 +7,13 @@
 -   **Agent Experience**
     -   Added `/handoff <goal>` and `Ctrl+H` to continue work in a linked, focused session with a generated context draft
     -   Added automatic handoff prompts before context compaction, enabled by default and independently configurable from `/settings`
+    -   Fixed `Ctrl+H` so the handoff shortcut remains available across agent sessions
     -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
+-   **App Development**
+    -   Added private Bkper-managed Git source for eligible new standalone apps; the first `bkper app sync` configures the managed repository and pushes the committed `main` branch, while apps with external remotes and monorepo apps keep their existing workflow
+    -   Added `bkper app clone <appId> [path]` to safely clone managed app source without installing dependencies or running repository lifecycle scripts
+    -   Managed `bkper app sync` and `bkper app deploy` now push committed source with clean-tree and fast-forward safety checks; deploy verifies the exact commit before uploading the existing local build
+    -   `bkper app init` now initializes Git on `main` when needed without staging or committing files
 
 ### **July 2026**
 
