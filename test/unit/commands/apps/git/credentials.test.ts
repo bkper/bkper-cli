@@ -55,6 +55,7 @@ describe('apps git credentials', function () {
         commitAll(repo, 'init');
 
         await configureManagedCredentialHelper(repo, ARTIFACTS_REMOTE, 'demo-app');
+        await configureManagedCredentialHelper(repo, ARTIFACTS_REMOTE, 'demo-app');
 
         const useHttpPath = runGitSync(
             ['config', '--get', `credential.${ARTIFACTS_REMOTE}.useHttpPath`],

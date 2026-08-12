@@ -89,8 +89,11 @@ export async function configureManagedCredentialHelper(
 
     const remoteKey = normalizeRemoteUrl(remote);
     await runner(['config', `credential.${remoteKey}.useHttpPath`, 'true'], {cwd: repoRoot});
-    // Empty helper clears inherited persistent helpers for this credential context.
-    await runner(['config', `credential.${remoteKey}.helper`, ''], {cwd: repoRoot});
+    // Replace all local values with the empty helper so retries remain idempotent
+    // while clearing inherited persistent helpers for this credential context.
+    await runner(['config', '--replace-all', `credential.${remoteKey}.helper`, ''], {
+        cwd: repoRoot,
+    });
     await runner(
         ['config', '--add', `credential.${remoteKey}.helper`, buildCredentialHelperCommand(appId)],
         {cwd: repoRoot}
