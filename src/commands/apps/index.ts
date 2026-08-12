@@ -55,6 +55,20 @@ export { build } from './build.js';
 // Init
 export { initApp } from './init.js';
 
+// Managed Git / Artifacts source plumbing
+export {
+    cloneManagedApp,
+    cloneManagedAppCommand,
+    configureManagedOrigin,
+    detectSourceMode,
+    ensureGitInitialized,
+    ensurePendingSourceMarker,
+    pushCurrentBranchSafe,
+    requireManagedGitPreflight,
+    runGitCredentialHelper,
+    writeManagedSourceMarker,
+} from './git/index.js';
+
 // Secrets
 export { secretsDelete, secretsList, secretsPut } from './secrets.js';
 

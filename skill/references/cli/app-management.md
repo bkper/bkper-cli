@@ -18,13 +18,14 @@ bkper app init my-app
 cd my-app
 ```
 
-`bkper app init <name>` creates and scaffolds `./<name>` using the same value as the app id. Run `bkper app init` with no name inside an existing empty or VCS-only directory to use the current folder name as the app id.
+`bkper app init <name>` creates and scaffolds `./<name>` using the same value as the app id. Run `bkper app init` with no name inside an existing empty or VCS-only directory to use the current folder name as the app id. Init initializes Git on `main` when needed, but does not create commits.
 
 Verify:
 
 - `client/` and `server/` exist
 - `bkper.yaml` has `id`, `name`, `description`, and `developers`
 - `package.json` scripts include `dev` and `build`
+- `.git` exists on branch `main` with no automatic commit
 
 ### 2. Develop
 
@@ -425,7 +426,9 @@ Inside the interactive agent:
 
 ### App Lifecycle
 
--   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name.
+-   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name. Initializes Git on `main` when the target is not already a repository, without staging or committing files.
+-   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
+-   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
 -   `app list` - List all apps you have access to
 -   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration (URLs, description) to Bkper API
 -   `app build` - Build the server Worker bundle for deployment

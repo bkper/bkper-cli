@@ -4,6 +4,7 @@ import path from 'path';
 import { Readable } from 'stream';
 import * as tar from 'tar';
 import * as YAML from 'yaml';
+import { ensureGitInitialized } from './git/inspect.js';
 
 // =============================================================================
 // Constants
@@ -354,7 +355,21 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 7. Install dependencies
+    // 7. Initialize Git on main without staging or committing when not already a repo.
+    try {
+        const created = await ensureGitInitialized(initTarget.targetDir);
+        if (created) {
+            console.log('  Initialized Git repository on main');
+        } else {
+            console.log('  Existing Git repository preserved');
+        }
+    } catch (err) {
+        console.log(
+            '  Warning: Could not initialize Git. Run "git init -b main" manually if needed.'
+        );
+    }
+
+    // 8. Install dependencies
     console.log('  Installing dependencies...');
     try {
         await runCommand('bun', ['install'], initTarget.targetDir);
@@ -367,7 +382,7 @@ export async function initApp(name?: string): Promise<void> {
         ? '  bun run dev'
         : `  cd ${initTarget.displayTarget}\n  bun run dev`;
 
-    // 8. Print success message
+    // 9. Print success message
     console.log(`
 Done! To get started:
 
@@ -377,5 +392,6 @@ Next steps:
   - Review bkper.yaml: update description, ownerName, ownerWebsite, and repoUrl
   - Replace logo-light.svg and logo-dark.svg in client/public/images/
   - Edit README.md to explain what your app does for end users
+  - Commit your changes, then run: bkper app sync
 `);
 }

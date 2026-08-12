@@ -20,6 +20,8 @@ import {
     build,
     installApp,
     uninstallApp,
+    cloneManagedAppCommand,
+    runGitCredentialHelper,
 } from './index.js';
 
 export function registerAppCommands(program: Command): void {
@@ -35,6 +37,39 @@ export function registerAppCommands(program: Command): void {
                 'initializing app',
                 async () => {
                     await initApp(name);
+                },
+                { skipSetup: true }
+            )()
+        );
+
+    appCommand
+        .command('clone <appId> [path]')
+        .description('Clone a Bkper-managed App source repository (does not install dependencies)')
+        .action((appId: string, destination: string | undefined) =>
+            withAction(
+                'cloning managed app source',
+                async () => {
+                    await cloneManagedAppCommand(appId, destination);
+                },
+                { skipSetup: true }
+            )()
+        );
+
+    appCommand
+        .command('git-credential <appId> [operation]')
+        .description('Internal Git credential helper for managed Artifacts source')
+        .action((appId: string, operation: string | undefined) =>
+            withAction(
+                'running git credential helper',
+                async () => {
+                    // Git appends get|store|erase to the configured helper command.
+                    const exitCode = await runGitCredentialHelper({
+                        appId,
+                        operation: operation ?? 'get',
+                    });
+                    if (exitCode !== 0) {
+                        process.exit(exitCode);
+                    }
                 },
                 { skipSetup: true }
             )()
