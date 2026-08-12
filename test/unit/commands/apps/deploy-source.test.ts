@@ -56,6 +56,25 @@ describe('CLI - apps deploy source paths', function () {
         });
     });
 
+    it('should include managed provenance with declared branch and full SHA', function () {
+        const metadata = buildPlatformDeployMetadata(
+            {server: 'server/src/index.ts'},
+            {
+                mode: 'managed',
+                declaredBranch: 'feature/provenance',
+                commitSha: '0123456789abcdef0123456789abcdef01234567',
+            }
+        );
+
+        expect(metadata).to.deep.equal({
+            source: {
+                mode: 'managed',
+                declaredBranch: 'feature/provenance',
+                commitSha: '0123456789abcdef0123456789abcdef01234567',
+            },
+        });
+    });
+
     it('should omit platform metadata when no deploy metadata is configured', function () {
         const metadata = buildPlatformDeployMetadata({
             server: 'server/src/index.ts',

@@ -7,6 +7,7 @@ import {
     readSourceMarker,
     writeManagedSourceMarker,
 } from '../../../../../src/commands/apps/git/markers.js';
+import {getWorkingTreeStatus} from '../../../../../src/commands/apps/git/inspect.js';
 import {ManagedGitError} from '../../../../../src/commands/apps/git/types.js';
 import {ARTIFACTS_REMOTE, initRepo, makeTempDir} from './helpers.js';
 
@@ -30,6 +31,16 @@ describe('apps git markers', function () {
         const second = ensurePendingSourceMarker(tempDir);
         expect(second.activationId).to.equal(first.activationId);
         expect(readSourceMarker(tempDir)).to.deep.equal(first);
+    });
+
+    it('keeps repository-local control markers out of managed clean-tree checks', async function () {
+        ensurePendingSourceMarker(tempDir);
+        expect(await getWorkingTreeStatus(tempDir)).to.deep.equal({
+            clean: true,
+            staged: [],
+            modified: [],
+            untracked: [],
+        });
     });
 
     it('replaces pending with managed marker', function () {

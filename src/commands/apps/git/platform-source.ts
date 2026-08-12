@@ -1,12 +1,20 @@
 import {AUTHENTICATION_REQUIRED_MESSAGE} from '../../../auth/auth-errors.js';
 import {getStoredOAuthToken} from '../../../auth/local-auth-service.js';
 import {createPlatformClient} from '../../../platform/client.js';
-import {ManagedGitError, type ManagedSourceCredential, type ManagedSourcePlatformStatus} from './types.js';
+import {
+    ManagedGitError,
+    type ManagedSourceActivationResult,
+    type ManagedSourceCredential,
+    type ManagedSourcePlatformStatus,
+} from './types.js';
 
 const PLATFORM_API_URL = process.env.BKPER_PLATFORM_URL || 'https://platform.bkper.app';
 
 export interface PlatformSourceApi {
-    getStatus(appId: string): Promise<ManagedSourcePlatformStatus | 'feature_disabled'>;
+    getStatus(
+        appId: string
+    ): Promise<ManagedSourcePlatformStatus | 'feature_disabled' | 'app_not_found'>;
+    activate(appId: string, activationId: string): Promise<ManagedSourceActivationResult>;
     issueCredential(
         appId: string,
         scope: 'read' | 'write'
@@ -42,17 +50,18 @@ function asErrorMessage(body: PlatformErrorBody | undefined, fallback: string): 
 
 async function authorizedFetch(
     path: string,
-    init: RequestInit = {}
+    init: RequestInit = {},
+    requireAuthentication = true
 ): Promise<{response: Response; body: unknown}> {
     const token = await getStoredOAuthToken();
-    if (!token) {
+    if (!token && requireAuthentication) {
         throw new ManagedGitError('AUTHENTICATION_REQUIRED', AUTHENTICATION_REQUIRED_MESSAGE);
     }
 
     const response = await fetch(`${PLATFORM_API_URL}${path}`, {
         ...init,
         headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token ? {Authorization: `Bearer ${token}`} : {}),
             Accept: 'application/json',
             ...(init.body ? {'Content-Type': 'application/json'} : {}),
             ...(init.headers ?? {}),
@@ -118,15 +127,58 @@ function throwPlatformError(
 export function createPlatformSourceApi(): PlatformSourceApi {
     return {
         async getStatus(appId: string) {
-            const {response, body} = await authorizedFetch(`/api/apps/${encodeURIComponent(appId)}/source`);
+            const {response, body} = await authorizedFetch(
+                `/api/apps/${encodeURIComponent(appId)}/source`,
+                {},
+                false
+            );
             const errorBody = body as PlatformErrorBody | undefined;
             if (response.status === 503 || errorBody?.error?.code === 'SOURCE_FEATURE_DISABLED') {
                 return 'feature_disabled';
             }
+            if (response.status === 404 || errorBody?.error?.code === 'APP_NOT_FOUND') {
+                return 'app_not_found';
+            }
             if (!response.ok) {
                 throwPlatformError(response, errorBody, 'Failed to load managed source status.');
             }
-            return body as ManagedSourcePlatformStatus;
+            const status = body as ManagedSourcePlatformStatus;
+            if (
+                status?.mode === 'managed' &&
+                (typeof status.remote !== 'string' || status.remote.length === 0)
+            ) {
+                throw new ManagedGitError(
+                    'MANAGED_SOURCE_UNAVAILABLE',
+                    'Managed source status did not include the registered remote.'
+                );
+            }
+            return status;
+        },
+
+        async activate(appId: string, activationId: string) {
+            const {response, body} = await authorizedFetch(
+                `/api/apps/${encodeURIComponent(appId)}/source/activate`,
+                {
+                    method: 'POST',
+                    body: JSON.stringify({activationId}),
+                }
+            );
+            const errorBody = body as PlatformErrorBody | undefined;
+            if (!response.ok) {
+                throwPlatformError(response, errorBody, 'Failed to activate managed source.');
+            }
+            const result = body as ManagedSourceActivationResult;
+            if (
+                !result?.success ||
+                result.source?.appId !== appId ||
+                typeof result.source.remote !== 'string'
+            ) {
+                throw new ManagedGitError(
+                    'MANAGED_SOURCE_UNAVAILABLE',
+                    'Managed source activation response was invalid.'
+                );
+            }
+            return result;
         },
 
         async issueCredential(appId: string, scope: 'read' | 'write') {
@@ -163,7 +215,7 @@ export function createPlatformSourceApi(): PlatformSourceApi {
 
 /**
  * Ensures the platform client module remains the auth base for non-source routes.
- * Source endpoints use fetch until OpenAPI types are regenerated after rollout.
+ * Source operations keep a small fetch wrapper for explicit no-store and token-redaction handling.
  */
 export function getPlatformBaseUrl(): string {
     createPlatformClient();

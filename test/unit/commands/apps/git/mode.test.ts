@@ -45,6 +45,7 @@ describe('apps git source mode detection', function () {
                 repositoryId: 'repo-1',
                 repositoryName: 'demo-app',
                 namespace: 'bkper-app-sources-dev',
+                remote: ARTIFACTS_REMOTE,
             },
         });
 

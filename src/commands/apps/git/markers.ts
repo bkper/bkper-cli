@@ -98,7 +98,29 @@ export function readSourceMarker(repoRoot: string): SourceMarker | null {
     return parseSourceMarker(fs.readFileSync(markerPath, 'utf8'));
 }
 
+function resolveGitDirectory(repoRoot: string): string | null {
+    const dotGit = path.join(repoRoot, '.git');
+    if (!fs.existsSync(dotGit)) return null;
+    if (fs.statSync(dotGit).isDirectory()) return dotGit;
+    const match = /^gitdir:\s*(.+)$/m.exec(fs.readFileSync(dotGit, 'utf8'));
+    return match ? path.resolve(repoRoot, match[1]) : null;
+}
+
+function excludeSourceMarker(repoRoot: string): void {
+    const gitDir = resolveGitDirectory(repoRoot);
+    if (!gitDir) return;
+    const infoDir = path.join(gitDir, 'info');
+    const excludePath = path.join(infoDir, 'exclude');
+    const pattern = `/${SOURCE_MARKER_DIR}/${SOURCE_MARKER_FILE}`;
+    fs.mkdirSync(infoDir, {recursive: true});
+    const existing = fs.existsSync(excludePath) ? fs.readFileSync(excludePath, 'utf8') : '';
+    if (existing.split(/\r?\n/).includes(pattern)) return;
+    const separator = existing.length > 0 && !existing.endsWith('\n') ? '\n' : '';
+    fs.appendFileSync(excludePath, `${separator}${pattern}\n`, 'utf8');
+}
+
 function writeMarkerAtomic(repoRoot: string, marker: SourceMarker): void {
+    excludeSourceMarker(repoRoot);
     const dir = path.join(repoRoot, SOURCE_MARKER_DIR);
     fs.mkdirSync(dir, {recursive: true});
     const markerPath = getSourceMarkerPath(repoRoot);

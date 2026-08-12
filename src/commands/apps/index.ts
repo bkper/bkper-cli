@@ -35,6 +35,7 @@ export { createApp, syncApp, updateApp } from './sync.js';
 
 // Deploy
 export { deployApp, statusApp, undeployApp } from './deploy.js';
+export {prepareManagedDeploySource, syncManagedAppSource} from './source-workflow.js';
 
 //Logs
 export {

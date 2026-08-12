@@ -5,6 +5,7 @@ import { getStoredOAuthToken } from '../../auth/local-auth-service.js';
 import { createPlatformClient } from '../../platform/client.js';
 import { createAssetManifest, readAssetFiles } from './bundler.js';
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from './config.js';
+import {prepareManagedDeploySource, type DeploySourceMetadata} from './source-workflow.js';
 import type { DeployOptions, Environment, SourceDeploymentConfig } from './types.js';
 
 interface PlatformDeployMetadata {
@@ -12,6 +13,7 @@ interface PlatformDeployMetadata {
         kv_namespaces?: Array<{ binding: string }>;
     };
     compatibility_date?: string;
+    source?: DeploySourceMetadata;
 }
 
 // =============================================================================
@@ -46,7 +48,10 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
         process.exit(1);
     }
 
-    // 5. Resolve build outputs
+    // 5. Push managed source before reading existing local build outputs.
+    const deploySource = await prepareManagedDeploySource({appId: config.id});
+
+    // 6. Resolve build outputs
     let resolvedPaths: { bundleDir: string; bundlePath: string; assetsDir?: string };
     try {
         resolvedPaths = resolveSourceDeployPaths(deploymentConfig);
@@ -111,7 +116,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     console.log(`Deploying app to ${env}...`);
 
     const queryParams: { env: Environment } = { env };
-    const metadata = buildPlatformDeployMetadata(deploymentConfig);
+    const metadata = buildPlatformDeployMetadata(deploymentConfig, deploySource);
 
     // Create multipart form data
     const formData = new FormData();
@@ -149,6 +154,13 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     console.log(`\nDeployed app to ${env}`);
     console.log(`  URL: ${data.url}`);
     console.log(`  Script: ${data.scriptName}`);
+    if (data.source) {
+        console.log('  Source: managed');
+        console.log(`  Branch: ${data.source.declaredBranch}`);
+        console.log(`  Verified SHA: ${data.source.verifiedSha}`);
+        console.log(`  Actor: ${data.source.actorId}`);
+        console.log(`  Server time: ${data.updatedAt}`);
+    }
 }
 
 export function resolveSourceDeployPaths(
@@ -166,7 +178,8 @@ export function resolveSourceDeployPaths(
 }
 
 export function buildPlatformDeployMetadata(
-    deploymentConfig: SourceDeploymentConfig
+    deploymentConfig: SourceDeploymentConfig,
+    source?: DeploySourceMetadata
 ): PlatformDeployMetadata | undefined {
     const metadata: PlatformDeployMetadata = {};
     const kvBindings = deploymentConfig.services
@@ -180,8 +193,30 @@ export function buildPlatformDeployMetadata(
     if (deploymentConfig.compatibilityDate) {
         metadata.compatibility_date = deploymentConfig.compatibilityDate;
     }
+    if (source) {
+        metadata.source = source;
+    }
 
-    return metadata.bindings || metadata.compatibility_date ? metadata : undefined;
+    return metadata.bindings || metadata.compatibility_date || metadata.source
+        ? metadata
+        : undefined;
+}
+
+function renderActiveSource(
+    source:
+        | {
+              mode: 'managed';
+              verifiedSha: string;
+              declaredBranch: string;
+              actorId: string;
+          }
+        | undefined
+): void {
+    if (!source) return;
+    console.log('  Source: managed');
+    console.log(`  Verified SHA: ${source.verifiedSha}`);
+    console.log(`  Branch: ${source.declaredBranch}`);
+    console.log(`  Actor: ${source.actorId}`);
 }
 
 // =============================================================================
@@ -330,6 +365,7 @@ export async function statusApp(): Promise<void> {
     console.log('Production:');
     if (data.prod?.deployed) {
         console.log(`  App: ${data.prod.url} (deployed ${data.prod.updatedAt})`);
+        renderActiveSource(data.prod.source);
     } else {
         console.log('  App: (not deployed)');
     }
@@ -337,6 +373,7 @@ export async function statusApp(): Promise<void> {
     console.log('\nPreview:');
     if (data.preview?.deployed) {
         console.log(`  App: ${data.preview.url} (deployed ${data.preview.updatedAt})`);
+        renderActiveSource(data.preview.source);
     } else {
         console.log('  App: (not deployed)');
     }

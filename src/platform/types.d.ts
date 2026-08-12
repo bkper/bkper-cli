@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    '/api/health': {
+    "/api/health": {
         parameters: {
             query?: never;
             header?: never;
@@ -30,7 +30,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['HealthResponse'];
+                        "application/json": components["schemas"]["HealthResponse"];
                     };
                 };
             };
@@ -43,7 +43,211 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/api/apps/{appId}/deploy': {
+    "/api/apps/{appId}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get recent app logs
+         * @description Query recent app logs for a deployed app
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description ISO8601 timestamp or relative duration like 5m, 1h, or 15d */
+                    since?: string;
+                    /** @description ISO8601 timestamp or relative duration like 5m, 1h, or 15d */
+                    until?: string;
+                    /** @description Return the newest N requests after filters */
+                    last?: number;
+                    /** @description Environment filter */
+                    env?: "production" | "preview";
+                    /** @description Optional handler filter */
+                    handler?: components["schemas"]["LogHandlerType"] & unknown;
+                    /** @description Minimum log level threshold. info returns info/warn/error, warn returns warn/error, error returns error only. */
+                    level?: components["schemas"]["LogLevel"] & unknown;
+                    /** @description Optional HTTP status code filter */
+                    statusCode?: number | null;
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recent app logs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LogsResponse"];
+                    };
+                };
+                /** @description Invalid logs query */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Logs backend failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get managed source status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Managed source status. Negative lookups are eventually consistent. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManagedSourceStatus"];
+                    };
+                };
+                /** @description Invalid managed source state */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source linkage mismatch */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source adapter failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source disabled */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/source/activate": {
         parameters: {
             query?: never;
             header?: never;
@@ -52,16 +256,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Deploy app script
-         * @description Deploy app code to Cloudflare Workers for Platforms. Send bundle as multipart/form-data with optional metadata and asset manifest.
-         */
+        /** Activate owner-bound managed source */
         post: {
             parameters: {
-                query?: {
-                    /** @description Target environment */
-                    env?: 'production' | 'preview';
-                };
+                query?: never;
                 header?: never;
                 path: {
                     /** @description Unique app identifier */
@@ -71,36 +269,44 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    'multipart/form-data': string;
-                    'application/octet-stream': string;
+                    "application/json": components["schemas"]["ActivateManagedSourceBody"];
                 };
             };
             responses: {
-                /** @description Deployment successful */
+                /** @description Existing source resumed or adopted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManagedSourceActivationResult"];
+                    };
+                };
+                /** @description Managed source created */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['DeployResult'];
+                        "application/json": components["schemas"]["ManagedSourceActivationResult"];
                     };
                 };
-                /** @description Invalid request (empty bundle, bundle too large, invalid parameters) */
+                /** @description Invalid activation ID */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authentication failed (missing or invalid token) */
+                /** @description Authentication failed */
                 401: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Permission denied */
@@ -109,7 +315,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description App not found */
@@ -118,16 +324,34 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Cloudflare deployment failed */
+                /** @description Collision or ownership mismatch */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Artifacts adapter failed */
                 502: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source disabled */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -138,7 +362,237 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/api/apps/{appId}': {
+    "/api/apps/{appId}/source/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a five-minute repository credential */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ManagedSourceCredentialBody"];
+                };
+            };
+            responses: {
+                /** @description Short-lived credential */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ManagedSourceCredentialResult"];
+                    };
+                };
+                /** @description Invalid scope */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source missing or mismatched */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Artifacts adapter failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source disabled */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/deploy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deploy app script
+         * @description Deploy app code to Cloudflare Workers for Platforms. Send bundle as application/octet-stream or multipart/form-data with metadata.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Target environment */
+                    env?: "production" | "preview";
+                    /** @description JSON-encoded bindings from CLI (alternative to multipart metadata) */
+                    bindings?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": unknown;
+                    "application/octet-stream": unknown;
+                };
+            };
+            responses: {
+                /** @description Deployment successful */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DeployResult"];
+                    };
+                };
+                /** @description Invalid request (empty bundle, bundle too large, invalid parameters) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed (missing or invalid token) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source linkage requires a source-aware client */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Feature not implemented */
+                501: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Cloudflare deployment failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Managed source disabled */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,7 +621,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['AppStatus'];
+                        "application/json": components["schemas"]["AppStatus"];
                     };
                 };
                 /** @description Authentication failed */
@@ -176,7 +630,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description App not found */
@@ -185,7 +639,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -194,15 +648,15 @@ export interface paths {
         post?: never;
         /**
          * Remove app script
-         * @description Remove app script from Cloudflare Workers for Platforms. Optionally delete associated data.
+         * @description Remove app script from Cloudflare Workers for Platforms. Optionally delete associated data (KV namespaces, etc.).
          */
         delete: {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'production' | 'preview';
-                    /** @description Permanently delete all associated data */
-                    deleteData?: boolean;
+                    env?: "production" | "preview";
+                    /** @description Also delete associated resources (KV namespaces, etc.) */
+                    deleteData?: boolean | null;
                 };
                 header?: never;
                 path: {
@@ -219,7 +673,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['UndeployResult'];
+                        "application/json": components["schemas"]["UndeployResult"];
                     };
                 };
                 /** @description Invalid parameters */
@@ -228,7 +682,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Authentication failed */
@@ -237,7 +691,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Permission denied */
@@ -246,7 +700,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description App not found */
@@ -255,7 +709,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Cloudflare undeploy failed */
@@ -264,7 +718,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
@@ -274,170 +728,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    '/api/apps/{appId}/logs': {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get recent app logs
-         * @description Query recent app logs for a deployed app
-         */
-        get: {
-            parameters: {
-                query?: {
-                    since?: string;
-                    until?: string;
-                    /** @description Return the newest N requests after filters */
-                    last?: number;
-                    /** @description Environment filter */
-                    env?: 'production' | 'preview';
-                    /** @description Optional handler filter */
-                    handler?: 'web' | 'events';
-                    /** @description Minimum log level threshold */
-                    level?: components['schemas']['LogLevel'];
-                    /** @description Optional HTTP status code filter */
-                    statusCode?: number;
-                };
-                header?: never;
-                path: {
-                    /** @description Unique app identifier */
-                    appId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Recent app logs */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['LogsResponse'];
-                    };
-                };
-                /** @description Invalid logs query */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-                /** @description Authentication failed */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-                /** @description Permission denied */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-                /** @description App not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    '/api/apps/{appId}/secrets': {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List secrets
-         * @description List all secret names for the app
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Target environment */
-                    env?: 'production' | 'preview';
-                };
-                header?: never;
-                path: {
-                    /** @description Unique app identifier */
-                    appId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Secrets list */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['SecretsListResponse'];
-                    };
-                };
-                /** @description Authentication failed */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-                /** @description Permission denied */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-                /** @description App not found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        'application/json': components['schemas']['ErrorResponse'];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    '/api/apps/{appId}/secrets/{name}': {
+    "/api/apps/{appId}/secrets/{name}": {
         parameters: {
             query?: never;
             header?: never;
@@ -446,27 +737,27 @@ export interface paths {
         };
         get?: never;
         /**
-         * Set secret
-         * @description Set a secret value for the app
+         * Set a secret
+         * @description Set a secret for an app. The secret is stored encrypted and set on the app Worker.
          */
         put: {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'production' | 'preview';
+                    env?: "production" | "preview";
                 };
                 header?: never;
                 path: {
                     /** @description Unique app identifier */
                     appId: string;
-                    /** @description Secret name */
+                    /** @description Secret name (valid identifier) */
                     name: string;
                 };
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    'application/json': components['schemas']['SecretValueRequest'];
+                    "application/json": components["schemas"]["SecretValue"];
                 };
             };
             responses: {
@@ -476,16 +767,16 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['SecretResponse'];
+                        "application/json": components["schemas"]["PutSecretResult"];
                     };
                 };
-                /** @description Invalid request */
+                /** @description Invalid request (invalid secret name, scripts not deployed) */
                 400: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Authentication failed */
@@ -494,7 +785,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Permission denied */
@@ -503,7 +794,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description App not found */
@@ -512,40 +803,58 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Cloudflare API failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
         };
         post?: never;
         /**
-         * Delete secret
-         * @description Delete a secret from the app
+         * Delete a secret
+         * @description Delete a secret from the app Worker.
          */
         delete: {
             parameters: {
                 query?: {
                     /** @description Target environment */
-                    env?: 'production' | 'preview';
+                    env?: "production" | "preview";
                 };
                 header?: never;
                 path: {
                     /** @description Unique app identifier */
                     appId: string;
-                    /** @description Secret name */
+                    /** @description Secret name (valid identifier) */
                     name: string;
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Secret deleted successfully */
+                /** @description Secret deleted */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['SecretResponse'];
+                        "application/json": components["schemas"]["DeleteSecretResult"];
+                    };
+                };
+                /** @description Invalid request (invalid secret name) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Authentication failed */
@@ -554,7 +863,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
                 /** @description Permission denied */
@@ -563,20 +872,119 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description App or secret not found */
+                /** @description App not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        'application/json': components['schemas']['ErrorResponse'];
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Cloudflare API failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/apps/{appId}/secrets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List secrets
+         * @description List secret names for an app. Values are not returned for security.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Target environment */
+                    env?: "production" | "preview";
+                };
+                header?: never;
+                path: {
+                    /** @description Unique app identifier */
+                    appId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Secret names */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListSecretsResult"];
+                    };
+                };
+                /** @description Invalid request (scripts not deployed) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Authentication failed */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Permission denied */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description App not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Cloudflare API failed */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -588,8 +996,8 @@ export interface components {
     schemas: {
         HealthResponse: {
             /** @enum {string} */
-            status: 'ok';
-            /** @example prod */
+            status: "ok";
+            /** @example production */
             environment: string;
             /**
              * Format: date-time
@@ -597,27 +1005,72 @@ export interface components {
              */
             timestamp: string;
         };
-        DeployResult: {
-            /** @enum {boolean} */
-            success: true;
-            /**
-             * Format: uri
-             * @example https://my-app.bkper.app
-             */
-            url: string;
-            /** @enum {string} */
-            environment: 'production' | 'preview';
-            /** @example bkper-apps-prod */
-            namespace: string;
-            /** @example my-app-123 */
-            scriptName: string;
+        LogsResponse: {
+            logs: components["schemas"]["LogEntry"][];
+            meta: components["schemas"]["LogsMeta"];
+        };
+        LogEntry: {
             /**
              * Format: date-time
-             * @example 2024-01-15T12:00:00.000Z
+             * @example 2026-04-29T12:00:00.000Z
              */
-            updatedAt: string;
-            /** @description Provisioned bindings with their types */
-            bindings?: Array<{ name: string; type: string }>;
+            timestamp: string;
+            /** @enum {string} */
+            environment: "production" | "preview";
+            handler: components["schemas"]["LogHandlerType"];
+            level: components["schemas"]["LogLevel"];
+            outcome: components["schemas"]["LogOutcome"];
+            /** @example POST */
+            requestMethod: string | null;
+            /** @example https://my-app.bkper.app/events */
+            requestUrl: string | null;
+            /** @example 500 */
+            statusCode: number | null;
+            /**
+             * @example [
+             *       {
+             *         "level": "info",
+             *         "message": "Processing webhook..."
+             *       },
+             *       {
+             *         "level": "error",
+             *         "name": "Error",
+             *         "message": "Webhook failed",
+             *         "stack": "Error: Webhook failed\n    at ..."
+             *       }
+             *     ]
+             */
+            entries: components["schemas"]["LogLineEntry"][];
+        };
+        /** @enum {string} */
+        LogHandlerType: "web" | "events";
+        /** @enum {string} */
+        LogLevel: "info" | "warn" | "error";
+        /** @enum {string} */
+        LogOutcome: "unknown" | "ok" | "exception" | "exceededCpu" | "exceededMemory" | "scriptNotFound" | "canceled" | "responseStreamDisconnected";
+        LogLineEntry: {
+            level: components["schemas"]["LogLevel"];
+            /** @example Processing webhook... */
+            message: string;
+            /** @example Error */
+            name?: string;
+            /**
+             * @example Error: Webhook failed
+             *         at ...
+             */
+            stack?: string;
+        };
+        LogsMeta: {
+            /** @example 100 */
+            last: number;
+            /** @example 15 */
+            retentionDays: number;
+            /**
+             * @example [
+             *       "since was clamped to the 15-day retention window"
+             *     ]
+             */
+            warnings: string[];
         };
         ErrorResponse: {
             /** @enum {boolean} */
@@ -631,6 +1084,94 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        };
+        ManagedSourceStatus: {
+            /** @enum {string} */
+            mode: "external";
+            /** @enum {string} */
+            state: "not_managed";
+            /** @enum {string} */
+            consistency: "eventual";
+            /** @enum {boolean} */
+            retryable: true;
+        } | {
+            /** @enum {string} */
+            mode: "managed";
+            /** @enum {string} */
+            state: "active";
+            /** @enum {string} */
+            consistency: "eventual";
+            appId: string;
+            repositoryId: string;
+            repositoryName: string;
+            namespace: string;
+            /** Format: uri */
+            remote: string;
+        };
+        ManagedSourceActivationResult: {
+            /** @enum {boolean} */
+            success: true;
+            /** @enum {string} */
+            disposition: "created" | "adopted" | "existing";
+            source: {
+                /** @enum {string} */
+                mode: "managed";
+                appId: string;
+                repositoryId: string;
+                repositoryName: string;
+                namespace: string;
+                /** Format: uri */
+                remote: string;
+            };
+        };
+        ActivateManagedSourceBody: {
+            activationId: string;
+        };
+        ManagedSourceCredentialResult: {
+            token: string;
+            /** @enum {string} */
+            scope: "read" | "write";
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uri */
+            remote: string;
+        };
+        ManagedSourceCredentialBody: {
+            /** @enum {string} */
+            scope: "read" | "write";
+        };
+        DeployResult: {
+            /** @enum {boolean} */
+            success: true;
+            /**
+             * Format: uri
+             * @example https://my-app.bkper.app
+             */
+            url: string;
+            /** @enum {string} */
+            environment: "production" | "preview";
+            /** @example bkper-apps-prod */
+            namespace: string;
+            /** @example my-app-123 */
+            scriptName: string;
+            /**
+             * Format: date-time
+             * @example 2024-01-15T12:00:00.000Z
+             */
+            updatedAt: string;
+            /** @description Provisioned bindings with their types */
+            bindings?: {
+                name: string;
+                type: string;
+            }[];
+            source?: components["schemas"]["ActiveDeploymentSource"];
+        };
+        ActiveDeploymentSource: {
+            /** @enum {string} */
+            mode: "managed";
+            verifiedSha: string;
+            declaredBranch: string;
+            actorId: string;
         };
         UndeployResult: {
             /** @enum {boolean} */
@@ -648,8 +1189,8 @@ export interface components {
         };
         AppStatus: {
             appId: string;
-            prod: components['schemas']['ScriptStatus'];
-            preview: components['schemas']['ScriptStatus'];
+            prod: components["schemas"]["ScriptStatus"];
+            preview: components["schemas"]["ScriptStatus"];
         };
         ScriptStatus: {
             deployed: boolean;
@@ -659,61 +1200,42 @@ export interface components {
             namespace: string;
             /** Format: date-time */
             updatedAt?: string;
+            source?: components["schemas"]["ActiveDeploymentSource"];
         } | null;
-        /** @enum {string} */
-        LogLevel: 'info' | 'warn' | 'error';
-        /** @enum {string} */
-        LogOutcome:
-            | 'unknown'
-            | 'ok'
-            | 'exception'
-            | 'exceededCpu'
-            | 'exceededMemory'
-            | 'scriptNotFound'
-            | 'canceled'
-            | 'responseStreamDisconnected';
-        LogLineEntry: {
-            level: components['schemas']['LogLevel'];
-            /** @example Processing webhook... */
-            message: string;
-            /** @example Error */
-            name?: string;
-            /** @example Error: Webhook failed\n    at ... */
-            stack?: string;
-        };
-        LogEntry: {
-            /** Format: date-time */
-            timestamp: string;
-            environment: 'production' | 'preview';
-            handler: 'web' | 'events';
-            level: components['schemas']['LogLevel'];
-            outcome: components['schemas']['LogOutcome'];
-            requestMethod: string | null;
-            requestUrl: string | null;
-            statusCode: number | null;
-            entries: components['schemas']['LogLineEntry'][];
-        };
-        LogsMeta: {
-            last: number;
-            retentionDays: number;
-            warnings: string[];
-        };
-        LogsResponse: {
-            logs: components['schemas']['LogEntry'][];
-            meta: components['schemas']['LogsMeta'];
-        };
-        SecretsListResponse: {
-            secrets: string[];
-            environment: 'production' | 'preview';
-        };
-        SecretValueRequest: {
-            value: string;
-        };
-        SecretResponse: {
+        PutSecretResult: {
             /** @enum {boolean} */
             success: true;
+            /** @example DATABASE_URL */
             name: string;
-            environment: 'production' | 'preview';
+            /** @enum {string} */
+            environment: "production" | "preview";
+        };
+        SecretValue: {
+            /**
+             * @description The secret value
+             * @example my-secret-value
+             */
+            value: string;
+        };
+        ListSecretsResult: {
+            /**
+             * @description List of secret names (values are not returned)
+             * @example [
+             *       "DATABASE_URL",
+             *       "API_KEY"
+             *     ]
+             */
+            secrets: string[];
+            /** @enum {string} */
+            environment: "production" | "preview";
+        };
+        DeleteSecretResult: {
+            /** @enum {boolean} */
+            success: true;
+            /** @example DATABASE_URL */
+            name: string;
+            /** @enum {string} */
+            environment: "production" | "preview";
         };
     };
     responses: never;

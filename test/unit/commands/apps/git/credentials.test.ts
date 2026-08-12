@@ -92,7 +92,11 @@ describe('apps git credentials', function () {
                     repositoryId: 'repo-1',
                     repositoryName: 'demo-app',
                     namespace: 'bkper-app-sources-dev',
+                    remote,
                 };
+            },
+            async activate() {
+                throw new Error('should not activate source');
             },
             async issueCredential() {
                 return {
@@ -161,6 +165,9 @@ describe('apps git credentials', function () {
         let stderr = '';
         const api: PlatformSourceApi = {
             async getStatus() {
+                throw new Error('unused');
+            },
+            async activate() {
                 throw new Error('unused');
             },
             async issueCredential() {

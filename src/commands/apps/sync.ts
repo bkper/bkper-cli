@@ -2,6 +2,7 @@ import { App, BkperError } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
 import { createConfiguredApp } from './config.js';
 import type { SyncResult } from './types.js';
+import {syncManagedAppSource} from './source-workflow.js';
 
 /**
  * Creates a new app from the configuration in the current directory.
@@ -54,11 +55,15 @@ export async function syncApp(): Promise<SyncResult> {
         }
     }
 
-    if (exists) {
-        await app.update();
-        return { id: appId, action: 'updated' };
-    } else {
-        await app.create();
-        return { id: appId, action: 'created' };
-    }
+    return syncManagedAppSource({
+        appId,
+        coreAppExists: exists,
+        syncCore: async action => {
+            if (action === 'updated') {
+                await app.update();
+            } else {
+                await app.create();
+            }
+        },
+    });
 }

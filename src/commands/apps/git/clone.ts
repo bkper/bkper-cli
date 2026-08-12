@@ -122,7 +122,7 @@ export async function cloneManagedApp(options: CloneManagedAppOptions): Promise<
             'Managed source control is not enabled in this Platform environment.'
         );
     }
-    if (status.mode !== 'managed') {
+    if (status === 'app_not_found' || status.mode !== 'managed') {
         throw new ManagedGitError(
             'EXTERNAL_SOURCE_CLONE',
             [

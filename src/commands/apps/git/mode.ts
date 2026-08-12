@@ -34,10 +34,6 @@ export async function detectSourceMode(
 ): Promise<SourceModeDecision> {
     const runner = input.runner ?? runGit;
 
-    if (input.featureDisabled) {
-        return {mode: 'external', reason: 'feature_disabled'};
-    }
-
     if (input.platformStatus?.mode === 'managed') {
         return {
             mode: 'managed',
@@ -67,6 +63,10 @@ export async function detectSourceMode(
             appId: marker.appId,
             remote: marker.remote,
         };
+    }
+
+    if (input.featureDisabled) {
+        return {mode: 'external', reason: 'feature_disabled'};
     }
 
     if (repo.isNestedApp) {

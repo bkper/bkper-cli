@@ -19,6 +19,7 @@ export type ManagedSourcePlatformStatus =
           repositoryId: string;
           repositoryName: string;
           namespace: string;
+          remote: string;
       };
 
 export interface ManagedSourceActivationResult {

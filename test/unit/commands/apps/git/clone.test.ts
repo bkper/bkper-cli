@@ -35,6 +35,9 @@ describe('apps git clone', function () {
                     retryable: true,
                 };
             },
+            async activate() {
+                throw new Error('should not activate source');
+            },
             async issueCredential() {
                 throw new Error('should not issue credentials');
             },
@@ -71,7 +74,11 @@ describe('apps git clone', function () {
                     repositoryId: 'repo-1',
                     repositoryName: 'demo-app',
                     namespace: 'bkper-app-sources-dev',
+                    remote: ARTIFACTS_REMOTE,
                 };
+            },
+            async activate() {
+                throw new Error('should not activate source');
             },
             async issueCredential(_appId, scope) {
                 expect(scope).to.equal('read');
@@ -135,7 +142,11 @@ describe('apps git clone', function () {
                     repositoryId: 'repo-1',
                     repositoryName: 'demo-app',
                     namespace: 'bkper-app-sources-dev',
+                    remote: ARTIFACTS_REMOTE,
                 };
+            },
+            async activate() {
+                throw new Error('should not activate source');
             },
             async issueCredential() {
                 return {
