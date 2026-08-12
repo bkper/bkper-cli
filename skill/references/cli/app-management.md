@@ -7,6 +7,21 @@ Build, deploy, and manage Bkper apps using the `bkper` CLI.
 
 ---
 
+## Source control modes
+
+Bkper selects source mode without changing the local-build deployment model:
+
+- **Managed source:** the first `bkper app sync` activates private Bkper-managed Git only when that same sync creates the Core App, `bkper.yaml` is at the root of a standalone Git repository, the current clean committed branch is `main`, and no Git remote exists. Bkper configures the managed repository as `origin` and pushes the committed source.
+- **External source:** an App keeps direct sync/deploy behavior when it has an external Git remote, is nested in a monorepo, is not rooted at `bkper.yaml`, or already existed in Core without a pending activation marker. Existing no-remote Apps are not migrated automatically. The CLI never changes an existing external remote.
+
+To opt out for a new standalone App, add a GitHub, GitLab, or other provider remote before its first sync. Managed mode is sticky after activation; adding another remote later does not change it, and Artifacts remains `origin`.
+
+Source and deployment remain separate. `git push` stores source only and **never deploys**. `bkper app sync` pushes managed source before syncing local metadata. `bkper app deploy` pushes managed source, verifies that the exact commit exists in the linked repository, and then uploads the existing local `dist/server` and optional `dist/client` output. Builds remain local and explicit; Bkper does not claim reproducible remote CI or prove that the local bundle was built from the declared commit. Source linkage is best-effort provenance for already-authorized developers.
+
+CLI-managed pushes are clean-tree and fast-forward-only. The CLI never commits, merges, rebases, force-pushes, resets, or discards files. Authorized developers may use ordinary Git commands, including an intentional force-push, but a push still never deploys.
+
+Configured App developers, including matches such as `*@example.com`, can read and modify private managed source under the existing owner/developer policy. App users and Book collaborators do not receive source access unless they also satisfy that developer policy. Repository credentials are exact URL/path-scoped, noninteractive, and valid for five minutes; they are never persisted by Bkper.
+
 ## Verification Workflow
 
 When scaffolding, developing, or deploying an app, verify each step before proceeding. This prevents broken deployments and silent failures.
@@ -54,14 +69,24 @@ Verify:
 
 ### 4. Sync & Deploy
 
+Commit source before the first eligible managed sync:
+
 ```bash
-bkper app sync && bkper app deploy
+git add .
+git commit -m "Initial app"
+bkper app sync
+npm run build
+bkper app deploy
 ```
+
+For a managed App, sync and deploy safely push the current committed branch. For an external App, both commands preserve direct local metadata and bundle upload behavior without changing remotes.
 
 Verify:
 
 - `bkper app status` shows the deployed version
+- managed status shows the declared branch and exact verified SHA
 - URLs in `bkper.yaml` match the deployed domain (`https://{appId}.bkper.app`)
+- an ordinary `git push` did not deploy anything
 
 #### Preview testing with menu and events
 
@@ -137,6 +162,66 @@ bkper app status
 ```
 
 > **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. Open the printed `Open app` URL in your browser; the `Worker/API` URL is for `/api`, `/health`, `/openapi.json`, and events. If your Vite server uses a port other than `5173`, pass that port with `--cp, --client-port` so the local `ASSETS` binding can reach it. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
+
+---
+
+## Clone managed source
+
+Clone an existing managed App explicitly:
+
+```bash
+bkper app clone <appId> [path]
+cd <path-or-appId>
+bun install
+```
+
+Clone authenticates with Bkper, uses a temporary sibling directory, validates the cloned App ID, and atomically installs the destination. It never installs dependencies or executes repository lifecycle scripts. External-source Apps must be cloned from their configured provider instead.
+
+If Git authentication fails:
+
+1. Run `bkper auth login` when the Bkper session is missing or expired.
+2. Retry the Git operation; a five-minute repository credential is minted automatically.
+3. If the managed `origin` is missing or incorrect, inspect `git remote -v` and use a fresh `bkper app clone <appId>` as the safe reference. Never replace an unrelated external remote automatically.
+4. Request App owner/developer access when Platform denies source access. Domain-pattern developers have the same private source read/write capability.
+
+The helper command is intentionally `bkper app git-credential <appId> [operation]`. It is internal Git plumbing, not a root `git` command or an `app git` group.
+
+## Managed Git preflight recovery
+
+Managed sync and deploy require `bkper.yaml` at the Git root, an attached branch, committed `HEAD`, and a clean tree. Ignored build output such as `dist/` is allowed.
+
+| Failure | Safe recovery |
+| --- | --- |
+| No Git repository | For a new standalone App, run `git init -b main`, review files, commit, and retry. Existing Apps are not migrated merely because they lack a remote. |
+| `bkper.yaml` below Git root | Keep the monorepo/external workflow; managed monorepos are not supported. |
+| No commits | Review, then run `git add .` and `git commit -m "Initial app"`. |
+| Detached `HEAD` | Attach a branch with `git switch -c <branch>`; use `main` for first activation. |
+| First activation is not on `main` | Switch to the existing `main` branch. The CLI does not rename or rewrite branches. |
+| Staged changes | Inspect `git diff --cached`; commit them or intentionally unstage them before retrying. |
+| Modified tracked files | Inspect `git diff`; commit or intentionally restore them before retrying. |
+| Non-ignored untracked files | Inspect `git status`; commit, ignore, or intentionally remove them before retrying. |
+| Missing or incorrect managed `origin` | Inspect `git remote -v`; compare with a fresh managed clone. Do not overwrite an external remote. |
+| Authentication or expired credential | Run `bkper auth login` if needed, then retry the Git operation for a new five-minute token. |
+| Remote branch ahead or divergent | Run `git fetch origin <branch>` and inspect `git log --oneline --left-right HEAD...origin/<branch>`; merge or rebase by your own choice, then push and retry. The CLI never force-resolves divergence. |
+| App ID or repository mismatch | Stop and use the clone/config belonging to the requested App; do not rewrite repository identity. |
+| Managed record temporarily missing | Retry sync/deploy. A managed marker never silently downgrades to external mode after a transient KV miss. |
+| Exact commit missing | Ensure the current clean commit was pushed to the registered managed `origin`, then retry. |
+
+## Roll back a managed deployment
+
+There is no hidden rollback ref, retained build archive, or automatic rollback API. Create an ordinary attached rollback branch at the selected committed source, build locally, and deploy explicitly:
+
+```bash
+git switch -c rollback/<name> <older-commit>
+bun run build
+bkper app deploy --preview
+# verify, then optionally deploy production
+bkper app deploy
+```
+
+The rollback branch is pushed normally. Preview remains optional; production does not require promotion from preview.
+
+`bkper app undeploy` removes only the selected runtime and optional runtime data. It never deletes managed source.
 
 ---
 
@@ -430,9 +515,9 @@ Inside the interactive agent:
 -   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
 -   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
 -   `app list` - List all apps you have access to
--   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration (URLs, description) to Bkper API
+-   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration. If this sync creates an eligible new standalone App, activate managed source; if already managed, cleanly fast-forward-push the current committed branch first.
 -   `app build` - Build the server Worker bundle for deployment
--   `app deploy` - Deploy built artifacts to Cloudflare Workers for Platforms
+-   `app deploy` - For managed Apps, cleanly fast-forward-push and verify the current commit, then explicitly deploy the existing local build. External Apps keep direct upload behavior.
     -   `-p, --preview` - Deploy to preview environment
 -   `app status` - Show deployment status
 -   `app logs [appId]` - View recent app logs. When `appId` is omitted, the app id is read from local app config.
@@ -452,7 +537,7 @@ Inside the interactive agent:
     -   `--sp, --server-port <port>` - Server simulation port (default: `8787`)
     -   `--cp, --client-port <port>` - Client dev server port for local static assets (default: `5173`)
 
-> **Note:** `sync` and `deploy` are independent operations. Use `sync` to update your app's URLs in Bkper (required for webhooks and menu integration). Use `deploy` to push code to Cloudflare. For a typical deployment workflow, run both: `bkper app sync && bkper app deploy`
+> **Note:** `sync` and `deploy` are independent explicit operations. `sync` updates App metadata and, for managed Apps, safely pushes committed source. `deploy` uploads an existing local build and never runs a build command. An ordinary Git push never deploys.
 
 ### App Installation
 

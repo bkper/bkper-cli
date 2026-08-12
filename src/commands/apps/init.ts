@@ -389,9 +389,10 @@ Done! To get started:
 ${startCommands}
 
 Next steps:
-  - Review bkper.yaml: update description, ownerName, ownerWebsite, and repoUrl
+  - Review bkper.yaml: update description, ownerName, ownerWebsite, and developers
   - Replace logo-light.svg and logo-dark.svg in client/public/images/
   - Edit README.md to explain what your app does for end users
-  - Commit your changes, then run: bkper app sync
+  - Commit your changes on main, then run: bkper app sync
+  - To use an external Git provider instead, add its remote before the first sync
 `);
 }

@@ -30,7 +30,7 @@ export function registerAppCommands(program: Command): void {
     appCommand
         .command('init [name]')
         .description(
-            'Create a new Bkper app (creates ./<name>, or uses current directory when omitted)'
+            'Scaffold a new App; first eligible sync uses Bkper-managed source unless an external remote exists'
         )
         .action((name: string | undefined) =>
             withAction(
@@ -44,7 +44,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('clone <appId> [path]')
-        .description('Clone a Bkper-managed App source repository (does not install dependencies)')
+        .description('Clone Bkper-managed source; run bun install explicitly afterward')
         .action((appId: string, destination: string | undefined) =>
             withAction(
                 'cloning managed app source',
@@ -57,7 +57,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('git-credential <appId> [operation]')
-        .description('Internal Git credential helper for managed Artifacts source')
+        .description('Internal noninteractive credential helper for Bkper-managed source')
         .action((appId: string, operation: string | undefined) =>
             withAction(
                 'running git credential helper',
@@ -97,7 +97,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('sync')
-        .description('Sync app config to Bkper (creates if new, updates if exists)')
+        .description('Sync App config and safely push source when the App is managed')
         .action(
             withAction('syncing app', async () => {
                 const result = await syncApp();
@@ -107,7 +107,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('deploy')
-        .description('Deploy app to Bkper Platform')
+        .description('Deploy the existing local build, verifying managed source when active')
         .option('-p, --preview', 'Deploy to preview environment')
         .action(options =>
             withAction(

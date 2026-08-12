@@ -152,7 +152,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get managed source status */
+        /**
+         * Get managed source status
+         * @description Returns the Platform-owned source linkage for an authorized App developer. A not-managed result is eventually consistent and does not migrate existing external, no-remote, or monorepo Apps.
+         */
         get: {
             parameters: {
                 query?: never;
@@ -256,7 +259,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Activate owner-bound managed source */
+        /**
+         * Activate owner-bound managed source
+         * @description Creates or safely resumes one private repository from a UUID-v4 activation claim. Platform derives ownerId from the trusted Core App and never accepts client-supplied ownership.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -371,7 +377,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create a five-minute repository credential */
+        /**
+         * Create a five-minute repository credential
+         * @description Issues a short-lived read or write credential for the exact Platform-linked repository. Configured developers, including domain-pattern matches, use the existing App developer authorization. Credentials are not cacheable.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -479,7 +488,7 @@ export interface paths {
         put?: never;
         /**
          * Deploy app script
-         * @description Deploy app code to Cloudflare Workers for Platforms. Send bundle as application/octet-stream or multipart/form-data with metadata.
+         * @description Explicitly uploads an existing local bundle to Cloudflare Workers for Platforms; this endpoint never builds from Git and Git pushes never deploy. When Platform observes managed source, metadata must declare a full commit SHA and attached branch. Platform verifies that exact commit in its linked repository before upload, but does not claim that the local bundle was reproducibly built from it. External Apps retain source-less direct uploads.
          */
         post: {
             parameters: {
@@ -601,7 +610,7 @@ export interface paths {
         };
         /**
          * Get app deployment status
-         * @description Get app deployment status for production and preview environments
+         * @description Get active production and preview runtime status. Managed runtimes include the exact verified repository SHA plus the developer-declared branch and actor; no deployment history is retained.
          */
         get: {
             parameters: {
@@ -1092,7 +1101,10 @@ export interface components {
             state: "not_managed";
             /** @enum {string} */
             consistency: "eventual";
-            /** @enum {boolean} */
+            /**
+             * @description Negative KV lookups are eventually consistent; managed-aware clients retry rather than silently downgrade.
+             * @enum {boolean}
+             */
             retryable: true;
         } | {
             /** @enum {string} */
@@ -1125,9 +1137,14 @@ export interface components {
             };
         };
         ActivateManagedSourceBody: {
+            /**
+             * @description Stable repository-local activation claim. Ownership is resolved from the trusted Core App.
+             * @example 28fbf7de-9755-4bb3-a263-0227b2a2696b
+             */
             activationId: string;
         };
         ManagedSourceCredentialResult: {
+            /** @description Sensitive short-lived repository credential. Never persist, log, fixture, or expose this value. */
             token: string;
             /** @enum {string} */
             scope: "read" | "write";
@@ -1137,7 +1154,10 @@ export interface components {
             remote: string;
         };
         ManagedSourceCredentialBody: {
-            /** @enum {string} */
+            /**
+             * @description Repository scope. Credentials are exact-repository scoped and expire after five minutes.
+             * @enum {string}
+             */
             scope: "read" | "write";
         };
         DeployResult: {
@@ -1166,6 +1186,7 @@ export interface components {
             }[];
             source?: components["schemas"]["ActiveDeploymentSource"];
         };
+        /** @description Active managed-source provenance. The SHA exists in the linked repository; the branch and local-build relationship are developer-declared. */
         ActiveDeploymentSource: {
             /** @enum {string} */
             mode: "managed";
@@ -1200,7 +1221,7 @@ export interface components {
             namespace: string;
             /** Format: date-time */
             updatedAt?: string;
-            source?: components["schemas"]["ActiveDeploymentSource"];
+            source?: components["schemas"]["ActiveDeploymentSource"] & unknown;
         } | null;
         PutSecretResult: {
             /** @enum {boolean} */
