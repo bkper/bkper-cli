@@ -11,16 +11,36 @@ Build, deploy, and manage Bkper apps using the `bkper` CLI.
 
 Bkper selects source mode without changing the local-build deployment model:
 
-- **Managed source:** the first `bkper app sync` activates private Bkper-managed Git only when that same sync creates the Core App, `bkper.yaml` is at the root of a standalone Git repository, the current clean committed branch is `main`, and no Git remote exists. Bkper configures the managed repository as `origin` and pushes the committed source.
-- **External source:** an App keeps direct sync/deploy behavior when it has an external Git remote, is nested in a monorepo, is not rooted at `bkper.yaml`, or already existed in Core without a pending activation marker. Existing no-remote Apps are not migrated automatically. The CLI never changes an existing external remote.
+- **Managed source:** `bkper app sync` activates private Bkper-managed Git for a new or existing App when `bkper.yaml` is at the root of a standalone Git repository, the current clean committed branch is `main`, and no Git remote exists. Bkper configures the managed repository as `origin`. New Apps initially upload `main`; existing Apps atomically upload all local branches and tags.
+- **External source:** an App keeps direct sync/deploy behavior when it has an external Git remote, is nested in a monorepo, or is not rooted at `bkper.yaml`. The CLI never changes an existing external remote.
 
-To opt out for a new standalone App, add a GitHub, GitLab, or other provider remote before its first sync. Managed mode is sticky after activation; adding another remote later does not change it, and Artifacts remains `origin`.
+To opt out, keep a GitHub, GitLab, or other provider remote configured. Managed mode is sticky after activation; adding another remote later does not change it, and Artifacts remains `origin`. The App listing `repoUrl` metadata does not select source mode.
 
 Source and deployment remain separate. `git push` stores source only and **never deploys**. `bkper app sync` pushes managed source before syncing local metadata. `bkper app deploy` pushes managed source, verifies that the exact commit exists in the linked repository, and then uploads the existing local `dist/server` and optional `dist/client` output. Builds remain local and explicit; Bkper does not claim reproducible remote CI or prove that the local bundle was built from the declared commit. Source linkage is best-effort provenance for already-authorized developers.
 
 CLI-managed pushes are clean-tree and fast-forward-only. The CLI never commits, merges, rebases, force-pushes, resets, or discards files. Authorized developers may use ordinary Git commands, including an intentional force-push, but a push still never deploys.
 
 Configured App developers, including matches such as `*@example.com`, can read and modify private managed source under the existing owner/developer policy. App users and Book collaborators do not receive source access unless they also satisfy that developer policy. Repository credentials are exact URL/path-scoped, noninteractive, and valid for five minutes; they are never persisted by Bkper.
+
+### Migrate from an external Git provider
+
+Source changes remain the user or coding agent's responsibility; the CLI never removes or renames provider remotes. Before migration, verify that `main` is clean and committed, the provider has the latest source, and every desired provider-only branch and tag is available locally. A coding agent must show the exact mutating commands and obtain explicit user approval before continuing.
+
+Inspect first:
+
+```bash
+git status --short --branch
+git remote -v
+```
+
+After approval, remove every external remote and sync. For a repository whose only external remote is `origin`:
+
+```bash
+git remote remove origin
+bkper app sync
+```
+
+Sync preserves the existing App identity, activates managed source, configures it as `origin`, and atomically uploads all local branches and tags. If that upload fails, the pending marker makes the next `bkper app sync` retry the complete upload. `bkper app deploy` never activates migration.
 
 ## Verification Workflow
 
@@ -192,7 +212,7 @@ Managed sync and deploy require `bkper.yaml` at the Git root, an attached branch
 
 | Failure | Safe recovery |
 | --- | --- |
-| No Git repository | For a new standalone App, run `git init -b main`, review files, commit, and retry. Existing Apps are not migrated merely because they lack a remote. |
+| No Git repository | For a standalone App, run `git init -b main`, review files, commit, and retry. An eligible new or existing App activates managed source on sync when no remote exists. |
 | `bkper.yaml` below Git root | Keep the monorepo/external workflow; managed monorepos are not supported. |
 | No commits | Review, then run `git add .` and `git commit -m "Initial app"`. |
 | Detached `HEAD` | Attach a branch with `git switch -c <branch>`; use `main` for first activation. |
@@ -515,7 +535,7 @@ Inside the interactive agent:
 -   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
 -   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
 -   `app list` - List all apps you have access to
--   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration. If this sync creates an eligible new standalone App, activate managed source; if already managed, cleanly fast-forward-push the current committed branch first.
+-   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration. For an eligible standalone repository with no remote, activate managed source for a new or existing App; existing migrations atomically upload all local branches and tags. If already managed, cleanly fast-forward-push the current committed branch first.
 -   `app build` - Build the server Worker bundle for deployment
 -   `app deploy` - For managed Apps, cleanly fast-forward-push and verify the current commit, then explicitly deploy the existing local build. External Apps keep direct upload behavior.
     -   `-p, --preview` - Deploy to preview environment

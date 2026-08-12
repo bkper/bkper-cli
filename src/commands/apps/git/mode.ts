@@ -23,16 +23,27 @@ export interface DetectSourceModeInput {
  * Deterministic source-mode detection.
  *
  * Order:
- * 1. Platform managed record
- * 2. Pending local marker (never downgrade on transient miss)
+ * 1. Pending local marker (preserves activation upload scope across retries)
+ * 2. Platform managed record
  * 3. Nested monorepo / external remote / missing git root
- * 4. Existing Core App without pending marker stays external
- * 5. New standalone eligible App activates managed source
+ * 4. Eligible standalone Apps activate managed source
  */
 export async function detectSourceMode(
     input: DetectSourceModeInput
 ): Promise<SourceModeDecision> {
     const runner = input.runner ?? runGit;
+
+    const repo = await inspectGitRepository(input.appDir, runner);
+    const marker = repo ? readSourceMarker(repo.root) : null;
+    if (marker?.state === 'pending') {
+        return {
+            mode: 'managed',
+            reason: 'pending_marker',
+            appId: input.appId,
+            activationId: marker.activationId,
+            upload: marker.upload,
+        };
+    }
 
     if (input.platformStatus?.mode === 'managed') {
         return {
@@ -42,20 +53,10 @@ export async function detectSourceMode(
         };
     }
 
-    const repo = await inspectGitRepository(input.appDir, runner);
     if (!repo) {
         return {mode: 'external', reason: 'no_git'};
     }
 
-    const marker = readSourceMarker(repo.root);
-    if (marker?.state === 'pending') {
-        return {
-            mode: 'managed',
-            reason: 'pending_marker',
-            appId: input.appId,
-            activationId: marker.activationId,
-        };
-    }
     if (marker?.state === 'managed') {
         return {
             mode: 'managed',
@@ -100,23 +101,17 @@ export async function detectSourceMode(
         };
     }
 
-    if (input.coreAppExists) {
-        return {mode: 'external', reason: 'existing_core_app'};
-    }
-
-    if (input.platformStatus?.mode === 'external') {
-        // Eligible new App: local shape already checked.
-        return {
-            mode: 'activate_managed',
-            reason: 'new_standalone_app',
-            appId: input.appId,
-        };
-    }
-
-    // No platform status available and local shape is eligible for activation.
-    return {
-        mode: 'activate_managed',
-        reason: 'new_standalone_app',
-        appId: input.appId,
-    };
+    return input.coreAppExists
+        ? {
+              mode: 'activate_managed',
+              reason: 'existing_standalone_app',
+              appId: input.appId,
+              upload: 'all_refs',
+          }
+        : {
+              mode: 'activate_managed',
+              reason: 'new_standalone_app',
+              appId: input.appId,
+              upload: 'main',
+          };
 }

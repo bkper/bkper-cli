@@ -82,7 +82,7 @@ describe('apps git source mode detection', function () {
         }
     });
 
-    it('keeps external mode for nested apps, external remotes, and existing core apps', async function () {
+    it('keeps external mode for nested apps and external remotes', async function () {
         const mono = path.join(tempDir, 'mono');
         initRepo(mono);
         writeFile(mono, 'README.md', 'root\n');
@@ -127,26 +127,32 @@ describe('apps git source mode detection', function () {
                 })
             ).reason
         ).to.equal('external_remote');
+    });
 
-        const existing = path.join(tempDir, 'existing');
-        initRepo(existing);
-        writeFile(existing, 'bkper.yaml', 'id: existing-app\n');
-        commitAll(existing, 'init');
-        expect(
-            (
-                await detectSourceMode({
-                    appDir: existing,
-                    appId: 'existing-app',
-                    coreAppExists: true,
-                    platformStatus: {
-                        mode: 'external',
-                        state: 'not_managed',
-                        consistency: 'eventual',
-                        retryable: true,
-                    },
-                })
-            ).reason
-        ).to.equal('existing_core_app');
+    it('selects migration for existing standalone apps with no remotes', async function () {
+        const repo = path.join(tempDir, 'existing');
+        initRepo(repo);
+        writeFile(repo, 'bkper.yaml', 'id: existing-app\n');
+        commitAll(repo, 'init');
+
+        const decision = await detectSourceMode({
+            appDir: repo,
+            appId: 'existing-app',
+            coreAppExists: true,
+            platformStatus: {
+                mode: 'external',
+                state: 'not_managed',
+                consistency: 'eventual',
+                retryable: true,
+            },
+        });
+
+        expect(decision).to.deep.equal({
+            mode: 'activate_managed',
+            reason: 'existing_standalone_app',
+            appId: 'existing-app',
+            upload: 'all_refs',
+        });
     });
 
     it('selects activate_managed for new standalone apps with no remotes', async function () {
@@ -171,6 +177,7 @@ describe('apps git source mode detection', function () {
             mode: 'activate_managed',
             reason: 'new_standalone_app',
             appId: 'new-app',
+            upload: 'main',
         });
     });
 

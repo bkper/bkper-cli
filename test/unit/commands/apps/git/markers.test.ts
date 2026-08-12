@@ -23,14 +23,37 @@ describe('apps git markers', function () {
         fs.rmSync(tempDir, {recursive: true, force: true});
     });
 
-    it('creates a pending UUID v4 marker and reuses it', function () {
-        const first = ensurePendingSourceMarker(tempDir);
+    it('creates a pending UUID v4 marker and reuses its upload scope', function () {
+        const first = ensurePendingSourceMarker(tempDir, 'all_refs');
         expect(first.state).to.equal('pending');
+        expect(first.upload).to.equal('all_refs');
         expect(isUuidV4(first.activationId)).to.equal(true);
 
-        const second = ensurePendingSourceMarker(tempDir);
+        const second = ensurePendingSourceMarker(tempDir, 'main');
         expect(second.activationId).to.equal(first.activationId);
+        expect(second.upload).to.equal('all_refs');
         expect(readSourceMarker(tempDir)).to.deep.equal(first);
+    });
+
+    it('defaults legacy pending markers without an upload scope to main', function () {
+        const markerPath = path.join(tempDir, '.bkper', 'source-marker.json');
+        fs.mkdirSync(path.dirname(markerPath), {recursive: true});
+        fs.writeFileSync(
+            markerPath,
+            JSON.stringify({
+                version: 1,
+                state: 'pending',
+                activationId: '28fbf7de-9755-4bb3-a263-0227b2a2696b',
+            }),
+            'utf8'
+        );
+
+        expect(readSourceMarker(tempDir)).to.deep.equal({
+            version: 1,
+            state: 'pending',
+            activationId: '28fbf7de-9755-4bb3-a263-0227b2a2696b',
+            upload: 'main',
+        });
     });
 
     it('keeps repository-local control markers out of managed clean-tree checks', async function () {

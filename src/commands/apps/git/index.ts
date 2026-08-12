@@ -11,6 +11,7 @@ export {
     type ManagedSourceActivationResult,
     type ManagedSourceCredential,
     type ManagedSourcePlatformStatus,
+    type ManagedSourceUpload,
     type SourceMarker,
     type SourceMode,
     type SourceModeDecision,
@@ -76,6 +77,7 @@ export {configureManagedOrigin} from './remote.js';
 
 export {
     assertFastForwardPush,
+    pushAllLocalRefsAtomic,
     pushCurrentBranchSafe,
     type SafePushOptions,
     type SafePushResult,

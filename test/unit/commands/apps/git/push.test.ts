@@ -4,6 +4,7 @@ import path from 'path';
 import {configureManagedOrigin} from '../../../../../src/commands/apps/git/remote.js';
 import {
     assertFastForwardPush,
+    pushAllLocalRefsAtomic,
     pushCurrentBranchSafe,
 } from '../../../../../src/commands/apps/git/push.js';
 import {ManagedGitError} from '../../../../../src/commands/apps/git/types.js';
@@ -54,6 +55,69 @@ describe('apps git safe push', function () {
         const ahead = await assertFastForwardPush(repo, 'main', nextHead);
         expect(ahead).to.equal('ahead');
         runGitSync(['push', 'origin', 'HEAD:main'], repo);
+    });
+
+    it('atomically pushes every local branch and tag for migration', async function () {
+        const bare = createBareRemote();
+        const repo = path.join(tempDir, 'migration');
+        initRepo(repo);
+        writeFile(repo, 'bkper.yaml', 'id: demo-app\n');
+        const mainHead = commitAll(repo, 'main');
+        runGitSync(['tag', 'v1'], repo);
+        runGitSync(['switch', '-c', 'feature'], repo);
+        writeFile(repo, 'feature.txt', 'feature\n');
+        const featureHead = commitAll(repo, 'feature');
+        runGitSync(['switch', 'main'], repo);
+        runGitSync(['remote', 'add', 'origin', fileUrl(bare)], repo);
+
+        const result = await pushAllLocalRefsAtomic({appDir: repo});
+
+        expect(result).to.deep.equal({
+            branch: 'main',
+            head: mainHead,
+            action: 'pushed',
+        });
+        expect(
+            runGitSync(['rev-parse', 'refs/heads/main'], bare).stdout.trim()
+        ).to.equal(mainHead);
+        expect(
+            runGitSync(['rev-parse', 'refs/heads/feature'], bare).stdout.trim()
+        ).to.equal(featureHead);
+        expect(runGitSync(['rev-parse', 'refs/tags/v1'], bare).stdout.trim()).to.equal(
+            mainHead
+        );
+    });
+
+    it('leaves every ref untouched when an atomic migration push is rejected', async function () {
+        const bare = createBareRemote();
+        const seed = path.join(tempDir, 'seed');
+        initRepo(seed);
+        writeFile(seed, 'remote.txt', 'remote\n');
+        const remoteHead = commitAll(seed, 'remote');
+        runGitSync(['branch', '-m', 'blocked'], seed);
+        runGitSync(['remote', 'add', 'origin', fileUrl(bare)], seed);
+        runGitSync(['push', 'origin', 'blocked'], seed);
+
+        const repo = path.join(tempDir, 'rejected');
+        initRepo(repo);
+        writeFile(repo, 'bkper.yaml', 'id: demo-app\n');
+        commitAll(repo, 'local');
+        runGitSync(['branch', 'blocked'], repo);
+        runGitSync(['remote', 'add', 'origin', fileUrl(bare)], repo);
+
+        try {
+            await pushAllLocalRefsAtomic({appDir: repo});
+            expect.fail('expected atomic push rejection');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+        }
+
+        expect(runGitSync(['rev-parse', 'refs/heads/blocked'], bare).stdout.trim()).to.equal(
+            remoteHead
+        );
+        expect(runGitSync(['rev-parse', '--verify', 'refs/heads/main'], bare).status).to.not.equal(
+            0
+        );
     });
 
     it('stops when remote is ahead or divergent and never force-pushes', async function () {

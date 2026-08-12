@@ -1,12 +1,13 @@
 import {getOriginRemote, listRemotes, remoteUrlsEqual} from './inspect.js';
 import {requireManagedGitPreflight} from './preflight.js';
 import {runGit, type GitRunner} from './run-git.js';
-import {ManagedGitError} from './types.js';
+import {ManagedGitError, type ManagedSourceUpload} from './types.js';
 
 export interface SafePushOptions {
     appDir?: string;
     expectedOriginRemote?: string;
     requireMainBranch?: boolean;
+    upload?: ManagedSourceUpload;
     runner?: GitRunner;
 }
 
@@ -67,6 +68,45 @@ export async function assertFastForwardPush(
             '  git push',
         ].join('\n')
     );
+}
+
+/**
+ * Pushes every local branch and tag as one atomic remote update.
+ * A rejected ref leaves the managed repository unchanged.
+ */
+export async function pushAllLocalRefsAtomic(
+    options: SafePushOptions = {}
+): Promise<SafePushResult> {
+    const runner = options.runner ?? runGit;
+    const preflight = await requireManagedGitPreflight({
+        appDir: options.appDir,
+        expectedOriginRemote: options.expectedOriginRemote,
+        requireMainBranch: options.requireMainBranch,
+        runner,
+    });
+    const refsResult = await runner(
+        ['for-each-ref', '--format=%(refname)', 'refs/heads', 'refs/tags'],
+        {cwd: preflight.repo.root}
+    );
+    const refs = refsResult.stdout
+        .split(/\r?\n/)
+        .map(ref => ref.trim())
+        .filter(ref => ref.length > 0);
+    const refspecs = refs.map(ref => `${ref}:${ref}`);
+
+    await runner(['push', '--atomic', 'origin', ...refspecs], {
+        cwd: preflight.repo.root,
+    });
+    await runner(
+        ['branch', '--set-upstream-to', `origin/${preflight.branch}`, preflight.branch],
+        {cwd: preflight.repo.root}
+    );
+
+    return {
+        branch: preflight.branch,
+        head: preflight.head,
+        action: 'pushed',
+    };
 }
 
 /**

@@ -4,6 +4,8 @@
 
 export type SourceMode = 'managed' | 'external' | 'pending_activation';
 
+export type ManagedSourceUpload = 'main' | 'all_refs';
+
 export type ManagedSourcePlatformStatus =
     | {
           mode: 'external';
@@ -47,6 +49,7 @@ export type SourceMarker =
           version: 1;
           state: 'pending';
           activationId: string;
+          upload: ManagedSourceUpload;
       }
     | {
           version: 1;
@@ -86,13 +89,13 @@ export type SourceModeDecision =
           appId: string;
           remote?: string;
           activationId?: string;
+          upload?: ManagedSourceUpload;
       }
     | {
           mode: 'external';
           reason:
               | 'nested_app'
               | 'external_remote'
-              | 'existing_core_app'
               | 'not_git_root'
               | 'no_git'
               | 'platform_external'
@@ -101,8 +104,9 @@ export type SourceModeDecision =
       }
     | {
           mode: 'activate_managed';
-          reason: 'new_standalone_app';
+          reason: 'new_standalone_app' | 'existing_standalone_app';
           appId: string;
+          upload: ManagedSourceUpload;
       };
 
 export type GitPreflightCode =

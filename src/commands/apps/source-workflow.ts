@@ -5,6 +5,7 @@ import {
     ensurePendingSourceMarker,
     inspectGitRepository,
     ManagedGitError,
+    pushAllLocalRefsAtomic,
     pushCurrentBranchSafe,
     readSourceMarker,
     requireManagedGitPreflight,
@@ -47,7 +48,8 @@ function platformStatus(
 async function pushManagedRepository(
     options: SourceWorkflowOptions,
     remote: string,
-    requireMainBranch = false
+    requireMainBranch = false,
+    upload: SafePushOptions['upload'] = 'main'
 ): Promise<SafePushResult> {
     const appDir = options.appDir ?? process.cwd();
     if (options.push) {
@@ -55,6 +57,7 @@ async function pushManagedRepository(
             appDir,
             expectedOriginRemote: remote,
             requireMainBranch,
+            upload,
         });
     }
 
@@ -68,10 +71,12 @@ async function pushManagedRepository(
         remote,
         options.appId
     );
-    return pushCurrentBranchSafe({
+    const push = upload === 'all_refs' ? pushAllLocalRefsAtomic : pushCurrentBranchSafe;
+    return push({
         appDir,
         expectedOriginRemote: remote,
         requireMainBranch,
+        upload,
     });
 }
 
@@ -131,8 +136,13 @@ export async function syncManagedAppSource(
             appDir,
             requireMainBranch: true,
         });
-        const pending = ensurePendingSourceMarker(preflight.repo.root);
-        console.log('Enabling Bkper-managed source and uploading committed main...');
+        const upload = decision.upload ?? 'main';
+        const pending = ensurePendingSourceMarker(preflight.repo.root, upload);
+        console.log(
+            upload === 'all_refs'
+                ? 'Enabling Bkper-managed source and uploading local branches and tags...'
+                : 'Enabling Bkper-managed source and uploading committed main...'
+        );
 
         await options.syncCore(action);
         const activation = await api.activate(options.appId, pending.activationId);
@@ -147,7 +157,12 @@ export async function syncManagedAppSource(
             activation.source.remote,
             options.appId
         );
-        await pushManagedRepository(options, activation.source.remote, true);
+        await pushManagedRepository(
+            options,
+            activation.source.remote,
+            true,
+            pending.upload
+        );
         writeManagedSourceMarker(
             preflight.repo.root,
             options.appId,
@@ -216,7 +231,15 @@ export async function prepareManagedDeploySource(
         platformStatus: statusResult,
         coreAppExists: true,
     });
-    if (decision.mode === 'external') return undefined;
+    if (decision.mode === 'external' || decision.mode === 'activate_managed') {
+        return undefined;
+    }
+    if (decision.reason === 'pending_marker') {
+        throw new ManagedGitError(
+            'MANAGED_SOURCE_UNAVAILABLE',
+            'Managed source activation is pending. Run `bkper app sync` to finish uploading source before deploying.'
+        );
+    }
 
     await validateLocalManagedMarker(appDir, options.appId);
     if (statusResult.mode !== 'managed') {

@@ -10,7 +10,8 @@
     -   Fixed `Ctrl+H` so the handoff shortcut remains available across agent sessions
     -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
 -   **App Development**
-    -   Added private Bkper-managed Git source for eligible new standalone apps; the first `bkper app sync` configures the managed repository and pushes the committed `main` branch, while apps with external remotes and monorepo apps keep their existing workflow
+    -   Added private Bkper-managed Git source for eligible standalone apps; `bkper app sync` configures the managed repository and pushes committed source, while apps with external remotes and monorepo apps keep their existing workflow
+    -   Existing standalone apps with no Git remote can now migrate on `bkper app sync`, preserving the App identity and atomically uploading all local branches and tags
     -   Added `bkper app clone <appId> [path]` to safely clone managed app source without installing dependencies or running repository lifecycle scripts
     -   Managed `bkper app sync` and `bkper app deploy` now push committed source with clean-tree and fast-forward safety checks; deploy verifies the exact commit before uploading the existing local build
     -   `bkper app init` now initializes Git on `main` when needed without staging or committing files

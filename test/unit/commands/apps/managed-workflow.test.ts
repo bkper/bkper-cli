@@ -7,6 +7,7 @@ import {
 } from '../../../../src/commands/apps/source-workflow.js';
 import {
     ensurePendingSourceMarker,
+    readSourceMarker,
     writeManagedSourceMarker,
 } from '../../../../src/commands/apps/git/markers.js';
 import {ManagedGitError} from '../../../../src/commands/apps/git/types.js';
@@ -130,6 +131,7 @@ describe('managed App sync and deploy workflow', function () {
             },
             push: async options => {
                 expect(options.requireMainBranch).to.equal(true);
+                expect(options.upload).to.equal('main');
                 expect(options.expectedOriginRemote).to.equal(REMOTE);
                 calls.push('push:main');
                 return pushed('main', head);
@@ -180,9 +182,70 @@ describe('managed App sync and deploy workflow', function () {
         ]);
     });
 
-    it('preserves existing no-remote, external-remote, and nested Core Apps', async function () {
+    it('activates an existing no-remote App and uploads all local refs', async function () {
+        const head = commitAll(repo, 'existing app');
+        const calls: string[] = [];
+
+        const result = await syncManagedAppSource({
+            appId: APP_ID,
+            appDir: repo,
+            coreAppExists: true,
+            api: api(externalStatus(), calls),
+            syncCore: async action => {
+                calls.push(`core:${action}`);
+            },
+            configureOrigin: async () => {
+                calls.push('origin');
+            },
+            push: async options => {
+                expect(options.upload).to.equal('all_refs');
+                calls.push('push:all_refs');
+                return pushed('main', head);
+            },
+        });
+
+        expect(result).to.deep.equal({id: APP_ID, action: 'updated'});
+        expect(calls[0]).to.equal('status');
+        expect(calls[1]).to.equal('core:updated');
+        expect(calls[2]).to.match(/^activate:/);
+        expect(calls.slice(3)).to.deep.equal(['origin', 'push:all_refs']);
+    });
+
+    it('retries the complete migration upload from its pending marker', async function () {
+        const head = commitAll(repo, 'existing app');
+        const pending = ensurePendingSourceMarker(repo, 'all_refs');
+        const calls: string[] = [];
+
+        await syncManagedAppSource({
+            appId: APP_ID,
+            appDir: repo,
+            coreAppExists: true,
+            api: api(managedStatus(), calls),
+            syncCore: async action => {
+                calls.push(`core:${action}`);
+            },
+            configureOrigin: async () => {
+                calls.push('origin');
+            },
+            push: async options => {
+                expect(options.upload).to.equal('all_refs');
+                calls.push('push:all_refs');
+                return pushed('main', head);
+            },
+        });
+
+        expect(calls).to.deep.equal([
+            'status',
+            'core:updated',
+            `activate:${pending.activationId}`,
+            'origin',
+            'push:all_refs',
+        ]);
+    });
+
+    it('preserves existing external-remote and nested Core Apps', async function () {
         commitAll(repo, 'existing app');
-        for (const shape of ['no-remote', 'external-remote', 'nested'] as const) {
+        for (const shape of ['external-remote', 'nested'] as const) {
             const appDir =
                 shape === 'nested' ? path.join(repo, 'packages', 'nested-app') : repo;
             if (shape === 'external-remote') {
@@ -216,6 +279,36 @@ describe('managed App sync and deploy workflow', function () {
                 fs.rmSync(path.join(repo, 'packages'), {recursive: true, force: true});
             }
         }
+    });
+
+    it('requires sync to finish a pending migration before deploy', async function () {
+        commitAll(repo, 'existing app');
+        ensurePendingSourceMarker(repo, 'all_refs');
+        const calls: string[] = [];
+
+        try {
+            await prepareManagedDeploySource({
+                appId: APP_ID,
+                appDir: repo,
+                api: api(managedStatus(), calls),
+                push: async () => {
+                    calls.push('push');
+                    return pushed('main', '0'.repeat(40));
+                },
+            });
+            expect.fail('expected pending migration error');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+            expect((error as ManagedGitError).code).to.equal(
+                'MANAGED_SOURCE_UNAVAILABLE'
+            );
+        }
+
+        expect(calls).to.deep.equal(['status']);
+        expect(readSourceMarker(repo)).to.deep.include({
+            state: 'pending',
+            upload: 'all_refs',
+        });
     });
 
     for (const branch of ['main', 'feature/change', 'rollback/known-good']) {

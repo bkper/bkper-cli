@@ -5,6 +5,7 @@ import {
     ManagedGitError,
     SOURCE_MARKER_DIR,
     SOURCE_MARKER_FILE,
+    type ManagedSourceUpload,
     type SourceMarker,
 } from './types.js';
 
@@ -56,10 +57,21 @@ function parseSourceMarker(raw: string): SourceMarker {
                 'The pending managed-source marker must contain a lowercase UUID v4 activationId.'
             );
         }
+        if (
+            marker.upload !== undefined &&
+            marker.upload !== 'main' &&
+            marker.upload !== 'all_refs'
+        ) {
+            throw new ManagedGitError(
+                'SOURCE_MARKER_INVALID',
+                'The pending managed-source marker has an invalid upload scope.'
+            );
+        }
         return {
             version: 1,
             state: 'pending',
             activationId: marker.activationId,
+            upload: marker.upload ?? 'main',
         };
     }
 
@@ -133,7 +145,10 @@ function writeMarkerAtomic(repoRoot: string, marker: SourceMarker): void {
  * Creates or returns the existing pending activation marker.
  * Does not overwrite a managed marker.
  */
-export function ensurePendingSourceMarker(repoRoot: string): SourceMarker & {
+export function ensurePendingSourceMarker(
+    repoRoot: string,
+    upload: ManagedSourceUpload = 'main'
+): SourceMarker & {
     state: 'pending';
 } {
     const existing = readSourceMarker(repoRoot);
@@ -150,6 +165,7 @@ export function ensurePendingSourceMarker(repoRoot: string): SourceMarker & {
         version: 1,
         state: 'pending',
         activationId: createActivationId(),
+        upload,
     };
     writeMarkerAtomic(repoRoot, marker);
     return marker;
