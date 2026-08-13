@@ -6,7 +6,7 @@ const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const APP_NAME = 'my-app';
 const CACHE_DIR = path.join(REPO_ROOT, 'tmp', 'app-state-cache');
 
-export type AppState = 'init' | 'built' | 'cleaned';
+export type AppState = 'init' | 'installed' | 'built' | 'cleaned';
 
 interface StateInfo {
     path: string;
@@ -17,7 +17,8 @@ interface StateInfo {
  * Manages cached app directories at different lifecycle states.
  *
  * Each state represents an app that has reached a specific point in the lifecycle:
- * - 'init': App created with `bkper app init`, dependencies installed
+ * - 'init': App created with `bkper app init`, dependencies not installed
+ * - 'installed': Initialized App with dependencies explicitly installed for later test states
  * - 'built': App has been built with the template build flow (client assets + server Worker)
  * - 'cleaned': App has been cleaned with `bun run clean` after being built
  *
@@ -89,6 +90,9 @@ export class AppStateManager {
             case 'init':
                 await this.createInitState(cachedPath);
                 break;
+            case 'installed':
+                await this.createInstalledState(cachedPath);
+                break;
             case 'built':
                 await this.createBuiltState(cachedPath);
                 break;
@@ -104,37 +108,40 @@ export class AppStateManager {
     }
 
     /**
-     * Create the 'init' state - fresh app with dependencies
+     * Create the 'init' state - fresh app without dependencies.
      */
     private async createInitState(targetPath: string): Promise<void> {
-        // Ensure cache directory exists
         fs.mkdirSync(CACHE_DIR, { recursive: true });
         const tempParent = fs.mkdtempSync(path.join(CACHE_DIR, 'tmp-'));
         const appDir = path.join(tempParent, APP_NAME);
 
-        // Run init
         await runCli(['app', 'init', APP_NAME], tempParent);
 
-        // Install dependencies
-        await runCommand('bun', ['install'], appDir);
-        this.linkLocalBkper(appDir);
-
-        // Move to cache location
         fs.mkdirSync(path.dirname(targetPath), { recursive: true });
         fs.renameSync(appDir, targetPath);
         fs.rmSync(tempParent, { recursive: true, force: true });
     }
 
     /**
-     * Create the 'built' state - init + build artifacts
+     * Create the 'installed' state for tests that need template dependencies.
      */
-    private async createBuiltState(targetPath: string): Promise<void> {
-        // Ensure init state exists
+    private async createInstalledState(targetPath: string): Promise<void> {
         await this.ensureState('init');
         const initPath = this.states.get('init')!.path;
 
-        // Copy init state
         this.copyDirectory(initPath, targetPath);
+        await runCommand('bun', ['install'], targetPath);
+        this.linkLocalBkper(targetPath);
+    }
+
+    /**
+     * Create the 'built' state - installed dependencies + build artifacts.
+     */
+    private async createBuiltState(targetPath: string): Promise<void> {
+        await this.ensureState('installed');
+        const installedPath = this.states.get('installed')!.path;
+
+        this.copyDirectory(installedPath, targetPath);
         this.linkLocalBkper(targetPath);
 
         // Build client assets and the server Worker bundle
@@ -204,11 +211,15 @@ export class AppStateManager {
             );
         }
 
+        if (state === 'init') {
+            return !fs.existsSync(path.join(cachedPath, 'node_modules'));
+        }
+
         if (!this.hasLocalBkperLink(cachedPath)) {
             return false;
         }
 
-        if (state === 'init') {
+        if (state === 'installed') {
             return this.hasInitTooling(cachedPath);
         }
 

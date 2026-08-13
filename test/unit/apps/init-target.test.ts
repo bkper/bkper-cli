@@ -1,7 +1,6 @@
 import { expect } from '../helpers/test-setup.js';
 import {
     assertInitTargetAvailable,
-    removeTemplateLockfiles,
     resolveInitTarget,
 } from '../../../src/commands/apps/init.js';
 import fs from 'fs';
@@ -65,13 +64,4 @@ describe('app init target handling', function () {
         ).to.throw('Current directory contains files that are not safe to overwrite: README.md');
     });
 
-    it('removes lockfiles after template extraction', function () {
-        fs.writeFileSync(path.join(tempDir, 'bun.lock'), 'lock\n', 'utf8');
-        fs.writeFileSync(path.join(tempDir, 'bun.lockb'), 'binary lock\n', 'utf8');
-
-        removeTemplateLockfiles(tempDir);
-
-        expect(fs.existsSync(path.join(tempDir, 'bun.lock'))).to.equal(false);
-        expect(fs.existsSync(path.join(tempDir, 'bun.lockb'))).to.equal(false);
-    });
 });

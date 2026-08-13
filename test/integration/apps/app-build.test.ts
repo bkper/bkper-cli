@@ -23,8 +23,8 @@ describe('Integration: app build', function () {
     it('should build the server Worker artifact', async function () {
         this.timeout(120000);
 
-        // Get initialized app
-        appDir = await stateManager.getApp('init');
+        // Get an initialized app after explicitly installing its dependencies.
+        appDir = await stateManager.getApp('installed');
 
         // Run build
         await runCli(['app', 'build'], appDir);

@@ -1,4 +1,3 @@
-import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
@@ -20,7 +19,12 @@ export interface AppInitTarget {
 }
 
 const ALLOWED_CURRENT_DIRECTORY_ENTRIES = new Set(['.git', '.gitignore', '.gitattributes', '.pi']);
-const TEMPLATE_LOCKFILES = ['bun.lock', 'bun.lockb'];
+const AGENT_GUIDANCE_MARKERS = [
+    '<!-- APP_STANDARDS:START -->',
+    '<!-- APP_STANDARDS:END -->',
+    '<!-- APP_SPECIFICS:START -->',
+    '<!-- APP_SPECIFICS:END -->',
+] as const;
 
 export function resolveInitTarget(name: string | undefined, cwd = process.cwd()): AppInitTarget {
     if (name) {
@@ -60,18 +64,67 @@ export function assertInitTargetAvailable(target: AppInitTarget): void {
     }
 }
 
-export function removeTemplateLockfiles(projectDir: string): void {
-    for (const lockfile of TEMPLATE_LOCKFILES) {
-        fs.rmSync(path.join(projectDir, lockfile), { force: true });
-    }
-}
-
 // =============================================================================
 // Validation
 // =============================================================================
 
+export function validateAgentGuidance(contents: string): string[] {
+    const lines = contents.split(/\r?\n/).map(line => line.trim());
+    const failures: string[] = [];
+    const malformedLines = lines.filter(
+        line =>
+            /<!--.*APP_(?:STANDARDS|SPECIFICS)/.test(line) &&
+            !AGENT_GUIDANCE_MARKERS.some(marker => marker === line)
+    );
+
+    if (malformedLines.length > 0) {
+        failures.push(`Malformed agent guidance marker: ${malformedLines.join(', ')}`);
+    }
+
+    const markerIndexes = AGENT_GUIDANCE_MARKERS.map(marker =>
+        lines.flatMap((line, index) => (line === marker ? [index] : []))
+    );
+
+    for (let index = 0; index < AGENT_GUIDANCE_MARKERS.length; index += 1) {
+        if (markerIndexes[index].length !== 1) {
+            failures.push(`AGENTS.md must contain exactly one ${AGENT_GUIDANCE_MARKERS[index]}`);
+        }
+    }
+
+    if (
+        markerIndexes.every(indexes => indexes.length === 1) &&
+        !markerIndexes.every(
+            (indexes, index) => index === 0 || markerIndexes[index - 1][0] < indexes[0]
+        )
+    ) {
+        failures.push(
+            `AGENTS.md markers must appear in this order: ${AGENT_GUIDANCE_MARKERS.join(', ')}`
+        );
+    }
+
+    return failures;
+}
+
+export function getAgentGuidanceDisplayPath(target: AppInitTarget): string {
+    return target.displayTarget === '.'
+        ? './AGENTS.md'
+        : `./${target.displayTarget}/AGENTS.md`;
+}
+
+function assertTemplateAgentGuidance(projectDir: string): void {
+    const agentsPath = path.join(projectDir, 'AGENTS.md');
+    if (!fs.existsSync(agentsPath)) {
+        throw new Error('AGENTS.md is missing');
+    }
+
+    const failures = validateAgentGuidance(fs.readFileSync(agentsPath, 'utf8'));
+    if (failures.length > 0) {
+        throw new Error(failures.join('; '));
+    }
+}
+
 /**
- * Validates that the app name is a valid npm package name.
+ * Validates that the app name is a valid app identifier.
  * Rules: lowercase, no spaces, starts with letter, only alphanumeric and hyphens
  */
 function validateAppName(name: string): { valid: boolean; error?: string } {
@@ -253,35 +306,6 @@ function updatePackageJson(projectDir: string, appName: string): void {
 }
 
 // =============================================================================
-// Shell Commands
-// =============================================================================
-
-/**
- * Runs a shell command and returns a promise.
- */
-function runCommand(command: string, args: string[], cwd: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-        const proc = spawn(command, args, {
-            cwd,
-            stdio: 'inherit',
-            shell: true,
-        });
-
-        proc.on('close', code => {
-            if (code === 0) {
-                resolve();
-            } else {
-                reject(
-                    new Error(`Command '${command} ${args.join(' ')}' failed with code ${code}`)
-                );
-            }
-        });
-
-        proc.on('error', reject);
-    });
-}
-
-// =============================================================================
 // Public API
 // =============================================================================
 
@@ -318,7 +342,6 @@ export async function initApp(name?: string): Promise<void> {
     // 3. Download template
     try {
         await downloadTemplate(initTarget.targetDir);
-        removeTemplateLockfiles(initTarget.targetDir);
         console.log('  Downloaded template');
     } catch (err) {
         console.error('Error downloading template:', err instanceof Error ? err.message : err);
@@ -328,7 +351,22 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 4. Update bkper.yaml
+    // 4. Validate protected agent guidance structure before customizing the scaffold.
+    try {
+        assertTemplateAgentGuidance(initTarget.targetDir);
+        console.log('  Validated AGENTS.md guidance');
+    } catch (err) {
+        console.error(
+            'Error: Invalid app template agent guidance:',
+            err instanceof Error ? err.message : err
+        );
+        if (!targetExistsBeforeDownload && fs.existsSync(initTarget.targetDir)) {
+            fs.rmSync(initTarget.targetDir, { recursive: true, force: true });
+        }
+        process.exit(1);
+    }
+
+    // 5. Update bkper.yaml
     try {
         updateBkperYaml(initTarget.targetDir, initTarget.appName);
         console.log('  Updated bkper.yaml');
@@ -337,7 +375,7 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 5. Update event handler loop guards
+    // 6. Update event handler loop guards
     try {
         updateEventHandlers(initTarget.targetDir, initTarget.appName);
         console.log('  Updated event handlers');
@@ -346,7 +384,7 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 6. Update package.json
+    // 7. Update package.json
     try {
         updatePackageJson(initTarget.targetDir, initTarget.appName);
         console.log('  Updated package.json');
@@ -355,7 +393,7 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 7. Initialize Git on main without staging or committing when not already a repo.
+    // 8. Initialize Git on main without staging or committing when not already a repo.
     try {
         const created = await ensureGitInitialized(initTarget.targetDir);
         if (created) {
@@ -369,24 +407,21 @@ export async function initApp(name?: string): Promise<void> {
         );
     }
 
-    // 8. Install dependencies
-    console.log('  Installing dependencies...');
-    try {
-        await runCommand('bun', ['install'], initTarget.targetDir);
-        console.log('  Installed dependencies');
-    } catch (err) {
-        console.log('  Warning: Could not install dependencies. Run "bun install" manually.');
-    }
+    const enterProject =
+        initTarget.displayTarget === '.'
+            ? ''
+            : `\nEnter the project directory:\n\n  cd ${initTarget.displayTarget}\n`;
+    const agentGuidancePath = getAgentGuidanceDisplayPath(initTarget);
 
-    const startCommands = initTarget.displayTarget === '.'
-        ? '  bun run dev'
-        : `  cd ${initTarget.displayTarget}\n  bun run dev`;
-
-    // 9. Print success message
+    // 9. Print success message and hand the scaffold to the active coding agent.
     console.log(`
-Done! To get started:
-
-${startCommands}
+Done! Dependencies were not installed. Follow the scaffold's setup instructions before development.
+${enterProject}
+Agent handoff:
+  - Active coding agent: read ${agentGuidancePath} before making changes
+  - Preserve APP_STANDARDS unless explicitly asked to change it
+  - Maintain APP_SPECIFICS as the app purpose, behavior, domain flows, resources, routes, and implementation decisions evolve
+  - Preserve both APP_STANDARDS and APP_SPECIFICS marker pairs
 
 Next steps:
   - Review bkper.yaml: update description, ownerName, ownerWebsite, and developers

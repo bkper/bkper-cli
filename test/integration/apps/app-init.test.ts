@@ -3,7 +3,6 @@ import fs from 'fs';
 import path from 'path';
 import { AppStateManager } from './helpers/app-state.js';
 import { setupAppTest } from './helpers/test-setup.js';
-import { assertNoVcsMetadata } from './helpers/cli-helpers.js';
 import { expect } from '../helpers.js';
 
 const APP_NAME = 'my-app';
@@ -37,26 +36,46 @@ describe('Integration: app init', function () {
         expect(fs.existsSync(path.join(appDir, 'server/src')), 'server/src should exist').to.be.true;
     });
 
-    it('should not include VCS metadata in the created app', async function () {
+    it('should initialize Git without creating a commit', async function () {
         this.timeout(5000);
 
-        // Reuse the app directory from previous test or get a fresh one
         if (!appDir) {
             appDir = await stateManager.getApp('init');
         }
 
-        assertNoVcsMetadata(appDir);
+        expect(fs.existsSync(path.join(appDir, '.git'))).to.be.true;
+        expect(fs.readFileSync(path.join(appDir, '.git/HEAD'), 'utf8').trim()).to.equal(
+            'ref: refs/heads/main'
+        );
+        expect(fs.existsSync(path.join(appDir, '.git/refs/heads/main'))).to.be.false;
     });
 
-    it('should have installed dependencies', async function () {
+    it('should not install dependencies', async function () {
         this.timeout(5000);
 
         if (!appDir) {
             appDir = await stateManager.getApp('init');
         }
 
-        // Verify node_modules exists in packages
-        expect(fs.existsSync(path.join(appDir, 'node_modules'))).to.be.true;
+        expect(fs.existsSync(path.join(appDir, 'node_modules'))).to.be.false;
+    });
+
+    it('should include valid agent guidance markers and its dedicated check command', async function () {
+        this.timeout(5000);
+
+        if (!appDir) {
+            appDir = await stateManager.getApp('init');
+        }
+
+        const agents = fs.readFileSync(path.join(appDir, 'AGENTS.md'), 'utf8');
+        const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+
+        expect(agents.indexOf('<!-- APP_STANDARDS:START -->')).to.be.lessThan(
+            agents.indexOf('<!-- APP_SPECIFICS:START -->')
+        );
+        expect(packageJson.scripts['check:agent-guidance']).to.equal(
+            'bun scripts/check-agent-guidance.ts'
+        );
     });
 
     it('should include generated environment types', async function () {

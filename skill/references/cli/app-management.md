@@ -53,18 +53,30 @@ bkper app init my-app
 cd my-app
 ```
 
-`bkper app init <name>` creates and scaffolds `./<name>` using the same value as the app id. Run `bkper app init` with no name inside an existing empty or VCS-only directory to use the current folder name as the app id. Init initializes Git on `main` when needed, but does not create commits.
+`bkper app init <name>` creates and scaffolds `./<name>` using the same value as the app id. Run `bkper app init` with no name inside an existing empty or VCS-only directory to use the current folder name as the app id. Init validates the guidance markers in `AGENTS.md` and blocks scaffolding when they are missing, duplicated, malformed, nested, or out of order. It initializes Git on `main` when needed, but never stages, commits, pushes, syncs, or deploys.
+
+Init does not install dependencies or execute package lifecycle scripts. The current template uses Bun; enter the App directory and run `bun install` explicitly when ready.
+
+Before specializing the App, the active coding agent must read the newly created `AGENTS.md` at the path printed by init. When its marker pairs are present:
+
+- Preserve `<!-- APP_STANDARDS:START -->` / `<!-- APP_STANDARDS:END -->` and `<!-- APP_SPECIFICS:START -->` / `<!-- APP_SPECIFICS:END -->`.
+- Preserve `APP_STANDARDS` by default and change it only when explicitly requested.
+- Maintain `APP_SPECIFICS` with the App's purpose, behavior, domain flows, resources, routes, and implementation decisions.
+- Never replace `AGENTS.md` wholesale merely to specialize the App.
 
 Verify:
 
+- `AGENTS.md` contains each marker exactly once, with `APP_STANDARDS` before `APP_SPECIFICS`
 - `client/` and `server/` exist
 - `bkper.yaml` has `id`, `name`, `description`, and `developers`
-- `package.json` scripts include `dev` and `build`
-- `.git` exists on branch `main` with no automatic commit
+- `package.json` scripts include `dev`, `build`, and `check:agent-guidance`
+- dependencies are not installed by init
+- `.git` exists on branch `main` with no automatic staging or commit
 
 ### 2. Develop
 
 ```bash
+bun install
 npm run dev
 ```
 
@@ -531,7 +543,7 @@ Inside the interactive agent:
 
 ### App Lifecycle
 
--   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name. Initializes Git on `main` when the target is not already a repository, without staging or committing files.
+-   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name. Validates the marked `AGENTS.md`, initializes Git on `main` when needed without staging or committing, and does not install dependencies. Read the printed `AGENTS.md` path before specialization and preserve its standards, specifics, and marker pairs.
 -   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
 -   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
 -   `app list` - List all apps you have access to

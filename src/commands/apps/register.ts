@@ -30,7 +30,7 @@ export function registerAppCommands(program: Command): void {
     appCommand
         .command('init [name]')
         .description(
-            'Scaffold a new App; first eligible sync uses Bkper-managed source unless an external remote exists'
+            'Scaffold a new App; first eligible sync may use Bkper-managed source'
         )
         .action((name: string | undefined) =>
             withAction(

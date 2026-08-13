@@ -167,16 +167,6 @@ export function assertArtifacts(rootDir: string): void {
 }
 
 /**
- * Assert that no VCS metadata (.git, .svn, .hg) exists in directory
- */
-export function assertNoVcsMetadata(rootDir: string): void {
-    const vcsDirs = ['.git', '.svn', '.hg'];
-    for (const vcsDir of vcsDirs) {
-        expect(fs.existsSync(path.join(rootDir, vcsDir))).to.be.false;
-    }
-}
-
-/**
  * Assert that build artifacts have been cleaned
  */
 export function assertCleaned(rootDir: string): void {
