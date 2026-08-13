@@ -419,6 +419,7 @@ Done! Dependencies were not installed. Follow the scaffold's setup instructions 
 ${enterProject}
 Agent handoff:
   - Active coding agent: read ${agentGuidancePath} before making changes
+  - Install dependencies using the scaffold's setup instructions before development
   - Preserve APP_STANDARDS unless explicitly asked to change it
   - Maintain APP_SPECIFICS as the app purpose, behavior, domain flows, resources, routes, and implementation decisions evolve
   - Preserve both APP_STANDARDS and APP_SPECIFICS marker pairs
@@ -426,8 +427,9 @@ Agent handoff:
 Next steps:
   - Review bkper.yaml: update description, ownerName, ownerWebsite, and developers
   - Replace logo-light.svg and logo-dark.svg in client/public/images/
-  - Edit README.md to explain what your app does for end users
+  - Edit README.md for end users, including the app API base URL and /openapi.json link
   - Commit your changes on main, then run: bkper app sync
   - To use an external Git provider instead, add its remote before the first sync
+  - Existing Apps, external remotes, and monorepos are preserved and never migrated automatically
 `);
 }
