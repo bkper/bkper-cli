@@ -474,9 +474,11 @@ export function registerBkperHandoffExtension(
                     context.ui.notify('Handoff shortcut dispatch is unavailable.', 'error');
                     return;
                 }
+                pendingGoalPrefill = context.ui.getEditorText();
                 try {
                     await dispatchCommand('/handoff');
                 } catch (error) {
+                    pendingGoalPrefill = undefined;
                     context.ui.notify(
                         `Handoff shortcut failed: ${normalizeError(error).message}`,
                         'error'

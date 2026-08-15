@@ -28,6 +28,7 @@ interface TestContext {
     model?: {provider: string; id: string};
     ui: {
         editor: sinon.SinonStub;
+        getEditorText: sinon.SinonStub;
         notify: sinon.SinonStub;
     };
     sessionManager: {
@@ -76,6 +77,7 @@ function createContext(tokens = 100_000): TestContext {
         model: {provider: 'bkper', id: 'test-model'},
         ui: {
             editor: sinon.stub().resolves('Finish the handoff feature'),
+            getEditorText: sinon.stub().returns(''),
             notify: sinon.stub(),
         },
         sessionManager: {
@@ -196,6 +198,29 @@ describe('agent handoff', function () {
         await shortcutHandler(createContext());
 
         expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
+    });
+
+    it('prefills the Ctrl+H goal editor with the current input text', async function () {
+        const {dependencies} = createDependencies();
+        const {shortcutHandler, command} = registerHandoff(
+            createMemorySettings(),
+            dependencies
+        );
+        const shortcutContext = createContext();
+        shortcutContext.ui.getEditorText.returns('Finish the feature I am describing');
+
+        await shortcutHandler(shortcutContext);
+
+        const commandContext = createCommandContext();
+        commandContext.ui.editor.resolves('Finish the edited feature');
+        await command('', commandContext);
+
+        expect(
+            commandContext.ui.editor.calledOnceWithExactly(
+                'Next session goal',
+                'Finish the feature I am describing'
+            )
+        ).to.equal(true);
     });
 
     it('preserves a user binding that claims Ctrl+H', function () {

@@ -8,6 +8,7 @@
     -   Added `/handoff <goal>` and `Ctrl+H` to continue work in a linked, focused session with a generated context draft
     -   Added automatic handoff prompts before context compaction, enabled by default and independently configurable from `/settings`
     -   Fixed `Ctrl+H` so the handoff shortcut remains available across agent sessions
+    -   Fixed `Ctrl+H` handoffs to prefill the goal editor with the current input text
     -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
 -   **App Development**
     -   Added private Bkper-managed Git source for eligible standalone apps; `bkper app sync` configures the managed repository and pushes committed source, while apps with external remotes and monorepo apps keep their existing workflow
