@@ -185,14 +185,14 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 -   Push the resulting commit and tag with `git push origin main --follow-tags`
 -   CI publishes only from version tags matching `v*.*.*`
 
-### Pi dependency automation policy
+### Pi dependency update policy
 
--   Dependabot tracks `@earendil-works/pi-coding-agent`.
--   Pi update PRs stay standard dependency PRs.
--   Do not add release labels or version bumps on Dependabot PR branches.
--   When asked to verify an open Pi Dependabot PR, check out the PR branch and run `bun install` before testing so `bun.lock` is refreshed for Bun.
--   If `bun install` changes `bun.lock`, commit that lockfile update to the Dependabot PR branch before merging. Do not merge a Pi bump where `package.json` and `bun.lock` disagree.
--   Keep the dependency bump and release separate: merge the verified dependency PR first, then run the release workflow from a clean, up-to-date `main`.
+-   Check for Pi updates only when explicitly requested.
+-   Review the release notes before recommending an update.
+-   Keep `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` on the same exact version.
+-   Run `bun install` after changing either dependency so `bun.lock` stays aligned with `package.json`.
+-   Build and run unit tests before committing a Pi update.
+-   Keep the dependency bump and release separate; run the release workflow later from a clean, up-to-date `main`.
 
 ### Agent docs maintenance
 

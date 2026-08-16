@@ -87,7 +87,6 @@ git push origin main --follow-tags
 ```
 
 GitHub Actions publishes only from version tags matching `v*.*.*`.
-Dependabot PRs stay standard dependency PRs.
 
 ## CI expectations
 
