@@ -79,7 +79,7 @@ describe('Shared package build helper', function () {
         expect(result.built).to.equal(false);
         expect(result.success).to.equal(false);
         expect(result.diagnostics).to.include(
-            'TypeScript not found. Run bun install at the app root (required for shared package build).'
+            "TypeScript not found. Install dependencies at the app root using the project's package manager (required for shared package build)."
         );
     });
 

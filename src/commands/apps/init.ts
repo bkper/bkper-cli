@@ -288,8 +288,12 @@ export function updateEventHandlers(projectDir: string, appName: string): void {
 }
 
 /**
- * Updates the package.json file with the new app name.
+ * Updates package metadata files with the new app name.
  */
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function updatePackageJson(projectDir: string, appName: string): void {
     const packagePath = path.join(projectDir, 'package.json');
 
@@ -297,12 +301,39 @@ function updatePackageJson(projectDir: string, appName: string): void {
         throw new Error('package.json not found in template');
     }
 
-    const content = fs.readFileSync(packagePath, 'utf8');
-    const pkg = JSON.parse(content);
+    const pkg: unknown = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    if (!isJsonObject(pkg)) {
+        throw new Error('package.json must contain a JSON object');
+    }
 
     pkg.name = appName;
-
     fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+}
+
+function updatePackageLockJson(projectDir: string, appName: string): void {
+    const packageLockPath = path.join(projectDir, 'package-lock.json');
+    if (!fs.existsSync(packageLockPath)) {
+        return;
+    }
+
+    const packageLock: unknown = JSON.parse(fs.readFileSync(packageLockPath, 'utf8'));
+    if (!isJsonObject(packageLock)) {
+        throw new Error('package-lock.json must contain a JSON object');
+    }
+
+    const packages = packageLock.packages;
+    if (!isJsonObject(packages) || !isJsonObject(packages[''])) {
+        throw new Error('package-lock.json must contain root package metadata');
+    }
+
+    packageLock.name = appName;
+    packages[''].name = appName;
+    fs.writeFileSync(packageLockPath, JSON.stringify(packageLock, null, 2) + '\n', 'utf8');
+}
+
+export function updatePackageMetadata(projectDir: string, appName: string): void {
+    updatePackageJson(projectDir, appName);
+    updatePackageLockJson(projectDir, appName);
 }
 
 // =============================================================================
@@ -384,12 +415,12 @@ export async function initApp(name?: string): Promise<void> {
         process.exit(1);
     }
 
-    // 7. Update package.json
+    // 7. Update package metadata
     try {
-        updatePackageJson(initTarget.targetDir, initTarget.appName);
-        console.log('  Updated package.json');
+        updatePackageMetadata(initTarget.targetDir, initTarget.appName);
+        console.log('  Updated package metadata');
     } catch (err) {
-        console.error('Error updating package.json:', err instanceof Error ? err.message : err);
+        console.error('Error updating package metadata:', err instanceof Error ? err.message : err);
         process.exit(1);
     }
 
@@ -407,19 +438,21 @@ export async function initApp(name?: string): Promise<void> {
         );
     }
 
-    const enterProject =
-        initTarget.displayTarget === '.'
-            ? ''
-            : `\nEnter the project directory:\n\n  cd ${initTarget.displayTarget}\n`;
+    const enterProjectCommand =
+        initTarget.displayTarget === '.' ? '' : `  cd ${initTarget.displayTarget}\n`;
     const agentGuidancePath = getAgentGuidanceDisplayPath(initTarget);
 
     // 9. Print success message and hand the scaffold to the active coding agent.
     console.log(`
-Done! Dependencies were not installed. Follow the scaffold's setup instructions before development.
-${enterProject}
+Done! Dependencies were not installed.
+
+Developer setup (this scaffold uses npm):
+${enterProjectCommand}  npm install
+  npm run dev
+
 Agent handoff:
   - Active coding agent: read ${agentGuidancePath} before making changes
-  - Install dependencies using the scaffold's setup instructions before development
+  - Complete the developer setup above before development
   - Preserve APP_STANDARDS unless explicitly asked to change it
   - Maintain APP_SPECIFICS as the app purpose, behavior, domain flows, resources, routes, and implementation decisions evolve
   - Preserve both APP_STANDARDS and APP_SPECIFICS marker pairs

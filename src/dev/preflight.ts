@@ -94,7 +94,7 @@ export function preflightDependencies(
             return {
                 ok: false,
                 message:
-                    'Missing Miniflare. Install it in the app root devDependencies (e.g. bun add -d miniflare or npm install -D miniflare).',
+                    "Missing Miniflare. Add it to the app root devDependencies using the project's package manager.",
             };
         }
 

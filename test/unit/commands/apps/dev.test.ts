@@ -148,7 +148,9 @@ deployment:
 
             expect(exitCode).to.equal(1);
             expect(consoleErrors.some(e => e.includes('Missing Miniflare'))).to.be.true;
-            expect(consoleErrors.some(e => e.includes('Install it in the app root devDependencies'))).to.be.true;
+            expect(
+                consoleErrors.some(e => e.includes("using the project's package manager"))
+            ).to.be.true;
         });
     });
 

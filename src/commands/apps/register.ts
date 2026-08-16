@@ -44,7 +44,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('clone <appId> [path]')
-        .description('Clone Bkper-managed source; run bun install explicitly afterward')
+        .description('Clone Bkper-managed source without installing dependencies')
         .action((appId: string, destination: string | undefined) =>
             withAction(
                 'cloning managed app source',

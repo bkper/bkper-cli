@@ -63,7 +63,7 @@ export async function buildSharedIfPresent(projectRoot: string): Promise<SharedB
             built: false,
             success: false,
             diagnostics: [
-                'TypeScript not found. Run bun install at the app root (required for shared package build).',
+                "TypeScript not found. Install dependencies at the app root using the project's package manager (required for shared package build).",
             ],
         };
     }

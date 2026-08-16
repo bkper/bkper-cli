@@ -36,6 +36,22 @@ describe('Integration: app init', function () {
         expect(fs.existsSync(path.join(appDir, 'server/src')), 'server/src should exist').to.be.true;
     });
 
+    it('should keep npm package metadata names aligned', async function () {
+        this.timeout(5000);
+
+        if (!appDir) {
+            appDir = await stateManager.getApp('init');
+        }
+
+        const packageJson = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+        const packageLock = JSON.parse(
+            fs.readFileSync(path.join(appDir, 'package-lock.json'), 'utf8')
+        );
+        expect(packageJson.name).to.equal(APP_NAME);
+        expect(packageLock.name).to.equal(APP_NAME);
+        expect(packageLock.packages[''].name).to.equal(APP_NAME);
+    });
+
     it('should initialize Git without creating a commit', async function () {
         this.timeout(5000);
 
@@ -74,7 +90,7 @@ describe('Integration: app init', function () {
             agents.indexOf('<!-- APP_SPECIFICS:START -->')
         );
         expect(packageJson.scripts['check:agent-guidance']).to.equal(
-            'bun scripts/check-agent-guidance.ts'
+            'tsx scripts/check-agent-guidance.ts'
         );
     });
 

@@ -1,5 +1,9 @@
 import { expect } from '../helpers/test-setup.js';
-import { replaceMyAppInObject, updateEventHandlers } from '../../../src/commands/apps/init.js';
+import {
+    replaceMyAppInObject,
+    updateEventHandlers,
+    updatePackageMetadata,
+} from '../../../src/commands/apps/init.js';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -52,6 +56,53 @@ describe('app init helpers', function () {
             expect(result.port).to.equal(8787);
             expect(result.active).to.be.true;
             expect(result.url).to.equal('https://test-app.bkper.app');
+        });
+    });
+
+    describe('updatePackageMetadata', function () {
+        let tempDir: string;
+
+        beforeEach(function () {
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bkper-init-test-'));
+        });
+
+        afterEach(function () {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        });
+
+        it('should update the root package name in package and lock files', function () {
+            fs.writeFileSync(
+                path.join(tempDir, 'package.json'),
+                JSON.stringify({ name: 'my-bkper-app', private: true }, null, 2) + '\n'
+            );
+            fs.writeFileSync(
+                path.join(tempDir, 'package-lock.json'),
+                JSON.stringify(
+                    {
+                        name: 'my-bkper-app',
+                        lockfileVersion: 3,
+                        packages: {
+                            '': { name: 'my-bkper-app' },
+                            client: { name: 'my-bkper-app-client' },
+                        },
+                    },
+                    null,
+                    2
+                ) + '\n'
+            );
+
+            updatePackageMetadata(tempDir, 'inventory-bot');
+
+            const packageJson = JSON.parse(
+                fs.readFileSync(path.join(tempDir, 'package.json'), 'utf8')
+            );
+            const packageLock = JSON.parse(
+                fs.readFileSync(path.join(tempDir, 'package-lock.json'), 'utf8')
+            );
+            expect(packageJson.name).to.equal('inventory-bot');
+            expect(packageLock.name).to.equal('inventory-bot');
+            expect(packageLock.packages[''].name).to.equal('inventory-bot');
+            expect(packageLock.packages.client.name).to.equal('my-bkper-app-client');
         });
     });
 

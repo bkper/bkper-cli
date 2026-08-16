@@ -199,7 +199,7 @@ export async function cloneManagedAppCommand(
     console.log('');
     console.log('Next steps:');
     console.log(`  cd ${path.relative(process.cwd(), dest) || '.'}`);
-    console.log('  bun install');
+    console.log("  Install dependencies using the project's package manager.");
     console.log('');
     console.log('Clone never installs dependencies or runs repository scripts.');
 }

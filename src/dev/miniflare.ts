@@ -195,7 +195,7 @@ async function loadMiniflare(projectRoot: string = process.cwd()): Promise<typeo
     } catch {
         console.error('miniflare is required for local development.');
         console.error(
-            'Install it in the app root devDependencies (e.g. bun add -d miniflare or npm install -D miniflare).'
+            "Add it to the app root devDependencies using the project's package manager."
         );
         process.exit(1);
     }
