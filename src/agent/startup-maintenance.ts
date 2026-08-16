@@ -1,5 +1,6 @@
 import {
     getAvailableUpgrade,
+    isVersionInstalledAsync,
     startDetachedUpgrade,
     type AvailableUpgrade,
     type InstallMethod,
@@ -13,12 +14,14 @@ export interface StartupMaintenanceCallbacks {
 
 export interface StartupMaintenanceDependencies {
     getAvailableUpgrade: () => Promise<AvailableUpgrade | null>;
+    isVersionInstalled: (method: InstallMethod, version: string) => Promise<boolean>;
     startDetachedUpgrade: (method: InstallMethod, version: string) => void;
 }
 
 function createDefaultDependencies(): StartupMaintenanceDependencies {
     return {
         getAvailableUpgrade,
+        isVersionInstalled: isVersionInstalledAsync,
         startDetachedUpgrade,
     };
 }
@@ -43,6 +46,20 @@ export async function runStartupMaintenance(
 
         if (availableUpgrade.method === 'unknown') {
             callbacks.notify(getManualUpgradeMessage(availableUpgrade.latest), 'warning');
+            return;
+        }
+
+        if (
+            await dependencies.isVersionInstalled(
+                availableUpgrade.method,
+                availableUpgrade.latest
+            )
+        ) {
+            callbacks.notify(
+                `bkper ${availableUpgrade.latest} is already installed. ` +
+                    `Restart this session to use it.`,
+                'info'
+            );
             return;
         }
 

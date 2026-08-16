@@ -99,6 +99,35 @@ export async function detectMethodAsync(
 }
 
 /**
+ * Checks whether a specific Bkper version is already installed globally.
+ */
+export async function isVersionInstalledAsync(
+    method: InstallMethod,
+    version: string,
+    commandRunner: CommandRunner = defaultCommandRunner
+): Promise<boolean> {
+    const check = getDetectionChecks().find(check => check.method === method);
+    if (!check) {
+        return false;
+    }
+
+    try {
+        const output = await commandRunner(check.command, 10000);
+        const packageVersion = `${PACKAGE_NAME}@${version}`;
+        return output.split(/\s+/).some(token => {
+            const normalizedToken = token.replace(
+                /^[^A-Za-z0-9@/._+-]+|[^A-Za-z0-9@/._+-]+$/g,
+                ''
+            );
+            return normalizedToken === packageVersion;
+        });
+    } catch {
+        // Preserve the existing upgrade flow when the check cannot be completed.
+        return false;
+    }
+}
+
+/**
  * Fetches the latest published version from the npm registry.
  * Returns null if the fetch fails.
  */

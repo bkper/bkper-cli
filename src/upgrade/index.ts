@@ -4,6 +4,7 @@ export {
     detectMethodAsync,
     fetchLatestVersion,
     getUpgradeCommand,
+    isVersionInstalledAsync,
     startDetachedUpgrade,
 } from './installation.js';
 export {

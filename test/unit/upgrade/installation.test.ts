@@ -1,8 +1,10 @@
 import {readFileSync} from 'node:fs';
-import { expect } from '../helpers/test-setup.js';
+import sinon from 'sinon';
+import {expect} from '../helpers/test-setup.js';
 import {
     detectMethodAsync,
     getUpgradeCommand,
+    isVersionInstalledAsync,
     startDetachedUpgrade,
     VERSION,
 } from '../../../src/upgrade/installation.js';
@@ -75,6 +77,76 @@ describe('installation', function () {
 
             const method = await detectMethodAsync(commandRunner);
             expect(method).to.equal('npm');
+        });
+    });
+
+    describe('isVersionInstalledAsync', function () {
+        const installedVersionCases: Array<{
+            method: InstallMethod;
+            command: string;
+            output: string;
+        }> = [
+            {
+                method: 'npm',
+                command: 'npm list -g bkper --depth=0',
+                output: '└── bkper@5.0.0',
+            },
+            {
+                method: 'bun',
+                command: 'bun pm ls -g',
+                output: '└── bkper@5.0.0',
+            },
+            {
+                method: 'yarn',
+                command: 'yarn global list --depth=0',
+                output: 'info "bkper@5.0.0" has binaries:',
+            },
+        ];
+
+        for (const {method, command, output} of installedVersionCases) {
+            it(`should detect the exact globally installed version for ${method}`, async function () {
+                const commandRunner = sinon.stub().resolves(output);
+
+                const installed = await isVersionInstalledAsync(
+                    method,
+                    '5.0.0',
+                    commandRunner
+                );
+
+                expect(installed).to.be.true;
+                expect(commandRunner.calledOnceWithExactly(command, 10000)).to.be.true;
+            });
+        }
+
+        it('should not match another package or version', async function () {
+            const commandRunner = sinon.stub().resolves(
+                [
+                    '├── other-bkper@5.0.0',
+                    '├── bkper@5.0.00',
+                    '└── bkper@5.0.0-beta.1',
+                ].join('\n')
+            );
+
+            const installed = await isVersionInstalledAsync('npm', '5.0.0', commandRunner);
+
+            expect(installed).to.be.false;
+        });
+
+        it('should return false when the package-manager command fails', async function () {
+            const commandRunner = sinon.stub().rejects(new Error('command failed'));
+
+            const installed = await isVersionInstalledAsync('npm', '5.0.0', commandRunner);
+
+            expect(installed).to.be.false;
+        });
+
+        it('should return false without running a command for an unknown method', async function () {
+            const commandRunner = sinon.stub();
+
+            const installed = await isVersionInstalledAsync('unknown', '5.0.0', commandRunner);
+
+            expect(installed).to.be.false;
+            expect(commandRunner.called).to.be.false;
         });
     });
 
