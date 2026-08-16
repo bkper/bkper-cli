@@ -16,6 +16,7 @@
     -   Added `bkper app clone <appId> [path]` to safely clone managed app source without installing dependencies or running repository lifecycle scripts
     -   Managed `bkper app sync` and `bkper app deploy` now push committed source with clean-tree and fast-forward safety checks; deploy verifies the exact commit before uploading the existing local build
     -   `bkper app init` now initializes Git on `main` when needed without staging or committing files
+    -   `bkper app init` now leaves dependency installation to the scaffold workflow and provides explicit coding-agent handoff instructions
 
 ### **July 2026**
 
