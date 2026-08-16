@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -6,6 +6,18 @@ interface DocSpec {
     url: string;
     outputPath: string;
 }
+
+interface FetchedDoc {
+    spec: DocSpec;
+    markdown: string;
+}
+
+const BKPER_DOCS_ORIGIN = 'https://bkper.com';
+const APP_DOCS_SOURCE_PREFIX = '/docs/build/apps/';
+const APP_DOCS_MANIFEST_SPEC: DocSpec = {
+    url: `${BKPER_DOCS_ORIGIN}${APP_DOCS_SOURCE_PREFIX}llms-full.txt`,
+    outputPath: 'apps/llms-full.txt',
+};
 
 const DOCS: readonly DocSpec[] = [
     {
@@ -20,11 +32,53 @@ const DOCS: readonly DocSpec[] = [
         url: 'https://bkper.com/docs/api/bkper-api-types.md',
         outputPath: 'sdk/bkper-api-types.md',
     },
-    {
-        url: 'https://bkper.com/docs/build/apps/llms-full.txt',
-        outputPath: 'apps/app-building.md',
-    },
 ];
+
+export function discoverAppDocSpecs(manifest: string): readonly DocSpec[] {
+    const specs: DocSpec[] = [];
+    const outputPaths = new Set<string>();
+    const sourcePattern = /^source:\s*\/docs\/build\/apps\/([a-z0-9][a-z0-9-]*\.md)\s*$/;
+
+    for (const line of manifest.split(/\r?\n/)) {
+        const match = sourcePattern.exec(line.trim());
+        if (!match) {
+            continue;
+        }
+
+        const filename = match[1];
+        const outputPath = `apps/${filename}`;
+        if (outputPaths.has(outputPath)) {
+            throw new Error(
+                `App docs manifest contains duplicate source: ${outputPath}.`
+            );
+        }
+        outputPaths.add(outputPath);
+        specs.push({
+            url: `${BKPER_DOCS_ORIGIN}${APP_DOCS_SOURCE_PREFIX}${filename}`,
+            outputPath,
+        });
+    }
+
+    if (specs.length === 0) {
+        throw new Error(
+            'App docs manifest contains no canonical document sources.'
+        );
+    }
+
+    return specs;
+}
+
+export function findStaleAppDocNames(
+    localNames: readonly string[],
+    appDocSpecs: readonly DocSpec[]
+): readonly string[] {
+    const activeNames = new Set(
+        appDocSpecs.map(spec => path.posix.basename(spec.outputPath))
+    );
+    return localNames
+        .filter(name => name.endsWith('.md') && !activeNames.has(name))
+        .sort();
+}
 
 function resolveOutputDir(): string {
     const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -64,32 +118,46 @@ async function fetchMarkdown(spec: DocSpec): Promise<string> {
     return markdown;
 }
 
-async function syncDoc(spec: DocSpec, outputDir: string): Promise<void> {
-    const markdown = await fetchMarkdown(spec);
-    const outputPath = path.join(outputDir, spec.outputPath);
+async function fetchDoc(spec: DocSpec): Promise<FetchedDoc> {
+    return {
+        spec,
+        markdown: await fetchMarkdown(spec),
+    };
+}
+
+async function writeDoc(doc: FetchedDoc, outputDir: string): Promise<void> {
+    const outputPath = path.join(outputDir, doc.spec.outputPath);
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, markdown, 'utf8');
-    console.log(`✔ ${spec.outputPath}`);
+    await writeFile(outputPath, doc.markdown, 'utf8');
+    console.log(`✔ ${doc.spec.outputPath}`);
+}
+
+async function removeStaleAppDocs(
+    outputDir: string,
+    appDocSpecs: readonly DocSpec[]
+): Promise<void> {
+    const appDocsDir = path.join(outputDir, 'apps');
+    const entries = await readdir(appDocsDir, { withFileTypes: true });
+    const localNames = entries.filter(entry => entry.isFile()).map(entry => entry.name);
+    const staleNames = findStaleAppDocNames(localNames, appDocSpecs);
+
+    await Promise.all(
+        staleNames.map(async name => {
+            await unlink(path.join(appDocsDir, name));
+            console.log(`✔ removed apps/${name}`);
+        })
+    );
 }
 
 async function main(): Promise<void> {
+    const manifest = await fetchMarkdown(APP_DOCS_MANIFEST_SPEC);
+    const appDocSpecs = discoverAppDocSpecs(manifest);
+    const fetchedDocs = await Promise.all([...DOCS, ...appDocSpecs].map(fetchDoc));
+
     const outputDir = resolveOutputDir();
     await mkdir(outputDir, { recursive: true });
-
-    const results = await Promise.allSettled(
-        DOCS.map(spec => syncDoc(spec, outputDir))
-    );
-
-    const failures = results.filter(
-        (r): r is PromiseRejectedResult => r.status === 'rejected'
-    );
-
-    if (failures.length > 0) {
-        for (const f of failures) {
-            console.error(`✘ ${f.reason}`);
-        }
-        process.exit(1);
-    }
+    await Promise.all(fetchedDocs.map(doc => writeDoc(doc, outputDir)));
+    await removeStaleAppDocs(outputDir, appDocSpecs);
 }
 
 function isDirectInvocation(): boolean {

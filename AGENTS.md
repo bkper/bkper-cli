@@ -152,7 +152,7 @@ Derived resources are read-only by default. Do not edit them during normal docum
 | `skill/references/core/core-concepts.md` | `https://bkper.com/docs/core-concepts.md` | `bun run sync:docs` |
 | `skill/references/sdk/bkper-js.md` | `https://bkper.com/docs/api/bkper-js.md` | `bun run sync:docs` |
 | `skill/references/sdk/bkper-api-types.md` | `https://bkper.com/docs/api/bkper-api-types.md` | `bun run sync:docs` |
-| `skill/references/apps/app-building.md` | `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
+| `skill/references/apps/*.md` | Canonical app pages discovered from `https://bkper.com/docs/build/apps/llms-full.txt` | `bun run sync:docs` |
 | `lib/docs/**` | `skill/references/**` | `bun run build:copy-docs` or full build |
 
 Notes:
