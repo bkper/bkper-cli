@@ -2,7 +2,12 @@ import {
     VERSION as PI_VERSION,
     type ExtensionAPI,
 } from '@earendil-works/pi-coding-agent';
-import {getKeybindings, KeybindingsManager, setKeybindings} from '@earendil-works/pi-tui';
+import {
+    getKeybindings,
+    KeybindingsManager,
+    setKeybindings,
+    type KeybindingsConfig,
+} from '@earendil-works/pi-tui';
 import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
 import {registerBkperAgentStartupExtension} from '../../../../src/agent/extensions/startup.js';
@@ -55,7 +60,7 @@ const STARTUP_TEST_KEYBINDINGS = {
 
 function renderStartupHeaderWithKeybindings(
     factory: StartupHeaderFactory,
-    userBindings: Record<string, string | string[]> = {}
+    userBindings: KeybindingsConfig = {}
 ): string {
     const previousKeybindings = getKeybindings();
     setKeybindings(new KeybindingsManager(STARTUP_TEST_KEYBINDINGS, userBindings));

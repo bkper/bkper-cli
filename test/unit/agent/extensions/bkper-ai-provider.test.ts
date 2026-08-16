@@ -12,11 +12,8 @@ function createRefreshContext(): Parameters<
 >[0] {
     return {
         allowNetwork: true,
-        store: {
-            read: async () => undefined,
-            write: async () => {},
-            delete: async () => {},
-        },
+        publish: async () => true,
+        signal: new AbortController().signal,
     };
 }
 

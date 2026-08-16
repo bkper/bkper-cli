@@ -1,13 +1,14 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
+import type { MockBook } from '../../helpers/mock-interfaces.js';
 
 // Import after mock setup
 const { mergeTransactions } = await import('../../../../src/commands/transactions/merge.js');
 
 describe('CLI - transaction merge Command', function () {
     let mergeCalls: Array<[string, string]>;
-    let mockBook: {
-        mergeTransactions: (tx1: string, tx2: string) => Promise<unknown>;
+    let mockBook: MockBook & {
+        mergeTransactions: NonNullable<MockBook['mergeTransactions']>;
     };
 
     beforeEach(function () {
@@ -15,6 +16,7 @@ describe('CLI - transaction merge Command', function () {
         mergeCalls = [];
 
         mockBook = {
+            json: () => ({id: 'book-123'}),
             mergeTransactions: async (tx1: string, tx2: string) => {
                 mergeCalls.push([tx1, tx2]);
                 return {
