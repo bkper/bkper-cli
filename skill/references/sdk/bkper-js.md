@@ -630,6 +630,7 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `getTotalTransactionsCurrentMonth()` → `number` — Gets the total number of posted transactions on current month.
 - `getTotalTransactionsCurrentYear()` → `number` — Gets the total number of posted transactions on current year.
 - `getTransaction(id: string)` → `Promise<Transaction | undefined>` — Retrieve a transaction by id.
+- `getTransactionsByIds(ids: string[])` → `Promise<Transaction[]>` — Retrieve complete transactions by id.
 - `getVisibility()` / `setVisibility(visibility: Visibility)` → `Visibility` — Gets the visibility of the book.
 - `json()` → `bkper.Book` — Gets an immutable copy of the JSON payload for this resource.
 - `listEvents(options: ListEventsOptions)` → `Promise<EventList>` — Lists events in the Book based on the provided options.
@@ -730,6 +731,10 @@ const groups = await book.getGroups();
 const bookWithGroups = await Bkper.getBook(bookId, false, true);
 const groups2 = await bookWithGroups.getGroups(); // Already cached
 ```
+
+**getTransactionsByIds**
+
+Requests are sent sequentially in batches of up to 200 IDs.
 
 **mergeTransactions**
 
