@@ -2,6 +2,7 @@ import { AUTHENTICATION_REQUIRED_MESSAGE } from '../auth/auth-errors.js';
 import { getStoredOAuthToken } from '../auth/local-auth-service.js';
 
 const PUBLIC_BKPER_API_HOST = 'api.bkper.app';
+const BKPER_AI_HOSTS = new Set(['ai.bkper.app', 'ai-dev.bkper.app']);
 const PLATFORM_SESSION_COOKIE_NAMES = new Set([
     'bkper_session',
     'bkper_session_dev',
@@ -25,7 +26,8 @@ export function createLocalOutboundService(options: LocalOutboundOptions): Local
     const forwardFetch = options.forwardFetch ?? ((request: Request) => fetch(request));
 
     return async (request: Request): Promise<Response> => {
-        if (!isAllowedBkperApiRequest(request)) {
+        const service = getAuthorizedBkperService(request);
+        if (!service) {
             return forwardFetch(
                 createForwardRequest(request, new Headers(request.headers), request.redirect)
             );
@@ -42,6 +44,9 @@ export function createLocalOutboundService(options: LocalOutboundOptions): Local
         const headers = new Headers(request.headers);
         headers.set('Authorization', `Bearer ${accessToken}`);
         headers.set('bkper-agent-id', options.appId);
+        if (service === 'ai') {
+            headers.set('bkper-ai-source', options.appId);
+        }
         stripPlatformCookieHeaders(headers);
 
         return forwardFetch(createForwardRequest(request, headers, 'manual'));
@@ -69,9 +74,18 @@ function createForwardRequest(
     return new Request(request.url, init);
 }
 
-function isAllowedBkperApiRequest(request: Request): boolean {
+function getAuthorizedBkperService(request: Request): 'api' | 'ai' | undefined {
     const url = new URL(request.url);
-    return url.protocol === 'https:' && url.host === PUBLIC_BKPER_API_HOST;
+    if (url.protocol !== 'https:') {
+        return undefined;
+    }
+    if (url.host === PUBLIC_BKPER_API_HOST) {
+        return 'api';
+    }
+    if (BKPER_AI_HOSTS.has(url.host)) {
+        return 'ai';
+    }
+    return undefined;
 }
 
 function normalizeBearerToken(token: string | undefined): string | undefined {

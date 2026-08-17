@@ -80,6 +80,37 @@ describe('local-outbound', function () {
         expect(forwardedRequests[0].headers.get('Cookie')).to.equal('app_cookie=1');
     });
 
+    it('injects local OAuth and app identity for exact Bkper AI requests', async function () {
+        const forwardedRequests: Request[] = [];
+        const service = createLocalOutboundService({
+            appId: 'my-app',
+            getAccessToken: async () => 'local-token',
+            forwardFetch: async request => {
+                forwardedRequests.push(request);
+                return createJsonResponse(200, { ok: true });
+            },
+        });
+
+        await service(
+            new Request('https://ai.bkper.app/v1/responses', {
+                headers: {
+                    Authorization: 'Bearer app-token',
+                    'bkper-agent-id': 'spoofed-agent',
+                    'bkper-ai-source': 'spoofed-source',
+                },
+            })
+        );
+        await service(new Request('https://ai-dev.bkper.app/v1/models'));
+
+        expect(forwardedRequests).to.have.length(2);
+        for (const request of forwardedRequests) {
+            expect(request.headers.get('Authorization')).to.equal('Bearer local-token');
+            expect(request.headers.get('bkper-agent-id')).to.equal('my-app');
+            expect(request.headers.get('bkper-ai-source')).to.equal('my-app');
+            expect(request.redirect).to.equal('manual');
+        }
+    });
+
     it('rebuilds forwarded Bkper API requests from primitive fields', async function () {
         const forwardedRequests: Request[] = [];
         const service = createLocalOutboundService({
@@ -143,10 +174,14 @@ describe('local-outbound', function () {
 
         await service(new Request('http://api.bkper.app/v5/books'));
         await service(new Request('https://evil.api.bkper.app/v5/books'));
+        await service(new Request('http://ai.bkper.app/v1/models'));
+        await service(new Request('https://evil.ai.bkper.app/v1/models'));
 
         expect(tokenReads).to.equal(0);
-        expect(forwardedRequests).to.have.length(2);
+        expect(forwardedRequests).to.have.length(4);
         expect(forwardedRequests[0].url).to.equal('http://api.bkper.app/v5/books');
         expect(forwardedRequests[1].url).to.equal('https://evil.api.bkper.app/v5/books');
+        expect(forwardedRequests[2].url).to.equal('http://ai.bkper.app/v1/models');
+        expect(forwardedRequests[3].url).to.equal('https://evil.ai.bkper.app/v1/models');
     });
 });

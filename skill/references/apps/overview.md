@@ -16,6 +16,12 @@ The same Worker can expose app-defined `/api/*` routes. Treat those routes as th
 - Scripts, external clients, and agents can call them too.
 - The default template documents them with an app OpenAPI spec at `/openapi.json`.
 
+### AI inference
+
+When an app needs model inference, use Bkper AI by default. An authenticated app API route or event establishes the user and app identity, then platform outbound supplies authorization and usage attribution for the Worker's Bkper AI requests. The app does not need provider credentials.
+
+See [Add Bkper AI to an App](https://bkper.com/docs/build/apps/ai.md) for live model discovery, strict structured output, validation, and the client-to-Worker authentication flow.
+
 ### Authentication
 
 OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build.
