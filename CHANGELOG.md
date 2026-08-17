@@ -11,6 +11,8 @@
     -   Fixed `Ctrl+H` handoffs to prefill the goal editor with the current input text
     -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
 -   **App Development**
+    -   Added Bkper AI integration support for Platform apps, including local outbound authentication and app attribution, live model discovery, strict structured output, response validation, and error-preservation guidance
+    -   Updated the built-in app-development context to discover and bundle individual canonical app guides from the lightweight documentation index
     -   Added private Bkper-managed Git source for eligible standalone apps; `bkper app sync` configures the managed repository and pushes committed source, while apps with external remotes and monorepo apps keep their existing workflow
     -   Existing standalone apps with no Git remote can now migrate on `bkper app sync`, preserving the App identity and atomically uploading all local branches and tags
     -   Added `bkper app clone <appId> [path]` to safely clone managed app source without installing dependencies or running repository lifecycle scripts
