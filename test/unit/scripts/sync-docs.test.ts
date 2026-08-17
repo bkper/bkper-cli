@@ -6,21 +6,14 @@ import {
 } from '../../../scripts/sync-docs.js';
 
 describe('sync docs validation', function () {
-    it('should discover individual app documents in manifest order', function () {
-        const manifest = `# Apps (Full)
+    it('should discover individual app documents from the lightweight index in order', function () {
+        const index = `# Apps
 
----
-source: /docs/build/apps/overview.md
-
-# Overview
-
----
-source: /docs/build/apps/event-handlers.md
-
-# Event Handlers
+- [Overview](https://bkper.com/docs/build/apps/overview.md): Platform overview.
+- [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md): Event reference.
 `;
 
-        expect(discoverAppDocSpecs(manifest)).to.deep.equal([
+        expect(discoverAppDocSpecs(index)).to.deep.equal([
             {
                 url: 'https://bkper.com/docs/build/apps/overview.md',
                 outputPath: 'apps/overview.md',
@@ -32,24 +25,36 @@ source: /docs/build/apps/event-handlers.md
         ]);
     });
 
-    it('should reject an app manifest without canonical document sources', function () {
-        expect(() => discoverAppDocSpecs('# Apps (Full)')).to.throw(
-            'App docs manifest contains no canonical document sources.'
+    it('should reject an app index without canonical document links', function () {
+        expect(() => discoverAppDocSpecs('# Apps')).to.throw(
+            'App docs index contains no canonical document links.'
         );
     });
 
-    it('should reject duplicate canonical app document sources', function () {
-        const manifest = `source: /docs/build/apps/overview.md
-source: /docs/build/apps/overview.md`;
+    it('should reject duplicate canonical app document links', function () {
+        const index = `- [Overview](https://bkper.com/docs/build/apps/overview.md)
+- [Overview again](https://bkper.com/docs/build/apps/overview.md)`;
 
-        expect(() => discoverAppDocSpecs(manifest)).to.throw(
-            'App docs manifest contains duplicate source: apps/overview.md.'
+        expect(() => discoverAppDocSpecs(index)).to.throw(
+            'App docs index contains duplicate link: apps/overview.md.'
         );
+    });
+
+    it('should ignore links outside the canonical app docs section', function () {
+        const index = `- [AI Provider](https://bkper.com/docs/ai/bkper-ai-provider.md)
+- [Overview](https://bkper.com/docs/build/apps/overview.md)`;
+
+        expect(discoverAppDocSpecs(index)).to.deep.equal([
+            {
+                url: 'https://bkper.com/docs/build/apps/overview.md',
+                outputPath: 'apps/overview.md',
+            },
+        ]);
     });
 
     it('should identify stale app docs in deterministic order', function () {
         const specs = discoverAppDocSpecs(
-            'source: /docs/build/apps/overview.md'
+            '- [Overview](https://bkper.com/docs/build/apps/overview.md)'
         );
 
         expect(

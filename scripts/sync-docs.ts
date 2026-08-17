@@ -14,9 +14,9 @@ interface FetchedDoc {
 
 const BKPER_DOCS_ORIGIN = 'https://bkper.com';
 const APP_DOCS_SOURCE_PREFIX = '/docs/build/apps/';
-const APP_DOCS_MANIFEST_SPEC: DocSpec = {
-    url: `${BKPER_DOCS_ORIGIN}${APP_DOCS_SOURCE_PREFIX}llms-full.txt`,
-    outputPath: 'apps/llms-full.txt',
+const APP_DOCS_INDEX_SPEC: DocSpec = {
+    url: `${BKPER_DOCS_ORIGIN}${APP_DOCS_SOURCE_PREFIX}llms.txt`,
+    outputPath: 'apps/llms.txt',
 };
 
 const DOCS: readonly DocSpec[] = [
@@ -34,13 +34,14 @@ const DOCS: readonly DocSpec[] = [
     },
 ];
 
-export function discoverAppDocSpecs(manifest: string): readonly DocSpec[] {
+export function discoverAppDocSpecs(index: string): readonly DocSpec[] {
     const specs: DocSpec[] = [];
     const outputPaths = new Set<string>();
-    const sourcePattern = /^source:\s*\/docs\/build\/apps\/([a-z0-9][a-z0-9-]*\.md)\s*$/;
+    const linkPattern =
+        /^- \[[^\]]+\]\(https:\/\/bkper\.com\/docs\/build\/apps\/([a-z0-9][a-z0-9-]*\.md)\)(?::.*)?$/;
 
-    for (const line of manifest.split(/\r?\n/)) {
-        const match = sourcePattern.exec(line.trim());
+    for (const line of index.split(/\r?\n/)) {
+        const match = linkPattern.exec(line.trim());
         if (!match) {
             continue;
         }
@@ -49,7 +50,7 @@ export function discoverAppDocSpecs(manifest: string): readonly DocSpec[] {
         const outputPath = `apps/${filename}`;
         if (outputPaths.has(outputPath)) {
             throw new Error(
-                `App docs manifest contains duplicate source: ${outputPath}.`
+                `App docs index contains duplicate link: ${outputPath}.`
             );
         }
         outputPaths.add(outputPath);
@@ -60,9 +61,7 @@ export function discoverAppDocSpecs(manifest: string): readonly DocSpec[] {
     }
 
     if (specs.length === 0) {
-        throw new Error(
-            'App docs manifest contains no canonical document sources.'
-        );
+        throw new Error('App docs index contains no canonical document links.');
     }
 
     return specs;
@@ -150,8 +149,8 @@ async function removeStaleAppDocs(
 }
 
 async function main(): Promise<void> {
-    const manifest = await fetchMarkdown(APP_DOCS_MANIFEST_SPEC);
-    const appDocSpecs = discoverAppDocSpecs(manifest);
+    const index = await fetchMarkdown(APP_DOCS_INDEX_SPEC);
+    const appDocSpecs = discoverAppDocSpecs(index);
     const fetchedDocs = await Promise.all([...DOCS, ...appDocSpecs].map(fetchDoc));
 
     const outputDir = resolveOutputDir();
