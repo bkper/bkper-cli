@@ -235,6 +235,9 @@ bkper transaction create -b abc123 --date 2025-01-15 --amount 23.90 \
 # Create a file-only draft for receipt capture
 bkper transaction create -b abc123 --file ./invoice.pdf
 
+# Get a transaction by id
+bkper transaction get tx_456 -b abc123
+
 # List transactions for a full year (on:YYYY)
 bkper transaction list -b abc123 -q 'on:2025'
 
@@ -275,6 +278,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 <details>
 <summary>Command reference</summary>
 
+-   `transaction get <id> -b <bookId>` - Get a transaction by ID
 -   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results unless `--limit` or `--cursor` is provided)
     -   `--limit <number>` - Fetch one page with up to this many transactions
     -   `--cursor <cursor>` - Cursor for fetching the next page

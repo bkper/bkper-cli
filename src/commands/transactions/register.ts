@@ -6,6 +6,7 @@ import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.j
 import { parseStdinItems } from '../../input/index.js';
 import {
     listTransactionsFormatted,
+    getTransaction,
     createTransaction,
     updateTransaction,
     postTransaction,
@@ -53,6 +54,18 @@ export function registerTransactionCommands(program: Command): void {
                     format
                 );
                 renderListResult(result, format);
+            })()
+        );
+
+    transactionCommand
+        .command('get <transactionId>')
+        .description('Get a transaction by ID')
+        .option('-b, --book <bookId>', 'Book ID')
+        .action((transactionId: string, options) =>
+            withAction('getting transaction', async format => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
+                const transaction = await getTransaction(options.book, transactionId);
+                renderItem(transaction.json(), format);
             })()
         );
 
