@@ -262,6 +262,9 @@ bkper transaction check tx_456 -b abc123
 # Trash a transaction
 bkper transaction trash tx_456 -b abc123
 
+# Restore a transaction from the trash
+bkper transaction untrash tx_456 -b abc123
+
 # Merge two duplicate transactions
 bkper transaction merge tx_123 tx_456 -b abc123
 ```
@@ -295,6 +298,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 -   `transaction post <id> -b <bookId>` - Post a draft transaction
 -   `transaction check <id> -b <bookId>` - Check a transaction
 -   `transaction trash <id> -b <bookId>` - Trash a transaction
+-   `transaction untrash <id> -b <bookId>` - Restore a transaction from the trash
 -   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions
 
 </details>

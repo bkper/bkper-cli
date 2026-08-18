@@ -11,6 +11,7 @@ import {
     postTransaction,
     checkTransaction,
     trashTransaction,
+    untrashTransaction,
     mergeTransactions,
     batchCreateTransactions,
     batchUpdateTransactions,
@@ -191,6 +192,18 @@ export function registerTransactionCommands(program: Command): void {
             withAction('trashing transaction', async format => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await trashTransaction(options.book, transactionId);
+                renderItem(transaction.json(), format);
+            })()
+        );
+
+    transactionCommand
+        .command('untrash <transactionId>')
+        .description('Restore a transaction from the trash')
+        .option('-b, --book <bookId>', 'Book ID')
+        .action((transactionId: string, options) =>
+            withAction('restoring transaction', async format => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
+                const transaction = await untrashTransaction(options.book, transactionId);
                 renderItem(transaction.json(), format);
             })()
         );
