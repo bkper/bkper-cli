@@ -146,6 +146,13 @@ Capture a receipt as a draft, then review and complete it in Bkper or with the a
 bkper transaction create -b <bookId> --file ./receipt.pdf
 ```
 
+For AI-derived transactions, set `draft: true` to bypass Book auto-posting. They stay out of balances until explicitly posted:
+
+```bash
+printf '%s\n' '[{"date":"2026-08-18","amount":"25.50","creditAccount":{"name":"Bank Account"},"debitAccount":{"name":"Meals"},"description":"Extracted receipt","draft":true}]' |
+    bkper transaction create -b <bookId>
+```
+
 > Run `bkper --help` or `bkper <command> --help` for built-in documentation on any command.
 
 → See [Data Management](#data-management) and [App Management](#app-management) below for full references.

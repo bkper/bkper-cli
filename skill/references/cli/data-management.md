@@ -238,6 +238,10 @@ bkper transaction create -b abc123 --description "Office supplies"
 bkper transaction create -b abc123 --date 2025-01-15 --amount 100.50 \
   --from "Bank Account" --to "Office Supplies" --description "Printer paper"
 
+# Keep a complete AI-derived transaction as a draft
+printf '%s\n' '[{"date":"2025-01-15","amount":"100.50","creditAccount":{"name":"Bank Account"},"debitAccount":{"name":"Office Supplies"},"description":"Extracted printer paper","draft":true}]' | \
+  bkper transaction create -b abc123
+
 # Create a transaction with one local attachment
 bkper transaction create -b abc123 --date 2025-01-15 --amount 23.90 \
   --from "Cash" --to "Meals" --description "Team lunch" --file ./receipt.pdf
@@ -540,6 +544,10 @@ python export_bank.py | bkper transaction create -b abc123
 
 The input follows the exact `bkper.Transaction` or `bkper.Account` type from the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts). Custom properties go inside the `properties` object.
 
+### AI-derived transaction safety
+
+Always set `"draft": true` for AI-derived transactions, even when complete. It bypasses Book auto-posting, so the transaction stays out of balances until explicitly posted. Do not rely on missing fields; parsing or Account discovery may complete them.
+
 Groups are created explicitly with `bkper group create --name` and optional `--parent` so hierarchy stays deterministic during setup.
 
 The `--property` CLI flag can override or delete properties from the stdin payload:
@@ -604,6 +612,7 @@ Only the fields below are meaningful when creating or updating resources via std
 | `creditAccount` | `{"name":"..."}` or `{"id":"..."}` | Reference to an existing account              |
 | `debitAccount`  | `{"name":"..."}` or `{"id":"..."}` | Reference to an existing account              |
 | `description`   | `string`                           | Free-text description                         |
+| `draft`         | `boolean`                          | `true` forces a draft and bypasses Book auto-posting |
 | `urls`          | `string[]`                         | Attached URLs (e.g. receipts)                 |
 | `remoteIds`     | `string[]`                         | External IDs to prevent duplicates            |
 | `properties`    | `{"key": "value", ...}`            | Custom key/value properties                   |
