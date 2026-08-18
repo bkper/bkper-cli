@@ -259,6 +259,9 @@ bkper transaction post tx_456 -b abc123
 # Check (reconcile) a transaction
 bkper transaction check tx_456 -b abc123
 
+# Uncheck a transaction
+bkper transaction uncheck tx_456 -b abc123
+
 # Trash a transaction
 bkper transaction trash tx_456 -b abc123
 
@@ -297,6 +300,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
     -   `-p, --property <key=value>` - Set a property (repeatable, empty value deletes)
 -   `transaction post <id> -b <bookId>` - Post a draft transaction
 -   `transaction check <id> -b <bookId>` - Check a transaction
+-   `transaction uncheck <id> -b <bookId>` - Uncheck a transaction
 -   `transaction trash <id> -b <bookId>` - Trash a transaction
 -   `transaction untrash <id> -b <bookId>` - Restore a transaction from the trash
 -   `transaction merge <id1> <id2> -b <bookId>` - Merge two transactions

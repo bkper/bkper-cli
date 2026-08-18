@@ -10,6 +10,7 @@ import {
     updateTransaction,
     postTransaction,
     checkTransaction,
+    uncheckTransaction,
     trashTransaction,
     untrashTransaction,
     mergeTransactions,
@@ -180,6 +181,18 @@ export function registerTransactionCommands(program: Command): void {
             withAction('checking transaction', async format => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await checkTransaction(options.book, transactionId);
+                renderItem(transaction.json(), format);
+            })()
+        );
+
+    transactionCommand
+        .command('uncheck <transactionId>')
+        .description('Uncheck a transaction')
+        .option('-b, --book <bookId>', 'Book ID')
+        .action((transactionId: string, options) =>
+            withAction('unchecking transaction', async format => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
+                const transaction = await uncheckTransaction(options.book, transactionId);
                 renderItem(transaction.json(), format);
             })()
         );

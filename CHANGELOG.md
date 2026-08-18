@@ -20,6 +20,7 @@
     -   `bkper app init` now initializes Git on `main` when needed without staging or committing files
     -   `bkper app init` now leaves dependency installation to the scaffold workflow and provides explicit coding-agent handoff instructions
 -   **Data Management**
+    -   Added `bkper transaction uncheck <transactionId>` to make a checked transaction editable again
     -   Added `bkper transaction untrash <transactionId>` to restore a transaction from the trash
 
 ### **July 2026**
