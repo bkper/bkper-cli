@@ -40,6 +40,12 @@ bkper book create --name "My Company" --fraction-digits 2 \
 # Create a book with custom properties
 bkper book create --name "Project X" -p "code=PX001" -p "department=Engineering"
 
+# Copy a book's structure without transactions
+bkper book copy abc123 --name "My Company Copy"
+
+# Copy a book with transactions from a specific date (source book owner only)
+bkper book copy abc123 --name "My Company 2025" --transactions --from-date 2025-01-01
+
 # Update a book
 bkper book update abc123 --lock-date 2024-12-31
 ```
@@ -58,6 +64,10 @@ bkper book update abc123 --lock-date 2024-12-31
     -   `--time-zone <timezone>` - IANA time zone (e.g. `America/New_York`, `UTC`)
     -   `--period <period>` - Period (`MONTH`, `QUARTER`, or `YEAR`)
     -   `-p, --property <key=value>` - Set a property (repeatable)
+-   `book copy <bookId>` - Copy a book
+    -   `--name <name>` - Name for the copied book (required)
+    -   `--transactions` - Include transactions (source book owner only)
+    -   `--from-date <YYYY-MM-DD>` - Include transactions from this date; requires `--transactions`
 -   `book update <bookId>` - Update a book
     -   `--name <name>` - Book name
     -   `--fraction-digits <digits>` - Number of decimal places (`0`-`8`)

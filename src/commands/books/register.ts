@@ -3,7 +3,7 @@ import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
 import { renderListResult, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
-import { listBooksFormatted, getBook, createBook, updateBook } from './index.js';
+import { listBooksFormatted, getBook, createBook, copyBook, updateBook } from './index.js';
 
 export function registerBookCommands(program: Command): void {
     const bookCommand = program.command('book').description('Manage Books');
@@ -53,6 +53,24 @@ export function registerBookCommands(program: Command): void {
                     timeZone: options.timeZone,
                     period: options.period,
                     property: options.property,
+                });
+                renderItem(book.json(), format);
+            })()
+        );
+
+    bookCommand
+        .command('copy <bookId>')
+        .description('Copy a book')
+        .option('--name <name>', 'Name for the copied book')
+        .option('--transactions', 'Copy transactions (source book owner only)')
+        .option('--from-date <date>', 'Copy transactions from this date (YYYY-MM-DD)')
+        .action((bookId: string, options) =>
+            withAction('copying book', async format => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
+                const book = await copyBook(bookId, {
+                    name: options.name,
+                    transactions: options.transactions,
+                    fromDate: options.fromDate,
                 });
                 renderItem(book.json(), format);
             })()
