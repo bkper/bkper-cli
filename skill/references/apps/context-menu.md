@@ -53,6 +53,53 @@ menuOpenMode: SIDEBAR
 | `EXPANDED` | Opens in a wider panel with more room for complex UIs.                |
 | `NEW_TAB`  | Opens the menu URL in a new browser tab instead of an embedded panel. |
 
+### Live context updates
+
+Bkper keeps embedded Apps informed of context changes without reloading the iframe, allowing them to preserve their current state. For Apps opened in `SIDEBAR` or `EXPANDED`, Bkper communicates those changes by sending the updated App URL to the iframe when its origin remains the same:
+
+```js
+{
+    type: 'bkper:app-url-changed',
+    url: 'https://my-app.bkper.app?bookId=abc123&query=account:Sales',
+}
+```
+
+Listen for the message in the App:
+
+```js
+const BKPER_ORIGIN = 'https://bkper.app';
+
+window.addEventListener('message', event => {
+    // Verify that the trusted Bkper parent sent the message.
+    if (event.source !== window.parent || event.origin !== BKPER_ORIGIN) return;
+
+    // Verify that this is a valid App URL update.
+    const message = event.data;
+    if (message?.type !== 'bkper:app-url-changed' || typeof message.url !== 'string') return;
+
+    // Parse the updated URL, ignoring malformed URL strings.
+    let nextUrl;
+    try {
+        nextUrl = new URL(message.url);
+
+        // Accept only URLs belonging to this App.
+        if (nextUrl.origin !== window.location.origin) return;
+    } catch {
+        return;
+    }
+
+    // Keep the iframe URL in sync without reloading it.
+    window.history.replaceState(window.history.state, '', nextUrl);
+
+    // Apply the validated context update.
+    handleAppUrlChange(nextUrl);
+});
+```
+
+`handleAppUrlChange` is App logic. The App can update internal state, notify components, refresh data, change its UI, or ignore the message. Bkper only communicates the new URL; it does not reload the iframe or apply the context inside the App.
+
+Apps opened with `NEW_TAB` do not receive this message. Their context is set only by the URL used to open the tab.
+
 ### Available expressions
 
 The menu URL supports these dynamic expressions:

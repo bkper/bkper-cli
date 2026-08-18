@@ -95,7 +95,9 @@ deployment:
 | `menuText`     | Custom menu text (defaults to app name).                                    |
 | `menuOpenMode` | How the app menu opens: `SIDEBAR` (default), `EXPANDED`, or `NEW_TAB`.      |
 
-See [Context Menu](https://bkper.com/docs/build/apps/context-menu.md) for details on building menu integrations.
+`SIDEBAR` and `EXPANDED` Apps can receive live context updates while their iframe stays loaded. `NEW_TAB` Apps receive context only in the URL used to open the tab.
+
+See [Context Menu](https://bkper.com/docs/build/apps/context-menu.md#live-context-updates) for menu URL configuration and live context updates.
 
 ### Menu URL variables
 
