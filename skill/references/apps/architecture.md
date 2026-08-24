@@ -200,59 +200,9 @@ Platform outbound authentication injects the validated user's OAuth token on Bkp
 
 ### Authorize app operations
 
-Platform authentication identifies the Bkper user and provides outbound authentication for server-side Bkper requests. Your app must still decide which authenticated users may perform each operation. Protect sensitive data and actions in the server API; client-side checks may improve the UI, but they are not an authorization boundary.
+Authentication identifies the Bkper user, but each app must authorize sensitive data and actions server-side. Client-side checks are not an authorization boundary.
 
-#### Restrict an internal app by user domain
-
-For an app intended only for people in one organization, authorize the authenticated user's hosted domain:
-
-```ts
-const ALLOWED_DOMAIN = 'example.com';
-
-const user = await context.bkper.getUser();
-const domain = user.getHostedDomain()?.toLowerCase();
-
-if (domain !== ALLOWED_DOMAIN) {
-    return c.json(buildApiError('FORBIDDEN', 'This app is restricted to your organization'), 403);
-}
-```
-
-#### Authorize a Book-backed operation
-
-When an operation acts on a Book, use an explicit permission allowlist appropriate to that operation. For an operation that requires edit access:
-
-```ts
-import { Permission } from 'bkper-js';
-
-const EDIT_PERMISSIONS: readonly Permission[] = [Permission.EDITOR, Permission.OWNER];
-
-const book = await context.bkper.getBook(bookId);
-
-if (!EDIT_PERMISSIONS.includes(book.getPermission())) {
-    return c.json(
-        buildApiError('FORBIDDEN', 'Editor or owner permission required for this operation'),
-        403
-    );
-}
-```
-
-Read, posting, and other operations may require different policies. Choose the minimum authorization appropriate to the behavior instead of treating every authenticated user as authorized.
-
-#### Require app installation
-
-Having permission to access a Book does not mean the app is installed in that Book. If an app is only supposed to be used with Books where it is installed, verify installation:
-
-```ts
-const APP_ID = 'my-app';
-
-const book = await context.bkper.getBook(bookId);
-const installedApps = await book.getApps();
-const isInstalled = installedApps.some(app => app.getId() === APP_ID);
-
-if (!isInstalled) {
-    return c.json(buildApiError('FORBIDDEN', 'This app is not installed in this Book'), 403);
-}
-```
+See [App Security](https://bkper.com/docs/build/apps/security.md) for domain restrictions, Book permissions, and app installation checks.
 
 ## Event handlers
 

@@ -63,6 +63,7 @@ For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data 
 - `references/apps/ai.md` — Bkper AI integration for Platform apps: authenticated `/api/*` request flow, outbound authorization and app attribution, live model discovery, strict structured output, response validation, error preservation, data minimization, and unit-test boundaries.
 - `references/apps/first-app.md` — First-app walkthrough: scaffold, install, run locally, trigger an event, customize the listing, establish shared source, check, and deploy.
 - `references/apps/architecture.md` — App and template architecture: npm workspace structure, Lit/Vite client, Hono Worker, typed `/api/*` contracts, authentication, `/events`, static assets, and supported app shapes.
+- `references/apps/security.md` — App security responsibilities and server-side authorization: platform authentication boundaries, user-domain restrictions, Book permission allowlists, and app installation checks.
 - `references/apps/configuration.md` — Complete `bkper.yaml` reference: identity, branding, ownership, access, context menus, event subscriptions, property schemas, and single-Worker deployment settings.
 - `references/apps/development.md` — Local development: Vite and Worker processes, ports, API proxy, local authentication, secrets, KV, generated environment types, development loop, and debugging.
 - `references/apps/event-handlers.md` — Event handler behavior: `/events` routing, responses, replay, loop prevention, platform and self-hosted authentication, event payloads, and event types.
