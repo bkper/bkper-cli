@@ -1,4 +1,4 @@
-# Self-Hosted Alternative
+# Bkper Self-Hosted Webhooks
 
 The [Bkper Platform](https://bkper.com/docs/build/apps/overview.md) handles hosting, authentication, and deployment for you. However, you can host event handlers on your own infrastructure if you have specific requirements — existing cloud setup, compliance constraints, or legacy apps.
 

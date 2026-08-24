@@ -26,6 +26,7 @@ import {
 import {restorePersistedSessionOptions} from './session-restore.js';
 import {
     applyBkperAgentSettingsDefaults,
+    applyBkperAgentToolSelection,
     collectSettingsDiagnostics,
     createStartupSessionManager,
 } from './settings.js';
@@ -83,6 +84,7 @@ export function createAgentModeDependencies(
                 sessionStartEvent,
             }) => {
                 const settingsManager = SettingsManager.create(cwd, agentDir);
+                const toolDiagnostics = applyBkperAgentToolSelection(settingsManager);
                 const modelRuntime = await ModelRuntime.create({
                     authPath: join(agentDir, 'auth.json'),
                     modelsPath: join(agentDir, 'models.json'),
@@ -100,7 +102,8 @@ export function createAgentModeDependencies(
                     settingsManager,
                     modelRuntime,
                     resourceLoaderOptions: {
-                        systemPromptOverride: () => getBkperAgentSystemPrompt(),
+                        systemPromptOverride: () =>
+                            getBkperAgentSystemPrompt(settingsManager.getDefaultTools()),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
                                 registerBkperAgentBuiltins(
@@ -145,6 +148,7 @@ export function createAgentModeDependencies(
                     services,
                     diagnostics: [
                         ...services.diagnostics,
+                        ...toolDiagnostics,
                         ...collectSettingsDiagnostics(settingsManager, 'runtime creation'),
                         ...restoredSessionOptions.diagnostics,
                     ],

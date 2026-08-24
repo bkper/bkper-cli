@@ -74,8 +74,12 @@ function renderStartupHeaderWithKeybindings(
 
 function registerStartupExtension(
     startupMaintenance = sinon.stub().resolves(),
-    settingsManager?: {getQuietStartup: () => boolean},
-    bkperAiBaseUrlOverride?: string
+    settingsManager?: {
+        getQuietStartup: () => boolean;
+        getShellPath?: () => string | undefined;
+    },
+    bkperAiBaseUrlOverride?: string,
+    bashAvailable?: boolean
 ): {
     sessionStartHandler: RegisteredSessionStartHandler;
     startupMaintenance: typeof startupMaintenance;
@@ -92,7 +96,8 @@ function registerStartupExtension(
         },
         startupMaintenance,
         settingsManager,
-        bkperAiBaseUrlOverride
+        bkperAiBaseUrlOverride,
+        bashAvailable
     );
 
     expect(sessionStartHandler).to.not.equal(undefined);
@@ -168,6 +173,36 @@ describe('Bkper agent startup extension', function () {
         expect(startupMaintenance.calledOnce).to.be.true;
         expect(startupMaintenance.firstCall.args[0]).to.have.property('notify');
         expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
+    });
+
+    it('hides the Bash shortcut when Bash is unavailable', async function () {
+        const notify = sinon.stub();
+        let startupHeaderFactory: StartupHeaderFactory | undefined;
+        const setHeader = sinon
+            .stub()
+            .callsFake((factory: StartupHeaderFactory | undefined) => {
+                startupHeaderFactory = factory;
+            });
+
+        const {sessionStartHandler} = registerStartupExtension(
+            sinon.stub().resolves(),
+            {getQuietStartup: () => false},
+            undefined,
+            false
+        );
+
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify, setHeader},
+                modelRegistry: {getAvailable: () => []},
+            }
+        );
+
+        const headerText = startupHeaderFactory
+            ? renderStartupHeaderWithKeybindings(startupHeaderFactory)
+            : '';
+        expect(headerText).to.not.include('to run bash');
     });
 
     it('suppresses the header override when quietStartup is enabled', async function () {

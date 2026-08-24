@@ -1,6 +1,7 @@
 import {
     createBashToolDefinition,
     createEditToolDefinition,
+    createPowerShellToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
 } from '@earendil-works/pi-coding-agent';
@@ -70,17 +71,18 @@ function normalizePromptGuidelines(guidelines: string[] | undefined): string[] {
     return Array.from(unique);
 }
 
-function getCodingToolDefinitions() {
+function getCodingToolDefinitions(selectedTools: string[]) {
     return [
         createReadToolDefinition(process.cwd()),
         createBashToolDefinition(process.cwd()),
+        createPowerShellToolDefinition(process.cwd()),
         createEditToolDefinition(process.cwd()),
         createWriteToolDefinition(process.cwd()),
-    ];
+    ].filter(definition => selectedTools.includes(definition.name));
 }
 
-function buildToolPromptSection(): string {
-    const toolDefinitions = getCodingToolDefinitions();
+function buildToolPromptSection(selectedTools: string[]): string {
+    const toolDefinitions = getCodingToolDefinitions(selectedTools);
     const toolLines = toolDefinitions
         .flatMap(definition => {
             const snippet = normalizePromptSnippet(definition.promptSnippet);
@@ -99,9 +101,15 @@ function buildToolPromptSection(): string {
         guidelineLines.push(`- ${normalized}`);
     };
 
-    addGuideline(
-        'Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.'
-    );
+    if (selectedTools.includes('powershell')) {
+        addGuideline(
+            'Use PowerShell for discovery and search. Use it to run bkper CLI commands when relevant.'
+        );
+    } else if (selectedTools.includes('bash')) {
+        addGuideline(
+            'Use bash for discovery and search like ls, rg, and find. Use it to run bkper CLI commands when relevant.'
+        );
+    }
     for (const definition of toolDefinitions) {
         for (const guideline of normalizePromptGuidelines(definition.promptGuidelines)) {
             addGuideline(guideline);
@@ -115,14 +123,16 @@ function buildToolPromptSection(): string {
     )}`;
 }
 
-export function getBkperAgentSystemPrompt(): string {
+export function getBkperAgentSystemPrompt(
+    selectedTools: string[] = ['read', 'bash', 'edit', 'write']
+): string {
     const coreConceptsPath = resolveReferenceDocPath('core/core-concepts.md');
     const indexPath = resolveDocsIndexPath('index.md');
     const referenceDocsDir = path.dirname(indexPath);
     const piRoot = resolvePiPackageRoot();
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');
-    return `${BKPER_AGENT_SYSTEM_PROMPT}
+    return `${buildBkperOperatingContext(selectedTools)}
 ## Required Reading
 
 Bkper's accounting model is intentionally non-standard. Generic accounting knowledge — debit/credit, account categories, sign conventions — will lead you to wrong answers here.
@@ -171,7 +181,8 @@ ${piExamplesPath}
 `;
 }
 
-export const BKPER_AGENT_SYSTEM_PROMPT = `# Bkper Context
+function buildBkperOperatingContext(selectedTools: string[]): string {
+    return `# Bkper Context
 
 You are a Bkper team member.
 
@@ -179,7 +190,7 @@ Protect the zero-sum invariant above all else.
 
 You help users by reading files, executing commands, editing code, and writing new files.
 
-${buildToolPromptSection()}
+${buildToolPromptSection(selectedTools)}
 
 ## IMPORTANT Operating Principles
 
@@ -194,3 +205,11 @@ ${buildToolPromptSection()}
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
 - Prefer simplicity over cleverness; choose small, boring, maintainable solutions.
 `;
+}
+
+export const BKPER_AGENT_SYSTEM_PROMPT = buildBkperOperatingContext([
+    'read',
+    'bash',
+    'edit',
+    'write',
+]);

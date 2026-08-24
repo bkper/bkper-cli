@@ -32,6 +32,7 @@ type ExtensionLoadError = {
 type BuiltinsSettings = {
     getQuietStartup(): boolean;
     getCompactionReserveTokens(): number;
+    getShellPath(): string | undefined;
 };
 
 // Pi currently labels inline extension factories as <inline:N>.

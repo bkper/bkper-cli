@@ -1,4 +1,4 @@
-# Event Handlers
+# Bkper Webhooks and Event Handlers
 
 Event handlers are the code that reacts to events in your Bkper Books. When a transaction is checked, an account is created, or any other event occurs, your handler receives it and can take action — calculate taxes, sync data between books, post to external services, and more.
 

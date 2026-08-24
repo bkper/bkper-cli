@@ -1,9 +1,3 @@
-import {
-    createBashToolDefinition,
-    createEditToolDefinition,
-    createReadToolDefinition,
-    createWriteToolDefinition,
-} from '@earendil-works/pi-coding-agent';
 import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
@@ -17,22 +11,19 @@ describe('agent system prompt', function () {
         expect(full).to.include(path.resolve('skill', 'references', 'core', 'core-concepts.md'));
     });
 
-    it('should assemble tool guidance from pi tool definitions', function () {
-        const full = getBkperAgentSystemPrompt();
-        const definitions = [
-            createReadToolDefinition(process.cwd()),
-            createBashToolDefinition(process.cwd()),
-            createEditToolDefinition(process.cwd()),
-            createWriteToolDefinition(process.cwd()),
-        ];
-        expect(full).to.include('Available tools:');
-        for (const definition of definitions) {
-            if (definition.promptSnippet) {
-                expect(full).to.include(`- ${definition.name}: ${definition.promptSnippet}`);
-            }
-            for (const guideline of definition.promptGuidelines ?? []) {
-                expect(full).to.include(`- ${guideline}`);
-            }
-        }
+    it('should describe the selected PowerShell tool without adding the Pi prompt', function () {
+        const full = getBkperAgentSystemPrompt([
+            'read',
+            'powershell',
+            'edit',
+            'write',
+        ]);
+
+        expect(full).to.match(/^# Bkper Context/);
+        expect(full).to.include('- powershell: Execute PowerShell commands');
+        expect(full).to.not.include('- bash:');
+        expect(full).to.include(
+            'Use PowerShell for discovery and search. Use it to run bkper CLI commands when relevant.'
+        );
     });
 });

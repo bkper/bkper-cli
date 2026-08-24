@@ -1,5 +1,6 @@
 import {getKeybindings} from '@earendil-works/pi-tui';
 import {
+    getShellConfig,
     keyText,
     VERSION as PI_VERSION,
     type ExtensionAPI,
@@ -90,6 +91,15 @@ function formatStartupHint(theme: Theme, key: string, description: string): stri
     return theme.fg('dim', key) + theme.fg('muted', ` ${description}`);
 }
 
+function isBashAvailable(shellPath?: string): boolean {
+    try {
+        getShellConfig(shellPath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function formatHandoffStartupCommand(): string {
     const shortcut = getBkperHandoffShortcut(getKeybindings().getResolvedBindings());
     return shortcut ? `/handoff (${shortcut})` : '/handoff';
@@ -98,7 +108,8 @@ function formatHandoffStartupCommand(): string {
 function buildStartupHeaderLines(
     theme: Theme,
     modelRegistry: ModelRegistryLike,
-    width: number
+    width: number,
+    showBashShortcut: boolean
 ): string[] {
     const lines = [
         ...BKPER_BANNER.map(line => theme.bold(theme.fg('accent', line))),
@@ -130,8 +141,11 @@ function buildStartupHeaderLines(
             formatHandoffStartupCommand(),
             'to continue in a focused session'
         ),
-        formatStartupHint(theme, '!', 'to run bash'),
     ];
+
+    if (showBashShortcut) {
+        lines.push(formatStartupHint(theme, '!', 'to run bash'));
+    }
 
     if (modelRegistry.getAvailable().length === 0) {
         lines.push(
@@ -146,10 +160,12 @@ function buildStartupHeaderLines(
 }
 
 function createStartupHeaderFactory(
-    modelRegistry: ModelRegistryLike
+    modelRegistry: ModelRegistryLike,
+    showBashShortcut: boolean
 ): StartupHeaderFactory {
     return (_tui, theme) => ({
-        render: (width: number) => buildStartupHeaderLines(theme, modelRegistry, width),
+        render: (width: number) =>
+            buildStartupHeaderLines(theme, modelRegistry, width, showBashShortcut),
         invalidate: () => {},
     });
 }
@@ -157,14 +173,20 @@ function createStartupHeaderFactory(
 export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
-    settingsManager?: {getQuietStartup(): boolean},
-    bkperAiBaseUrlOverride?: string
+    settingsManager?: {
+        getQuietStartup(): boolean;
+        getShellPath?(): string | undefined;
+    },
+    bkperAiBaseUrlOverride?: string,
+    bashAvailable: boolean = isBashAvailable(settingsManager?.getShellPath?.())
 ): void {
     let startupMaintenanceTriggered = false;
 
     pi.on('session_start', async (_event, ctx) => {
         if (!settingsManager?.getQuietStartup()) {
-            ctx.ui.setHeader(createStartupHeaderFactory(ctx.modelRegistry));
+            ctx.ui.setHeader(
+                createStartupHeaderFactory(ctx.modelRegistry, bashAvailable)
+            );
         }
 
         if (startupMaintenanceTriggered) {
