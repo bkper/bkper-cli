@@ -77,6 +77,7 @@ function registerStartupExtension(
     settingsManager?: {
         getQuietStartup: () => boolean;
         getShellPath?: () => string | undefined;
+        getDefaultTools?: () => string[] | undefined;
     },
     bkperAiBaseUrlOverride?: string,
     bashAvailable?: boolean
@@ -175,7 +176,7 @@ describe('Bkper agent startup extension', function () {
         expect(startupMaintenance.firstCall.args[0].notify).to.be.a('function');
     });
 
-    it('hides the Bash shortcut when Bash is unavailable', async function () {
+    it('hides the Bash shortcut when Bash is not a selected tool', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;
         const setHeader = sinon
@@ -186,9 +187,10 @@ describe('Bkper agent startup extension', function () {
 
         const {sessionStartHandler} = registerStartupExtension(
             sinon.stub().resolves(),
-            {getQuietStartup: () => false},
-            undefined,
-            false
+            {
+                getQuietStartup: () => false,
+                getDefaultTools: () => ['read', 'powershell', 'edit', 'write'],
+            }
         );
 
         await sessionStartHandler(

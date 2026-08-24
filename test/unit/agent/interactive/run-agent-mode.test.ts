@@ -33,6 +33,45 @@ describe('runAgentMode', function () {
         expect((startupError as Error).message).to.include('BKPER_AI_BASE_URL');
     });
 
+    it('applies forced PowerShell selection to runtime tools and prompt', async function () {
+        const previousPlatform = process.env.BKPER_AGENT_FORCE_PLATFORM;
+        const previousAutoUpdate = process.env.BKPER_DISABLE_AUTOUPDATE;
+        process.env.BKPER_AGENT_FORCE_PLATFORM = 'win32';
+        process.env.BKPER_DISABLE_AUTOUPDATE = '1';
+
+        try {
+            const {runtime} = await createAgentModeDependencies({
+                noSession: true,
+            }).createRuntime();
+
+            try {
+                expect(runtime.session.getActiveToolNames()).to.deep.equal([
+                    'read',
+                    'powershell',
+                    'edit',
+                    'write',
+                ]);
+                expect(runtime.session.systemPrompt).to.include(
+                    '- powershell: Execute PowerShell commands'
+                );
+                expect(runtime.session.systemPrompt).to.not.include('- bash:');
+            } finally {
+                await runtime.dispose();
+            }
+        } finally {
+            if (previousPlatform === undefined) {
+                delete process.env.BKPER_AGENT_FORCE_PLATFORM;
+            } else {
+                process.env.BKPER_AGENT_FORCE_PLATFORM = previousPlatform;
+            }
+            if (previousAutoUpdate === undefined) {
+                delete process.env.BKPER_DISABLE_AUTOUPDATE;
+            } else {
+                process.env.BKPER_DISABLE_AUTOUPDATE = previousAutoUpdate;
+            }
+        }
+    });
+
     it('creates the runtime and runs interactive mode', async function () {
         const calls: string[] = [];
         const fakeRuntime = createFakeRuntime();

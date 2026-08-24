@@ -103,7 +103,7 @@ function buildToolPromptSection(selectedTools: string[]): string {
 
     if (selectedTools.includes('powershell')) {
         addGuideline(
-            'Use PowerShell for discovery and search. Use it to run bkper CLI commands when relevant.'
+            'Use PowerShell for file operations like listing, searching, and finding files. Use it to run bkper CLI commands when relevant.'
         );
     } else if (selectedTools.includes('bash')) {
         addGuideline(

@@ -176,16 +176,21 @@ export function registerBkperAgentStartupExtension(
     settingsManager?: {
         getQuietStartup(): boolean;
         getShellPath?(): string | undefined;
+        getDefaultTools?(): string[] | undefined;
     },
     bkperAiBaseUrlOverride?: string,
-    bashAvailable: boolean = isBashAvailable(settingsManager?.getShellPath?.())
+    bashAvailable?: boolean
 ): void {
     let startupMaintenanceTriggered = false;
 
     pi.on('session_start', async (_event, ctx) => {
         if (!settingsManager?.getQuietStartup()) {
+            const showBashShortcut =
+                bashAvailable ??
+                ((settingsManager?.getDefaultTools?.()?.includes('bash') ?? true) &&
+                    isBashAvailable(settingsManager?.getShellPath?.()));
             ctx.ui.setHeader(
-                createStartupHeaderFactory(ctx.modelRegistry, bashAvailable)
+                createStartupHeaderFactory(ctx.modelRegistry, showBashShortcut)
             );
         }
 

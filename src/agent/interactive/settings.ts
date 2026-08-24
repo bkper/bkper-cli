@@ -80,14 +80,17 @@ export function applyBkperAgentToolSelection(
     settingsManager: BkperAgentToolSettingsManager,
     platform: NodeJS.Platform = process.platform
 ): AgentSessionRuntimeDiagnostic[] {
+    const forceWindows = process.env.BKPER_AGENT_FORCE_PLATFORM === 'win32';
+    const effectivePlatform = forceWindows ? 'win32' : platform;
     const availability = {
         bash: canResolveShell(() => getShellConfig(settingsManager.getShellPath())),
         powershell:
-            platform === 'win32' && canResolveShell(() => getPowerShellConfig()),
+            effectivePlatform === 'win32' &&
+            (forceWindows || canResolveShell(() => getPowerShellConfig())),
     };
     const resolved = resolveBkperAgentTools(
         settingsManager.getDefaultTools(),
-        platform,
+        effectivePlatform,
         availability
     );
 

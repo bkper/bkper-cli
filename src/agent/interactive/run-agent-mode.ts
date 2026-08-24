@@ -85,6 +85,7 @@ export function createAgentModeDependencies(
             }) => {
                 const settingsManager = SettingsManager.create(cwd, agentDir);
                 const toolDiagnostics = applyBkperAgentToolSelection(settingsManager);
+                const selectedTools = settingsManager.getDefaultTools() ?? [];
                 const modelRuntime = await ModelRuntime.create({
                     authPath: join(agentDir, 'auth.json'),
                     modelsPath: join(agentDir, 'models.json'),
@@ -103,7 +104,7 @@ export function createAgentModeDependencies(
                     modelRuntime,
                     resourceLoaderOptions: {
                         systemPromptOverride: () =>
-                            getBkperAgentSystemPrompt(settingsManager.getDefaultTools()),
+                            getBkperAgentSystemPrompt(selectedTools),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
                                 registerBkperAgentBuiltins(
@@ -122,6 +123,7 @@ export function createAgentModeDependencies(
                             }),
                     },
                 });
+                settingsManager.applyOverrides({defaultTools: selectedTools});
                 applyBkperAgentSettingsDefaults(settingsManager);
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,

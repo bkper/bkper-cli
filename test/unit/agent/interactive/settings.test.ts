@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
 import {
     applyBkperAgentSettingsDefaults,
+    applyBkperAgentToolSelection,
     createStartupSessionManager,
     resolveBkperAgentTools,
 } from '../../../../src/agent/interactive/settings.js';
@@ -27,6 +28,33 @@ describe('interactive agent settings', function () {
         ).to.deep.equal({
             tools: ['read', 'bash', 'edit', 'write'],
         });
+    });
+
+    it('forces PowerShell detection for local development', function () {
+        const previousOverride = process.env.BKPER_AGENT_FORCE_PLATFORM;
+        const applyOverrides = sinon.stub();
+        process.env.BKPER_AGENT_FORCE_PLATFORM = 'win32';
+
+        try {
+            const diagnostics = applyBkperAgentToolSelection({
+                getDefaultTools: () => undefined,
+                getShellPath: () => undefined,
+                applyOverrides,
+            });
+
+            expect(
+                applyOverrides.calledOnceWithExactly({
+                    defaultTools: ['read', 'powershell', 'edit', 'write'],
+                })
+            ).to.be.true;
+            expect(diagnostics).to.deep.equal([]);
+        } finally {
+            if (previousOverride === undefined) {
+                delete process.env.BKPER_AGENT_FORCE_PLATFORM;
+            } else {
+                process.env.BKPER_AGENT_FORCE_PLATFORM = previousOverride;
+            }
+        }
     });
 
     it('falls back to Bash when PowerShell is unavailable on Windows', function () {
