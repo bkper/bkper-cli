@@ -5,6 +5,10 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import {installBkperAuthCommandRouting} from '../extensions/auth-commands.js';
 import {
+    installHandoffGoalEditorAutocomplete,
+    type HandoffGoalEditorHost,
+} from '../extensions/handoff-goal-editor.js';
+import {
     FileAutoHandoffSettings,
     getAutoHandoffSettingsPath,
     installAutoHandoffSettingsIntegration,
@@ -85,6 +89,11 @@ export class BkperInteractiveMode extends InteractiveMode {
                 authRoutingMode as unknown as AutoHandoffSettingsHost,
                 new FileAutoHandoffSettings(getAutoHandoffSettingsPath(getAgentDir()))
             );
+        }
+
+        const handoffGoalMode = this as unknown as Partial<HandoffGoalEditorHost>;
+        if (handoffGoalMode.showExtensionEditor) {
+            installHandoffGoalEditorAutocomplete(handoffGoalMode as HandoffGoalEditorHost);
         }
 
         const providerRegistry = authRoutingMode.session?.modelRuntime;

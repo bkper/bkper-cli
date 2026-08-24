@@ -12,6 +12,7 @@ import {
     type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
 import {type KeyId, type SettingItem} from '@earendil-works/pi-tui';
+import {HANDOFF_GOAL_EDITOR_TITLE} from './handoff-goal-editor.js';
 
 export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
@@ -504,7 +505,10 @@ export function registerBkperHandoffExtension(
             if (!goal) {
                 const goalPrefill = pendingGoalPrefill ?? '';
                 pendingGoalPrefill = undefined;
-                const editedGoal = await context.ui.editor('Next session goal', goalPrefill);
+                const editedGoal = await context.ui.editor(
+                    HANDOFF_GOAL_EDITOR_TITLE,
+                    goalPrefill
+                );
                 if (editedGoal === undefined || !editedGoal.trim()) {
                     context.ui.notify('Handoff cancelled.', 'info');
                     return;

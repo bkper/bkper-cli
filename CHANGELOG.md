@@ -5,12 +5,18 @@
 ### **August 2026**
 
 -   **Agent Experience**
+    -   Added native PowerShell support for the Bkper Agent on Windows, with automatic shell-tool selection and Bash fallback when needed
+    -   Fixed `/connect` and `/disconnect` routing for external model providers after agent runtime updates
+    -   Added safety guidance requiring AI-derived transactions to remain drafts until explicitly approved by a person
     -   Added `/handoff <goal>` and `Ctrl+H` to continue work in a linked, focused session with a generated context draft
+    -   Added prompt-template autocomplete and argument expansion to the handoff goal editor
     -   Added automatic handoff prompts before context compaction, enabled by default and independently configurable from `/settings`
     -   Fixed `Ctrl+H` so the handoff shortcut remains available across agent sessions
     -   Fixed `Ctrl+H` handoffs to prefill the goal editor with the current input text
     -   Fixed npm global installations failing to start agent mode when the Pi TUI dependency was nested
 -   **App Development**
+    -   Added app security guidance for server-side authorization, including user-domain restrictions, Book permission allowlists, and app installation checks
+    -   Expanded app architecture guidance for API ownership, canonical Bkper API types, and server-side authorization boundaries
     -   Added Bkper AI integration support for Platform apps, including local outbound authentication and app attribution, live model discovery, strict structured output, response validation, and error-preservation guidance
     -   Updated the built-in app-development context to discover and bundle individual canonical app guides from the lightweight documentation index
     -   Added private Bkper-managed Git source for eligible standalone apps; `bkper app sync` configures the managed repository and pushes committed source, while apps with external remotes and monorepo apps keep their existing workflow
@@ -19,6 +25,8 @@
     -   Managed `bkper app sync` and `bkper app deploy` now push committed source with clean-tree and fast-forward safety checks; deploy verifies the exact commit before uploading the existing local build
     -   `bkper app init` now initializes Git on `main` when needed without staging or committing files
     -   `bkper app init` now leaves dependency installation to the scaffold workflow and provides explicit coding-agent handoff instructions
+-   **Installation**
+    -   Improved npm package discovery and documented direct execution with `npx bkper`
 -   **Data Management**
     -   Added `bkper book copy <bookId>` with optional transaction and start-date copying
     -   Added `bkper transaction get <transactionId>` to retrieve one transaction directly by ID
