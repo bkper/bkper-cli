@@ -123,8 +123,8 @@ export function createAgentModeDependencies(
                             }),
                     },
                 });
-                settingsManager.applyOverrides({defaultTools: selectedTools});
                 applyBkperAgentSettingsDefaults(settingsManager);
+                settingsManager.applyOverrides({defaultTools: selectedTools});
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,
                     {
