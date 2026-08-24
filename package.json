@@ -1,14 +1,23 @@
 {
     "name": "bkper",
     "version": "4.27.0",
-    "description": "Command line client for Bkper",
+    "description": "Official Bkper CLI for accounting data, automation, apps, and AI agents",
     "bin": {
         "bkper": "./lib/cli.js"
     },
     "repository": "https://github.com/bkper/bkper-cli.git",
-    "homepage": "https://bkper.com/docs",
+    "homepage": "https://bkper.com/docs/build/tools/cli",
     "author": "mael <mael@bkper.com>",
     "license": "Apache-2.0",
+    "keywords": [
+        "bkper",
+        "cli",
+        "accounting",
+        "bookkeeping",
+        "finance",
+        "automation",
+        "ai-agent"
+    ],
     "private": false,
     "main": "./lib/index.js",
     "module": "./lib/index.js",

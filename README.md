@@ -1,8 +1,9 @@
 [Developer Docs]: https://bkper.com/docs
+[CLI Docs]: https://bkper.com/docs/build/tools/cli
 [App Template]: https://github.com/bkper/bkper-app-template
 [Pi]: https://pi.dev/
 
-A unified **interface for [Bkper](https://bkper.com)**. Use `bkper` in two complementary ways:
+The official Bkper CLI is published on npm as [`bkper`](https://www.npmjs.com/package/bkper). Use it in two complementary ways:
 
 -   **Ask the Bkper Agent** — run `bkper` for guided, interactive help in your terminal
 -   **Run CLI commands** — run `bkper <command>` for scripts, exports, automations, and app workflows
@@ -21,7 +22,7 @@ With one tool, you can work with Bkper from your terminal, built-in agent, or ex
 ### Install (choose one)
 
 ```bash tab="npm"
-npm i -g bkper
+npm install -g bkper
 ```
 
 ```bash tab="bun"
@@ -35,6 +36,14 @@ pnpm add -g bkper
 ```bash tab="yarn"
 yarn global add bkper
 ```
+
+Or run it without a global installation:
+
+```bash
+npx bkper
+```
+
+The package and executable are both named `bkper`. See the [CLI Docs] for the dedicated command-line guide.
 
 ### Install on Windows with WSL
 
