@@ -1,3 +1,5 @@
+import {InteractiveMode} from '@earendil-works/pi-coding-agent';
+import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
 import {
     BkperInteractiveMode,
@@ -5,6 +7,10 @@ import {
 } from '../../../../src/agent/interactive/interactive-mode.js';
 
 describe('BkperInteractiveMode', function () {
+    afterEach(function () {
+        sinon.restore();
+    });
+
     it('suppresses the Pi changelog banner', async function () {
         const mode: Record<string, unknown> = {};
 
@@ -16,6 +22,34 @@ describe('BkperInteractiveMode', function () {
 
         expect(typeof mode.getChangelogForDisplay).to.equal('function');
         expect((mode.getChangelogForDisplay as () => unknown)()).to.equal(undefined);
+    });
+
+    it('routes /connect through the session model runtime', async function () {
+        const unregisterProvider = sinon.stub();
+        const registerProvider = sinon.stub();
+        const submitted: string[] = [];
+        const editor = {
+            onSubmit: async (text: string) => {
+                submitted.push(text);
+            },
+        };
+        const mode: Record<string, unknown> = {
+            defaultEditor: editor,
+            session: {
+                modelRuntime: {
+                    unregisterProvider,
+                    registerProvider,
+                },
+            },
+        };
+        sinon.stub(InteractiveMode.prototype, 'init').resolves();
+
+        await BkperInteractiveMode.prototype.init.call(mode);
+        await editor.onSubmit('/connect');
+
+        expect(submitted).to.deep.equal(['/login']);
+        expect(unregisterProvider.calledOnceWithExactly('bkper')).to.equal(true);
+        expect(registerProvider.called).to.equal(false);
     });
 
     it('suppresses the Pi exit resume hint', function () {

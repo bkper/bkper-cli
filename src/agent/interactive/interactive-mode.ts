@@ -71,7 +71,7 @@ export class BkperInteractiveMode extends InteractiveMode {
             };
             showSettingsSelector?: () => void;
             session?: {
-                modelRegistry: {
+                modelRuntime?: {
                     unregisterProvider(name: string): void;
                     registerProvider(
                         name: string,
@@ -87,17 +87,15 @@ export class BkperInteractiveMode extends InteractiveMode {
             );
         }
 
-        if (authRoutingMode.session) {
+        const providerRegistry = authRoutingMode.session?.modelRuntime;
+        if (providerRegistry) {
             const editors = new Set(
                 [authRoutingMode.defaultEditor, authRoutingMode.editor].filter(
                     editor => editor !== undefined
                 )
             );
             for (const editor of editors) {
-                installBkperAuthCommandRouting(
-                    editor,
-                    authRoutingMode.session.modelRegistry
-                );
+                installBkperAuthCommandRouting(editor, providerRegistry);
             }
         }
     }
