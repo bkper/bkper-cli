@@ -14,7 +14,6 @@ my-app/
 │   ├── vite.config.ts
 │   └── src/
 │       ├── api/
-│       ├── app/
 │       ├── auth/
 │       ├── components/
 │       └── services/
@@ -44,10 +43,14 @@ The client uses:
 - [`@bkper/web-design`](https://www.npmjs.com/package/@bkper/web-design) for Bkper design tokens.
 - [Vite](https://vitejs.dev/) for development and production builds, configured in `client/vite.config.ts`.
 
-Client code has two data paths:
+Client code has two data paths. Choose based on who owns the behavior:
 
-- **Direct Bkper calls** use `bkper-js` for browser-specific behavior.
-- **App API calls** use the generated typed client in `client/src/api/` with `auth.authenticatedFetch()`.
+- **Direct Bkper calls** use `bkper-js` for generic Bkper data needed only by the browser UI.
+- **App API calls** use the generated typed client in `client/src/api/` with `auth.authenticatedFetch()` for app-owned behavior, especially when it needs server-only capabilities or more than one caller.
+
+Keep app-owned behavior in one place. Do not implement the same behavior separately in the UI and the app API.
+
+For stateful feature components, co-locate view, controller, and CSS files in one folder under `components/`. Simple presentational components can remain in one file.
 
 ### Client authentication
 
@@ -115,7 +118,7 @@ The default template publishes versioned routes under `/api/v1/*` and exposes th
 | Business behavior            | `server/src/services/`                |
 | Generated client types       | `client/src/api/generated/types.d.ts` |
 | Typed client wrapper         | `client/src/api/app-api.ts`           |
-| Contract snapshot            | `server/test/openapi.snapshot.json`   |
+| Contract snapshot            | `server/test/api/openapi.snapshot.json` |
 
 When changing the API:
 
@@ -125,6 +128,30 @@ When changing the API:
 4. Run `npm run check` before release.
 
 Keep existing `/api/v1/*` contracts backward compatible. Additive fields and routes can remain in `v1`; breaking changes belong in a new namespace such as `/api/v2/*`.
+
+### Reuse Bkper API types
+
+When an app API returns payloads from the Bkper REST API, reference the canonical types from `@bkper/bkper-api-types` instead of recreating their fields in the app. The template's balances endpoint demonstrates this with `bkper.Book`:
+
+```ts
+export const BookSchema = z
+    .custom<bkper.Book>(value => value !== undefined)
+    .openapi('Book', {
+        type: 'object',
+        additionalProperties: true,
+        'x-typescript-type': 'bkper.Book',
+    });
+```
+
+The template's API generator recognizes `x-typescript-type`, imports `@bkper/bkper-api-types`, and emits the canonical reference in `client/src/api/generated/types.d.ts`:
+
+```ts
+Book: bkper.Book;
+```
+
+Both the server and client packages include `@bkper/bkper-api-types` for local typechecking. Run `npm run api` after adding or changing these schemas.
+
+This bridge provides compile-time types but does not validate payload fields at runtime. Use it directly for trusted Bkper-owned responses. Request bodies, especially those used to create or modify Book resources, still require concrete Zod validation.
 
 ### URLs
 
@@ -145,7 +172,7 @@ TOKEN="$(bkper auth token)"
 
 curl \
   -H "Authorization: Bearer ${TOKEN}" \
-  "https://my-app.bkper.app/api/v1/books"
+  "https://my-app.bkper.app/api/v1/ping"
 ```
 
 Replace `my-app` with the app id from `bkper.yaml`.
@@ -155,7 +182,7 @@ Replace `my-app` with the app id from `bkper.yaml`.
 Deployed `/api/*` routes require a Bkper OAuth bearer token. The template client uses `authenticatedFetch()` so token attachment and refresh stay inside `@bkper/web-auth`:
 
 ```ts
-const response = await auth.authenticatedFetch('/api/v1/books');
+const response = await auth.authenticatedFetch('/api/v1/ping');
 ```
 
 Dispatch validates the incoming bearer token and strips the `Authorization` header before the Worker runs. Server code should not read or forward the token.
@@ -170,6 +197,62 @@ const books = await bkper.getBooks();
 ```
 
 Platform outbound authentication injects the validated user's OAuth token on Bkper API requests.
+
+### Authorize app operations
+
+Platform authentication identifies the Bkper user and provides outbound authentication for server-side Bkper requests. Your app must still decide which authenticated users may perform each operation. Protect sensitive data and actions in the server API; client-side checks may improve the UI, but they are not an authorization boundary.
+
+#### Restrict an internal app by user domain
+
+For an app intended only for people in one organization, authorize the authenticated user's hosted domain:
+
+```ts
+const ALLOWED_DOMAIN = 'example.com';
+
+const user = await context.bkper.getUser();
+const domain = user.getHostedDomain()?.toLowerCase();
+
+if (domain !== ALLOWED_DOMAIN) {
+    return c.json(buildApiError('FORBIDDEN', 'This app is restricted to your organization'), 403);
+}
+```
+
+#### Authorize a Book-backed operation
+
+When an operation acts on a Book, use an explicit permission allowlist appropriate to that operation. For an operation that requires edit access:
+
+```ts
+import { Permission } from 'bkper-js';
+
+const EDIT_PERMISSIONS: readonly Permission[] = [Permission.EDITOR, Permission.OWNER];
+
+const book = await context.bkper.getBook(bookId);
+
+if (!EDIT_PERMISSIONS.includes(book.getPermission())) {
+    return c.json(
+        buildApiError('FORBIDDEN', 'Editor or owner permission required for this operation'),
+        403
+    );
+}
+```
+
+Read, posting, and other operations may require different policies. Choose the minimum authorization appropriate to the behavior instead of treating every authenticated user as authorized.
+
+#### Require app installation
+
+Having permission to access a Book does not mean the app is installed in that Book. If an app is only supposed to be used with Books where it is installed, verify installation:
+
+```ts
+const APP_ID = 'my-app';
+
+const book = await context.bkper.getBook(bookId);
+const installedApps = await book.getApps();
+const isInstalled = installedApps.some(app => app.getId() === APP_ID);
+
+if (!isInstalled) {
+    return c.json(buildApiError('FORBIDDEN', 'This app is not installed in this Book'), 403);
+}
+```
 
 ## Event handlers
 

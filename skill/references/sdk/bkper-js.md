@@ -636,7 +636,8 @@ It contains all `Accounts` where `Transactions` are recorded/posted;
 - `listEvents(options: ListEventsOptions)` → `Promise<EventList>` — Lists events in the Book based on the provided options.
 - `listFiles(limit?: number, cursor?: string)` → `Promise<FileList>` — Lists files in the Book, for pagination.
 - `listTransactions(query?: string, limit?: number, cursor?: string)` → `Promise<TransactionList>` — Lists transactions in the Book based on the provided query, limit, and cursor, for pagination.
-- `mergeTransactions(transaction1: string | bkper.Transaction | Transaction, transaction2: string | bkper.Transaction | Transaction)` → `Promise<Transaction>` — Merge two `Transactions` into a single new canonical transaction.
+- `mergeTransactions(primary: string | bkper.Transaction | Transaction, secondary: string | bkper.Transaction | Transaction)` → `Promise<Transaction>` — Merge a primary and secondary `Transaction`. Submitted primary fields
+have highest precedence; an id string sends no field overrides.
 - `parseDate(date: string)` → `Date` — Parse a date string according to date pattern and timezone of the Book. Also parse ISO yyyy-mm-dd format.
 - `parseValue(value: string)` → `Amount | undefined` — Parse a value string according to `DecimalSeparator` and fraction digits of the Book.
 - `remove()` → `Promise<Book>` — Warning!
@@ -735,11 +736,6 @@ const groups2 = await bookWithGroups.getGroups(); // Already cached
 **getTransactionsByIds**
 
 Requests are sent sequentially in batches of up to 200 IDs.
-
-**mergeTransactions**
-
-The merged transaction is created synchronously. Cleanup of the two
-originals is scheduled asynchronously by the backend.
 
 **remove**
 

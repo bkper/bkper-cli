@@ -25,10 +25,10 @@ You can also run them independently: `npm run dev:client` for just the UI, or `n
 | Client (Vite dev server)               | `http://localhost:5173`                     |
 | Server Worker (Miniflare)              | `http://localhost:8787`                     |
 | App API routes                         | `http://localhost:8787/api/*`               |
-| App OpenAPI spec                       | `http://localhost:8787/openapi.json`        |
+| App OpenAPI spec                       | `http://localhost:5173/openapi.json`        |
 | Events (via tunnel to the same Worker) | `https://<random>.trycloudflare.com/events` |
 
-The Vite dev server proxies `/api` requests to `http://localhost:8787` through `client/vite.config.ts`. The app OpenAPI spec is served by the Worker at `http://localhost:8787/openapi.json`. The tunnel URL is automatically registered as `webhookUrlDev`, so development-mode events are routed to your local machine.
+The Vite dev server proxies `/api` and `/openapi.json` requests to `http://localhost:8787` through `client/vite.config.ts`, so the client and OpenAPI spec share the same local origin just as they do in production. The spec also remains available directly from the Worker at `http://localhost:8787/openapi.json`. The tunnel URL is automatically registered as `webhookUrlDev`, so development-mode events are routed to your local machine.
 
 ## Configuration flags
 
@@ -40,13 +40,13 @@ bkper app dev --sp 8787
 
 ## Client configuration
 
-The client dev server is configured in `client/vite.config.ts`. This standard Vite configuration registers local auth middleware and proxies `/api` requests to the Worker.
+The client dev server is configured in `client/vite.config.ts`. This standard Vite configuration registers local auth middleware and proxies `/api` and `/openapi.json` requests to the Worker.
 
 ### Local development authentication
 
 During local development, the Vite dev server runs `createBkperAuthMiddleware()` from `bkper/dev`. It serves the local `/auth/refresh` endpoint used by `@bkper/web-auth`, obtaining OAuth tokens from your CLI credentials.
 
-The separate Vite proxy configuration forwards `/api` requests to the Miniflare Worker.
+The separate Vite proxy configuration forwards `/api` and `/openapi.json` requests to the Miniflare Worker.
 
 Before starting development, run:
 
