@@ -27,7 +27,7 @@ const templates: HandoffPromptTemplate[] = [
 ];
 
 describe('handoff goal editor prompt templates', function () {
-    it('adds prompt-only slash autocomplete and expands arguments on submit', async function () {
+    it('expands selected slash prompts for review and expands arguments on submit', async function () {
         let autocompleteProvider: AutocompleteProvider | undefined;
         const host: HandoffGoalEditorHost = {
             showExtensionEditor: async () => {
@@ -67,7 +67,27 @@ describe('handoff goal editor prompt templates', function () {
                     description: '<file> [focus] — Review a file',
                 },
             ],
-            prefix: '/rev',
+            prefix: '',
+        });
+
+        const selected = suggestions?.items[0];
+        expect(selected).to.not.equal(undefined);
+        if (!selected) {
+            throw new Error('Expected a slash prompt suggestion');
+        }
+        const completion = autocompleteProvider?.applyCompletion(
+            ['/rev'],
+            0,
+            4,
+            selected,
+            suggestions.prefix
+        );
+        const expanded =
+            'Review  with general checks. First extra: . Missing: none. All: ';
+        expect(completion).to.deep.equal({
+            lines: [expanded],
+            cursorLine: 0,
+            cursorCol: expanded.length,
         });
 
         const afterArgument = await autocompleteProvider?.getSuggestions(

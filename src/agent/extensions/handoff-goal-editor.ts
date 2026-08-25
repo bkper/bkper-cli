@@ -137,13 +137,27 @@ function createPromptTemplateAutocompleteProvider(
             if (cursorLine !== 0 || !/^\/[^\s]*$/.test(textBeforeCursor)) {
                 return null;
             }
-            return provider.getSuggestions(lines, cursorLine, cursorCol, {
-                ...options,
-                force: false,
-            });
+            const suggestions = await provider.getSuggestions(
+                lines,
+                cursorLine,
+                cursorCol,
+                {...options, force: false}
+            );
+            return suggestions ? {...suggestions, prefix: ''} : null;
         },
-        applyCompletion: (lines, cursorLine, cursorCol, item, prefix) =>
-            provider.applyCompletion(lines, cursorLine, cursorCol, item, prefix),
+        applyCompletion(lines, cursorLine, cursorCol, item) {
+            const template = templates.find(candidate => candidate.name === item.value);
+            if (!template) {
+                return {lines, cursorLine, cursorCol};
+            }
+            const expandedLines = substituteArgs(template.content, []).split('\n');
+            const expandedCursorLine = Math.max(0, expandedLines.length - 1);
+            return {
+                lines: expandedLines,
+                cursorLine: expandedCursorLine,
+                cursorCol: expandedLines[expandedCursorLine]?.length ?? 0,
+            };
+        },
         shouldTriggerFileCompletion: () => false,
     };
 }
