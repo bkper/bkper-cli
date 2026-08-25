@@ -73,6 +73,17 @@
         "tar": "^7.5.22",
         "yaml": "^2.8.3"
     },
+    "overrides": {
+        "external-editor": {
+            "tmp": "0.2.7"
+        },
+        "miniflare": {
+            "undici": "7.29.0"
+        },
+        "mocha": {
+            "serialize-javascript": "7.1.0"
+        }
+    },
     "devDependencies": {
         "@bkper/bkper-api-types": "^5.44.0",
         "@types/chai": "^4.3.0",
