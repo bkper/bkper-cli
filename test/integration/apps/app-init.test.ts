@@ -52,18 +52,14 @@ describe('Integration: app init', function () {
         expect(packageLock.packages[''].name).to.equal(APP_NAME);
     });
 
-    it('should initialize Git without creating a commit', async function () {
+    it('should preserve the parent Git repository without creating a nested repository', async function () {
         this.timeout(5000);
 
         if (!appDir) {
             appDir = await stateManager.getApp('init');
         }
 
-        expect(fs.existsSync(path.join(appDir, '.git'))).to.be.true;
-        expect(fs.readFileSync(path.join(appDir, '.git/HEAD'), 'utf8').trim()).to.equal(
-            'ref: refs/heads/main'
-        );
-        expect(fs.existsSync(path.join(appDir, '.git/refs/heads/main'))).to.be.false;
+        expect(fs.existsSync(path.join(appDir, '.git'))).to.be.false;
     });
 
     it('should not install dependencies', async function () {

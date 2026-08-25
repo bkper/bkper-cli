@@ -144,8 +144,8 @@ export class AppStateManager {
         this.copyDirectory(installedPath, targetPath);
         this.linkLocalBkper(targetPath);
 
-        // Build client assets and the server Worker bundle
-        await runCommand('bun', ['x', 'vite', 'build'], targetPath);
+        // Build client assets through the root workspace orchestrator, then bundle the Worker.
+        await runCommand('bun', ['run', 'build:client'], targetPath);
         await runCli(['app', 'build'], targetPath);
     }
 
