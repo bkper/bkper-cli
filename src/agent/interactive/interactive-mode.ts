@@ -6,6 +6,7 @@ import {
 import {installBkperAuthCommandRouting} from '../extensions/auth-commands.js';
 import {
     installHandoffGoalEditorAutocomplete,
+    installHandoffGoalEditorPromptHistory,
     type HandoffGoalEditorHost,
 } from '../extensions/handoff-goal-editor.js';
 import {
@@ -14,6 +15,14 @@ import {
     installAutoHandoffSettingsIntegration,
     type AutoHandoffSettingsHost,
 } from '../extensions/handoff.js';
+import {
+    installPromptHistoryEditor,
+    type PromptHistoryEditor,
+} from './prompt-history-search.js';
+import {
+    FilePromptHistory,
+    getPromptHistoryPath,
+} from './prompt-history-store.js';
 import {
     installBkperSessionKeybindings,
     type BkperKeybindingsManager,
@@ -64,12 +73,8 @@ export class BkperInteractiveMode extends InteractiveMode {
         await super.init();
 
         const authRoutingMode = this as unknown as {
-            defaultEditor?: {
-                onSubmit?: (text: string) => void | Promise<void>;
-            };
-            editor?: {
-                onSubmit?: (text: string) => void | Promise<void>;
-            };
+            defaultEditor?: PromptHistoryEditor;
+            editor?: PromptHistoryEditor;
             editorContainer?: {
                 children: unknown[];
             };
@@ -91,9 +96,15 @@ export class BkperInteractiveMode extends InteractiveMode {
             );
         }
 
+        const promptHistory = new FilePromptHistory(
+            getPromptHistoryPath(getAgentDir())
+        );
+
         const handoffGoalMode = this as unknown as Partial<HandoffGoalEditorHost>;
         if (handoffGoalMode.showExtensionEditor) {
-            installHandoffGoalEditorAutocomplete(handoffGoalMode as HandoffGoalEditorHost);
+            const handoffGoalHost = handoffGoalMode as HandoffGoalEditorHost;
+            installHandoffGoalEditorPromptHistory(handoffGoalHost, promptHistory);
+            installHandoffGoalEditorAutocomplete(handoffGoalHost);
         }
 
         const providerRegistry = authRoutingMode.session?.modelRuntime;
@@ -106,6 +117,15 @@ export class BkperInteractiveMode extends InteractiveMode {
             for (const editor of editors) {
                 installBkperAuthCommandRouting(editor, providerRegistry);
             }
+        }
+
+        const editors = new Set(
+            [authRoutingMode.defaultEditor, authRoutingMode.editor].filter(
+                editor => editor !== undefined
+            )
+        );
+        for (const editor of editors) {
+            installPromptHistoryEditor(editor, promptHistory);
         }
     }
 

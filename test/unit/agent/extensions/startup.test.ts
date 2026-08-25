@@ -55,7 +55,7 @@ const STARTUP_TEST_KEYBINDINGS = {
     'app.editor.external': {defaultKeys: 'ctrl+g'},
     'app.session.resume': {defaultKeys: 'ctrl+s'},
     'app.session.fork': {defaultKeys: 'ctrl+x'},
-    'app.session.tree': {defaultKeys: 'ctrl+r'},
+    'app.session.tree': {defaultKeys: 'ctrl+alt+r'},
 } as const;
 
 function renderStartupHeaderWithKeybindings(
@@ -160,7 +160,7 @@ describe('Bkper agent startup extension', function () {
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
-        expect(headerText).to.include('/tree (ctrl+r)');
+        expect(headerText).to.include('/tree (ctrl+alt+r)');
         expect(headerText).to.include('/handoff (ctrl+h)');
         expect(
             startupHeaderFactory
@@ -293,7 +293,7 @@ describe('Bkper agent startup extension', function () {
         expect(headerText).to.include('to branch from a message');
         expect(headerText).to.include('/clone');
         expect(headerText).to.include('to duplicate session');
-        expect(headerText).to.include('/tree (ctrl+r)');
+        expect(headerText).to.include('/tree (ctrl+alt+r)');
         expect(headerText).to.include('Use /login for Bkper AI');
         expect(headerText).to.include('/connect for another model provider');
         expect(notify.called).to.be.false;

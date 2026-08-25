@@ -43,8 +43,24 @@ describe('interactive session keybindings', function () {
         expect(userBindings).to.deep.equal({
             'tui.editor.cursorRight': 'ctrl+x',
             'app.session.resume': 'ctrl+s',
-            'app.session.tree': 'ctrl+r',
+            'app.session.tree': 'ctrl+alt+r',
         });
+    });
+
+    it('migrates the previous Bkper tree shortcut for Ctrl+R history search', function () {
+        let userBindings: Record<string, string | string[] | undefined> = {
+            'app.session.tree': 'ctrl+r',
+        };
+        const keybindings = {
+            getUserBindings: () => userBindings,
+            setUserBindings: (nextBindings: Record<string, string | string[] | undefined>) => {
+                userBindings = nextBindings;
+            },
+        };
+
+        applyBkperSessionKeybindings(keybindings);
+
+        expect(userBindings['app.session.tree']).to.equal('ctrl+alt+r');
     });
 
     it('reapplies Bkper session keybindings after keybindings reload', function () {
@@ -64,7 +80,7 @@ describe('interactive session keybindings', function () {
 
         expect(userBindings).to.deep.equal({
             'app.session.resume': 'ctrl+s',
-            'app.session.tree': 'ctrl+r',
+            'app.session.tree': 'ctrl+alt+r',
             'app.session.fork': 'ctrl+x',
         });
     });

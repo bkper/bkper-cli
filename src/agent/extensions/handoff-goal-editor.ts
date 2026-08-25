@@ -2,6 +2,11 @@ import {
     CombinedAutocompleteProvider,
     type AutocompleteProvider,
 } from '@earendil-works/pi-tui';
+import {
+    installPromptHistorySearch,
+    type PromptHistoryEditor,
+} from '../interactive/prompt-history-search.js';
+import type {PromptHistoryRepository} from '../interactive/prompt-history-store.js';
 
 export const HANDOFF_GOAL_EDITOR_TITLE = 'Next session goal';
 
@@ -13,7 +18,13 @@ export interface HandoffPromptTemplate {
 }
 
 interface HandoffGoalEditor {
+    autocompleteProvider?: AutocompleteProvider;
     setAutocompleteProvider(provider: AutocompleteProvider): void;
+    requestAutocomplete?(options: {force: boolean; explicitTab: boolean}): void;
+    isShowingAutocomplete?(): boolean;
+    getText?(): string;
+    setText?(text: string): void;
+    handleInput?(data: string): void;
 }
 
 export interface HandoffGoalEditorHost {
@@ -134,6 +145,33 @@ function createPromptTemplateAutocompleteProvider(
         applyCompletion: (lines, cursorLine, cursorCol, item, prefix) =>
             provider.applyCompletion(lines, cursorLine, cursorCol, item, prefix),
         shouldTriggerFileCompletion: () => false,
+    };
+}
+
+export function installHandoffGoalEditorPromptHistory(
+    host: HandoffGoalEditorHost,
+    history: PromptHistoryRepository
+): void {
+    const showExtensionEditor = host.showExtensionEditor.bind(host);
+
+    host.showExtensionEditor = async (title, prefill) => {
+        if (title !== HANDOFF_GOAL_EDITOR_TITLE) {
+            return showExtensionEditor(title, prefill);
+        }
+
+        const result = showExtensionEditor(title, prefill);
+        queueMicrotask(() => {
+            const editor = host.extensionEditor?.editor;
+            if (editor?.getText && editor.setText && editor.handleInput) {
+                installPromptHistorySearch(editor as PromptHistoryEditor, history, false);
+            }
+        });
+
+        const goal = await result;
+        if (goal?.trim()) {
+            history.record(goal, 'handoff');
+        }
+        return goal;
     };
 }
 

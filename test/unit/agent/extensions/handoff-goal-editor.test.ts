@@ -1,9 +1,12 @@
 import type {AutocompleteProvider} from '@earendil-works/pi-tui';
+import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
+import {PromptHistoryAutocompleteProvider} from '../../../../src/agent/interactive/prompt-history-search.js';
 import {
     expandHandoffGoalTemplate,
     HANDOFF_GOAL_EDITOR_TITLE,
     installHandoffGoalEditorAutocomplete,
+    installHandoffGoalEditorPromptHistory,
     type HandoffGoalEditorHost,
     type HandoffPromptTemplate,
 } from '../../../../src/agent/extensions/handoff-goal-editor.js';
@@ -74,6 +77,63 @@ describe('handoff goal editor prompt templates', function () {
             {signal: new AbortController().signal}
         );
         expect(afterArgument).to.equal(null);
+    });
+
+    it('records submitted handoff goals and searches without Bash inputs', async function () {
+        let text = 'current handoff goal';
+        let activeProvider: AutocompleteProvider | undefined;
+        const originalHandleInput = sinon.stub();
+        const requestAutocomplete = sinon.stub();
+        const recorded: Array<{text: string; kind: string}> = [];
+        const entries = [
+            {text: '!bun test', kind: 'bash' as const, timestamp: 2},
+            {text: 'reused handoff prompt', kind: 'handoff' as const, timestamp: 1},
+        ];
+        const host: HandoffGoalEditorHost = {
+            showExtensionEditor: async () => {
+                host.extensionEditor = {
+                    editor: {
+                        get autocompleteProvider() {
+                            return activeProvider;
+                        },
+                        setAutocompleteProvider: provider => {
+                            activeProvider = provider;
+                        },
+                        getText: () => text,
+                        setText: value => {
+                            text = value;
+                        },
+                        handleInput: originalHandleInput,
+                        requestAutocomplete,
+                        isShowingAutocomplete: () => true,
+                    },
+                };
+                return 'submitted handoff goal';
+            },
+        };
+
+        installHandoffGoalEditorPromptHistory(host, {
+            getEntries: () => entries,
+            record: (value, kind) => recorded.push({text: value, kind}),
+        });
+        installHandoffGoalEditorAutocomplete(host);
+
+        const result = host.showExtensionEditor(HANDOFF_GOAL_EDITOR_TITLE);
+        await Promise.resolve();
+        host.extensionEditor?.editor?.handleInput?.('\x12');
+
+        expect(await result).to.equal('submitted handoff goal');
+        expect(activeProvider).to.be.instanceOf(PromptHistoryAutocompleteProvider);
+        const suggestions = await activeProvider?.getSuggestions([''], 0, 0, {
+            signal: new AbortController().signal,
+        });
+        expect(suggestions?.items.map(item => item.value)).to.deep.equal([
+            'reused handoff prompt',
+        ]);
+        expect(requestAutocomplete.calledOnce).to.equal(true);
+        expect(recorded).to.deep.equal([
+            {text: 'submitted handoff goal', kind: 'handoff'},
+        ]);
     });
 
     it('preserves free-form and unknown slash goals', function () {

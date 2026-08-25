@@ -11,9 +11,11 @@ export type BkperKeybindingsManager = {
 
 const BKPER_SESSION_KEYBINDINGS = {
     'app.session.resume': 'ctrl+s',
-    'app.session.tree': 'ctrl+r',
+    'app.session.tree': 'ctrl+alt+r',
     'app.session.fork': 'ctrl+x',
 } as const;
+
+const LEGACY_BKPER_TREE_SHORTCUT = 'ctrl+r';
 
 const installedBkperKeybindingsManagers = new WeakSet<BkperKeybindingsManager>();
 
@@ -51,6 +53,17 @@ export function applyBkperSessionKeybindings(
     let changed = false;
 
     for (const [keybinding, shortcut] of Object.entries(BKPER_SESSION_KEYBINDINGS)) {
+        if (
+            keybinding === 'app.session.tree' &&
+            typeof nextBindings[keybinding] === 'string' &&
+            nextBindings[keybinding].toLowerCase() === LEGACY_BKPER_TREE_SHORTCUT &&
+            !isShortcutClaimedByUserBinding(userBindings, keybinding, shortcut)
+        ) {
+            nextBindings[keybinding] = shortcut;
+            changed = true;
+            continue;
+        }
+
         if (
             nextBindings[keybinding] !== undefined ||
             isShortcutClaimedByUserBinding(userBindings, keybinding, shortcut)

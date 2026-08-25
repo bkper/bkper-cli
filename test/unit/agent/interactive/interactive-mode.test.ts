@@ -5,6 +5,7 @@ import {
     BkperInteractiveMode,
     suppressPiResumeHintOutput,
 } from '../../../../src/agent/interactive/interactive-mode.js';
+import {FilePromptHistory} from '../../../../src/agent/interactive/prompt-history-store.js';
 
 describe('BkperInteractiveMode', function () {
     afterEach(function () {
@@ -28,7 +29,13 @@ describe('BkperInteractiveMode', function () {
         const unregisterProvider = sinon.stub();
         const registerProvider = sinon.stub();
         const submitted: string[] = [];
+        let editorText = '';
         const editor = {
+            getText: () => editorText,
+            setText: (text: string) => {
+                editorText = text;
+            },
+            handleInput: sinon.stub(),
             onSubmit: async (text: string) => {
                 submitted.push(text);
             },
@@ -43,6 +50,7 @@ describe('BkperInteractiveMode', function () {
             },
         };
         sinon.stub(InteractiveMode.prototype, 'init').resolves();
+        sinon.stub(FilePromptHistory.prototype, 'record');
 
         await BkperInteractiveMode.prototype.init.call(mode);
         await editor.onSubmit('/connect');
