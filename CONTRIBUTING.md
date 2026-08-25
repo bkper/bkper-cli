@@ -67,12 +67,19 @@ bun run test:unit
 
 ---
 
+## Changelog policy
+
+-   Add user-facing changes under `[Unreleased]` using the existing domain categories.
+-   Before a release, move those entries under `[version] - YYYY-MM-DD`, add a fresh `[Unreleased]` section, and commit the changelog.
+-   Omit versions that have no user-facing changelog entry.
+
 ## Release workflow
 
 Releases are automated and **tag-driven**.
 
 1. Start from a clean, up-to-date `main`
-2. Run one of:
+2. Finalize and commit the changelog as described above
+3. Run one of:
 
 ```bash
 bun run release:patch
@@ -80,7 +87,7 @@ bun run release:minor
 bun run release:major
 ```
 
-3. Push the release commit and tag:
+4. Push the release commit and tag:
 
 ```bash
 git push origin main --follow-tags
