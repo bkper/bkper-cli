@@ -46,6 +46,8 @@ Sync preserves the existing App identity, activates managed source, configures i
 
 When scaffolding, developing, or deploying an app, verify each step before proceeding. This prevents broken deployments and silent failures.
 
+For app implementation, refactoring, or code review, first read the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md). After implementation, review the changed code against the guidelines and run the project's deterministic checks. A successful build does not replace this quality review.
+
 ### 1. Init
 
 ```bash

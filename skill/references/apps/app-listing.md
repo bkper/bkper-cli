@@ -49,6 +49,7 @@ To make your app available to all Bkper users, contact us at [support@bkper.com]
 ### What the review involves
 
 - **Functionality check** — The app works correctly and handles errors gracefully
+- **Quality review** — The implementation follows the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md)
 - **Security review** — Event handlers are idempotent and include loop prevention
 - **Listing quality** — The app has a clear name, description, logo, and user-facing documentation
 

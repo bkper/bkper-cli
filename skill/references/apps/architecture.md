@@ -4,6 +4,8 @@ Bkper platform apps use one Worker bundle per app and environment. The same Work
 
 Treat `/api/*` as the reusable surface for app behavior. The bundled web client is one consumer; scripts, external clients, and agents can call the same routes with bearer authentication.
 
+Follow the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md) when implementing, changing, or reviewing an app.
+
 ## Structure
 
 ```txt

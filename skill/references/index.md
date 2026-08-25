@@ -4,6 +4,8 @@ Reference docs for Bkper tasks. Load only the specific doc(s) relevant to the ta
 
 For Bkper data, accounting, reporting, tax, or financial-flow tasks, read `core/core-concepts.md` first.
 
+For Bkper app implementation, refactoring, or code review, always read `apps/quality.md` alongside the task-specific references. After implementation, review the changed code against the guidelines before considering the work complete.
+
 - `core/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
 - `cli/data-management.md` — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, per-account balance queries, query operators (on:, after:, before:, account:, group:), output formats (table/json/csv), human-review Bkper UI links, batch operations via stdin/piping, collections.
 - `cli/app-management.md` — CLI reference for building and deploying Bkper apps: init/git clone/credential helpers, dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference (identity, branding, events, menu integration, deployment).
@@ -11,6 +13,7 @@ For Bkper data, accounting, reporting, tax, or financial-flow tasks, read `core/
 - `apps/ai.md` — Bkper AI integration for Platform apps: authenticated `/api/*` request flow, outbound authorization and app attribution, live model discovery, strict structured output, response validation, error preservation, data minimization, and unit-test boundaries.
 - `apps/first-app.md` — First-app walkthrough: scaffold, install, run locally, trigger an event, customize the listing, establish shared source, check, and deploy.
 - `apps/architecture.md` — App and template architecture: npm workspace structure, Lit/Vite client, Hono Worker, typed `/api/*` contracts, authentication, `/events`, static assets, and supported app shapes.
+- `apps/quality.md` — Cross-cutting quality guidance for Bkper apps: UI consistency, immediate first rendering, typed API contracts, cohesive low-coupling modules, separation of business behavior from connectors and storage, security, and final implementation review. Load for app implementation, refactoring, or review tasks.
 - `apps/security.md` — App security responsibilities and server-side authorization: platform authentication boundaries, user-domain restrictions, Book permission allowlists, and app installation checks.
 - `apps/configuration.md` — Complete `bkper.yaml` reference: identity, branding, ownership, access, context menus, event subscriptions, property schemas, and single-Worker deployment settings.
 - `apps/development.md` — Local development: Vite and Worker processes, ports, API proxy, local authentication, secrets, KV, generated environment types, development loop, and debugging.

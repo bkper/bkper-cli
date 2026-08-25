@@ -2,6 +2,8 @@
 
 Apps can add context menu items on the Transactions page **More** menu in your Books. This lets you open dynamically built URLs with reference to the current Book's context — the active query, selected account, date range, and more.
 
+Embedded interfaces should follow the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md) for visual consistency, startup behavior, and Book-context verification.
+
 ## How it works
 
 Once you install an App with a menu configuration, a new menu item appears in your Book:

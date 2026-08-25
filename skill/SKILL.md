@@ -54,6 +54,8 @@ This is not optional and prior accounting intuition does not substitute for it.
 
 Read local `AGENTS.md`, nearby files, and existing tests first for project-specific work.
 
+For Bkper app implementation, refactoring, or code review, always read `references/apps/quality.md` alongside the task-specific references. After implementation, review the changed code against the guidelines before considering the work complete.
+
 For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data management, financial reports, taxes, accountant recommendations, app development, or safe `bkper` CLI operations — read the most specific reference document(s) directly:
 
 - `references/core/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
@@ -63,6 +65,7 @@ For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data 
 - `references/apps/ai.md` — Bkper AI integration for Platform apps: authenticated `/api/*` request flow, outbound authorization and app attribution, live model discovery, strict structured output, response validation, error preservation, data minimization, and unit-test boundaries.
 - `references/apps/first-app.md` — First-app walkthrough: scaffold, install, run locally, trigger an event, customize the listing, establish shared source, check, and deploy.
 - `references/apps/architecture.md` — App and template architecture: npm workspace structure, Lit/Vite client, Hono Worker, typed `/api/*` contracts, authentication, `/events`, static assets, and supported app shapes.
+- `references/apps/quality.md` — Cross-cutting quality guidance for Bkper apps: UI consistency, immediate first rendering, typed API contracts, cohesive low-coupling modules, separation of business behavior from connectors and storage, security, and final implementation review. Load for app implementation, refactoring, or review tasks.
 - `references/apps/security.md` — App security responsibilities and server-side authorization: platform authentication boundaries, user-domain restrictions, Book permission allowlists, and app installation checks.
 - `references/apps/configuration.md` — Complete `bkper.yaml` reference: identity, branding, ownership, access, context menus, event subscriptions, property schemas, and single-Worker deployment settings.
 - `references/apps/development.md` — Local development: Vite and Worker processes, ports, API proxy, local authentication, secrets, KV, generated environment types, development loop, and debugging.
