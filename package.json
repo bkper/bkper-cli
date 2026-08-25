@@ -66,12 +66,12 @@
         "bkper-js": "^2.42.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
-        "esbuild": "^0.27.2",
+        "esbuild": "^0.28.1",
         "google-auth-library": "^10.5.0",
         "mime": "^4.1.0",
         "openapi-fetch": "^0.15.0",
-        "tar": "^7.0.0",
-        "yaml": "^2.5.1"
+        "tar": "^7.5.22",
+        "yaml": "^2.8.3"
     },
     "devDependencies": {
         "@bkper/bkper-api-types": "^5.44.0",
