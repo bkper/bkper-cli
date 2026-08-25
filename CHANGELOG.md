@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [4.29.0] - 2026-08-25
+
+-   **Agent Experience**
+    -   Added persistent global fuzzy input-history search with `Ctrl+R` in standard and handoff editors, and moved the session tree shortcut to `Ctrl+Alt+R`
+    -   Changed handoff prompt-template completion to expand the selected prompt into the goal editor for review before starting the handoff
+-   **App Development**
+    -   Added cross-cutting app quality guidance for user interfaces, startup behavior, typed API contracts, module boundaries, security, and final implementation review
+
 ## [4.28.0] - 2026-08-24
 
 -   **Agent Experience**
