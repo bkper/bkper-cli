@@ -162,6 +162,7 @@ describe('Bkper agent startup extension', function () {
         expect(headerText).to.include('to duplicate session');
         expect(headerText).to.include('/tree (ctrl+alt+r)');
         expect(headerText).to.include('/handoff (ctrl+h)');
+        expect(headerText).to.include('ctrl+r to search prompt history');
         expect(
             startupHeaderFactory
                 ? renderStartupHeaderWithKeybindings(startupHeaderFactory, {
@@ -169,6 +170,13 @@ describe('Bkper agent startup extension', function () {
                   })
                 : ''
         ).to.not.include('/handoff (ctrl+h)');
+        expect(
+            startupHeaderFactory
+                ? renderStartupHeaderWithKeybindings(startupHeaderFactory, {
+                      'tui.editor.cursorRight': 'ctrl+r',
+                  })
+                : ''
+        ).to.not.include('ctrl+r to search prompt history');
         expect(headerText).to.not.include('Pi can explain its own features and look up its docs.');
         expect(notify.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;

@@ -6,7 +6,11 @@ import {
     type ExtensionAPI,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
-import {formatBkperSessionCommandShortcut} from '../interactive/session-keybindings.js';
+import {PROMPT_HISTORY_SHORTCUT} from '../interactive/prompt-history-shortcut.js';
+import {
+    formatBkperSessionCommandShortcut,
+    isShortcutClaimedByUserBinding,
+} from '../interactive/session-keybindings.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperHandoffShortcut} from './handoff.js';
 
@@ -118,6 +122,19 @@ function buildStartupHeaderLines(
         formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
         formatStartupHint(theme, keyText('app.clear'), 'to clear'),
         formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
+        ...(!isShortcutClaimedByUserBinding(
+            getKeybindings().getUserBindings(),
+            undefined,
+            PROMPT_HISTORY_SHORTCUT
+        )
+            ? [
+                  formatStartupHint(
+                      theme,
+                      PROMPT_HISTORY_SHORTCUT,
+                      'to search prompt history'
+                  ),
+              ]
+            : []),
         formatStartupHint(theme, '/', 'for commands'),
         formatStartupHint(theme, '/new', 'to start new session'),
         formatStartupHint(

@@ -21,7 +21,7 @@ interface PromptHistoryShortcutHost {
     setupExtensionShortcuts?: (...args: unknown[]) => void;
 }
 
-const PROMPT_HISTORY_SHORTCUT = 'ctrl+r';
+export const PROMPT_HISTORY_SHORTCUT = 'ctrl+r';
 const installedHosts = new WeakSet<PromptHistoryShortcutHost>();
 
 export function installPromptHistoryShortcut(
