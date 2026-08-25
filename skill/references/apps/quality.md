@@ -17,7 +17,8 @@ Always:
 
 Always:
 
-- Use Web Awesome as the primary component library.
+- Prefer Web Awesome for all UI controls. Do not use native controls when Web Awesome provides an equivalent.
+- If no equivalent exists, first compose existing Web Awesome components. Create a reusable Lit web component only when necessary, keeping any native controls encapsulated within it.
 - Style with Bkper design tokens instead of ad-hoc design constants.
 - Support the active Bkper light or dark theme.
 - Keep interactions accessible and provide clear loading, empty, and error states.
