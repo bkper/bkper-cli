@@ -25,7 +25,9 @@ interface InlineAutocompleteEditor extends PromptHistoryEditor {
     isShowingAutocomplete(): boolean;
 }
 
-const searchInstalledEditors = new WeakSet<PromptHistoryEditor>();
+type PromptHistorySearchTrigger = () => boolean;
+
+const searchTriggers = new WeakMap<PromptHistoryEditor, PromptHistorySearchTrigger>();
 const recordingInstalledEditors = new WeakSet<PromptHistoryEditor>();
 const DOWN_KEY_INPUT = '\x1b[B';
 
@@ -103,15 +105,19 @@ export class PromptHistoryAutocompleteProvider implements AutocompleteProvider {
     }
 }
 
-export function installPromptHistorySearch(
+function getPromptHistorySearchTrigger(
     editor: PromptHistoryEditor,
     history: Pick<PromptHistoryRepository, 'getEntries'>,
-    includeBash: boolean
-): void {
-    if (searchInstalledEditors.has(editor) || !supportsInlineAutocomplete(editor)) {
-        return;
+    includeBash: boolean,
+    interceptCtrlR: boolean
+): PromptHistorySearchTrigger | undefined {
+    const installedTrigger = searchTriggers.get(editor);
+    if (installedTrigger) {
+        return installedTrigger;
     }
-    searchInstalledEditors.add(editor);
+    if (!supportsInlineAutocomplete(editor)) {
+        return undefined;
+    }
 
     const handleInput = editor.handleInput.bind(editor);
     let originalProvider: AutocompleteProvider | undefined;
@@ -130,24 +136,30 @@ export function installPromptHistorySearch(
         editor.requestAutocomplete({force: false, explicitTab: true});
     };
 
+    const trigger = (): boolean => {
+        if (searching) {
+            if (editor.isShowingAutocomplete()) {
+                handleInput(DOWN_KEY_INPUT);
+            } else {
+                requestSuggestions();
+            }
+            return true;
+        }
+
+        originalProvider = editor.autocompleteProvider;
+        searching = true;
+        editor.setAutocompleteProvider(
+            new PromptHistoryAutocompleteProvider(history.getEntries(), includeBash)
+        );
+        requestSuggestions();
+        return true;
+    };
+    searchTriggers.set(editor, trigger);
+
     editor.handleInput = (data: string): void => {
         const keybindings = getKeybindings();
-        if (matchesKey(data, 'ctrl+r')) {
-            if (searching) {
-                if (editor.isShowingAutocomplete()) {
-                    handleInput(DOWN_KEY_INPUT);
-                } else {
-                    requestSuggestions();
-                }
-                return;
-            }
-
-            originalProvider = editor.autocompleteProvider;
-            searching = true;
-            editor.setAutocompleteProvider(
-                new PromptHistoryAutocompleteProvider(history.getEntries(), includeBash)
-            );
-            requestSuggestions();
+        if (interceptCtrlR && matchesKey(data, 'ctrl+r')) {
+            trigger();
             return;
         }
 
@@ -181,13 +193,34 @@ export function installPromptHistorySearch(
             requestSuggestions();
         }
     };
+
+    return trigger;
+}
+
+export function installPromptHistorySearch(
+    editor: PromptHistoryEditor,
+    history: Pick<PromptHistoryRepository, 'getEntries'>,
+    includeBash: boolean
+): void {
+    getPromptHistorySearchTrigger(editor, history, includeBash, true);
+}
+
+export function startPromptHistorySearch(
+    editor: PromptHistoryEditor,
+    history: Pick<PromptHistoryRepository, 'getEntries'>,
+    includeBash: boolean
+): boolean {
+    return (
+        getPromptHistorySearchTrigger(editor, history, includeBash, false)?.() ?? false
+    );
 }
 
 export function installPromptHistoryEditor(
     editor: PromptHistoryEditor,
-    history: PromptHistoryRepository
+    history: PromptHistoryRepository,
+    interceptCtrlR = true
 ): void {
-    installPromptHistorySearch(editor, history, true);
+    getPromptHistorySearchTrigger(editor, history, true, interceptCtrlR);
 
     if (recordingInstalledEditors.has(editor)) {
         return;

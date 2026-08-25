@@ -33,9 +33,9 @@ function keybindingConfigIncludesShortcut(
     );
 }
 
-function isShortcutClaimedByUserBinding(
+export function isShortcutClaimedByUserBinding(
     userBindings: KeybindingsConfigLike,
-    targetKeybinding: string,
+    targetKeybinding: string | undefined,
     shortcut: string
 ): boolean {
     return Object.entries(userBindings).some(

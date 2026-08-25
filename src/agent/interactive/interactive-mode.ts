@@ -19,6 +19,7 @@ import {
     installPromptHistoryEditor,
     type PromptHistoryEditor,
 } from './prompt-history-search.js';
+import {installPromptHistoryShortcut} from './prompt-history-shortcut.js';
 import {
     FilePromptHistory,
     getPromptHistoryPath,
@@ -125,7 +126,15 @@ export class BkperInteractiveMode extends InteractiveMode {
             )
         );
         for (const editor of editors) {
-            installPromptHistoryEditor(editor, promptHistory);
+            installPromptHistoryEditor(editor, promptHistory, false);
+        }
+
+        if (interactiveMode.keybindings) {
+            installPromptHistoryShortcut(
+                authRoutingMode,
+                promptHistory,
+                interactiveMode.keybindings
+            );
         }
     }
 
