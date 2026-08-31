@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [4.29.2] - 2026-08-31
+
+-   **Agent Experience**
+    -   Updated the bundled Pi runtime to 0.84.4, including stability fixes for compaction, session resumption, tool-result ordering, Windows shell aborts, and image-heavy output
+-   **App Development**
+    -   Clarified how to put an existing unversioned app under Git before creating Bkper-managed source with `bkper app sync`
+
 ## [4.29.0] - 2026-08-25
 
 -   **Agent Experience**
