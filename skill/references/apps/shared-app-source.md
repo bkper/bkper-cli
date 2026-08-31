@@ -19,7 +19,23 @@ A standalone app becomes eligible for Bkper-managed source when:
 - The working tree is clean and has at least one commit.
 - No Git remote is configured.
 
-`bkper app init` initializes Git on `main`, but it does not create the first commit. Review and commit the app before its first sync:
+If the app source already exists but is not yet versioned, do not run `bkper app init` again. From the directory containing `bkper.yaml`, initialize it and review the files before committing. Update `.gitignore` first so local secrets, dependencies, and build output are not staged.
+
+```bash
+git init -b main
+
+# Review files and update .gitignore before staging
+git status --short
+
+git add .
+
+# Verify exactly what will be committed
+git status --short
+git commit -m "Initial app"
+bkper app sync
+```
+
+For a new app, `bkper app init` initializes Git on `main`, but it does not create the first commit. Review and commit the app before its first sync:
 
 ```bash
 bkper app init my-app
@@ -32,7 +48,7 @@ git commit -m "Initial app"
 bkper app sync
 ```
 
-For an eligible app, `bkper app sync` creates its private Bkper-managed source and configures it as `origin`. The same command also syncs app metadata from `bkper.yaml`.
+For an eligible new or existing app, `bkper app sync` creates its private Bkper-managed source and configures it as `origin`. The same command also syncs app metadata from `bkper.yaml`.
 
 ## Clone and continue together
 
