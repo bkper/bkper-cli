@@ -25,11 +25,6 @@ interface TestContext {
         buildContextEntries: sinon.SinonStub;
         getSessionFile: () => string;
     };
-    getContextUsage: () => {
-        tokens: number | null;
-        contextWindow: number;
-        percent: number | null;
-    };
 }
 
 interface TestCommandContext extends TestContext {
@@ -51,7 +46,7 @@ function createDependencies(): {
     };
 }
 
-function createContext(tokens = 100_000): TestContext {
+function createContext(): TestContext {
     return {
         mode: 'tui',
         model: {provider: 'bkper', id: 'test-model'},
@@ -98,16 +93,11 @@ function createContext(tokens = 100_000): TestContext {
             ]),
             getSessionFile: () => '/sessions/parent.jsonl',
         },
-        getContextUsage: () => ({
-            tokens,
-            contextWindow: 128_000,
-            percent: (tokens / 128_000) * 100,
-        }),
     };
 }
 
-function createCommandContext(tokens = 100_000): TestCommandContext {
-    const context = createContext(tokens) as TestCommandContext;
+function createCommandContext(): TestCommandContext {
+    const context = createContext() as TestCommandContext;
     context.waitForIdle = sinon.stub().resolves();
     context.appendSessionInfo = sinon.stub();
     context.setEditorText = sinon.stub();

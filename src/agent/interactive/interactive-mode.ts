@@ -70,9 +70,6 @@ export class BkperInteractiveMode extends InteractiveMode {
         const authRoutingMode = this as unknown as {
             defaultEditor?: PromptHistoryEditor;
             editor?: PromptHistoryEditor;
-            editorContainer?: {
-                children: unknown[];
-            };
             session?: {
                 modelRuntime?: {
                     unregisterProvider(name: string): void;

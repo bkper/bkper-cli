@@ -29,7 +29,6 @@ type ExtensionLoadError = {
 
 type BuiltinsSettings = {
     getQuietStartup(): boolean;
-    getCompactionReserveTokens(): number;
     getShellPath(): string | undefined;
 };
 
