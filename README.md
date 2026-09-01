@@ -196,8 +196,6 @@ Use `/handoff <goal>` to continue long-running work in a new focused session. If
 
 Press `Ctrl+R` in the standard or handoff input to fuzzy-search recently submitted inputs. Search history starts with inputs submitted after this feature is installed; it does not scan existing sessions. The handoff search omits Bash commands. Press `Ctrl+Alt+R` to open the session tree.
 
-Auto-handoff is enabled by default and offers a handoff shortly before context compaction. Auto-handoff and Auto-compact are independent and can each be turned on or off from `/settings`.
-
 ---
 
 ## Data Management

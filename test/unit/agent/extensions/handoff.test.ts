@@ -1,26 +1,16 @@
-import {mkdtempSync, readFileSync, writeFileSync} from 'node:fs';
+import {mkdtempSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
-import type {ExtensionAPI, ExtensionContext} from '@earendil-works/pi-coding-agent';
+import type {ExtensionAPI} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
 import {
-    AUTO_HANDOFF_LEAD_TOKENS,
-    addAutoHandoffSetting,
-    calculateAutoHandoffThreshold,
-    FileAutoHandoffSettings,
-    getAutoHandoffSettingsPath,
     getBkperHandoffShortcut,
     getBkperHandoffShortcutFromFile,
-    getHandoffReminderThreshold,
-    installAutoHandoffSettingsIntegration,
     registerBkperHandoffExtension,
-    type AutoHandoffSettings,
     type HandoffDependencies,
-    type MutableSettingsList,
 } from '../../../../src/agent/extensions/handoff.js';
 
-type EventHandler = (event: unknown, context: TestContext) => Promise<unknown> | unknown;
 type CommandHandler = (args: string, context: TestCommandContext) => Promise<void>;
 
 interface TestContext {
@@ -48,16 +38,6 @@ interface TestCommandContext extends TestContext {
     appendSessionInfo: sinon.SinonStub;
     setEditorText: sinon.SinonStub;
     replacementNotify: sinon.SinonStub;
-}
-
-function createMemorySettings(enabled = true): AutoHandoffSettings {
-    let current = enabled;
-    return {
-        isEnabled: () => current,
-        setEnabled: value => {
-            current = value;
-        },
-    };
 }
 
 function createDependencies(): {
@@ -146,26 +126,19 @@ function createCommandContext(tokens = 100_000): TestCommandContext {
 }
 
 function registerHandoff(
-    settings = createMemorySettings(),
     dependencies = createDependencies().dependencies,
-    reserveTokens = 16_384,
-    env: Record<string, string | undefined> = {}
+    shortcut: string | undefined = 'ctrl+h'
 ): {
-    handlers: Map<string, EventHandler>;
     command: CommandHandler;
     shortcutHandler: (context: TestContext) => Promise<void> | void;
     dispatchCommand: sinon.SinonStub;
 } {
-    const handlers = new Map<string, EventHandler>();
     let command: CommandHandler | undefined;
     let shortcutHandler: ((context: TestContext) => Promise<void> | void) | undefined;
     const dispatchCommand = sinon.stub().resolves();
 
     registerBkperHandoffExtension(
         {
-            on: ((event: string, handler: EventHandler) => {
-                handlers.set(event, handler);
-            }) as unknown as ExtensionAPI['on'],
             registerCommand: ((_name: string, options: {handler: CommandHandler}) => {
                 command = options.handler;
             }) as unknown as ExtensionAPI['registerCommand'],
@@ -173,18 +146,13 @@ function registerHandoff(
                 shortcutHandler = options.handler;
             }) as unknown as ExtensionAPI['registerShortcut'],
         },
-        settings,
-        () => reserveTokens,
-        dependencies,
-        env,
         dispatchCommand,
-        'ctrl+h'
+        shortcut as 'ctrl+h',
+        dependencies
     );
 
     expect(command).to.not.equal(undefined);
-    expect(shortcutHandler).to.not.equal(undefined);
     return {
-        handlers,
         command: command as CommandHandler,
         shortcutHandler: shortcutHandler as (context: TestContext) => Promise<void> | void,
         dispatchCommand,
@@ -202,10 +170,7 @@ describe('agent handoff', function () {
 
     it('prefills the Ctrl+H goal editor with the current input text', async function () {
         const {dependencies} = createDependencies();
-        const {shortcutHandler, command} = registerHandoff(
-            createMemorySettings(),
-            dependencies
-        );
+        const {shortcutHandler, command} = registerHandoff(dependencies);
         const shortcutContext = createContext();
         shortcutContext.ui.getEditorText.returns('Finish the feature I am describing');
 
@@ -236,16 +201,12 @@ describe('agent handoff', function () {
         const registerShortcut = sinon.stub();
         registerBkperHandoffExtension(
             {
-                on: sinon.stub() as unknown as ExtensionAPI['on'],
                 registerCommand: sinon.stub(),
                 registerShortcut,
             },
-            createMemorySettings(),
-            () => 16_384,
-            createDependencies().dependencies,
-            {},
             sinon.stub().resolves(),
-            shortcut
+            shortcut,
+            createDependencies().dependencies
         );
 
         expect(shortcut).to.equal(undefined);
@@ -253,120 +214,9 @@ describe('agent handoff', function () {
         expect(getBkperHandoffShortcut({})).to.equal('ctrl+h');
     });
 
-    it('places auto-handoff one lead window before auto-compaction', function () {
-        expect(calculateAutoHandoffThreshold(128_000, 16_384)).to.equal(103_424);
-        expect(getHandoffReminderThreshold(103_424)).to.equal(
-            103_424 + AUTO_HANDOFF_LEAD_TOKENS
-        );
-    });
-
-    it('uses a token threshold override from the environment', async function () {
-        const {dependencies} = createDependencies();
-        const {handlers, dispatchCommand} = registerHandoff(
-            createMemorySettings(),
-            dependencies,
-            16_384,
-            {BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS: '10000'}
-        );
-        const belowThreshold = createContext(9_999);
-        const atThreshold = createContext(10_000);
-
-        await handlers.get('agent_settled')?.({}, belowThreshold);
-        await handlers.get('agent_settled')?.({}, atThreshold);
-
-        expect(belowThreshold.ui.editor.called).to.equal(false);
-        expect(atThreshold.ui.editor.called).to.equal(false);
-        expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
-    });
-
-    it('rejects an invalid token threshold override', function () {
-        expect(() =>
-            registerHandoff(
-                createMemorySettings(),
-                createDependencies().dependencies,
-                16_384,
-                {BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS: 'soon'}
-            )
-        ).to.throw('BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS must be a non-negative integer');
-    });
-
-    it('adds an independent auto-handoff toggle to settings', function () {
-        const settings = createMemorySettings();
-        const originalChange = sinon.stub();
-        const baseItem = {
-            id: 'autocompact',
-            label: 'Auto-compact',
-            currentValue: 'true',
-            values: ['true', 'false'],
-        };
-        const items = [baseItem];
-        const settingsList: MutableSettingsList = {
-            items,
-            filteredItems: items,
-            onChange: originalChange,
-        };
-
-        addAutoHandoffSetting(settingsList, settings);
-        settingsList.onChange('auto-handoff', 'false');
-        settingsList.onChange('autocompact', 'false');
-
-        expect(settingsList.items.map(item => item.id)).to.deep.equal([
-            'auto-handoff',
-            'autocompact',
-        ]);
-        expect(settings.isEnabled()).to.equal(false);
-        expect(originalChange.calledOnceWithExactly('autocompact', 'false')).to.equal(true);
-    });
-
-    it('integrates the auto-handoff toggle into the existing settings selector', function () {
-        const settings = createMemorySettings();
-        const items = [
-            {
-                id: 'autocompact',
-                label: 'Auto-compact',
-                currentValue: 'true',
-                values: ['true', 'false'],
-            },
-        ];
-        const settingsList: MutableSettingsList = {
-            items,
-            filteredItems: items,
-            onChange: sinon.stub(),
-        };
-        const host = {
-            editorContainer: {children: [] as unknown[]},
-            showSettingsSelector() {
-                this.editorContainer.children = [
-                    {getSettingsList: () => settingsList},
-                ];
-            },
-        };
-
-        installAutoHandoffSettingsIntegration(host, settings);
-        host.showSettingsSelector();
-        settingsList.onChange('auto-handoff', 'false');
-
-        expect(settingsList.items[0]?.id).to.equal('auto-handoff');
-        expect(settings.isEnabled()).to.equal(false);
-    });
-
-    it('persists auto-handoff globally and defaults to enabled', function () {
-        const directory = mkdtempSync(path.join(tmpdir(), 'bkper-handoff-'));
-        const filePath = getAutoHandoffSettingsPath(directory);
-        const settings = new FileAutoHandoffSettings(filePath);
-
-        expect(settings.isEnabled()).to.equal(true);
-        settings.setEnabled(false);
-
-        expect(new FileAutoHandoffSettings(filePath).isEnabled()).to.equal(false);
-        expect(JSON.parse(readFileSync(filePath, 'utf8'))).to.deep.equal({
-            autoHandoff: {enabled: false},
-        });
-    });
-
     it('uses an explicit goal without opening the goal editor', async function () {
         const {dependencies, generatePrompt} = createDependencies();
-        const {command} = registerHandoff(createMemorySettings(), dependencies);
+        const {command} = registerHandoff(dependencies);
         const context = createCommandContext();
 
         await command('Implement phase two', context);
@@ -399,7 +249,7 @@ describe('agent handoff', function () {
 
     it('opens an empty goal editor when /handoff has no goal', async function () {
         const {dependencies, generatePrompt} = createDependencies();
-        const {command} = registerHandoff(createMemorySettings(), dependencies);
+        const {command} = registerHandoff(dependencies);
         const context = createCommandContext();
         context.ui.editor.resolves('Use my custom goal');
 
@@ -421,7 +271,7 @@ describe('agent handoff', function () {
             cancelledGoal === undefined ? 'cancelled' : 'empty'
         }`, async function () {
             const {dependencies, generatePrompt} = createDependencies();
-            const {command} = registerHandoff(createMemorySettings(), dependencies);
+            const {command} = registerHandoff(dependencies);
             const context = createCommandContext();
             context.ui.editor.resolves(cancelledGoal);
 
@@ -433,64 +283,4 @@ describe('agent handoff', function () {
             expect(context.newSession.called).to.equal(false);
         });
     }
-
-    it('runs the normal handoff command with a one-shot automatic prefill', async function () {
-        const {dependencies, generatePrompt} = createDependencies();
-        const {handlers, command, dispatchCommand} = registerHandoff(
-            createMemorySettings(),
-            dependencies
-        );
-        const context = createContext(103_424);
-
-        await handlers.get('agent_settled')?.({}, context);
-
-        expect(context.ui.editor.called).to.equal(false);
-        expect(dispatchCommand.calledOnceWithExactly('/handoff')).to.equal(true);
-
-        const commandContext = createCommandContext(103_424);
-        commandContext.ui.editor.resolves('Edited automatic goal');
-        await command('', commandContext);
-
-        expect(
-            commandContext.ui.editor.calledOnceWithExactly(
-                'Next session goal',
-                'Continue the current work'
-            )
-        ).to.equal(true);
-        expect(generatePrompt.firstCall.args[0].goal).to.equal('Edited automatic goal');
-    });
-
-    it('snoozes auto-handoff for another lead window after dismissal', async function () {
-        const {dependencies} = createDependencies();
-        const {handlers, command, dispatchCommand} = registerHandoff(
-            createMemorySettings(),
-            dependencies
-        );
-        const context = createContext(103_424);
-        const belowReminder = createContext(110_000);
-        const reminder = createContext(111_616);
-
-        await handlers.get('agent_settled')?.({}, context);
-        expect(dispatchCommand.callCount).to.equal(1);
-
-        const commandContext = createCommandContext(103_424);
-        commandContext.ui.editor.resolves(undefined);
-        await command('', commandContext);
-
-        await handlers.get('agent_settled')?.({}, belowReminder);
-        expect(dispatchCommand.callCount).to.equal(1);
-
-        await handlers.get('agent_settled')?.({}, reminder);
-        expect(dispatchCommand.callCount).to.equal(2);
-    });
-
-    it('does not offer automatic handoff when disabled', async function () {
-        const {dependencies} = createDependencies();
-        const {handlers} = registerHandoff(createMemorySettings(false), dependencies);
-        const context = createContext(120_000);
-
-        await handlers.get('agent_settled')?.({}, context);
-
-        expect(context.ui.editor.called).to.equal(false);
-    });
 });

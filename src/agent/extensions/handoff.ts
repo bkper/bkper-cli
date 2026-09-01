@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import {
@@ -11,14 +11,10 @@ import {
     type ExtensionContext,
     type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
-import {type KeyId, type SettingItem} from '@earendil-works/pi-tui';
-import {HANDOFF_GOAL_EDITOR_TITLE} from './handoff-goal-editor.js';
+import { type KeyId } from '@earendil-works/pi-tui';
+import { HANDOFF_GOAL_EDITOR_TITLE } from './handoff-goal-editor.js';
 
-export const AUTO_HANDOFF_LEAD_TOKENS = 8192;
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
-const AUTO_HANDOFF_SETTING_ID = 'auto-handoff';
-const AUTO_HANDOFF_THRESHOLD_ENV_VAR = 'BKPER_AUTO_HANDOFF_THRESHOLD_TOKENS';
-const DEFAULT_AUTO_HANDOFF_GOAL = 'Continue the current work';
 const MAX_SESSION_NAME_LENGTH = 80;
 
 const HANDOFF_SYSTEM_PROMPT = `You are a context transfer assistant. Given a conversation history and the user's goal for a new thread, generate a focused prompt that:
@@ -44,11 +40,6 @@ Use this structure:
 ## Constraints
 [Important constraints and verification status]`;
 
-export interface AutoHandoffSettings {
-    isEnabled(): boolean;
-    setEnabled(enabled: boolean): void;
-}
-
 export interface HandoffGenerationRequest {
     conversation: string;
     goal?: string;
@@ -60,19 +51,6 @@ export interface HandoffDependencies {
 
 export type HandoffCommandDispatcher = (command: string) => Promise<void>;
 
-export interface MutableSettingsList {
-    items: SettingItem[];
-    filteredItems: SettingItem[];
-    onChange(id: string, newValue: string): void;
-}
-
-export interface AutoHandoffSettingsHost {
-    showSettingsSelector(): void;
-    editorContainer: {
-        children: unknown[];
-    };
-}
-
 type KeybindingsConfigValue = string | string[] | undefined;
 type KeybindingsConfig = Record<string, KeybindingsConfigValue>;
 
@@ -80,13 +58,6 @@ type GenerationOutcome =
     | { status: 'completed'; text: string }
     | { status: 'cancelled' }
     | { status: 'failed'; error: Error };
-
-type StoredBkperSettings = {
-    autoHandoff?: {
-        enabled?: boolean;
-    };
-    [key: string]: unknown;
-};
 
 class HandoffCancelledError extends Error {}
 
@@ -147,144 +118,6 @@ export function getBkperHandoffShortcutFromFile(agentDir: string): KeyId | undef
         return getBkperHandoffShortcut(bindings);
     } catch {
         return BKPER_HANDOFF_SHORTCUT;
-    }
-}
-
-function readStoredSettings(filePath: string): StoredBkperSettings {
-    try {
-        const parsed: unknown = JSON.parse(readFileSync(filePath, 'utf8'));
-        if (!isRecord(parsed)) {
-            return {};
-        }
-
-        const autoHandoff = parsed.autoHandoff;
-        return {
-            ...parsed,
-            autoHandoff: isRecord(autoHandoff)
-                ? {
-                      ...autoHandoff,
-                      enabled:
-                          typeof autoHandoff.enabled === 'boolean'
-                              ? autoHandoff.enabled
-                              : undefined,
-                  }
-                : undefined,
-        };
-    } catch (error) {
-        const code = isRecord(error) ? error.code : undefined;
-        if (code === 'ENOENT' || error instanceof SyntaxError) {
-            return {};
-        }
-        throw error;
-    }
-}
-
-export function calculateAutoHandoffThreshold(
-    contextWindow: number,
-    reserveTokens: number
-): number {
-    return Math.max(0, contextWindow - reserveTokens - AUTO_HANDOFF_LEAD_TOKENS);
-}
-
-export function getHandoffReminderThreshold(lastPromptTokens: number): number {
-    return lastPromptTokens + AUTO_HANDOFF_LEAD_TOKENS;
-}
-
-function getAutoHandoffThresholdOverride(
-    env: Record<string, string | undefined>
-): number | undefined {
-    const configured = env[AUTO_HANDOFF_THRESHOLD_ENV_VAR];
-    if (configured === undefined) {
-        return undefined;
-    }
-
-    const threshold = Number(configured);
-    if (configured.trim() === '' || !Number.isSafeInteger(threshold) || threshold < 0) {
-        throw new Error(`${AUTO_HANDOFF_THRESHOLD_ENV_VAR} must be a non-negative integer.`);
-    }
-    return threshold;
-}
-
-function insertSetting(items: SettingItem[], setting: SettingItem): void {
-    if (items.some(item => item.id === setting.id)) {
-        return;
-    }
-    const autoCompactIndex = items.findIndex(item => item.id === 'autocompact');
-    items.splice(autoCompactIndex >= 0 ? autoCompactIndex : 0, 0, setting);
-}
-
-export function addAutoHandoffSetting(
-    settingsList: MutableSettingsList,
-    settings: AutoHandoffSettings
-): void {
-    const setting: SettingItem = {
-        id: AUTO_HANDOFF_SETTING_ID,
-        label: 'Auto-handoff',
-        description: 'Offer a focused new session shortly before context compaction',
-        currentValue: settings.isEnabled() ? 'true' : 'false',
-        values: ['true', 'false'],
-    };
-    insertSetting(settingsList.items, setting);
-    if (settingsList.filteredItems !== settingsList.items) {
-        insertSetting(settingsList.filteredItems, setting);
-    }
-
-    const originalOnChange = settingsList.onChange.bind(settingsList);
-    settingsList.onChange = (id, newValue) => {
-        if (id === AUTO_HANDOFF_SETTING_ID) {
-            settings.setEnabled(newValue === 'true');
-            return;
-        }
-        originalOnChange(id, newValue);
-    };
-}
-
-function hasSettingsList(value: unknown): value is { getSettingsList(): MutableSettingsList } {
-    return isRecord(value) && typeof value.getSettingsList === 'function';
-}
-
-export function installAutoHandoffSettingsIntegration(
-    host: AutoHandoffSettingsHost,
-    settings: AutoHandoffSettings
-): void {
-    const showSettingsSelector = host.showSettingsSelector.bind(host);
-    host.showSettingsSelector = () => {
-        showSettingsSelector();
-        const selector = host.editorContainer.children.find(hasSettingsList);
-        if (selector) {
-            addAutoHandoffSetting(selector.getSettingsList(), settings);
-        }
-    };
-}
-
-export function getAutoHandoffSettingsPath(agentDir: string): string {
-    return path.join(agentDir, 'bkper-settings.json');
-}
-
-export class FileAutoHandoffSettings implements AutoHandoffSettings {
-    constructor(private readonly filePath: string) {}
-
-    isEnabled(): boolean {
-        return readStoredSettings(this.filePath).autoHandoff?.enabled ?? true;
-    }
-
-    setEnabled(enabled: boolean): void {
-        const current = readStoredSettings(this.filePath);
-        const next: StoredBkperSettings = {
-            ...current,
-            autoHandoff: {
-                ...current.autoHandoff,
-                enabled,
-            },
-        };
-        mkdirSync(path.dirname(this.filePath), { recursive: true });
-        const temporaryPath = `${this.filePath}.${process.pid}.${randomUUID()}.tmp`;
-        try {
-            writeFileSync(temporaryPath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
-            renameSync(temporaryPath, this.filePath);
-        } finally {
-            rmSync(temporaryPath, { force: true });
-        }
     }
 }
 
@@ -447,25 +280,12 @@ async function performHandoff(
 }
 
 export function registerBkperHandoffExtension(
-    pi: Pick<ExtensionAPI, 'on' | 'registerCommand' | 'registerShortcut'>,
-    settings: AutoHandoffSettings,
-    reserveTokens: () => number,
-    dependencies: HandoffDependencies = defaultDependencies,
-    env: Record<string, string | undefined>,
-    dispatchCommand: HandoffCommandDispatcher | undefined,
-    handoffShortcut: KeyId | undefined
+    pi: Pick<ExtensionAPI, 'registerCommand' | 'registerShortcut'>,
+    dispatchCommand?: HandoffCommandDispatcher,
+    handoffShortcut?: KeyId,
+    dependencies: HandoffDependencies = defaultDependencies
 ): void {
-    const thresholdOverride = getAutoHandoffThresholdOverride(env);
-    let lastPromptTokens: number | undefined;
     let pendingGoalPrefill: string | undefined;
-
-    const resetAutomaticState = () => {
-        lastPromptTokens = undefined;
-        pendingGoalPrefill = undefined;
-    };
-
-    pi.on('session_start', resetAutomaticState);
-    pi.on('session_compact', resetAutomaticState);
 
     if (handoffShortcut) {
         pi.registerShortcut(handoffShortcut, {
@@ -519,35 +339,5 @@ export function registerBkperHandoffExtension(
             await context.waitForIdle();
             await performHandoff(goal, context, dependencies);
         },
-    });
-
-    pi.on('agent_settled', async (_event, context) => {
-        if (context.mode !== 'tui' || !settings.isEnabled() || !context.model) {
-            return;
-        }
-        const usage = context.getContextUsage();
-        if (!usage || usage.tokens === null) {
-            return;
-        }
-        const threshold =
-            lastPromptTokens === undefined
-                ? (thresholdOverride ??
-                  calculateAutoHandoffThreshold(usage.contextWindow, reserveTokens()))
-                : getHandoffReminderThreshold(lastPromptTokens);
-        if (usage.tokens < threshold) {
-            return;
-        }
-        lastPromptTokens = usage.tokens;
-
-        if (!dispatchCommand) {
-            context.ui.notify('Automatic handoff command dispatch is unavailable.', 'error');
-            return;
-        }
-
-        pendingGoalPrefill = DEFAULT_AUTO_HANDOFF_GOAL;
-        void dispatchCommand('/handoff').catch(error => {
-            pendingGoalPrefill = undefined;
-            context.ui.notify(`Automatic handoff failed: ${normalizeError(error).message}`, 'error');
-        });
     });
 }

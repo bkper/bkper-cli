@@ -10,12 +10,6 @@ import {
     type HandoffGoalEditorHost,
 } from '../extensions/handoff-goal-editor.js';
 import {
-    FileAutoHandoffSettings,
-    getAutoHandoffSettingsPath,
-    installAutoHandoffSettingsIntegration,
-    type AutoHandoffSettingsHost,
-} from '../extensions/handoff.js';
-import {
     installPromptHistoryEditor,
     type PromptHistoryEditor,
 } from './prompt-history-search.js';
@@ -79,7 +73,6 @@ export class BkperInteractiveMode extends InteractiveMode {
             editorContainer?: {
                 children: unknown[];
             };
-            showSettingsSelector?: () => void;
             session?: {
                 modelRuntime?: {
                     unregisterProvider(name: string): void;
@@ -90,12 +83,6 @@ export class BkperInteractiveMode extends InteractiveMode {
                 };
             };
         };
-        if (authRoutingMode.editorContainer && authRoutingMode.showSettingsSelector) {
-            installAutoHandoffSettingsIntegration(
-                authRoutingMode as unknown as AutoHandoffSettingsHost,
-                new FileAutoHandoffSettings(getAutoHandoffSettingsPath(getAgentDir()))
-            );
-        }
 
         const promptHistory = new FilePromptHistory(
             getPromptHistoryPath(getAgentDir())
