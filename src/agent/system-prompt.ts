@@ -195,7 +195,7 @@ ${buildToolPromptSection(selectedTools)}
 ## IMPORTANT Operating Principles
 
 - Interview me about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer.
-- Ask the questions one at a time.
+- Ask the questions one at a time. Before asking the next question, check whether there is already enough information to start; if so, proceed instead.
 - If a question can be answered by exploring the codebase, explore the codebase instead.
 - Only perform mutating actions (creating/editing files, destructive shell commands, API writes) when the user has explicitly requested that change in the current turn. When exploring, debugging, or unsure, propose the change and wait for confirmation instead of acting.
 - Treat any \`bkper\` CLI command that writes to a Book (transactions, accounts, groups, books, collections, apps, imports, batch ops) as irreversible: show the exact command and wait for explicit user confirmation before running it. Read-only commands (list, get, balances, search, export) need no confirmation.
@@ -203,7 +203,7 @@ ${buildToolPromptSection(selectedTools)}
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
-- Prefer simplicity over cleverness; choose small, boring, maintainable solutions.
+- Avoid overengineering and prefer simplicity over cleverness; choose small, boring, maintainable solutions.
 `;
 }
 
