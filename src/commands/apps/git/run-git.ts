@@ -78,7 +78,7 @@ export async function runGit(
     });
 }
 
-function formatGitFailure(args: string[], result: GitCommandResult): string {
+export function formatGitFailure(args: string[], result: GitCommandResult): string {
     const detail = result.stderr || result.stdout || `exit ${result.exitCode}`;
     // Never include credential helper password protocol output in errors.
     const redacted = detail

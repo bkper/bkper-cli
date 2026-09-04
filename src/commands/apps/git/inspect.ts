@@ -226,11 +226,16 @@ export function requireGitRepository(
         throw new ManagedGitError(
             'NO_GIT_REPOSITORY',
             [
-                'No Git repository found for this App.',
-                'Initialize one at the App root, for example:',
+                'App sync and deployment require source stored in Git.',
+                'Recommended: initialize Bkper-managed private source from the App root:',
                 '  git init -b main',
+                '  # Review .gitignore and the source files before staging.',
+                '  git status --short',
                 '  git add .',
                 '  git commit -m "Initial app"',
+                '  bkper app sync',
+                'Then run the full build and retry deployment.',
+                'The CLI never stages or commits source automatically.',
             ].join('\n')
         );
     }

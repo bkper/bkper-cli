@@ -79,6 +79,7 @@ export async function deployApp(options: DeployOptions = {}): Promise<void> {
     }
 
     // 5. Push managed source before reading existing local build outputs.
+    console.log('Verifying stored source...');
     const deploySource = await prepareManagedDeploySource({appId: config.id});
 
     // 6. Resolve build outputs

@@ -217,7 +217,7 @@ bkper balance list -b <bookId> -q 'on:2026-12-31' --format csv
 
 ## App Management
 
-Build, deploy, and manage Bkper apps.
+Build, deploy, and manage Bkper apps. Sync and deploy require clean, committed source stored in Bkper-managed Git (recommended) or in the current branch's external upstream.
 
 ```bash
 bkper app init my-app

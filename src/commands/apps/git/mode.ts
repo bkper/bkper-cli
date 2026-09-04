@@ -1,5 +1,9 @@
 import path from 'path';
-import {hasExternalRemote, inspectGitRepository} from './inspect.js';
+import {
+    hasExternalRemote,
+    inspectGitRepository,
+    requireGitRepository,
+} from './inspect.js';
 import {readSourceMarker} from './markers.js';
 import {runGit, type GitRunner} from './run-git.js';
 import type {
@@ -25,8 +29,9 @@ export interface DetectSourceModeInput {
  * Order:
  * 1. Pending local marker (preserves activation upload scope across retries)
  * 2. Platform managed record
- * 3. Nested monorepo / external remote / missing git root
- * 4. Eligible standalone Apps activate managed source
+ * 3. Reject missing Git source
+ * 4. Nested monorepo / external remote
+ * 5. Eligible standalone Apps activate managed source
  */
 export async function detectSourceMode(
     input: DetectSourceModeInput
@@ -53,9 +58,7 @@ export async function detectSourceMode(
         };
     }
 
-    if (!repo) {
-        return {mode: 'external', reason: 'no_git'};
-    }
+    requireGitRepository(repo);
 
     if (marker?.state === 'managed') {
         return {

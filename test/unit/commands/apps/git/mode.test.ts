@@ -6,6 +6,7 @@ import {
     ensurePendingSourceMarker,
     writeManagedSourceMarker,
 } from '../../../../../src/commands/apps/git/markers.js';
+import {ManagedGitError} from '../../../../../src/commands/apps/git/types.js';
 import {
     ARTIFACTS_REMOTE,
     commitAll,
@@ -24,6 +25,25 @@ describe('apps git source mode detection', function () {
 
     afterEach(function () {
         fs.rmSync(tempDir, {recursive: true, force: true});
+    });
+
+    it('rejects an unversioned App instead of classifying it as external', async function () {
+        const appDir = path.join(tempDir, 'no-git');
+        fs.mkdirSync(appDir, {recursive: true});
+        writeFile(appDir, 'bkper.yaml', 'id: demo-app\n');
+
+        try {
+            await detectSourceMode({
+                appDir,
+                appId: 'demo-app',
+                coreAppExists: false,
+                platformStatus: null,
+            });
+            expect.fail('expected Git source requirement');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+            expect((error as ManagedGitError).code).to.equal('NO_GIT_REPOSITORY');
+        }
     });
 
     it('prefers Platform managed status over local shape', async function () {

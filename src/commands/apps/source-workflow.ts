@@ -3,11 +3,13 @@ import {
     createPlatformSourceApi,
     detectSourceMode,
     ensurePendingSourceMarker,
+    hasExternalRemote,
     inspectGitRepository,
     ManagedGitError,
     pushAllLocalRefsAtomic,
     pushCurrentBranchSafe,
     readSourceMarker,
+    requireGitRepository,
     requireManagedGitPreflight,
     writeManagedSourceMarker,
     type ManagedSourcePlatformStatus,
@@ -15,6 +17,11 @@ import {
     type SafePushOptions,
     type SafePushResult,
 } from './git/index.js';
+import {
+    prepareExternalSource,
+    type ExternalSourceVerification,
+    type PrepareExternalSourceOptions,
+} from './git/external-source.js';
 import type {SyncResult} from './types.js';
 
 export interface DeploySourceMetadata {
@@ -22,6 +29,10 @@ export interface DeploySourceMetadata {
     declaredBranch: string;
     commitSha: string;
 }
+
+type PrepareExternalSource = (
+    options?: PrepareExternalSourceOptions
+) => Promise<ExternalSourceVerification>;
 
 type ConfigureOrigin = typeof configureManagedOrigin;
 type PushManagedSource = (options: SafePushOptions) => Promise<SafePushResult>;
@@ -32,6 +43,7 @@ interface SourceWorkflowOptions {
     api?: PlatformSourceApi;
     configureOrigin?: ConfigureOrigin;
     push?: PushManagedSource;
+    prepareExternal?: PrepareExternalSource;
 }
 
 export interface ManagedSyncWorkflowOptions extends SourceWorkflowOptions {
@@ -49,7 +61,8 @@ async function pushManagedRepository(
     options: SourceWorkflowOptions,
     remote: string,
     requireMainBranch = false,
-    upload: SafePushOptions['upload'] = 'main'
+    upload: SafePushOptions['upload'] = 'main',
+    skipPushIfTrackingRefMatches = false
 ): Promise<SafePushResult> {
     const appDir = options.appDir ?? process.cwd();
     if (options.push) {
@@ -58,6 +71,7 @@ async function pushManagedRepository(
             expectedOriginRemote: remote,
             requireMainBranch,
             upload,
+            skipPushIfTrackingRefMatches,
         });
     }
 
@@ -77,6 +91,8 @@ async function pushManagedRepository(
         expectedOriginRemote: remote,
         requireMainBranch,
         upload,
+        skipPushIfTrackingRefMatches,
+        preflight,
     });
 }
 
@@ -105,6 +121,8 @@ export async function syncManagedAppSource(
     options: ManagedSyncWorkflowOptions
 ): Promise<SyncResult> {
     const appDir = options.appDir ?? process.cwd();
+    const repo = await inspectGitRepository(appDir);
+    requireGitRepository(repo);
     const api = options.api ?? createPlatformSourceApi();
     const statusResult = await api.getStatus(options.appId);
     const status = platformStatus(statusResult);
@@ -118,6 +136,7 @@ export async function syncManagedAppSource(
     const action: SyncResult['action'] = options.coreAppExists ? 'updated' : 'created';
 
     if (decision.mode === 'external') {
+        await (options.prepareExternal ?? prepareExternalSource)({appDir});
         await options.syncCore(action);
         return {id: options.appId, action};
     }
@@ -184,36 +203,42 @@ export async function syncManagedAppSource(
         );
     }
 
-    const pushed = await pushManagedRepository(options, status.remote);
-    const repo = await inspectGitRepository(appDir);
-    if (repo) writeManagedSourceMarker(repo.root, options.appId, status.remote);
+    await pushManagedRepository(options, status.remote);
+    const refreshedRepo = await inspectGitRepository(appDir);
+    if (refreshedRepo) {
+        writeManagedSourceMarker(refreshedRepo.root, options.appId, status.remote);
+    }
     await options.syncCore(action);
     return {id: options.appId, action};
 }
 
 /**
  * Pushes managed source before the caller reads and uploads existing local build output.
- * External Apps remain source-less and retain direct-upload behavior.
+ * External Apps are verified by the CLI and retain source-less Platform uploads.
  */
 export async function prepareManagedDeploySource(
     options: SourceWorkflowOptions
 ): Promise<DeploySourceMetadata | undefined> {
     const appDir = options.appDir ?? process.cwd();
+    const repo = await inspectGitRepository(appDir);
+    requireGitRepository(repo);
+    const prepareExternal = options.prepareExternal ?? prepareExternalSource;
     const api = options.api ?? createPlatformSourceApi();
     let statusResult: Awaited<ReturnType<PlatformSourceApi['getStatus']>>;
     try {
         statusResult = await api.getStatus(options.appId);
     } catch (error) {
         if (error instanceof ManagedGitError && error.code === 'AUTHENTICATION_REQUIRED') {
-            const repo = await inspectGitRepository(appDir);
-            const marker = repo ? readSourceMarker(repo.root) : null;
-            if (!marker) return undefined;
+            const marker = readSourceMarker(repo.root);
+            if (!marker && (repo.isNestedApp || hasExternalRemote(repo.remotes))) {
+                await prepareExternal({appDir});
+                return undefined;
+            }
         }
         throw error;
     }
     if (statusResult === 'feature_disabled' || statusResult === 'app_not_found') {
-        const repo = await inspectGitRepository(appDir);
-        const marker = repo ? readSourceMarker(repo.root) : null;
+        const marker = readSourceMarker(repo.root);
         if (marker) {
             throw new ManagedGitError(
                 'MANAGED_SOURCE_UNAVAILABLE',
@@ -222,7 +247,17 @@ export async function prepareManagedDeploySource(
                     : 'This repository is managed, but its Platform linkage is not visible. Retry the deployment.'
             );
         }
-        return undefined;
+        if (repo.isNestedApp || hasExternalRemote(repo.remotes)) {
+            await prepareExternal({appDir});
+            return undefined;
+        }
+        throw new ManagedGitError(
+            'MANAGED_SOURCE_UNAVAILABLE',
+            [
+                'This standalone App has no stored source linked for deployment.',
+                'Run `bkper app sync` to create and upload Bkper-managed private source, then retry.',
+            ].join('\n')
+        );
     }
 
     const decision = await detectSourceMode({
@@ -231,8 +266,18 @@ export async function prepareManagedDeploySource(
         platformStatus: statusResult,
         coreAppExists: true,
     });
-    if (decision.mode === 'external' || decision.mode === 'activate_managed') {
+    if (decision.mode === 'external') {
+        await prepareExternal({appDir});
         return undefined;
+    }
+    if (decision.mode === 'activate_managed') {
+        throw new ManagedGitError(
+            'MANAGED_SOURCE_UNAVAILABLE',
+            [
+                'This standalone App has not enabled Bkper-managed source yet.',
+                'Run `bkper app sync` to create and upload the private repository, then retry deployment.',
+            ].join('\n')
+        );
     }
     if (decision.reason === 'pending_marker') {
         throw new ManagedGitError(
@@ -255,9 +300,17 @@ export async function prepareManagedDeploySource(
         );
     }
 
-    const pushed = await pushManagedRepository(options, statusResult.remote);
-    const repo = await inspectGitRepository(appDir);
-    if (repo) writeManagedSourceMarker(repo.root, options.appId, statusResult.remote);
+    const pushed = await pushManagedRepository(
+        options,
+        statusResult.remote,
+        false,
+        'main',
+        true
+    );
+    const refreshedRepo = await inspectGitRepository(appDir);
+    if (refreshedRepo) {
+        writeManagedSourceMarker(refreshedRepo.root, options.appId, statusResult.remote);
+    }
     return {
         mode: 'managed',
         declaredBranch: pushed.branch,

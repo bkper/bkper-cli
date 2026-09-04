@@ -47,11 +47,20 @@ export {
 } from './markers.js';
 
 export {
+    requireGitSourcePreflight,
     requireManagedGitPreflight,
     requireManagedOrigin,
+    type GitSourcePreflightOptions,
+    type GitSourcePreflightResult,
     type ManagedGitPreflightOptions,
     type ManagedGitPreflightResult,
 } from './preflight.js';
+
+export {
+    prepareExternalSource,
+    type ExternalSourceVerification,
+    type PrepareExternalSourceOptions,
+} from './external-source.js';
 
 export {detectSourceMode, type DetectSourceModeInput} from './mode.js';
 

@@ -13,19 +13,25 @@ import {
     type WorkingTreeStatus,
 } from './types.js';
 
-export interface ManagedGitPreflightOptions {
+export interface GitSourcePreflightOptions {
     requireMainBranch?: boolean;
     expectedOriginRemote?: string;
+    allowNestedApp?: boolean;
+    sourceLabel?: string;
     appDir?: string;
     runner?: GitRunner;
 }
 
-export interface ManagedGitPreflightResult {
+export type ManagedGitPreflightOptions = GitSourcePreflightOptions;
+
+export interface GitSourcePreflightResult {
     repo: GitRepositoryInfo;
     branch: string;
     head: string;
     tree: WorkingTreeStatus;
 }
+
+export type ManagedGitPreflightResult = GitSourcePreflightResult;
 
 function formatFileList(files: string[], limit = 10): string {
     if (files.length === 0) {
@@ -41,25 +47,26 @@ function formatFileList(files: string[], limit = 10): string {
 }
 
 /**
- * Validates the local Git state required for managed source operations.
+ * Validates the committed, attached, clean Git state required for source storage.
  * Never mutates the repository.
  */
-export async function requireManagedGitPreflight(
-    options: ManagedGitPreflightOptions = {}
-): Promise<ManagedGitPreflightResult> {
+export async function requireGitSourcePreflight(
+    options: GitSourcePreflightOptions = {}
+): Promise<GitSourcePreflightResult> {
     const runner = options.runner ?? runGit;
     const appDir = options.appDir ?? process.cwd();
+    const sourceLabel = options.sourceLabel ?? 'Source storage';
     const repo = await inspectGitRepository(appDir, runner);
     requireGitRepository(repo);
 
-    if (repo.isNestedApp) {
+    if (repo.isNestedApp && !options.allowNestedApp) {
         throw new ManagedGitError(
             'BKPER_YAML_NOT_AT_GIT_ROOT',
             [
                 'Managed source requires bkper.yaml at the Git repository root.',
                 `Git root: ${repo.root}`,
                 `App config: ${repo.bkperYamlPath ?? appDir}`,
-                'Nested monorepo Apps keep external source mode and are not migrated automatically.',
+                'Nested monorepo Apps must use a stored external Git source.',
             ].join('\n')
         );
     }
@@ -68,8 +75,9 @@ export async function requireManagedGitPreflight(
         throw new ManagedGitError(
             'NO_COMMITS',
             [
-                'Managed source requires a committed HEAD.',
-                'Create an initial commit, then retry:',
+                `${sourceLabel} requires a committed HEAD.`,
+                'Review the source and create an initial commit, then retry:',
+                '  git status --short',
                 '  git add .',
                 '  git commit -m "Initial app"',
             ].join('\n')
@@ -80,7 +88,7 @@ export async function requireManagedGitPreflight(
         throw new ManagedGitError(
             'DETACHED_HEAD',
             [
-                'Managed source requires an attached branch (detached HEAD is not allowed).',
+                `${sourceLabel} requires an attached branch (detached HEAD is not allowed).`,
                 'Create or switch to a branch first, for example:',
                 '  git switch -c main',
                 'or:',
@@ -106,7 +114,7 @@ export async function requireManagedGitPreflight(
         throw new ManagedGitError(
             'STAGED_CHANGES',
             [
-                'Managed source requires a clean working tree (no staged changes).',
+                `${sourceLabel} requires a clean working tree (no staged changes).`,
                 'Review and commit or unstage these files:',
                 formatFileList(tree.staged),
             ].join('\n'),
@@ -117,7 +125,7 @@ export async function requireManagedGitPreflight(
         throw new ManagedGitError(
             'MODIFIED_TRACKED_FILES',
             [
-                'Managed source requires a clean working tree (no modified tracked files).',
+                `${sourceLabel} requires a clean working tree (no modified tracked files).`,
                 'Review and commit or restore these files:',
                 formatFileList(tree.modified),
             ].join('\n'),
@@ -128,7 +136,7 @@ export async function requireManagedGitPreflight(
         throw new ManagedGitError(
             'UNTRACKED_FILES',
             [
-                'Managed source requires a clean working tree (no non-ignored untracked files).',
+                `${sourceLabel} requires a clean working tree (no non-ignored untracked files).`,
                 'Review, commit, or ignore these files:',
                 formatFileList(tree.untracked),
             ].join('\n'),
@@ -146,6 +154,16 @@ export async function requireManagedGitPreflight(
         head: repo.head,
         tree,
     };
+}
+
+export async function requireManagedGitPreflight(
+    options: ManagedGitPreflightOptions = {}
+): Promise<ManagedGitPreflightResult> {
+    return requireGitSourcePreflight({
+        ...options,
+        allowNestedApp: false,
+        sourceLabel: 'Managed source',
+    });
 }
 
 export function requireManagedOrigin(

@@ -97,7 +97,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('sync')
-        .description('Sync App config and safely push source when the App is managed')
+        .description('Sync App config after verifying committed source is stored')
         .action(
             withAction('syncing app', async () => {
                 const result = await syncApp();
@@ -107,7 +107,7 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('deploy')
-        .description('Deploy the existing local build, verifying managed source when active')
+        .description('Deploy the existing local build after verifying stored source')
         .option('-p, --preview', 'Deploy to preview environment')
         .action(options =>
             withAction(

@@ -55,6 +55,7 @@ export async function syncApp(): Promise<SyncResult> {
         }
     }
 
+    console.log('Verifying stored source...');
     return syncManagedAppSource({
         appId,
         coreAppExists: exists,

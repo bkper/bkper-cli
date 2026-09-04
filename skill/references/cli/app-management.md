@@ -9,14 +9,16 @@ Build, deploy, and manage Bkper apps using the `bkper` CLI.
 
 ## Source control modes
 
-Bkper selects source mode without changing the local-build deployment model:
+Every App sync and deployment requires an attached, clean, committed Git source stored in a durable remote. Bkper-managed private Git is the recommended default:
 
 - **Managed source:** `bkper app sync` activates private Bkper-managed Git for a new or existing App when `bkper.yaml` is at the root of a standalone Git repository, the current clean committed branch is `main`, and no Git remote exists. Bkper configures the managed repository as `origin`. New Apps initially upload `main`; existing Apps atomically upload all local branches and tags.
-- **External source:** an App keeps direct sync/deploy behavior when it has an external Git remote, is nested in a monorepo, or is not rooted at `bkper.yaml`. The CLI never changes an existing external remote.
+- **External source:** an App keeps its provider when it has an external Git remote or is nested in a monorepo. Its current branch must track an upstream branch containing the current commit. The CLI fetches and verifies that upstream before sync or deploy, but never chooses a remote or pushes external source.
 
-To opt out, keep a GitHub, GitLab, or other provider remote configured. Managed mode is sticky after activation; adding another remote later does not change it, and Artifacts remains `origin`. The App listing `repoUrl` metadata does not select source mode.
+Apps without a Git repository cannot sync or deploy. The CLI returns the exact initialization, review, commit, and managed-sync steps so a user or coding agent can establish source safely. To use GitHub, GitLab, or another provider instead, configure the intended branch upstream and push it before syncing.
 
-Source and deployment remain separate. `git push` stores source only and **never deploys**. `bkper app sync` pushes managed source before syncing local metadata. `bkper app deploy` pushes managed source, verifies that the exact commit exists in the linked repository, and then uploads the existing local `dist/server` and optional `dist/client` output. Builds remain local and explicit; Bkper does not claim reproducible remote CI or prove that the local bundle was built from the declared commit. Source linkage is best-effort provenance for already-authorized developers.
+Managed mode is sticky after activation; adding another remote later does not change it, and Artifacts remains `origin`. The App listing `repoUrl` metadata does not select source mode.
+
+Source and deployment remain separate. `git push` stores source only and **never deploys**. `bkper app sync` pushes managed source or verifies external source before syncing local metadata. `bkper app deploy` pushes and verifies managed source, or verifies that the external upstream contains the current commit, before uploading the existing local `dist/server` and optional `dist/client` output. Builds remain local and explicit; Bkper does not prove that the local bundle was built from the verified commit.
 
 CLI-managed pushes are clean-tree and fast-forward-only. The CLI never commits, merges, rebases, force-pushes, resets, or discards files. Authorized developers may use ordinary Git commands, including an intentional force-push, but a push still never deploys.
 
@@ -113,7 +115,7 @@ npm run build
 bkper app deploy
 ```
 
-For a managed App, sync and deploy safely push the current committed branch. For an external App, both commands preserve direct local metadata and bundle upload behavior without changing remotes.
+For a managed App, sync and deploy safely push the current committed branch. For an external App, both commands require a configured upstream containing the current clean commit and preserve direct local metadata and bundle upload behavior without changing remotes.
 
 Verify:
 
@@ -221,13 +223,13 @@ If Git authentication fails:
 
 The helper command is intentionally `bkper app git-credential <appId> [operation]`. It is internal Git plumbing, not a root `git` command or an `app git` group.
 
-## Managed Git preflight recovery
+## Source preflight recovery
 
-Managed sync and deploy require `bkper.yaml` at the Git root, an attached branch, committed `HEAD`, and a clean tree. Ignored build output such as `dist/` is allowed.
+Every sync and deploy requires an attached branch, committed `HEAD`, a clean tree, and durable source storage. Managed source additionally requires `bkper.yaml` at the Git root. Ignored build output such as `dist/` is allowed.
 
 | Failure | Safe recovery |
 | --- | --- |
-| No Git repository | For a standalone App, run `git init -b main`, review files, commit, and retry. An eligible new or existing App activates managed source on sync when no remote exists. |
+| No Git repository | From the App root, run `git init -b main`, review `.gitignore` and all source files, commit, then run `bkper app sync` to activate the recommended managed source. |
 | `bkper.yaml` below Git root | Keep the monorepo/external workflow; managed monorepos are not supported. |
 | No commits | Review, then run `git add .` and `git commit -m "Initial app"`. |
 | Detached `HEAD` | Attach a branch with `git switch -c <branch>`; use `main` for first activation. |
@@ -235,6 +237,8 @@ Managed sync and deploy require `bkper.yaml` at the Git root, an attached branch
 | Staged changes | Inspect `git diff --cached`; commit them or intentionally unstage them before retrying. |
 | Modified tracked files | Inspect `git diff`; commit or intentionally restore them before retrying. |
 | Non-ignored untracked files | Inspect `git status`; commit, ignore, or intentionally remove them before retrying. |
+| External branch has no upstream | Choose the intended provider remote and run `git push --set-upstream <remote> <branch>`, then retry. The CLI never guesses or pushes an external remote. |
+| Current commit is not upstream | Push the current branch to its configured upstream, then retry. |
 | Missing or incorrect managed `origin` | Inspect `git remote -v`; compare with a fresh managed clone. Do not overwrite an external remote. |
 | Authentication or expired credential | Run `bkper auth login` if needed, then retry the Git operation for a new five-minute token. |
 | Remote branch ahead or divergent | Run `git fetch origin <branch>` and inspect `git log --oneline --left-right HEAD...origin/<branch>`; merge or rebase by your own choice, then push and retry. The CLI never force-resolves divergence. |
@@ -550,9 +554,9 @@ Inside the interactive agent:
 -   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
 -   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
 -   `app list` - List all apps you have access to
--   `app sync` - Sync [bkper.yaml][bkper.yaml reference] configuration. For an eligible standalone repository with no remote, activate managed source for a new or existing App; existing migrations atomically upload all local branches and tags. If already managed, cleanly fast-forward-push the current committed branch first.
+-   `app sync` - Verify that source is clean, committed, and stored before syncing [bkper.yaml][bkper.yaml reference]. For an eligible standalone repository with no remote, activate managed source for a new or existing App; existing migrations atomically upload all local branches and tags. For external source, verify that the configured upstream contains the current commit.
 -   `app build` - Build the server Worker bundle for deployment
--   `app deploy` - For managed Apps, cleanly fast-forward-push and verify the current commit, then explicitly deploy the existing local build. External Apps keep direct upload behavior.
+-   `app deploy` - Require stored source, then explicitly deploy the existing local build. Managed Apps safely push and Platform-verifies the current commit. External Apps keep direct upload behavior after the CLI verifies that their upstream contains the current commit.
     -   `-p, --preview` - Deploy to preview environment
 -   `app status [appId]` - Show deployment status. When `appId` is omitted, the app id is read from local app config.
 -   `app logs [appId]` - View recent app logs. When `appId` is omitted, the app id is read from local app config.

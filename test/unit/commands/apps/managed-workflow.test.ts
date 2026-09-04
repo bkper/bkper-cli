@@ -28,6 +28,11 @@ import {
 const APP_ID = 'demo-app';
 const REMOTE =
     'https://example.artifacts.cloudflare.net/git/bkper-app-sources-dev/demo-app.git';
+const EXTERNAL_SOURCE = {
+    branch: 'main',
+    commitSha: '1111111111111111111111111111111111111111',
+    remote: 'upstream',
+};
 
 function externalStatus(): ManagedSourcePlatformStatus {
     return {
@@ -270,8 +275,12 @@ describe('managed App sync and deploy workflow', function () {
                     calls.push('push');
                     return pushed('main', '0'.repeat(40));
                 },
+                prepareExternal: async () => {
+                    calls.push('external');
+                    return EXTERNAL_SOURCE;
+                },
             });
-            expect(calls).to.deep.equal(['status', 'core:updated']);
+            expect(calls).to.deep.equal(['status', 'external', 'core:updated']);
             if (shape === 'external-remote') {
                 runGitSync(['remote', 'remove', 'upstream'], repo);
             }
@@ -324,6 +333,7 @@ describe('managed App sync and deploy workflow', function () {
                     api: api(managedStatus(), calls),
                     push: async options => {
                         expect(options.expectedOriginRemote).to.equal(REMOTE);
+                        expect(options.skipPushIfTrackingRefMatches).to.equal(true);
                         calls.push(`push:${branch}`);
                         return pushed(branch, head);
                     },
@@ -339,8 +349,9 @@ describe('managed App sync and deploy workflow', function () {
         );
     }
 
-    it('preserves unauthenticated proxy deployment only when no local managed marker exists', async function () {
+    it('verifies external source through an unauthenticated deployment proxy', async function () {
         commitAll(repo, 'external app');
+        runGitSync(['remote', 'add', 'upstream', 'https://github.com/acme/demo.git'], repo);
         const unauthenticated: PlatformSourceApi = {
             async getStatus() {
                 throw new ManagedGitError('AUTHENTICATION_REQUIRED', 'login required');
@@ -357,6 +368,7 @@ describe('managed App sync and deploy workflow', function () {
             appId: APP_ID,
             appDir: repo,
             api: unauthenticated,
+            prepareExternal: async () => EXTERNAL_SOURCE,
         });
         expect(external).to.equal(undefined);
 
@@ -370,8 +382,9 @@ describe('managed App sync and deploy workflow', function () {
         }
     });
 
-    it('keeps feature-disabled and external deploys source-less', async function () {
+    it('verifies feature-disabled and external Apps before source-less upload', async function () {
         commitAll(repo, 'external app');
+        runGitSync(['remote', 'add', 'upstream', 'https://github.com/acme/demo.git'], repo);
         for (const status of ['feature_disabled', externalStatus()] as const) {
             const calls: string[] = [];
             const source = await prepareManagedDeploySource({
@@ -381,8 +394,78 @@ describe('managed App sync and deploy workflow', function () {
                 push: async () => {
                     throw new Error('external deploy must not push');
                 },
+                prepareExternal: async () => {
+                    calls.push('external');
+                    return EXTERNAL_SOURCE;
+                },
             });
             expect(source).to.equal(undefined);
+            expect(calls).to.deep.equal(['status', 'external']);
+        }
+    });
+
+    it('rejects sync before Core mutation when the App has no Git repository', async function () {
+        const appDir = path.join(tempDir, 'no-git-app');
+        fs.mkdirSync(appDir, {recursive: true});
+        writeFile(appDir, 'bkper.yaml', `id: ${APP_ID}\n`);
+        const calls: string[] = [];
+
+        try {
+            await syncManagedAppSource({
+                appId: APP_ID,
+                appDir,
+                coreAppExists: false,
+                api: api('app_not_found', calls),
+                syncCore: async () => {
+                    calls.push('core');
+                },
+            });
+            expect.fail('expected Git source requirement');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+            expect((error as ManagedGitError).code).to.equal('NO_GIT_REPOSITORY');
+            expect((error as Error).message).to.include('bkper app sync');
+        }
+
+        expect(calls).to.deep.equal([]);
+    });
+
+    it('rejects deploy before Platform lookup when the App has no Git repository', async function () {
+        const appDir = path.join(tempDir, 'no-git-deploy');
+        fs.mkdirSync(appDir, {recursive: true});
+        writeFile(appDir, 'bkper.yaml', `id: ${APP_ID}\n`);
+        const calls: string[] = [];
+
+        try {
+            await prepareManagedDeploySource({
+                appId: APP_ID,
+                appDir,
+                api: api(externalStatus(), calls),
+            });
+            expect.fail('expected Git source requirement');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+            expect((error as ManagedGitError).code).to.equal('NO_GIT_REPOSITORY');
+        }
+
+        expect(calls).to.deep.equal([]);
+    });
+
+    it('requires sync before deploying a standalone repository without a remote', async function () {
+        commitAll(repo, 'initial app');
+        const calls: string[] = [];
+
+        try {
+            await prepareManagedDeploySource({
+                appId: APP_ID,
+                appDir: repo,
+                api: api(externalStatus(), calls),
+            });
+            expect.fail('expected managed activation guidance');
+        } catch (error) {
+            expect(error).to.be.instanceOf(ManagedGitError);
+            expect((error as ManagedGitError).code).to.equal('MANAGED_SOURCE_UNAVAILABLE');
+            expect((error as Error).message).to.include('bkper app sync');
         }
     });
 });

@@ -1,6 +1,9 @@
-import {getOriginRemote, listRemotes, remoteUrlsEqual} from './inspect.js';
-import {requireManagedGitPreflight} from './preflight.js';
-import {runGit, type GitRunner} from './run-git.js';
+import {getOriginRemote, remoteUrlsEqual} from './inspect.js';
+import {
+    requireManagedGitPreflight,
+    type ManagedGitPreflightResult,
+} from './preflight.js';
+import {formatGitFailure, runGit, type GitRunner} from './run-git.js';
 import {ManagedGitError, type ManagedSourceUpload} from './types.js';
 
 export interface SafePushOptions {
@@ -8,6 +11,8 @@ export interface SafePushOptions {
     expectedOriginRemote?: string;
     requireMainBranch?: boolean;
     upload?: ManagedSourceUpload;
+    skipPushIfTrackingRefMatches?: boolean;
+    preflight?: ManagedGitPreflightResult;
     runner?: GitRunner;
 }
 
@@ -17,24 +22,36 @@ export interface SafePushResult {
     action: 'pushed' | 'already_up_to_date' | 'created_remote_branch';
 }
 
-/**
- * Fetches the remote branch and allows only missing, equal, or ancestor remote tips.
- */
-export async function assertFastForwardPush(
+type RemoteRelation = 'missing' | 'same' | 'ahead';
+
+function remoteAheadOrDiverged(branch: string): ManagedGitError {
+    return new ManagedGitError(
+        'REMOTE_AHEAD_OR_DIVERGED',
+        [
+            `Remote branch 'origin/${branch}' is ahead of or diverged from local HEAD.`,
+            'The CLI never force-pushes, merges, or rebases.',
+            'Fetch and reconcile intentionally, then retry:',
+            `  git fetch origin ${branch}`,
+            '  git log --oneline --left-right HEAD...origin/' + branch,
+            '  # merge or rebase by your choice, then:',
+            '  git push',
+        ].join('\n')
+    );
+}
+
+async function inspectLocalRemoteRelation(
     repoRoot: string,
     branch: string,
     head: string,
-    runner: GitRunner = runGit
-): Promise<'missing' | 'same' | 'ahead'> {
-    await runner(['fetch', 'origin', branch], {
-        cwd: repoRoot,
-        allowFailure: true,
-    });
-
-    const remoteRef = await runner(['rev-parse', '--verify', `refs/remotes/origin/${branch}`], {
-        cwd: repoRoot,
-        allowFailure: true,
-    });
+    runner: GitRunner
+): Promise<RemoteRelation> {
+    const remoteRef = await runner(
+        ['rev-parse', '--verify', `refs/remotes/origin/${branch}`],
+        {
+            cwd: repoRoot,
+            allowFailure: true,
+        }
+    );
 
     if (remoteRef.exitCode !== 0) {
         return 'missing';
@@ -56,18 +73,23 @@ export async function assertFastForwardPush(
         return 'ahead';
     }
 
-    throw new ManagedGitError(
-        'REMOTE_AHEAD_OR_DIVERGED',
-        [
-            `Remote branch 'origin/${branch}' is ahead of or diverged from local HEAD.`,
-            'The CLI never force-pushes, merges, or rebases.',
-            'Fetch and reconcile intentionally, then retry:',
-            `  git fetch origin ${branch}`,
-            '  git log --oneline --left-right HEAD...origin/' + branch,
-            '  # merge or rebase by your choice, then:',
-            '  git push',
-        ].join('\n')
-    );
+    throw remoteAheadOrDiverged(branch);
+}
+
+/**
+ * Fetches the remote branch and allows only missing, equal, or ancestor remote tips.
+ */
+export async function assertFastForwardPush(
+    repoRoot: string,
+    branch: string,
+    head: string,
+    runner: GitRunner = runGit
+): Promise<RemoteRelation> {
+    await runner(['fetch', 'origin', branch], {
+        cwd: repoRoot,
+        allowFailure: true,
+    });
+    return inspectLocalRemoteRelation(repoRoot, branch, head, runner);
 }
 
 /**
@@ -78,12 +100,14 @@ export async function pushAllLocalRefsAtomic(
     options: SafePushOptions = {}
 ): Promise<SafePushResult> {
     const runner = options.runner ?? runGit;
-    const preflight = await requireManagedGitPreflight({
-        appDir: options.appDir,
-        expectedOriginRemote: options.expectedOriginRemote,
-        requireMainBranch: options.requireMainBranch,
-        runner,
-    });
+    const preflight =
+        options.preflight ??
+        (await requireManagedGitPreflight({
+            appDir: options.appDir,
+            expectedOriginRemote: options.expectedOriginRemote,
+            requireMainBranch: options.requireMainBranch,
+            runner,
+        }));
     const refsResult = await runner(
         ['for-each-ref', '--format=%(refname)', 'refs/heads', 'refs/tags'],
         {cwd: preflight.repo.root}
@@ -117,15 +141,16 @@ export async function pushCurrentBranchSafe(
     options: SafePushOptions = {}
 ): Promise<SafePushResult> {
     const runner = options.runner ?? runGit;
-    const preflight = await requireManagedGitPreflight({
-        appDir: options.appDir,
-        expectedOriginRemote: options.expectedOriginRemote,
-        requireMainBranch: options.requireMainBranch,
-        runner,
-    });
+    const preflight =
+        options.preflight ??
+        (await requireManagedGitPreflight({
+            appDir: options.appDir,
+            expectedOriginRemote: options.expectedOriginRemote,
+            requireMainBranch: options.requireMainBranch,
+            runner,
+        }));
 
-    const remotes = await listRemotes(preflight.repo.root, runner);
-    const origin = getOriginRemote(remotes);
+    const origin = getOriginRemote(preflight.repo.remotes);
     if (!origin) {
         throw new ManagedGitError(
             'MISSING_MANAGED_ORIGIN',
@@ -139,14 +164,14 @@ export async function pushCurrentBranchSafe(
         );
     }
 
-    const relation = await assertFastForwardPush(
+    const relation = await inspectLocalRemoteRelation(
         preflight.repo.root,
         preflight.branch,
         preflight.head,
         runner
     );
 
-    if (relation === 'same') {
+    if (relation === 'same' && options.skipPushIfTrackingRefMatches) {
         return {
             branch: preflight.branch,
             head: preflight.head,
@@ -163,14 +188,21 @@ export async function pushCurrentBranchSafe(
     );
     const hasUpstream = upstream.exitCode === 0 && upstream.stdout.trim().length > 0;
 
-    if (hasUpstream) {
-        await runner(['push', 'origin', `HEAD:${preflight.branch}`], {
-            cwd: preflight.repo.root,
-        });
-    } else {
-        await runner(['push', '-u', 'origin', `HEAD:${preflight.branch}`], {
-            cwd: preflight.repo.root,
-        });
+    const pushArgs = hasUpstream
+        ? ['push', 'origin', `HEAD:${preflight.branch}`]
+        : ['push', '-u', 'origin', `HEAD:${preflight.branch}`];
+    const pushResult = await runner(pushArgs, {
+        cwd: preflight.repo.root,
+        allowFailure: true,
+    });
+    if (pushResult.exitCode !== 0) {
+        if (/non-fast-forward|fetch first/i.test(`${pushResult.stderr}\n${pushResult.stdout}`)) {
+            throw remoteAheadOrDiverged(preflight.branch);
+        }
+        throw new ManagedGitError(
+            'GIT_COMMAND_FAILED',
+            formatGitFailure(pushArgs, pushResult)
+        );
     }
 
     return {

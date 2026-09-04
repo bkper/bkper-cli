@@ -97,7 +97,6 @@ export type SourceModeDecision =
               | 'nested_app'
               | 'external_remote'
               | 'not_git_root'
-              | 'no_git'
               | 'platform_external'
               | 'feature_disabled';
           details?: string;
@@ -131,6 +130,10 @@ export type GitPreflightCode =
     | 'CLONE_EMPTY_REPOSITORY'
     | 'INVALID_CREDENTIAL_REQUEST'
     | 'SOURCE_MARKER_INVALID'
+    | 'MISSING_SOURCE_UPSTREAM'
+    | 'SOURCE_REMOTE_NOT_DURABLE'
+    | 'SOURCE_REMOTE_UNAVAILABLE'
+    | 'SOURCE_COMMIT_NOT_PUSHED'
     | 'GIT_COMMAND_FAILED';
 
 export class ManagedGitError extends Error {

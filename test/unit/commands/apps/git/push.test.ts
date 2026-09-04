@@ -7,6 +7,7 @@ import {
     pushAllLocalRefsAtomic,
     pushCurrentBranchSafe,
 } from '../../../../../src/commands/apps/git/push.js';
+import {runGit, type GitRunner} from '../../../../../src/commands/apps/git/run-git.js';
 import {ManagedGitError} from '../../../../../src/commands/apps/git/types.js';
 import {
     commitAll,
@@ -55,6 +56,61 @@ describe('apps git safe push', function () {
         const ahead = await assertFastForwardPush(repo, 'main', nextHead);
         expect(ahead).to.equal('ahead');
         runGitSync(['push', 'origin', 'HEAD:main'], repo);
+    });
+
+    it('pushes directly without fetching when the local branch is ahead', async function () {
+        const bare = createBareRemote();
+        const repo = path.join(tempDir, 'direct-push');
+        initRepo(repo);
+        writeFile(repo, 'bkper.yaml', 'id: demo-app\n');
+        commitAll(repo, 'init');
+        runGitSync(['remote', 'add', 'origin', fileUrl(bare)], repo);
+        runGitSync(['push', '-u', 'origin', 'HEAD:main'], repo);
+        writeFile(repo, 'next.txt', 'next\n');
+        const head = commitAll(repo, 'next');
+        const commands: string[] = [];
+        const runner: GitRunner = async (args, options) => {
+            commands.push(args[0] ?? '');
+            return runGit(args, options);
+        };
+
+        const result = await pushCurrentBranchSafe({appDir: repo, runner});
+
+        expect(result).to.deep.equal({branch: 'main', head, action: 'pushed'});
+        expect(commands).to.include('push');
+        expect(commands).to.not.include('fetch');
+        expect(runGitSync(['rev-parse', 'refs/heads/main'], bare).stdout.trim()).to.equal(
+            head
+        );
+    });
+
+    it('skips Git network access for a deploy when tracking already matches HEAD', async function () {
+        const bare = createBareRemote();
+        const repo = path.join(tempDir, 'tracked-deploy');
+        initRepo(repo);
+        writeFile(repo, 'bkper.yaml', 'id: demo-app\n');
+        const head = commitAll(repo, 'init');
+        runGitSync(['remote', 'add', 'origin', fileUrl(bare)], repo);
+        runGitSync(['push', '-u', 'origin', 'HEAD:main'], repo);
+        const commands: string[] = [];
+        const runner: GitRunner = async (args, options) => {
+            commands.push(args[0] ?? '');
+            return runGit(args, options);
+        };
+
+        const result = await pushCurrentBranchSafe({
+            appDir: repo,
+            skipPushIfTrackingRefMatches: true,
+            runner,
+        });
+
+        expect(result).to.deep.equal({
+            branch: 'main',
+            head,
+            action: 'already_up_to_date',
+        });
+        expect(commands).to.not.include('fetch');
+        expect(commands).to.not.include('push');
     });
 
     it('atomically pushes every local branch and tag for migration', async function () {
