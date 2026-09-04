@@ -16,6 +16,7 @@ import {
     type PlatformSourceApi,
     type SafePushOptions,
     type SafePushResult,
+    type SourceMarker,
 } from './git/index.js';
 import {
     prepareExternalSource,
@@ -96,10 +97,7 @@ async function pushManagedRepository(
     });
 }
 
-async function validateLocalManagedMarker(appDir: string, appId: string): Promise<void> {
-    const repo = await inspectGitRepository(appDir);
-    if (!repo) return;
-    const marker = readSourceMarker(repo.root);
+function validateManagedMarker(marker: SourceMarker | null, appId: string): void {
     if (marker?.state === 'managed' && marker.appId !== appId) {
         throw new ManagedGitError(
             'APP_ID_MISMATCH',
@@ -113,6 +111,12 @@ async function validateLocalManagedMarker(appDir: string, appId: string): Promis
     }
 }
 
+async function validateLocalManagedMarker(appDir: string, appId: string): Promise<void> {
+    const repo = await inspectGitRepository(appDir);
+    if (!repo) return;
+    validateManagedMarker(readSourceMarker(repo.root), appId);
+}
+
 /**
  * Integrates managed activation and source pushes into direct Core metadata sync.
  * Core remains the metadata authority; Artifacts pushes never deploy.
@@ -123,6 +127,19 @@ export async function syncManagedAppSource(
     const appDir = options.appDir ?? process.cwd();
     const repo = await inspectGitRepository(appDir);
     requireGitRepository(repo);
+    const localMarker = readSourceMarker(repo.root);
+    validateManagedMarker(localMarker, options.appId);
+    const action: SyncResult['action'] = options.coreAppExists ? 'updated' : 'created';
+
+    if (localMarker?.state === 'managed') {
+        console.log('Confirming committed source in Bkper-managed Git...');
+        const pushed = await pushManagedRepository(options, localMarker.remote);
+        console.log(`Stored source verified at ${pushed.head}.`);
+        writeManagedSourceMarker(repo.root, options.appId, localMarker.remote);
+        await options.syncCore(action);
+        return {id: options.appId, action};
+    }
+
     const api = options.api ?? createPlatformSourceApi();
     const statusResult = await api.getStatus(options.appId);
     const status = platformStatus(statusResult);
@@ -133,8 +150,6 @@ export async function syncManagedAppSource(
         coreAppExists: options.coreAppExists,
         featureDisabled: statusResult === 'feature_disabled',
     });
-    const action: SyncResult['action'] = options.coreAppExists ? 'updated' : 'created';
-
     if (decision.mode === 'external') {
         await (options.prepareExternal ?? prepareExternalSource)({appDir});
         await options.syncCore(action);
@@ -203,7 +218,9 @@ export async function syncManagedAppSource(
         );
     }
 
-    await pushManagedRepository(options, status.remote);
+    console.log('Confirming committed source in Bkper-managed Git...');
+    const pushed = await pushManagedRepository(options, status.remote);
+    console.log(`Stored source verified at ${pushed.head}.`);
     const refreshedRepo = await inspectGitRepository(appDir);
     if (refreshedRepo) {
         writeManagedSourceMarker(refreshedRepo.root, options.appId, status.remote);
@@ -222,6 +239,27 @@ export async function prepareManagedDeploySource(
     const appDir = options.appDir ?? process.cwd();
     const repo = await inspectGitRepository(appDir);
     requireGitRepository(repo);
+    const localMarker = readSourceMarker(repo.root);
+    validateManagedMarker(localMarker, options.appId);
+
+    if (localMarker?.state === 'managed') {
+        console.log('Checking committed Bkper-managed source...');
+        const pushed = await pushManagedRepository(
+            options,
+            localMarker.remote,
+            false,
+            'main',
+            true
+        );
+        console.log(`Stored source ready at ${pushed.head}.`);
+        writeManagedSourceMarker(repo.root, options.appId, localMarker.remote);
+        return {
+            mode: 'managed',
+            declaredBranch: pushed.branch,
+            commitSha: pushed.head,
+        };
+    }
+
     const prepareExternal = options.prepareExternal ?? prepareExternalSource;
     const api = options.api ?? createPlatformSourceApi();
     let statusResult: Awaited<ReturnType<PlatformSourceApi['getStatus']>>;
@@ -300,6 +338,7 @@ export async function prepareManagedDeploySource(
         );
     }
 
+    console.log('Checking committed Bkper-managed source...');
     const pushed = await pushManagedRepository(
         options,
         statusResult.remote,
@@ -307,6 +346,7 @@ export async function prepareManagedDeploySource(
         'main',
         true
     );
+    console.log(`Stored source ready at ${pushed.head}.`);
     const refreshedRepo = await inspectGitRepository(appDir);
     if (refreshedRepo) {
         writeManagedSourceMarker(refreshedRepo.root, options.appId, statusResult.remote);

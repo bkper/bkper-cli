@@ -290,6 +290,80 @@ describe('managed App sync and deploy workflow', function () {
         }
     });
 
+    it('uses the managed marker without a Platform status lookup during sync', async function () {
+        const head = commitAll(repo, 'managed app');
+        writeManagedSourceMarker(repo, APP_ID, REMOTE);
+        const calls: string[] = [];
+        const noStatusLookup: PlatformSourceApi = {
+            async getStatus() {
+                calls.push('status');
+                throw new Error('managed marker should bypass status lookup');
+            },
+            async activate() {
+                throw new Error('not used');
+            },
+            async issueCredential() {
+                throw new Error('not used');
+            },
+        };
+
+        const result = await syncManagedAppSource({
+            appId: APP_ID,
+            appDir: repo,
+            coreAppExists: true,
+            api: noStatusLookup,
+            syncCore: async action => {
+                calls.push(`core:${action}`);
+            },
+            push: async options => {
+                expect(options.expectedOriginRemote).to.equal(REMOTE);
+                expect(options.skipPushIfTrackingRefMatches).to.equal(false);
+                calls.push('push');
+                return pushed('main', head);
+            },
+        });
+
+        expect(result).to.deep.equal({id: APP_ID, action: 'updated'});
+        expect(calls).to.deep.equal(['push', 'core:updated']);
+    });
+
+    it('uses the managed marker without a Platform status lookup during deploy', async function () {
+        const head = commitAll(repo, 'managed app');
+        writeManagedSourceMarker(repo, APP_ID, REMOTE);
+        const calls: string[] = [];
+        const noStatusLookup: PlatformSourceApi = {
+            async getStatus() {
+                calls.push('status');
+                throw new Error('managed marker should bypass status lookup');
+            },
+            async activate() {
+                throw new Error('not used');
+            },
+            async issueCredential() {
+                throw new Error('not used');
+            },
+        };
+
+        const source = await prepareManagedDeploySource({
+            appId: APP_ID,
+            appDir: repo,
+            api: noStatusLookup,
+            push: async options => {
+                expect(options.expectedOriginRemote).to.equal(REMOTE);
+                expect(options.skipPushIfTrackingRefMatches).to.equal(true);
+                calls.push('push');
+                return pushed('main', head);
+            },
+        });
+
+        expect(source).to.deep.equal({
+            mode: 'managed',
+            declaredBranch: 'main',
+            commitSha: head,
+        });
+        expect(calls).to.deep.equal(['push']);
+    });
+
     it('requires sync to finish a pending migration before deploy', async function () {
         commitAll(repo, 'existing app');
         ensurePendingSourceMarker(repo, 'all_refs');
@@ -371,15 +445,6 @@ describe('managed App sync and deploy workflow', function () {
             prepareExternal: async () => EXTERNAL_SOURCE,
         });
         expect(external).to.equal(undefined);
-
-        writeManagedSourceMarker(repo, APP_ID, REMOTE);
-        try {
-            await prepareManagedDeploySource({appId: APP_ID, appDir: repo, api: unauthenticated});
-            expect.fail('expected managed authentication failure');
-        } catch (error) {
-            expect(error).to.be.instanceOf(ManagedGitError);
-            expect((error as ManagedGitError).code).to.equal('AUTHENTICATION_REQUIRED');
-        }
     });
 
     it('verifies feature-disabled and external Apps before source-less upload', async function () {
