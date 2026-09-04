@@ -2,7 +2,7 @@
 
 Apps can add context menu items on the Transactions page **More** menu in your Books. This lets you open dynamically built URLs with reference to the current Book's context — the active query, selected account, date range, and more.
 
-Embedded interfaces should follow the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md) for visual consistency, startup behavior, and Book-context verification.
+Embedded interfaces should follow the [App Quality Guidelines](https://bkper.com/docs/platform/apps/quality.md) for visual consistency, startup behavior, and Book-context verification.
 
 ## How it works
 
@@ -16,7 +16,7 @@ When clicked, a popup opens carrying the particular context of that book at that
 
 ## Configuration
 
-Configure the menu URL in your [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md):
+Configure the menu URL in your [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md):
 
 ```yaml
 menuUrl: https://my-app.bkper.app?bookId=${book.id}&query=${transactions.query}
@@ -115,4 +115,4 @@ The menu URL supports these dynamic expressions:
 | `${group.id}`           | The selected group ID     |
 | `${group.name}`         | The selected group name   |
 
-For the full list of accepted expressions, see the [Menu URL variables](https://bkper.com/docs/build/apps/configuration.md#menu-url-variables) reference.
+For the full list of accepted expressions, see the [Menu URL variables](https://bkper.com/docs/platform/apps/configuration.md#menu-url-variables) reference.

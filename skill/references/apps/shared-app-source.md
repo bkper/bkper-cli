@@ -2,7 +2,7 @@
 
 Bkper-managed app source gives your team and coding agents one shared private codebase for a Bkper app. Authorized app developers can clone the same repository, improve it locally, and continue from one shared history without setting up a separate Git host.
 
-Shared app source supports development collaboration. It does not automatically build or deploy your app.
+Every app sync and deployment requires clean, committed source stored in a durable Git remote. Bkper-managed source is the recommended default for development collaboration. It does not automatically build or deploy your app.
 
 ## Who can access the source
 
@@ -66,7 +66,7 @@ Keep agent instructions such as `AGENTS.md` in the repository so every teammate 
 
 ## Source synchronization is not deployment
 
-Source storage and app deployment are separate operations:
+Source storage and app deployment are separate operations. Apps without a Git repository cannot sync or deploy; the CLI provides the initialization and managed-sync steps needed to establish source safely.
 
 | Action             | What it does with source                                                       | Does it deploy? |
 | ------------------ | ------------------------------------------------------------------------------ | --------------- |
@@ -75,19 +75,24 @@ Source storage and app deployment are separate operations:
 | `npm run build`    | Creates local build output in `dist/`.                                         | No              |
 | `bkper app deploy` | Pushes and verifies the managed commit, then uploads the existing local build. | Yes             |
 
-An ordinary Git push never deploys. `bkper app deploy` also does not run a build, so build locally before deploying the result you intend to release.
+An ordinary Git push never deploys. `bkper app deploy` also does not run a build, so build locally before deploying the result you intend to release. The CLI verifies the stored source commit but does not prove that the local `dist/` output was built from it.
 
-Managed sync and deploy require a clean, committed working tree and use fast-forward safety checks. The CLI does not automatically commit, merge, rebase, force-push, reset, or discard files.
+Managed sync and deploy require a clean, committed working tree and use fast-forward safety checks. External sync and deploy require the current branch to track an upstream containing the current clean commit. The CLI does not automatically commit, merge, rebase, force-push, reset, discard files, choose an external remote, or push to an external provider.
 
 ## External Git and monorepos
 
 Bkper-managed source is optional. Existing workflows remain external when:
 
-- the app already has a GitHub, GitLab, or other provider remote;
-- `bkper.yaml` is inside a monorepo rather than at the repository root; or
-- the app is otherwise not rooted in a standalone Git repository.
+- the app already has a GitHub, GitLab, or other provider remote; or
+- `bkper.yaml` is inside a monorepo rather than at the repository root.
 
-Clone those apps from their external provider. `bkper app clone` is for Bkper-managed source only.
+The current branch must have a configured upstream containing the commit being synced or deployed. If no upstream is configured, choose the intended provider remote and store the branch explicitly:
+
+```bash
+git push --set-upstream <remote> <branch>
+```
+
+The CLI fetches and verifies the upstream without pushing or changing the working tree. Clone external apps from their provider. `bkper app clone` is for Bkper-managed source only.
 
 Moving an existing standalone app from an external provider is intentional: the CLI never removes or renames an existing remote. Before changing remotes, make sure every branch and tag you want to preserve is available locally and the current `main` branch is clean and committed. Removing all external remotes and running `bkper app sync` then activates managed source for an eligible app.
 
@@ -95,7 +100,7 @@ The `repoUrl` field in `bkper.yaml` is app-listing metadata. It does not select 
 
 ## Next steps
 
-- [Your First App](https://bkper.com/docs/build/apps/first-app.md) — Scaffold an app and establish its shared source
-- [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md) — Build, sync, preview, and deploy explicitly
-- [CLI](https://bkper.com/docs/build/tools/cli.md) — Install the CLI and review its app-development workflows
+- [Your First App](https://bkper.com/docs/platform/apps/first-app.md) — Scaffold an app and establish its shared source
+- [Building & Deploying](https://bkper.com/docs/platform/apps/deploying.md) — Build, sync, preview, and deploy explicitly
+- [CLI](https://bkper.com/docs/platform/tools/cli.md) — Install the CLI and review its app-development workflows
 - [Coding Agents](https://bkper.com/docs/ai/coding-agents.md) — Give coding agents the Bkper and project context they need

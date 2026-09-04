@@ -2,6 +2,8 @@
 
 ## The deployment workflow
 
+Sync and deployment require an attached, clean, committed Git branch whose current commit is stored remotely. Bkper-managed private Git is recommended. Apps without Git receive actionable initialization and managed-sync instructions from the CLI; external repositories must configure and push the current branch to its intended upstream.
+
 Run the template's deterministic checks before releasing:
 
 ```bash
@@ -26,7 +28,7 @@ npm run check
     bkper app sync
     ```
 
-    Syncs your `bkper.yaml` configuration to Bkper — name, description, menu URLs, webhook URLs, access control, and branding. For an app using Bkper-managed source, it also safely pushes the current clean, committed branch. Sync does not build or deploy the app.
+    Verifies stored source, then syncs your `bkper.yaml` configuration to Bkper — name, description, menu URLs, webhook URLs, access control, and branding. For managed source, it safely pushes the current clean, committed branch. For external source, it fetches the configured upstream and verifies that it contains the current commit. Sync does not build or deploy the app.
 
 3. **Deploy** — Upload the local build to the platform
 
@@ -34,7 +36,7 @@ npm run check
     bkper app deploy
     ```
 
-    For a managed-source app, deploy safely pushes and verifies the current commit. It then uploads your existing pre-built code from `dist/` to the Bkper Platform. The command does not run a build. Your app is live at `https://{appId}.bkper.app`.
+    Deploy verifies stored source again. Managed source is pushed and Platform-verified; external source is checked against the configured upstream by the CLI. Deploy then uploads your existing pre-built code from `dist/` to the Bkper Platform. The command does not run a build, and the Platform does not prove that `dist/` was produced from the verified commit. Your app is live at `https://{appId}.bkper.app`.
 
 The app template combines all three after source changes are committed:
 
@@ -46,7 +48,7 @@ Use `npm run deploy:preview` for the preview environment.
 
 > **Caution: Source is not deployment**
 > An ordinary `git push` stores source only and never deploys. `bkper app sync` also does not deploy. Run `bkper app deploy` explicitly when the local build is ready to release.
-See [Shared App Source](https://bkper.com/docs/build/apps/shared-app-source.md) for managed-source setup, cloning, access, and external Git workflows.
+See [Shared App Source](https://bkper.com/docs/platform/apps/shared-app-source.md) for managed-source setup, cloning, access, and external Git workflows.
 
 ### Production
 
@@ -131,7 +133,7 @@ app.get('/api/data', async c => {
 });
 ```
 
-During local development, use the `.dev.vars` file instead. See [Development Experience](https://bkper.com/docs/build/apps/development.md#local-secrets).
+During local development, use the `.dev.vars` file instead. See [Development Experience](https://bkper.com/docs/platform/apps/development.md#local-secrets).
 
 ### KV storage
 
@@ -172,10 +174,10 @@ bkper app install <appId> -b <bookId>
 bkper app uninstall <appId> -b <bookId>
 ```
 
-Once installed, the app's [event handlers](https://bkper.com/docs/build/apps/event-handlers.md) receive events from that book at `/events`, and the app's [context menu](https://bkper.com/docs/build/apps/context-menu.md) appears in the book's UI.
+Once installed, the app's [event handlers](https://bkper.com/docs/platform/apps/event-handlers.md) receive events from that book at `/events`, and the app's [context menu](https://bkper.com/docs/platform/apps/context-menu.md) appears in the book's UI.
 
 ## Next steps
 
-- [Shared App Source](https://bkper.com/docs/build/apps/shared-app-source.md) — Share private source without coupling Git pushes to deployment
-- [Development Experience](https://bkper.com/docs/build/apps/development.md) — Run the app and event delivery locally
-- [App Listing](https://bkper.com/docs/build/apps/app-listing.md) — Prepare the app for installation
+- [Shared App Source](https://bkper.com/docs/platform/apps/shared-app-source.md) — Share private source without coupling Git pushes to deployment
+- [Development Experience](https://bkper.com/docs/platform/apps/development.md) — Run the app and event delivery locally
+- [App Listing](https://bkper.com/docs/platform/apps/app-listing.md) — Prepare the app for installation

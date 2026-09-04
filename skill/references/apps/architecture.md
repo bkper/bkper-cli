@@ -4,7 +4,7 @@ Bkper platform apps use one Worker bundle per app and environment. The same Work
 
 Treat `/api/*` as the reusable surface for app behavior. The bundled web client is one consumer; scripts, external clients, and agents can call the same routes with bearer authentication.
 
-Follow the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md) when implementing, changing, or reviewing an app.
+Follow the [App Quality Guidelines](https://bkper.com/docs/platform/apps/quality.md) when implementing, changing, or reviewing an app.
 
 ## Structure
 
@@ -204,7 +204,7 @@ Platform outbound authentication injects the validated user's OAuth token on Bkp
 
 Authentication identifies the Bkper user, but each app must authorize sensitive data and actions server-side. Client-side checks are not an authorization boundary.
 
-See [App Security](https://bkper.com/docs/build/apps/security.md) for domain restrictions, Book permissions, and app installation checks.
+See [App Security](https://bkper.com/docs/platform/apps/security.md) for domain restrictions, Book permissions, and app installation checks.
 
 ## Event handlers
 
@@ -212,7 +212,7 @@ Platform event deliveries reach `/events` on the same Worker. Event adapters liv
 
 Event code uses server-side `new Bkper()` and must not read `bkper-oauth-token`, `bkper-agent-id`, or `Authorization` headers. Dispatch and platform outbound authentication handle the event token and app agent identity.
 
-See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for routing, responses, loop prevention, and event types. Self-hosted handlers process event authentication directly because the platform outbound layer is not involved.
+See [Event Handlers](https://bkper.com/docs/platform/apps/event-handlers.md) for routing, responses, loop prevention, and event types. Self-hosted handlers process event authentication directly because the platform outbound layer is not involved.
 
 ## App shapes
 

@@ -20,20 +20,20 @@ The same Worker can expose app-defined `/api/*` routes. Treat those routes as th
 
 When an app needs model inference, use Bkper AI by default. An authenticated app API route or event establishes the user and app identity, then platform outbound supplies authorization and usage attribution for the Worker's Bkper AI requests. The app does not need provider credentials.
 
-See [Add Bkper AI to an App](https://bkper.com/docs/build/apps/ai.md) for live model discovery, strict structured output, validation, and the client-to-Worker authentication flow.
+See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md) for live model discovery, strict structured output, validation, and the client-to-Worker authentication flow.
 
 ### Authentication
 
 OAuth is pre-configured. No client IDs, no redirect URIs, no consent screens to build.
 
-- **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Client authentication](https://bkper.com/docs/build/apps/architecture.md#client-authentication).
-- **Server API routes** — Send `Authorization: Bearer <token>` to `/api/*`; dispatch validates it and platform outbound injects auth for server-side Bkper API calls. See [App Architecture → Server API authentication](https://bkper.com/docs/build/apps/architecture.md#server-api-authentication).
-- **Event handlers** — Handle `/events` in the same Worker and call Bkper with server-side `new Bkper()`; dispatch/outbound handle auth and agent identity. See [Event Handlers → Authentication](https://bkper.com/docs/build/apps/event-handlers.md#authentication).
-- **Local development** — The Vite auth middleware uses your CLI credentials. See [Development Experience → Local development authentication](https://bkper.com/docs/build/apps/development.md#local-development-authentication).
+- **Web client** — Use `@bkper/web-auth`: `auth.getAccessToken()`. See [App Architecture → Client authentication](https://bkper.com/docs/platform/apps/architecture.md#client-authentication).
+- **Server API routes** — Send `Authorization: Bearer <token>` to `/api/*`; dispatch validates it and platform outbound injects auth for server-side Bkper API calls. See [App Architecture → Server API authentication](https://bkper.com/docs/platform/apps/architecture.md#server-api-authentication).
+- **Event handlers** — Handle `/events` in the same Worker and call Bkper with server-side `new Bkper()`; dispatch/outbound handle auth and agent identity. See [Event Handlers → Authentication](https://bkper.com/docs/platform/apps/event-handlers.md#authentication).
+- **Local development** — The Vite auth middleware uses your CLI credentials. See [Development Experience → Local development authentication](https://bkper.com/docs/platform/apps/development.md#local-development-authentication).
 
 ### Services
 
-Declare the services you need in [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md) and the platform provisions them:
+Declare the services you need in [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md) and the platform provisions them:
 
 - **KV storage** — Key-value storage for caching and state. Access via `c.env.KV` in your handlers.
 - **Secrets** — Securely stored environment variables. Set via `bkper app secrets put`, access via `c.env.SECRET_NAME`.
@@ -54,7 +54,7 @@ Bkper can host one private codebase for your app. Authorized teammates and codin
 
 Source synchronization remains separate from deployment. A Git push stores source but never builds or deploys the app.
 
-See [Shared App Source](https://bkper.com/docs/build/apps/shared-app-source.md) for the collaboration workflow, access rules, and external Git options.
+See [Shared App Source](https://bkper.com/docs/platform/apps/shared-app-source.md) for the collaboration workflow, access rules, and external Git options.
 
 ### Deployment
 
@@ -101,6 +101,6 @@ This gives you a working app with a client UI, server API routes, and `/events` 
 
 ## Next steps
 
-- [Your First App](https://bkper.com/docs/build/apps/first-app.md) — Build and deploy a complete platform app
-- [Shared App Source](https://bkper.com/docs/build/apps/shared-app-source.md) — Collaborate from one private codebase
-- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Understand how platform apps are structured
+- [Your First App](https://bkper.com/docs/platform/apps/first-app.md) — Build and deploy a complete platform app
+- [Shared App Source](https://bkper.com/docs/platform/apps/shared-app-source.md) — Collaborate from one private codebase
+- [App Architecture](https://bkper.com/docs/platform/apps/architecture.md) — Understand how platform apps are structured

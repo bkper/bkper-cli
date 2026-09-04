@@ -8,7 +8,7 @@ Authentication identifies the Bkper user making a request. The platform handles 
 
 Authorization determines whether that user may perform a specific operation.
 
-See [App Architecture](https://bkper.com/docs/build/apps/architecture.md) for the client and server authentication flow.
+See [App Architecture](https://bkper.com/docs/platform/apps/architecture.md) for the client and server authentication flow.
 
 ## Authorize app operations
 
@@ -68,7 +68,7 @@ if (!isInstalled) {
 
 ## Next Steps
 
-- [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md) — Review cross-cutting app quality and security expectations.
-- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Understand client and server authentication flows.
-- [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md#setting-secrets) — Store production and preview secrets.
-- [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md#authentication) — Understand authentication for platform and self-hosted events.
+- [App Quality Guidelines](https://bkper.com/docs/platform/apps/quality.md) — Review cross-cutting app quality and security expectations.
+- [App Architecture](https://bkper.com/docs/platform/apps/architecture.md) — Understand client and server authentication flows.
+- [Building & Deploying](https://bkper.com/docs/platform/apps/deploying.md#setting-secrets) — Store production and preview secrets.
+- [Event Handlers](https://bkper.com/docs/platform/apps/event-handlers.md#authentication) — Understand authentication for platform and self-hosted events.

@@ -509,6 +509,8 @@ The Billing information includes the plan, the admin email, and the billing port
 - `getPortalUrl(returnUrl: string)` → `Promise<string | undefined>` — Gets the URL to redirect the User to the billing portal.
 - `getTotalTransactionsThisMonth()` → `number | undefined` — Gets the number of total transactions this month for the User's billing account.
 - `getTotalTransactionsThisYear()` → `number | undefined` — Gets the number of total transactions this year for the User's billing account.
+- `getTransactionsAverage()` → `number | undefined` — Gets the authoritative rolling monthly average of posted transactions.
+- `getTransactionsCapacity()` → `number | undefined` — Gets the confirmed average monthly transaction capacity.
 - `hasStartedTrial()` → `boolean | undefined` — Tells if the User has started the trial period.
 - `isEnabled()` → `boolean | undefined` — Tells if billing is enabled for the User.
 - `isPlanOverdue()` → `boolean | undefined` — Tells if the User's current plan payment is overdue.

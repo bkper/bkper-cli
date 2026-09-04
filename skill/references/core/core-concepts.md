@@ -147,6 +147,6 @@ Collections can also serve as references for automations (Bots or Apps) that wor
 
 ## Events
 
-Every action in a Book — posting a transaction, editing an account, adding a comment — generates an **Event**. Events record _who_ (a user) or _what_ (a bot, an automation) performed the action and _when_, forming a complete audit trail essential for collaboration and trust.
+Every action in a Book — such as posting a transaction, editing an account, or attaching a file — generates an **Event**. Events record _who_ (a user) or _what_ (a bot, an automation) performed the action and _when_, forming a complete audit trail essential for collaboration and trust.
 
 Events are also the foundation of Bkper's automation model. Bots and Agents listen for specific event types and react automatically — for example, calculating taxes when a transaction is posted or converting currencies when one is checked.

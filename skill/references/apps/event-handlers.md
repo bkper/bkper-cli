@@ -6,11 +6,11 @@ Event handlers are the code that reacts to events in your Bkper Books. When a tr
 
 ## How it works
 
-1. You declare which events your app handles in [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md)
+1. You declare which events your app handles in [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md)
 2. Bkper sends an HTTP POST to your webhook URL when those events fire
 3. Your handler processes the event and returns a response
 
-On the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md), events are routed to `/events` on your app's single Worker — including local development via tunnels. For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, you configure the webhook URL directly.
+On the [Bkper Platform](https://bkper.com/docs/platform/apps/overview.md), events are routed to `/events` on your app's single Worker — including local development via tunnels. For [self-hosted](https://bkper.com/docs/platform/apps/self-hosted.md) setups, you configure the webhook URL directly.
 
 ## Agent identity
 
@@ -99,7 +99,7 @@ Do not read `bkper-oauth-token`, `bkper-agent-id`, or `Authorization` headers in
 
 > **Note**
 > During local development, events are routed through the Cloudflare tunnel started by `bkper app dev`. Local outbound uses your CLI credentials when the handler calls Bkper.
-For [self-hosted](https://bkper.com/docs/build/apps/self-hosted.md) setups, the event auth headers are sent to both `webhookUrl` and `webhookUrlDev` and must be handled directly by your infrastructure.
+For [self-hosted](https://bkper.com/docs/platform/apps/self-hosted.md) setups, the event auth headers are sent to both `webhookUrl` and `webhookUrlDev` and must be handled directly by your infrastructure.
 
 ## Event routing pattern
 
@@ -197,7 +197,7 @@ The event payload has the following structure:
 }
 ```
 
-The event payload is the same structure exposed by the [REST API](https://bkper.com/docs/build/scripts/rest-api.md). If you use TypeScript, add the [`@bkper/bkper-api-types`](https://www.npmjs.com/package/@bkper/bkper-api-types) package to your project for full type definitions.
+The event payload is the same structure exposed by the [REST API](https://bkper.com/docs/platform/scripts/rest-api.md). If you use TypeScript, add the [`@bkper/bkper-api-types`](https://www.npmjs.com/package/@bkper/bkper-api-types) package to your project for full type definitions.
 
 For update events, `data.previousAttributes` contains the fields that changed and their previous values — useful for computing diffs or reacting only to specific field changes.
 
@@ -212,7 +212,7 @@ events:
     - ACCOUNT_CREATED
 ```
 
-The complete current set of event types:
+The complete API set of event types is listed below. `COMMENT_CREATED` and `COMMENT_DELETED` remain in the API for compatibility with historical Events; Comments are not available in the current Bkper PWA.
 
 | Event | Description |
 | --- | --- |

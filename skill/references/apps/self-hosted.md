@@ -1,6 +1,6 @@
 # Bkper Self-Hosted Webhooks
 
-The [Bkper Platform](https://bkper.com/docs/build/apps/overview.md) handles hosting, authentication, and deployment for you. However, you can host event handlers on your own infrastructure if you have specific requirements — existing cloud setup, compliance constraints, or legacy apps.
+The [Bkper Platform](https://bkper.com/docs/platform/apps/overview.md) handles hosting, authentication, and deployment for you. However, you can host event handlers on your own infrastructure if you have specific requirements — existing cloud setup, compliance constraints, or legacy apps.
 
 > **Tip**
 > Use the Bkper Platform unless you have a specific reason to self-host. It eliminates the need to manage authentication, secrets, hosting, and deployment yourself.
@@ -8,7 +8,7 @@ The [Bkper Platform](https://bkper.com/docs/build/apps/overview.md) handles host
 
 A Bkper event handler running on [Google Cloud Functions](https://cloud.google.com/functions/) receives authenticated calls from the `bkper-hrd@appspot.gserviceaccount.com` service account. You need to grant this service account the [Cloud Functions Invoker IAM role](https://cloud.google.com/functions/docs/securing/managing-access-iam) (`roles/cloudfunctions.invoker`).
 
-Set the production endpoint in [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md):
+Set the production endpoint in [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md):
 
 ```yaml
 webhookUrl: https://us-central1-my-project.cloudfunctions.net/events
@@ -32,7 +32,7 @@ The function response must follow the standard format:
 { result?: any, error?: any }
 ```
 
-See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md#response-format) for details on response handling.
+See [Event Handlers](https://bkper.com/docs/platform/apps/event-handlers.md#response-format) for details on response handling.
 
 ### Considerations
 
@@ -46,7 +46,7 @@ See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md#respons
 
 You can host event handlers on any infrastructure — other cloud providers, containers, on-premise servers.
 
-Configure the same `webhookUrl` property in [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md):
+Configure the same `webhookUrl` property in [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md):
 
 ```yaml
 webhookUrl: https://my-server.example.com/bkper/events

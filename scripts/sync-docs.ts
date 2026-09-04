@@ -13,7 +13,7 @@ interface FetchedDoc {
 }
 
 const BKPER_DOCS_ORIGIN = 'https://bkper.com';
-const APP_DOCS_SOURCE_PREFIX = '/docs/build/apps/';
+const APP_DOCS_SOURCE_PREFIX = '/docs/platform/apps/';
 const APP_DOCS_INDEX_SPEC: DocSpec = {
     url: `${BKPER_DOCS_ORIGIN}${APP_DOCS_SOURCE_PREFIX}llms.txt`,
     outputPath: 'apps/llms.txt',
@@ -38,7 +38,7 @@ export function discoverAppDocSpecs(index: string): readonly DocSpec[] {
     const specs: DocSpec[] = [];
     const outputPaths = new Set<string>();
     const linkPattern =
-        /^- \[[^\]]+\]\(https:\/\/bkper\.com\/docs\/build\/apps\/([a-z0-9][a-z0-9-]*\.md)\)(?::.*)?$/;
+        /^- \[[^\]]+\]\(https:\/\/bkper\.com\/docs\/platform\/apps\/([a-z0-9][a-z0-9-]*\.md)\)(?::.*)?$/;
 
     for (const line of index.split(/\r?\n/)) {
         const match = linkPattern.exec(line.trim());

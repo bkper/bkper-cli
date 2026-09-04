@@ -190,6 +190,8 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `startedTrial?`: `boolean` — True if the user has started the trial period
 - `totalTransactionsThisMonth?`: `number` — User-level total transactions this month
 - `totalTransactionsThisYear?`: `number` — User-level total transactions this year
+- `transactionsAverage?`: `number` — Authoritative rounded-up rolling monthly average of posted transactions for the current plan
+- `transactionsCapacity?`: `number` — Confirmed average monthly transaction capacity for the current plan
 
 ### Book
 

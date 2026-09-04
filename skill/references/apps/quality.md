@@ -66,7 +66,7 @@ Keep the security boundary simple and explicit:
 - Access only the Book data needed for the operation.
 - Make event handling safe to retry and prevent event loops.
 
-See [App Security](https://bkper.com/docs/build/apps/security.md) and [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for implementation details.
+See [App Security](https://bkper.com/docs/platform/apps/security.md) and [Event Handlers](https://bkper.com/docs/platform/apps/event-handlers.md) for implementation details.
 
 ## Verification
 
@@ -81,7 +81,7 @@ App reviews should report concrete findings with file locations and suggested fi
 
 ## Next Steps
 
-- [App Architecture](https://bkper.com/docs/build/apps/architecture.md) — Client, server, API, and event structure.
-- [App Security](https://bkper.com/docs/build/apps/security.md) — Authentication and authorization boundaries.
-- [Context Menu](https://bkper.com/docs/build/apps/context-menu.md) — Embedded Book context and open modes.
-- [Development Experience](https://bkper.com/docs/build/apps/development.md) — Local development and deterministic checks.
+- [App Architecture](https://bkper.com/docs/platform/apps/architecture.md) — Client, server, API, and event structure.
+- [App Security](https://bkper.com/docs/platform/apps/security.md) — Authentication and authorization boundaries.
+- [Context Menu](https://bkper.com/docs/platform/apps/context-menu.md) — Embedded Book context and open modes.
+- [Development Experience](https://bkper.com/docs/platform/apps/development.md) — Local development and deterministic checks.

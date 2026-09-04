@@ -4,7 +4,7 @@ All Bkper apps are listed on the Automations Portal at _[app.bkper.com](https://
 
 ![App listing on the Automations Portal](https://bkper.com/docs/_astro/bkper-app-listing.BgcbAsjE.png)
 
-App listings are populated from the fields you declare in [`bkper.yaml`](https://bkper.com/docs/build/apps/configuration.md). Sync metadata changes with `bkper app sync`. Deploying code is a separate step.
+App listings are populated from the fields you declare in [`bkper.yaml`](https://bkper.com/docs/platform/apps/configuration.md). Sync metadata changes with `bkper app sync`. Deploying code is a separate step.
 
 ## Listing fields
 
@@ -24,7 +24,7 @@ ownerWebsite: https://yourwebsite.com
 website: https://your-app.bkper.app
 ```
 
-See [App Configuration](https://bkper.com/docs/build/apps/configuration.md) for the full `bkper.yaml` reference.
+See [App Configuration](https://bkper.com/docs/platform/apps/configuration.md) for the full `bkper.yaml` reference.
 
 ## Default visibility
 
@@ -49,7 +49,7 @@ To make your app available to all Bkper users, contact us at [support@bkper.com]
 ### What the review involves
 
 - **Functionality check** — The app works correctly and handles errors gracefully
-- **Quality review** — The implementation follows the [App Quality Guidelines](https://bkper.com/docs/build/apps/quality.md)
+- **Quality review** — The implementation follows the [App Quality Guidelines](https://bkper.com/docs/platform/apps/quality.md)
 - **Security review** — Event handlers are idempotent and include loop prevention
 - **Listing quality** — The app has a clear name, description, logo, and user-facing documentation
 

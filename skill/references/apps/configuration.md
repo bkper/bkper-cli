@@ -97,7 +97,7 @@ deployment:
 
 `SIDEBAR` and `EXPANDED` Apps can receive live context updates while their iframe stays loaded. `NEW_TAB` Apps receive context only in the URL used to open the tab.
 
-See [Context Menu](https://bkper.com/docs/build/apps/context-menu.md#live-context-updates) for menu URL configuration and live context updates.
+See [Context Menu](https://bkper.com/docs/platform/apps/context-menu.md#live-context-updates) for menu URL configuration and live context updates.
 
 ### Menu URL variables
 
@@ -123,9 +123,9 @@ The following variables can be used in `menuUrl` and `menuUrlDev`:
 | `webhookUrl`    | Production webhook URL for receiving events.                                        |
 | `webhookUrlDev` | Development webhook URL (auto-updated by `bkper app dev`).                          |
 | `apiVersion`    | API version for event payloads (currently `v5`).                                    |
-| `events`        | List of [event types](https://bkper.com/docs/build/apps/event-handlers.md#event-types) to subscribe to. |
+| `events`        | List of [event types](https://bkper.com/docs/platform/apps/event-handlers.md#event-types) to subscribe to. |
 
-See [Event Handlers](https://bkper.com/docs/build/apps/event-handlers.md) for details on handling events.
+See [Event Handlers](https://bkper.com/docs/platform/apps/event-handlers.md) for details on handling events.
 
 ### File patterns
 
@@ -160,7 +160,7 @@ propertiesSchema:
 
 ### Deployment
 
-For apps deployed to the [Bkper Platform](https://bkper.com/docs/build/apps/overview.md):
+For apps deployed to the [Bkper Platform](https://bkper.com/docs/platform/apps/overview.md):
 
 | Field                           | Description                                                                                                            |
 | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -170,4 +170,4 @@ For apps deployed to the [Bkper Platform](https://bkper.com/docs/build/apps/over
 | `deployment.secrets`            | Secret names used by the app. Managed via `bkper app secrets`.                                                         |
 | `deployment.compatibility_date` | [Cloudflare Workers compatibility date](https://developers.cloudflare.com/workers/configuration/compatibility-dates/). |
 
-See [Building & Deploying](https://bkper.com/docs/build/apps/deploying.md) for the full deployment workflow.
+See [Building & Deploying](https://bkper.com/docs/platform/apps/deploying.md) for the full deployment workflow.
