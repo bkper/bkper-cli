@@ -6,7 +6,37 @@ import { createPlatformClient } from '../../platform/client.js';
 import { createAssetManifest, readAssetFiles } from './bundler.js';
 import { handleError, loadAppConfig, loadSourceDeploymentConfig } from './config.js';
 import {prepareManagedDeploySource, type DeploySourceMetadata} from './source-workflow.js';
-import type { DeployOptions, Environment, SourceDeploymentConfig } from './types.js';
+import type { AppStatus, DeployOptions, Environment, SourceDeploymentConfig } from './types.js';
+
+interface StatusPlatformClient {
+    GET(
+        path: '/api/apps/{appId}',
+        init: { params: { path: { appId: string } } }
+    ): Promise<{ data?: AppStatus; error?: unknown }>;
+}
+
+interface StatusCommandDependencies {
+    loadAppConfig: typeof loadAppConfig;
+    getStoredOAuthToken: typeof getStoredOAuthToken;
+    createPlatformClient(token?: string): StatusPlatformClient;
+    handleError: typeof handleError;
+    exit(code?: number): never;
+}
+
+function getStatusDependencies(
+    overrides: Partial<StatusCommandDependencies> = {}
+): StatusCommandDependencies {
+    return {
+        loadAppConfig,
+        getStoredOAuthToken,
+        createPlatformClient,
+        handleError,
+        exit(code?: number): never {
+            process.exit(code);
+        },
+        ...overrides,
+    };
+}
 
 interface PlatformDeployMetadata {
     bindings?: {
@@ -318,48 +348,63 @@ export async function undeployApp(options: DeployOptions = {}): Promise<void> {
 // Status
 // =============================================================================
 
-/**
- * Shows the deployment status for the app.
- */
-export async function statusApp(): Promise<void> {
-    // 1. Load bkper.yaml/json to get app ID
+function resolveStatusAppId(
+    appId: string | undefined,
+    dependencies: StatusCommandDependencies
+): string {
+    const explicitAppId = appId?.trim();
+    if (explicitAppId) {
+        return explicitAppId;
+    }
+
     let config: bkper.App;
     try {
-        config = loadAppConfig();
+        config = dependencies.loadAppConfig();
     } catch {
         console.error('Error: bkper.yaml or bkper.json not found');
-        process.exit(1);
+        return dependencies.exit(1);
     }
 
     if (!config?.id) {
         console.error('Error: App config is missing "id" field');
-        process.exit(1);
+        return dependencies.exit(1);
     }
 
-    // 3. Create client using stored auth if available. If not, allow an external
-    // proxy to inject auth or let the API return a clear authentication error.
-    const token = await getStoredOAuthToken();
-    const client = createPlatformClient(token);
+    return config.id;
+}
 
-    // 4. Call Platform API
-    console.log(`Fetching status for ${config.id}...`);
+/**
+ * Shows the deployment status for an explicit app ID or the current app config.
+ */
+export async function statusApp(
+    appId?: string,
+    overrides: Partial<StatusCommandDependencies> = {}
+): Promise<void> {
+    const dependencies = getStatusDependencies(overrides);
+    const resolvedAppId = resolveStatusAppId(appId, dependencies);
+
+    // Create client using stored auth if available. If not, allow an external
+    // proxy to inject auth or let the API return a clear authentication error.
+    const token = await dependencies.getStoredOAuthToken();
+    const client = dependencies.createPlatformClient(token);
+
+    console.log(`Fetching status for ${resolvedAppId}...`);
 
     const { data, error } = await client.GET('/api/apps/{appId}', {
         params: {
-            path: { appId: config.id },
+            path: { appId: resolvedAppId },
         },
     });
 
     if (error) {
-        handleError(error);
+        dependencies.handleError(error);
     }
 
     if (!data) {
         console.error('Error: Unexpected empty response');
-        process.exit(1);
+        return dependencies.exit(1);
     }
 
-    // 5. Display status
     console.log(`\nApp: ${data.appId}\n`);
 
     console.log('Production:');

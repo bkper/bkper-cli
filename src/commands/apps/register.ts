@@ -136,13 +136,13 @@ export function registerAppCommands(program: Command): void {
         );
 
     appCommand
-        .command('status')
+        .command('status [appId]')
         .description('Show deployment status')
-        .action(options =>
+        .action((appId: string | undefined) =>
             withAction(
                 'getting app status',
                 async () => {
-                    await statusApp();
+                    await statusApp(appId);
                 },
                 { skipSetup: true }
             )()

@@ -191,8 +191,9 @@ bkper app get <appId> --json
 # Deploy to preview environment (URL: https://{appId}-preview.bkper.app)
 bkper app deploy --preview
 
-# Check deployment status
+# Check deployment status from the current app or by ID
 bkper app status
+bkper app status <appId>
 ```
 
 > **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. Open the printed `Open app` URL in your browser; the `Worker/API` URL is for `/api`, `/health`, `/openapi.json`, and events. If your Vite server uses a port other than `5173`, pass that port with `--cp, --client-port` so the local `ASSETS` binding can reach it. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
@@ -553,7 +554,7 @@ Inside the interactive agent:
 -   `app build` - Build the server Worker bundle for deployment
 -   `app deploy` - For managed Apps, cleanly fast-forward-push and verify the current commit, then explicitly deploy the existing local build. External Apps keep direct upload behavior.
     -   `-p, --preview` - Deploy to preview environment
--   `app status` - Show deployment status
+-   `app status [appId]` - Show deployment status. When `appId` is omitted, the app id is read from local app config.
 -   `app logs [appId]` - View recent app logs. When `appId` is omitted, the app id is read from local app config.
     -   `--since <time>` - ISO8601 or relative lower bound (e.g. `5m`, `1h`, `15d`)
     -   `--until <time>` - ISO8601 or relative upper bound
