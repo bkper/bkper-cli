@@ -24,6 +24,7 @@ export interface CredentialHelperOptions {
     stdin?: string;
     operation?: string;
     api?: PlatformSourceApi;
+    environment?: NodeJS.ProcessEnv;
     stdout?: (chunk: string) => void;
     stderr?: (chunk: string) => void;
 }
@@ -130,7 +131,7 @@ export function formatCredentialGetResponse(password: string): string {
 
 /**
  * Implements `bkper app git-credential <appId>` for Git's credential helper protocol.
- * - get: issues a short-lived write token and prints protocol fields only
+ * - get: uses the clone's pre-issued read token or issues a short-lived write token
  * - store/erase: no-op (never persists)
  */
 export async function runGitCredentialHelper(
@@ -175,21 +176,40 @@ export async function runGitCredentialHelper(
             );
         }
 
-        const api = options.api ?? createPlatformSourceApi();
-        let credential: ManagedSourceCredential;
-        try {
-            credential = await api.issueCredential(appId, 'write');
-        } catch (error) {
-            if (error instanceof ManagedGitError) {
-                throw error;
+        const environment = options.environment ?? process.env;
+        const cloneToken = environment.BKPER_CLONE_TOKEN;
+        const cloneRemote = environment.BKPER_CLONE_REMOTE;
+        let token: string;
+        let remote: string;
+
+        if (cloneToken || cloneRemote) {
+            if (!cloneToken || !cloneRemote) {
+                throw new ManagedGitError(
+                    'INVALID_CREDENTIAL_REQUEST',
+                    'Managed clone credential environment is incomplete.'
+                );
             }
-            throw new ManagedGitError(
-                'MANAGED_SOURCE_UNAVAILABLE',
-                'Failed to issue managed source credentials. Run: bkper auth login'
-            );
+            token = cloneToken;
+            remote = cloneRemote;
+        } else {
+            const api = options.api ?? createPlatformSourceApi();
+            let credential: ManagedSourceCredential;
+            try {
+                credential = await api.issueCredential(appId, 'write');
+            } catch (error) {
+                if (error instanceof ManagedGitError) {
+                    throw error;
+                }
+                throw new ManagedGitError(
+                    'MANAGED_SOURCE_UNAVAILABLE',
+                    'Failed to issue managed source credentials. Run: bkper auth login'
+                );
+            }
+            token = credential.token;
+            remote = credential.remote;
         }
 
-        if (!requestMatchesRemote(request, credential.remote)) {
+        if (!requestMatchesRemote(request, remote)) {
             throw new ManagedGitError(
                 'INVALID_CREDENTIAL_REQUEST',
                 [
@@ -199,7 +219,7 @@ export async function runGitCredentialHelper(
             );
         }
 
-        const password = stripRepositoryTokenSecret(credential.token);
+        const password = stripRepositoryTokenSecret(token);
         // Credential protocol output only — never log this string.
         writeOut(formatCredentialGetResponse(password));
         return 0;

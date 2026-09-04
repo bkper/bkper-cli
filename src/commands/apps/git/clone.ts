@@ -1,5 +1,4 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import * as YAML from 'yaml';
 import {runGit, type GitRunner} from './run-git.js';
@@ -8,6 +7,7 @@ import {
     stripRepositoryTokenSecret,
     type PlatformSourceApi,
 } from './platform-source.js';
+import {buildCredentialHelperCommand} from './credentials.js';
 import {configureManagedOrigin} from './remote.js';
 import {writeManagedSourceMarker} from './markers.js';
 import {ManagedGitError} from './types.js';
@@ -20,6 +20,7 @@ export interface CloneManagedAppOptions {
     runner?: GitRunner;
     /** Test-only: skip real network clone and use this factory. */
     cloneImpl?: (args: {
+        appId: string;
         remote: string;
         token: string;
         tempDir: string;
@@ -51,47 +52,38 @@ function readClonedAppId(repoDir: string): string | undefined {
     return undefined;
 }
 
-async function cloneWithReadToken(args: {
+export async function cloneWithReadToken(args: {
+    appId: string;
     remote: string;
     token: string;
     tempDir: string;
     runner: GitRunner;
 }): Promise<void> {
     const password = stripRepositoryTokenSecret(args.token);
-    // Use an absolute credential helper so the token never appears in argv or remote URL.
-    const helperScript = [
-        '#!/bin/sh',
-        'set -eu',
-        '[ "${1:-}" = "get" ] || exit 0',
-        'printf "username=x\\npassword=%s\\n" "$BKPER_CLONE_TOKEN"',
-        '',
-    ].join('\n');
-    const helperPath = path.join(os.tmpdir(), `bkper-clone-helper-${process.pid}-${Date.now()}.sh`);
-    fs.writeFileSync(helperPath, helperScript, {mode: 0o700});
-    try {
-        await args.runner(
-            [
-                '-c',
-                'credential.helper=',
-                '-c',
-                `credential.helper=${helperPath}`,
-                'clone',
-                '--branch',
-                'main',
-                args.remote,
-                args.tempDir,
-            ],
-            {
-                env: {
-                    ...process.env,
-                    BKPER_CLONE_TOKEN: password,
-                    GIT_TERMINAL_PROMPT: '0',
-                },
-            }
-        );
-    } finally {
-        fs.rmSync(helperPath, {force: true});
-    }
+    const helper = buildCredentialHelperCommand(args.appId);
+    await args.runner(
+        [
+            '-c',
+            'credential.helper=',
+            '-c',
+            'credential.useHttpPath=true',
+            '-c',
+            `credential.helper=${helper}`,
+            'clone',
+            '--branch',
+            'main',
+            args.remote,
+            args.tempDir,
+        ],
+        {
+            env: {
+                ...process.env,
+                BKPER_CLONE_TOKEN: password,
+                BKPER_CLONE_REMOTE: args.remote,
+                GIT_TERMINAL_PROMPT: '0',
+            },
+        }
+    );
 }
 
 /**
@@ -142,6 +134,7 @@ export async function cloneManagedApp(options: CloneManagedAppOptions): Promise<
         const cloneImpl = options.cloneImpl ?? cloneWithReadToken;
         try {
             await cloneImpl({
+                appId: options.appId,
                 remote: credential.remote,
                 token: credential.token,
                 tempDir,
@@ -149,7 +142,7 @@ export async function cloneManagedApp(options: CloneManagedAppOptions): Promise<
             });
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (/empty|not found|could not find remote|Remote branch main not found/i.test(message)) {
+            if (/Remote branch main not found|couldn't find remote ref (?:refs\/heads\/)?main/i.test(message)) {
                 throw new ManagedGitError(
                     'CLONE_EMPTY_REPOSITORY',
                     [

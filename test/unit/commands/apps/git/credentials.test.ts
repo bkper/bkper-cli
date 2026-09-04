@@ -161,6 +161,45 @@ describe('apps git credentials', function () {
         expect(files).to.not.include('.git-credentials');
     });
 
+    it('uses a pre-issued clone token without requesting a write credential', async function () {
+        let stdout = '';
+        const api: PlatformSourceApi = {
+            async getStatus() {
+                throw new Error('unused');
+            },
+            async activate() {
+                throw new Error('unused');
+            },
+            async issueCredential() {
+                throw new Error('should not issue another credential');
+            },
+        };
+        const parsed = new URL(ARTIFACTS_REMOTE);
+
+        const code = await runGitCredentialHelper({
+            appId: 'demo-app',
+            operation: 'get',
+            api,
+            environment: {
+                BKPER_CLONE_TOKEN: 'clone-read-token?expires=999',
+                BKPER_CLONE_REMOTE: ARTIFACTS_REMOTE,
+            },
+            stdin: [
+                `protocol=${parsed.protocol.replace(':', '')}`,
+                `host=${parsed.host}`,
+                `path=${parsed.pathname.replace(/^\//, '')}`,
+                '',
+            ].join('\n'),
+            stdout: chunk => {
+                stdout += chunk;
+            },
+            stderr: () => undefined,
+        });
+
+        expect(code).to.equal(0);
+        expect(stdout).to.equal('username=x\npassword=clone-read-token\n');
+    });
+
     it('fails closed on host/path mismatch without printing secrets', async function () {
         let stdout = '';
         let stderr = '';

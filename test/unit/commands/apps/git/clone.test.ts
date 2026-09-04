@@ -1,7 +1,10 @@
 import {expect} from '../../../helpers/test-setup.js';
 import fs from 'fs';
 import path from 'path';
-import {cloneManagedApp} from '../../../../../src/commands/apps/git/clone.js';
+import {
+    cloneManagedApp,
+    cloneWithReadToken,
+} from '../../../../../src/commands/apps/git/clone.js';
 import type {PlatformSourceApi} from '../../../../../src/commands/apps/git/platform-source.js';
 import {ManagedGitError} from '../../../../../src/commands/apps/git/types.js';
 import {readSourceMarker} from '../../../../../src/commands/apps/git/markers.js';
@@ -23,6 +26,29 @@ describe('apps git clone', function () {
 
     afterEach(function () {
         fs.rmSync(tempDir, {recursive: true, force: true});
+    });
+
+    it('uses the installed credential helper without exposing the read token in arguments', async function () {
+        let command: string[] = [];
+        let environment: NodeJS.ProcessEnv | undefined;
+
+        await cloneWithReadToken({
+            appId: 'demo-app',
+            remote: ARTIFACTS_REMOTE,
+            token: 'read-token?expires=999',
+            tempDir: path.join(tempDir, 'clone'),
+            runner: async (args, options) => {
+                command = args;
+                environment = options?.env;
+                return {stdout: '', stderr: '', exitCode: 0};
+            },
+        });
+
+        expect(command).to.include("credential.helper=!bkper app git-credential 'demo-app'");
+        expect(command.join(' ')).to.not.contain('read-token');
+        expect(command.join(' ')).to.not.match(/bkper-clone-helper.*\.sh/);
+        expect(environment?.BKPER_CLONE_TOKEN).to.equal('read-token');
+        expect(environment?.BKPER_CLONE_REMOTE).to.equal(ARTIFACTS_REMOTE);
     });
 
     it('rejects external apps with provider-clone guidance', async function () {
@@ -129,6 +155,51 @@ describe('apps git clone', function () {
             .readdirSync(tempDir)
             .filter(name => name.startsWith('.demo-app-clone-'));
         expect(leftovers).to.deep.equal([]);
+    });
+
+    it('preserves credential-helper failures instead of reporting an empty repository', async function () {
+        const api: PlatformSourceApi = {
+            async getStatus() {
+                return {
+                    mode: 'managed',
+                    state: 'active',
+                    consistency: 'eventual',
+                    appId: 'demo-app',
+                    repositoryId: 'repo-1',
+                    repositoryName: 'demo-app',
+                    namespace: 'bkper-app-sources-dev',
+                    remote: ARTIFACTS_REMOTE,
+                };
+            },
+            async activate() {
+                throw new Error('should not activate source');
+            },
+            async issueCredential() {
+                return {
+                    token: 'read-token',
+                    scope: 'read',
+                    expiresAt: new Date().toISOString(),
+                    remote: ARTIFACTS_REMOTE,
+                };
+            },
+        };
+
+        try {
+            await cloneManagedApp({
+                appId: 'demo-app',
+                destination: path.join(tempDir, 'demo-app'),
+                api,
+                cloneImpl: async () => {
+                    throw new Error('credential helper executable not found');
+                },
+            });
+            expect.fail('expected clone failure');
+        } catch (error) {
+            expect(error).to.be.instanceOf(Error);
+            expect((error as Error).message).to.equal(
+                'credential helper executable not found'
+            );
+        }
     });
 
     it('removes only the temporary directory when validation fails', async function () {
