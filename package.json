@@ -1,6 +1,6 @@
 {
     "name": "bkper",
-    "version": "4.29.4",
+    "version": "4.30.0",
     "description": "Official Bkper CLI for accounting data, automation, apps, and AI agents",
     "bin": {
         "bkper": "./lib/cli.js"
