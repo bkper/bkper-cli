@@ -19,7 +19,6 @@ import {
     registerBkperHandoffExtension,
     type HandoffCommandDispatcher,
 } from './handoff.js';
-import {registerBkperImageFallbackExtension} from './image-fallback.js';
 import {registerBkperAgentStartupExtension} from './startup.js';
 
 type ExtensionLoadError = {
@@ -114,7 +113,6 @@ export function registerBkperAgentBuiltins(
     );
     registerBkperAgentAuthExtension(pi, undefined, credentialManager);
     registerBkperAiProvider(pi, env);
-    registerBkperImageFallbackExtension(pi);
     registerBkperHandoffExtension(
         pi,
         dispatchHandoffCommand,

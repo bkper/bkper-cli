@@ -121,7 +121,7 @@ function toProviderModel(
 ): BkperAiModelConfig {
     const input = model.input_modalities?.filter(
         (modality): modality is 'text' | 'image' => modality === 'text' || modality === 'image'
-    ) ?? ['text', 'image'];
+    ) ?? [];
 
     return {
         id: model.id,
@@ -166,8 +166,10 @@ async function fetchBkperAiModels(
         throw new Error('Bkper AI model response is invalid.');
     }
 
-    const defaultModelId = catalog.default_model ?? catalog.data[0]?.id;
-    return catalog.data.map(model => toProviderModel(model, defaultModelId));
+    const models = catalog.data.filter(model => model.input_modalities?.includes('image'));
+    const defaultModelId =
+        models.find(model => model.id === catalog.default_model)?.id ?? models[0]?.id;
+    return models.map(model => toProviderModel(model, defaultModelId));
 }
 
 export function findDefaultBkperAiModel<TModel extends BkperAiModelMetadata>(

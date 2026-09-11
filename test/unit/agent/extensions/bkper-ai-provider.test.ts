@@ -72,7 +72,7 @@ describe('agent/bkper-ai-provider', function () {
 
         expect(fetchModels.calledOnce).to.equal(true);
         expect(fetchModels.firstCall.args[0]).to.equal('https://ai-dev.bkper.app/v1/models');
-        expect(models).to.have.length(2);
+        expect(models).to.have.length(1);
         expect(models?.[0]).to.deep.include({
             id: 'openai/gpt-5.6-luna',
             name: 'GPT-5.6 Luna',
@@ -96,6 +96,69 @@ describe('agent/bkper-ai-provider', function () {
         const runtimeModels = (models ?? []).map(model => ({...model, provider: 'bkper'}));
         expect(findDefaultBkperAiModel(runtimeModels)).to.equal(runtimeModels[0]);
         expect(getBkperAiDefaultThinkingLevel(runtimeModels[0])).to.equal('xhigh');
+    });
+
+    for (const defaultModel of ['text-only', undefined, 'vision-default']) {
+        it(`selects a vision default when catalog default is ${defaultModel}`, async function () {
+            const model = {
+                pricing: {
+                    inputNanoUsdPerToken: 0,
+                    cachedInputNanoUsdPerToken: 0,
+                    cacheWriteNanoUsdPerToken: 0,
+                    outputNanoUsdPerToken: 0,
+                },
+                context_window: 128000,
+                max_output_tokens: 8192,
+                thinking_levels: [],
+            };
+            const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+                new Response(JSON.stringify({
+                    default_model: defaultModel,
+                    data: [
+                        {...model, id: 'text-only', input_modalities: ['text']},
+                        {...model, id: 'unknown-modalities'},
+                        {...model, id: 'vision-first', input_modalities: ['text', 'image']},
+                        {...model, id: 'vision-default', input_modalities: ['text', 'image']},
+                    ],
+                }))
+            ));
+
+            const models = await config.refreshModels?.(createRefreshContext());
+
+            expect(models?.map(model => model.id)).to.deep.equal([
+                'vision-first',
+                'vision-default',
+            ]);
+            const runtimeModels = (models ?? []).map(model => ({...model, provider: 'bkper'}));
+            expect(findDefaultBkperAiModel(runtimeModels)?.id).to.equal(
+                defaultModel === 'vision-default' ? 'vision-default' : 'vision-first'
+            );
+            expect(models?.filter(model => 'bkperDefault' in model && model.bkperDefault))
+                .to.have.length(1);
+        });
+    }
+
+    it('offers no models when none advertise image support', async function () {
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({
+                default_model: 'text-only',
+                data: [{
+                    id: 'text-only',
+                    input_modalities: ['text'],
+                    pricing: {
+                        inputNanoUsdPerToken: 0,
+                        cachedInputNanoUsdPerToken: 0,
+                        cacheWriteNanoUsdPerToken: 0,
+                        outputNanoUsdPerToken: 0,
+                    },
+                    context_window: 128000,
+                    max_output_tokens: 8192,
+                    thinking_levels: [],
+                }],
+            }))
+        ));
+
+        expect(await config.refreshModels?.(createRefreshContext())).to.deep.equal([]);
     });
 
     it('reports a failed model request', async function () {

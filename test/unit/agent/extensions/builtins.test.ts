@@ -52,8 +52,6 @@ describe('Bkper agent built-in extensions', function () {
             'tool_call',
             'session_start',
             'session_start',
-            'input',
-            'tool_result',
         ]);
     });
 
