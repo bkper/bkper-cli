@@ -146,7 +146,15 @@ printf '%s\n' '[{"date":"2026-08-18","amount":"25.50","creditAccount":{"name":"B
 
 ## Use Bkper from your existing agent
 
-Install and authenticate the CLI first:
+Give your local assistant this prompt:
+
+```text
+Set up Bkper in this workspace using only the official instructions at https://bkper.com/apps/bkper-cli.
+
+Install the official Bkper CLI npm package (`bkper`) and the official `bkper-cli` skill from `bkper/bkper-cli` only if they are missing. Run `bkper book list`; if authentication is required, guide me through `bkper auth login`, then rerun `bkper book list`. Do not create or change any Bkper Book data.
+```
+
+To configure an existing agent manually, authenticate the CLI first:
 
 ```bash
 bkper auth login
