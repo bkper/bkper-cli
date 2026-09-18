@@ -5,10 +5,10 @@
 
 The official Bkper CLI is published on npm as [`bkper`](https://www.npmjs.com/package/bkper). Use it in two complementary ways:
 
--   **Ask the Bkper Agent** — run `bkper` for guided, interactive help in your terminal
+-   **Ask Bkper CLI Agent** — run `bkper` for guided, interactive help in your terminal
 -   **Run CLI commands** — run `bkper <command>` for scripts, exports, automations, and app workflows
 
-With one tool, you can work with Bkper from your terminal, built-in agent, or external AI tools — managing financial data, building apps, and automating workflows.
+With one tool, you can work with Bkper from your terminal, Bkper CLI Agent, or external AI tools — managing financial data, building apps, and automating workflows.
 
 [![npm](https://img.shields.io/npm/v/bkper?color=%235889e4)](https://www.npmjs.com/package/bkper)
 
@@ -54,7 +54,7 @@ npm install -g bkper
 bkper
 ```
 
-The Bkper Agent uses PowerShell natively on Windows. WSL remains supported and uses Bash.
+Bkper CLI Agent uses PowerShell natively on Windows. WSL remains supported and uses Bash.
 
 ### Authenticate with Bkper
 
@@ -62,19 +62,19 @@ The Bkper Agent uses PowerShell natively on Windows. WSL remains supported and u
 bkper auth login
 ```
 
-`bkper auth login` connects the CLI to your Bkper account. The same local authentication can be used by direct CLI commands, the built-in agent, external coding agents, scripts, and local app development.
+`bkper auth login` connects the CLI to your Bkper account. The same local authentication can be used by direct CLI commands, Bkper CLI Agent, external coding agents, scripts, and local app development.
 
 ---
 
 ## Get started
 
-### Ask the Bkper Agent
+### Ask Bkper CLI Agent
 
 ```bash
 bkper
 ```
 
-Run `bkper` to open the built-in Bkper Agent in your terminal.
+Run `bkper` to open Bkper CLI Agent in your terminal.
 
 ![Bkper CLI Agent TUI](https://raw.githubusercontent.com/bkper/bkper-cli/main/assets/bkper-agent-cli.png)
 
@@ -179,7 +179,7 @@ For general Bkper Q&A without local tool access, use the published docs and [`ll
 
 ## Advanced agent options
 
-`bkper agent` starts the same built-in agent experience as `bkper`.
+`bkper agent` starts the same Bkper CLI Agent experience as `bkper`.
 
 Advanced users can pass supported agent-runtime flags through:
 
