@@ -381,6 +381,10 @@ bkper balance list -b abc123 -q 'on:2025-12-31'
 
 # Monthly balance evolution of one account during 2025
 bkper balance list -b abc123 -q "account:'<accountName>' after:2025-01-01 before:2026-01-01 by:m" --expanded 2
+
+# Point-in-time trial view with separate debit and credit columns
+bkper balance list -b abc123 \
+  -q "group:'<balanceSheetRootGroup>' before:2026-01-01" --expanded 2 --trial
 ```
 
 <details>
@@ -388,6 +392,9 @@ bkper balance list -b abc123 -q "account:'<accountName>' after:2025-01-01 before
 
 -   `balance list -b <bookId> -q <query>` - List balances
     -   `--expanded <level>` - Expand groups to specified depth (`0`+)
+    -   `--trial` - Show total balances in separate debit and credit columns
+
+`--trial` uses cumulative balances unless the query contains `after:`, in which case it uses period movements. It works with any balance query. A filtered subset, including Balance Sheet accounts alone, is not necessarily zero-sum; the Book-wide ledger remains zero-sum.
 
 </details>
 

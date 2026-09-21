@@ -13,6 +13,7 @@ export function registerBalanceCommands(program: Command): void {
         .option('-b, --book <bookId>', 'Book ID')
         .option('-q, --query <query>', 'Balances query')
         .option('--expanded <level>', 'Expand groups to specified depth (0+)', parseInt)
+        .option('--trial', 'Split total balances into debit and credit columns')
         .action(options =>
             withAction('listing balances', async format => {
                 throwIfErrors(
@@ -25,6 +26,7 @@ export function registerBalanceCommands(program: Command): void {
                     query: options.query,
                     expanded: options.expanded,
                     format,
+                    trial: options.trial,
                 });
                 renderTable(matrix, format);
             })()

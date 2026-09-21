@@ -123,6 +123,9 @@ bkper transaction list -b <bookId> -q 'on:2026-06' --format csv
 
 # Query balances
 bkper balance list -b <bookId> -q 'on:2026-06-30'
+
+# Show separate debit and credit columns
+bkper balance list -b <bookId> -q 'on:2026-06-30' --trial
 ```
 
 Capture a receipt as a draft, then review and complete it in Bkper or with the agent:
