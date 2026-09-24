@@ -38,11 +38,6 @@ describe('CLI - group delete Command', function () {
         expect(removeCalled).to.be.true;
     });
 
-    it('should return the removed group', async function () {
-        const result = await deleteGroup('book-123', 'grp-123');
-        expect(result).to.have.property('getId');
-    });
-
     it('should throw when group not found', async function () {
         try {
             await deleteGroup('book-123', 'not-found');

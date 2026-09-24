@@ -30,14 +30,15 @@ describe('CLI - group get Command', function () {
         });
     });
 
-    it('should return group by id', async function () {
-        const result = await getGroup('book-123', 'grp-123');
-        expect(result).to.equal(mockGroup);
-    });
+    it('should forward the group identifier to the book', async function () {
+        let requested: string | undefined;
+        mockBook.getGroup = async (idOrName: string) => {
+            requested = idOrName;
+            return mockGroup;
+        };
 
-    it('should return group by name', async function () {
-        const result = await getGroup('book-123', 'Assets');
-        expect(result).to.equal(mockGroup);
+        await getGroup('book-123', 'grp-123');
+        expect(requested).to.equal('grp-123');
     });
 
     it('should throw when group not found', async function () {

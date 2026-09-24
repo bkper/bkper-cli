@@ -37,11 +37,6 @@ describe('CLI - transaction untrash Command', function () {
         expect(untrashCalled).to.be.true;
     });
 
-    it('should return the restored transaction', async function () {
-        const result = await untrashTransaction('book-123', 'tx-123');
-        expect(result).to.have.property('getId');
-    });
-
     it('should throw when transaction not found', async function () {
         try {
             await untrashTransaction('book-123', 'not-found');

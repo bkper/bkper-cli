@@ -30,14 +30,15 @@ describe('CLI - account get Command', function () {
         });
     });
 
-    it('should return account by id', async function () {
-        const result = await getAccount('book-123', 'acc-123');
-        expect(result).to.equal(mockAccount);
-    });
+    it('should forward the account identifier to the book', async function () {
+        let requested: string | undefined;
+        mockBook.getAccount = async (idOrName: string) => {
+            requested = idOrName;
+            return mockAccount;
+        };
 
-    it('should return account by name', async function () {
-        const result = await getAccount('book-123', 'Checking');
-        expect(result).to.equal(mockAccount);
+        await getAccount('book-123', 'acc-123');
+        expect(requested).to.equal('acc-123');
     });
 
     it('should throw when account not found', async function () {

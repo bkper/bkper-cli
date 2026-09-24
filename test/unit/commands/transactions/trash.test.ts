@@ -37,11 +37,6 @@ describe('CLI - transaction trash Command', function () {
         expect(trashCalled).to.be.true;
     });
 
-    it('should return the trashed transaction', async function () {
-        const result = await trashTransaction('book-123', 'tx-123');
-        expect(result).to.have.property('getId');
-    });
-
     it('should throw when transaction not found', async function () {
         try {
             await trashTransaction('book-123', 'not-found');

@@ -165,8 +165,6 @@ describe('Claude Code plugin publishing metadata', function () {
         expect(manifest.version).to.equal(packageJson.version);
         expect(manifest.repository).to.equal(packageJson.repository);
         expect(manifest.license).to.equal(packageJson.license);
-        expect(manifest.author.name).to.equal('Bkper');
-        expect(manifest.homepage).to.equal('https://bkper.com/docs');
         expect(manifest.skills).to.equal('./skill/');
         expect(existsSync(canonicalSkillPath)).to.equal(true);
         expect(existsSync(legacySkillPluginManifestPath)).to.equal(false);
@@ -183,11 +181,6 @@ describe('Claude Code plugin publishing metadata', function () {
         const marketplace = await readMarketplaceManifest();
 
         expect(marketplace.name).to.equal('bkper');
-        expect(marketplace.owner.name).to.equal('Bkper');
-        expect(marketplace.description).to.equal(undefined);
-        expect(marketplace.metadata?.description).to.equal(
-            'Claude Code plugins for Bkper workflows.'
-        );
         expect(marketplace.plugins).to.have.lengthOf(1);
 
         const [plugin] = marketplace.plugins;

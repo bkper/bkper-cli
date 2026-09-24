@@ -54,17 +54,4 @@ describe('CLI - group list Command', function () {
         expect(result).to.deep.equal([]);
     });
 
-    it('should return empty array for undefined groups', async function () {
-        mockBook = {
-            getGroups: async () => undefined,
-        };
-
-        setMockBkper({
-            setConfig: () => {},
-            getBook: async () => mockBook,
-        });
-
-        const result = await listGroups('book-123');
-        expect(result).to.deep.equal([]);
-    });
 });

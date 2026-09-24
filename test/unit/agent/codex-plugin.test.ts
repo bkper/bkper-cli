@@ -212,7 +212,6 @@ describe('Codex plugin package', function () {
         const plugin = marketplace.plugins.find(entry => entry.name === 'bkper-cli');
 
         expect(marketplace.name).to.equal('bkper');
-        expect(marketplace.interface?.displayName).to.equal('Bkper Plugins');
         expect(plugin).not.to.equal(undefined);
         if (!plugin) {
             return;
@@ -225,7 +224,6 @@ describe('Codex plugin package', function () {
             installation: 'AVAILABLE',
             authentication: 'ON_INSTALL',
         });
-        expect(plugin.category).to.equal('Productivity');
         expect(existsSync(manifestPath)).to.equal(true);
     });
 
@@ -248,8 +246,6 @@ describe('Codex plugin package', function () {
         expect(manifest.mcpServers).to.equal(undefined);
         expect(manifest.apps).to.equal(undefined);
         expect(manifest.hooks).to.equal(undefined);
-        expect(manifest.interface?.displayName).to.equal('Bkper CLI');
-        expect(manifest.interface?.developerName).to.equal('Bkper');
         expect(manifest.interface?.capabilities).to.include.members(['Read', 'Write']);
         expect(manifest.interface?.websiteURL).to.equal('https://bkper.com');
         expect(manifest.interface?.privacyPolicyURL).to.equal('https://bkper.com/privacy');

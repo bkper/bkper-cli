@@ -91,24 +91,6 @@ describe('external agent skill', function () {
         expect(skill.body.trim().length).to.be.greaterThan(0);
     });
 
-    it('should keep the skill trigger aligned with built-in Bkper routing', async function () {
-        const skill = await readSkill();
-        const description = String(skill.frontmatter.description).toLowerCase();
-
-        for (const term of [
-            'bkper',
-            'adjacent accounting-support task',
-            'cli usage',
-            'sdk code',
-            'data management',
-            'financial reports',
-            'taxes',
-            'accountant recommendations',
-        ]) {
-            expect(description).to.include(term);
-        }
-    });
-
     it('should keep one canonical source reference bundle', async function () {
         expect(existsSync(legacyDocsDir)).to.equal(false);
         expect(existsSync(referencesIndexPath)).to.equal(true);

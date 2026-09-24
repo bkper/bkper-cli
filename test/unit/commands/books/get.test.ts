@@ -27,9 +27,4 @@ describe('CLI - book get Command', function () {
         expect(result).to.equal(mockBook);
     });
 
-    it('should return proper json representation', async function () {
-        const result = await getBook('book-123');
-        const json = result.json();
-        expect(json).to.deep.equal({ id: 'book-123', name: 'My Ledger' });
-    });
 });

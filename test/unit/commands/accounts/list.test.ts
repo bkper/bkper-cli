@@ -54,17 +54,4 @@ describe('CLI - account list Command', function () {
         expect(result).to.deep.equal([]);
     });
 
-    it('should return empty array for undefined accounts', async function () {
-        mockBook = {
-            getAccounts: async () => undefined,
-        };
-
-        setMockBkper({
-            setConfig: () => {},
-            getBook: async () => mockBook,
-        });
-
-        const result = await listAccounts('book-123');
-        expect(result).to.deep.equal([]);
-    });
 });

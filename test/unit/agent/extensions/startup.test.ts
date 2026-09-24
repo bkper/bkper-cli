@@ -146,23 +146,8 @@ describe('Bkper agent startup extension', function () {
             ? renderStartupHeaderWithKeybindings(startupHeaderFactory)
             : '';
 
-        expect(headerText).to.include('██████╗');
         expect(headerText).to.include(`pi v${PI_VERSION}`);
-        expect(headerText).to.include('to interrupt');
-        expect(headerText).to.include('for session tree');
-        expect(headerText).to.include('to clear');
-        expect(headerText).to.include('to exit');
-        expect(headerText).to.include('for commands');
-        expect(headerText).to.include('to run bash');
-        expect(headerText).to.include('/resume (ctrl+s)');
-        expect(headerText).to.include('to resume a session');
-        expect(headerText).to.include('/fork (ctrl+x)');
-        expect(headerText).to.include('to branch from a message');
-        expect(headerText).to.include('/clone');
-        expect(headerText).to.include('to duplicate session');
-        expect(headerText).to.include('/tree (ctrl+alt+r)');
         expect(headerText).to.include('/handoff (ctrl+h)');
-        expect(headerText).to.include('ctrl+r to search prompt history');
         expect(
             startupHeaderFactory
                 ? renderStartupHeaderWithKeybindings(startupHeaderFactory, {

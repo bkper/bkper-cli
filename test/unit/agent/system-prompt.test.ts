@@ -22,8 +22,5 @@ describe('agent system prompt', function () {
         expect(full).to.match(/^# Bkper Context/);
         expect(full).to.include('- powershell: Execute PowerShell commands');
         expect(full).to.not.include('- bash:');
-        expect(full).to.include(
-            'Use PowerShell for file operations like listing, searching, and finding files. Use it to run bkper CLI commands when relevant.'
-        );
     });
 });

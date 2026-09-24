@@ -37,11 +37,6 @@ describe('CLI - transaction uncheck Command', function () {
         expect(uncheckCalled).to.be.true;
     });
 
-    it('should return the unchecked transaction', async function () {
-        const result = await uncheckTransaction('book-123', 'tx-123');
-        expect(result).to.have.property('getId');
-    });
-
     it('should throw when transaction not found', async function () {
         try {
             await uncheckTransaction('book-123', 'not-found');

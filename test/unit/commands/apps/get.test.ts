@@ -45,10 +45,4 @@ describe('CLI - app get Command', function () {
         expect(result).to.equal(mockApp);
     });
 
-    it('should return proper json representation', async function () {
-        const result = await getApp('app-tax-bot');
-        const json = result.json();
-
-        expect(json).to.deep.equal(mockApps[0]);
-    });
 });

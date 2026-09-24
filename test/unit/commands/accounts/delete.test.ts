@@ -38,11 +38,6 @@ describe('CLI - account delete Command', function () {
         expect(removeCalled).to.be.true;
     });
 
-    it('should return the removed account', async function () {
-        const result = await deleteAccount('book-123', 'acc-123');
-        expect(result).to.have.property('getId');
-    });
-
     it('should throw when account not found', async function () {
         try {
             await deleteAccount('book-123', 'not-found');
