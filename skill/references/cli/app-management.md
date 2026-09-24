@@ -22,7 +22,7 @@ Source and deployment remain separate. `git push` stores source only and **never
 
 CLI-managed pushes are clean-tree and fast-forward-only. The CLI never commits, merges, rebases, force-pushes, resets, or discards files. Authorized developers may use ordinary Git commands, including an intentional force-push, but a push still never deploys.
 
-Configured App developers, including matches such as `*@example.com`, can read and modify private managed source under the existing owner/developer policy. App users and Book collaborators do not receive source access unless they also satisfy that developer policy. Repository credentials are exact URL/path-scoped, noninteractive, and valid for five minutes; they are never persisted by Bkper.
+Configured App developers, including exact email entries and domain patterns such as `*@example.com`, can read and modify private managed source under the existing owner/developer policy. An exact email matches only that account (case-insensitively); a domain pattern grants access across the hosted domain. App users and Book collaborators do not receive source access unless they also satisfy that developer policy. Repository credentials are exact URL/path-scoped, noninteractive, and valid for five minutes; they are never persisted by Bkper.
 
 ### Migrate from an external Git provider
 
@@ -360,14 +360,15 @@ deprecated: false
 # -----------------------------------------------------------------------------
 # ACCESS CONTROL
 # -----------------------------------------------------------------------------
-# Who can update the app configuration and deploy new versions.
-# Comma-separated list of Bkper usernames (not emails).
-# Supports domain wildcards for registered custom domains: *@yourdomain.com
-developers: victor, aldo, *@bkper.com
+# Who can update the app, access managed source, and deploy new versions.
+# Comma- or space-separated Bkper usernames, exact emails, or domain patterns.
+# An exact email matches only that account (case-insensitively).
+# Use *@yourdomain.com only to grant access to the entire hosted domain.
+developers: victor, aldo@example.com, *@bkper.com
 
-# Who can install and use the app.
-# Same format as developers. Leave empty for public apps.
-users: maria, *@acme.com
+# Who can find the unpublished app in listings (along with its owner and developers).
+# Same entry formats as developers; public listing requires publication review.
+users: maria, alice@example.com, *@acme.com
 
 # -----------------------------------------------------------------------------
 # MENU INTEGRATION (optional)

@@ -83,8 +83,8 @@ deployment:
 
 | Field        | Description                                                                                                                                      |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `developers` | Who can update the app and deploy new versions. Accepts comma- or space-separated Bkper usernames and domain wildcards such as `*@yoursite.com`. |
-| `users`      | Who can install and use the app. Uses the same format as `developers`; leave empty for public apps.                                              |
+| `developers` | Can update, deploy, and access managed source. Comma- or space-separated usernames, exact emails (case-insensitive), or hosted-domain patterns (`*@example.com`). |
+| `users`      | Who can find an unpublished app in listings. Accepts the same entries as `developers`. |
 
 ### Menu integration
 

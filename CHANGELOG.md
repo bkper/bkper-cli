@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [4.31.0] - 2026-09-24
+
+-   **Data Management**
+    -   Added `--trial` to `bkper balance list` for separate debit and credit columns, with cumulative totals by default and period totals when the query contains `after:`
+-   **Agent Experience**
+    -   Updated the bundled Pi runtime to 0.87.0 and made handoff summaries respect the session's model-visible context
+    -   Changed `Ctrl+R` prompt-history search to case-insensitive substring matching in newest-first order
+-   **App Development**
+    -   Updated Bkper AI app guidance to distinguish typed evaluations from language responses and show an Open Responses integration
+    -   Documented exact email addresses for `bkper.yaml` developer and user access, alongside usernames and domain patterns
+-   **Documentation**
+    -   Clarified external agent setup and linked the assistant setup guide from the CLI README
+
 ## [4.29.2] - 2026-08-31
 
 -   **Agent Experience**

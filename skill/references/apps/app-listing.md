@@ -28,19 +28,13 @@ See [App Configuration](https://bkper.com/docs/platform/apps/configuration.md) f
 
 ## Default visibility
 
-By default, installation is limited to the users you've declared in `bkper.yaml`:
+Unpublished apps appear in listings for their owner, developers, and users matched by `bkper.yaml`:
 
 ```yaml
-# Specific Bkper usernames
-users: alice bob
-
-# Your entire domain
-users: *@yourcompany.com
+users: alice bob@example.com *@yourcompany.com
 ```
 
-Use Bkper usernames for individual access, not email addresses.
-
-Your team can install and use the app, but it doesn't appear in the public Bkper app directory for other users.
+An exact email matches only that account, case-insensitively. `*@yourcompany.com` matches the hosted domain. Other users won't see an unpublished app in listings.
 
 ## Publishing to all users
 

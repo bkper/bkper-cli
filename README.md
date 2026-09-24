@@ -199,7 +199,7 @@ When the selected model cannot read images, the agent briefly uses Bkper's defau
 
 Use `/handoff <goal>` to continue long-running work in a new focused session. If you omit the goal, the agent opens an empty goal editor. Pressing `Ctrl+H` opens that editor with your current input text as the goal. The new session is linked to the original, with the relevant context drafted in the input editor for you to adjust or submit.
 
-Press `Ctrl+R` in the standard or handoff input to fuzzy-search recently submitted inputs. Search history starts with inputs submitted after this feature is installed; it does not scan existing sessions. The handoff search omits Bash commands. Press `Ctrl+Alt+R` to open the session tree.
+Press `Ctrl+R` in the standard or handoff input to search recently submitted inputs by case-insensitive substring, newest first. Search history starts with inputs submitted after this feature is installed; it does not scan existing sessions. The handoff search omits Bash commands. Press `Ctrl+Alt+R` to open the session tree.
 
 ---
 
