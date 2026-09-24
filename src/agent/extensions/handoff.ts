@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { AgentMessage } from '@earendil-works/pi-agent-core';
 import {
     BorderedLoader,
     convertToLlm,
@@ -9,7 +8,6 @@ import {
     type ExtensionAPI,
     type ExtensionCommandContext,
     type ExtensionContext,
-    type SessionEntry,
 } from '@earendil-works/pi-coding-agent';
 import { type KeyId } from '@earendil-works/pi-tui';
 import { HANDOFF_GOAL_EDITOR_TITLE } from './handoff-goal-editor.js';
@@ -121,30 +119,9 @@ export function getBkperHandoffShortcutFromFile(agentDir: string): KeyId | undef
     }
 }
 
-function entryToMessage(entry: SessionEntry): AgentMessage | undefined {
-    if (entry.type === 'message') {
-        return entry.message;
-    }
-    if (entry.type === 'compaction') {
-        return {
-            role: 'compactionSummary',
-            summary: entry.summary,
-            tokensBefore: entry.tokensBefore,
-            timestamp: new Date(entry.timestamp).getTime(),
-        };
-    }
-    return undefined;
-}
-
-function contextMessages(context: ExtensionContext): AgentMessage[] {
-    return context.sessionManager
-        .buildContextEntries()
-        .map(entryToMessage)
-        .filter(message => message !== undefined);
-}
-
 function serializeCurrentConversation(context: ExtensionContext): string {
-    return serializeConversation(convertToLlm(contextMessages(context)));
+    const messages = context.sessionManager.buildSessionProjection().messages;
+    return serializeConversation(convertToLlm(messages));
 }
 
 async function generateWithCurrentModel(

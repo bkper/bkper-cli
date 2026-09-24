@@ -23,6 +23,7 @@ interface TestContext {
     };
     sessionManager: {
         buildContextEntries: sinon.SinonStub;
+        buildSessionProjection: sinon.SinonStub;
         getSessionFile: () => string;
     };
 }
@@ -56,24 +57,15 @@ function createContext(): TestContext {
             notify: sinon.stub(),
         },
         sessionManager: {
-            buildContextEntries: sinon.stub().returns([
-                {
-                    type: 'message',
-                    id: 'user-entry',
-                    parentId: null,
-                    timestamp: new Date(1).toISOString(),
-                    message: {
+            buildContextEntries: sinon.stub().returns([]),
+            buildSessionProjection: sinon.stub().returns({
+                messages: [
+                    {
                         role: 'user',
                         content: [{type: 'text', text: 'Please implement handoff support'}],
                         timestamp: 1,
                     },
-                },
-                {
-                    type: 'message',
-                    id: 'assistant-entry',
-                    parentId: 'user-entry',
-                    timestamp: new Date(2).toISOString(),
-                    message: {
+                    {
                         role: 'assistant',
                         content: [{type: 'text', text: 'I have explored the implementation.'}],
                         provider: 'bkper',
@@ -89,8 +81,8 @@ function createContext(): TestContext {
                         stopReason: 'stop',
                         timestamp: 2,
                     },
-                },
-            ]),
+                ],
+            }),
             getSessionFile: () => '/sessions/parent.jsonl',
         },
     };
@@ -213,9 +205,9 @@ describe('agent handoff', function () {
 
         expect(context.waitForIdle.calledOnce).to.equal(true);
         expect(context.ui.editor.called).to.equal(false);
-        expect(context.waitForIdle.calledBefore(context.sessionManager.buildContextEntries)).to.equal(
-            true
-        );
+        expect(
+            context.waitForIdle.calledBefore(context.sessionManager.buildSessionProjection)
+        ).to.equal(true);
         expect(generatePrompt.calledOnce).to.equal(true);
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Implement phase two');
         expect(generatePrompt.firstCall.args[0].conversation).to.include(
@@ -237,6 +229,53 @@ describe('agent handoff', function () {
         )).to.equal(true);
     });
 
+    it('serializes the canonical projected session messages', async function () {
+        const {dependencies, generatePrompt} = createDependencies();
+        const {command} = registerHandoff(dependencies);
+        const context = createCommandContext();
+        context.sessionManager.buildContextEntries.returns([
+            {
+                type: 'message',
+                message: {
+                    role: 'assistant',
+                    content: [{type: 'text', text: 'Abandoned response'}],
+                },
+            },
+        ]);
+        context.sessionManager.buildSessionProjection.returns({
+            messages: [
+                {
+                    role: 'user',
+                    content: [{type: 'text', text: 'Retained request'}],
+                    timestamp: 1,
+                },
+                {
+                    role: 'assistant',
+                    content: [{type: 'text', text: 'Replacement response'}],
+                    provider: 'bkper',
+                    model: 'test-model',
+                    usage: {
+                        input: 1,
+                        output: 1,
+                        cacheRead: 0,
+                        cacheWrite: 0,
+                        totalTokens: 2,
+                        cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0},
+                    },
+                    stopReason: 'stop',
+                    timestamp: 2,
+                },
+            ],
+        });
+
+        await command('Continue from canonical context', context);
+
+        const conversation = generatePrompt.firstCall.args[0].conversation;
+        expect(conversation).to.include('Retained request');
+        expect(conversation).to.include('Replacement response');
+        expect(conversation).not.to.include('Abandoned response');
+    });
+
     it('opens an empty goal editor when /handoff has no goal', async function () {
         const {dependencies, generatePrompt} = createDependencies();
         const {command} = registerHandoff(dependencies);
@@ -247,12 +286,12 @@ describe('agent handoff', function () {
 
         expect(context.ui.editor.calledOnceWithExactly('Next session goal', '')).to.equal(true);
         expect(context.ui.editor.calledBefore(context.waitForIdle)).to.equal(true);
-        expect(context.waitForIdle.calledBefore(context.sessionManager.buildContextEntries)).to.equal(
-            true
-        );
-        expect(context.sessionManager.buildContextEntries.calledBefore(generatePrompt)).to.equal(
-            true
-        );
+        expect(
+            context.waitForIdle.calledBefore(context.sessionManager.buildSessionProjection)
+        ).to.equal(true);
+        expect(
+            context.sessionManager.buildSessionProjection.calledBefore(generatePrompt)
+        ).to.equal(true);
         expect(generatePrompt.firstCall.args[0].goal).to.equal('Use my custom goal');
     });
 
@@ -268,7 +307,7 @@ describe('agent handoff', function () {
             await command('', context);
 
             expect(context.waitForIdle.called).to.equal(false);
-            expect(context.sessionManager.buildContextEntries.called).to.equal(false);
+            expect(context.sessionManager.buildSessionProjection.called).to.equal(false);
             expect(generatePrompt.called).to.equal(false);
             expect(context.newSession.called).to.equal(false);
         });
