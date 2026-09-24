@@ -9,8 +9,6 @@ import {
     writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
-import {fuzzyFilter} from '@earendil-works/pi-tui';
-
 export type PromptHistoryKind = 'standard' | 'handoff' | 'bash';
 
 export interface PromptHistoryEntry {
@@ -97,10 +95,10 @@ export function searchPromptHistoryEntries(
         uniqueEntries.push(entry);
     }
 
-    return fuzzyFilter(uniqueEntries, query, entry => entry.text).slice(
-        0,
-        options.limit ?? DEFAULT_SEARCH_LIMIT
-    );
+    const normalizedQuery = query.toLowerCase();
+    return uniqueEntries
+        .filter(entry => entry.text.toLowerCase().includes(normalizedQuery))
+        .slice(0, options.limit ?? DEFAULT_SEARCH_LIMIT);
 }
 
 export class FilePromptHistory implements PromptHistoryRepository {

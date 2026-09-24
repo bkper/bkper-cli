@@ -55,18 +55,23 @@ describe('prompt history store', function () {
         ]);
     });
 
-    it('uses fuzzy relevance with newest-first ties', function () {
+    it('uses case-insensitive substring matching in newest-first order', function () {
         const entries: PromptHistoryEntry[] = [
-            {text: 'finish handoff tests', kind: 'standard', timestamp: 3},
-            {text: 'finish the handoff implementation', kind: 'standard', timestamp: 2},
-            {text: 'unrelated prompt', kind: 'standard', timestamp: 1},
+            {text: 'create the latest table summary', kind: 'standard', timestamp: 4},
+            {text: 'yes, acceptable', kind: 'standard', timestamp: 3},
+            {text: 'review the older TABLE summary', kind: 'standard', timestamp: 2},
+            {text: 'create a tahle summary', kind: 'standard', timestamp: 1},
         ];
 
         expect(
-            searchPromptHistoryEntries(entries, 'fin hand', {includeBash: true}).map(
+            searchPromptHistoryEntries(entries, 'table', {includeBash: true}).map(
                 entry => entry.text
             )
-        ).to.deep.equal(['finish handoff tests', 'finish the handoff implementation']);
+        ).to.deep.equal([
+            'create the latest table summary',
+            'yes, acceptable',
+            'review the older TABLE summary',
+        ]);
     });
 
     it('rotates back to the newest bounded entries without a lock', function () {
