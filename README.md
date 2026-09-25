@@ -45,16 +45,7 @@ npx bkper
 
 The package and executable are both named `bkper`. See the [CLI Docs] for the dedicated command-line guide.
 
-### Install on Windows
-
-After installing Node.js, run Bkper directly from PowerShell:
-
-```powershell
-npm install -g bkper
-bkper
-```
-
-Bkper CLI Agent uses PowerShell natively on Windows. WSL remains supported and uses Bash.
+On Windows, Bkper CLI Agent runs natively in PowerShell. WSL is also supported and uses Bash.
 
 ### Authenticate with Bkper
 
