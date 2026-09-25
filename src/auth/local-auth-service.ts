@@ -371,7 +371,7 @@ To authenticate Bkper CLI:
 1. Open this URL: ${deviceCode.verificationUrl}
 2. Enter this code: ${deviceCode.userCode}
 
-Waiting for authorization... Keep this command running while the user completes browser sign-in.
+Waiting for authorization...
 `);
 }
 
