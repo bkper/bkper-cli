@@ -53,7 +53,7 @@ On Windows, Bkper CLI Agent runs natively in PowerShell. WSL is also supported a
 bkper auth login
 ```
 
-`bkper auth login` connects the CLI to your Bkper account. The same local authentication can be used by direct CLI commands, Bkper CLI Agent, external coding agents, scripts, and local app development.
+`bkper auth login` connects the CLI to your Bkper account. Keep it running while you complete browser authorization; wait for it to finish successfully. The same local authentication can be used by direct CLI commands, Bkper CLI Agent, external coding agents, scripts, and local app development.
 
 ---
 

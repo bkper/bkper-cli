@@ -36,6 +36,8 @@ npm i -g bkper
 bkper auth login
 ```
 
+Keep the `bkper auth login` process running while the user completes browser authorization.
+
 For general Bkper questions without local tool access, prefer published Bkper Markdown docs and `llms.txt` instead of relying on this skill alone.
 
 ## Required Reading

@@ -7,7 +7,7 @@ export function registerAuthCommands(program: Command): void {
 
     authCommand
         .command('login')
-        .description('Authenticate with Bkper, storing credentials locally')
+        .description('Authenticate with Bkper; keep running until browser authorization completes')
         .action(async () => {
             await login();
         });
