@@ -532,7 +532,7 @@ deployment:
 
 ### Authentication
 
--   `auth login` - Connect the CLI to your Bkper account, storing credentials locally. Keep the process running while completing browser authorization.
+-   `auth login` - Connect the CLI to your Bkper account, storing credentials locally. For agents: share the device code as a progress update without ending the turn or stopping `bkper auth login`; keep it running while the user signs in.
 -   `auth logout` - Revoke the stored Bkper refresh token and clear local credentials
 -   `auth token` - Print the current Bkper OAuth access token to stdout (requires prior login)
 

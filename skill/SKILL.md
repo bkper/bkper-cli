@@ -36,7 +36,7 @@ npm i -g bkper
 bkper auth login
 ```
 
-Keep the `bkper auth login` process running while the user completes browser authorization.
+When `bkper auth login` shows a device code, share it as a progress update without ending your turn or stopping the command. Keep that same process running while the user authorizes in the browser; wait for login to finish before verifying access.
 
 For general Bkper questions without local tool access, prefer published Bkper Markdown docs and `llms.txt` instead of relying on this skill alone.
 
