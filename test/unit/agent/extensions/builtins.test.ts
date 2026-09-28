@@ -44,12 +44,12 @@ describe('Bkper agent built-in extensions', function () {
             }) as ExtensionAPI['on'],
             registerCommand: sinon.stub(),
             registerShortcut: sinon.stub(),
+            registerMessageRenderer: sinon.stub(),
             registerProvider: sinon.stub(),
         } as unknown as ExtensionAPI);
 
         expect(registeredEvents).to.deep.equal([
             'before_agent_start',
-            'tool_call',
             'session_start',
             'session_start',
         ]);
@@ -63,6 +63,7 @@ describe('Bkper agent built-in extensions', function () {
                 on: sinon.stub() as unknown as ExtensionAPI['on'],
                 registerCommand: sinon.stub(),
                 registerShortcut: sinon.stub(),
+                registerMessageRenderer: sinon.stub(),
                 registerProvider: (name: string, config: ProviderConfig) => {
                     providers.push({name, config});
                 },
@@ -96,6 +97,7 @@ describe('Bkper agent built-in extensions', function () {
                 on: sinon.stub() as unknown as ExtensionAPI['on'],
                 registerCommand: sinon.stub(),
                 registerShortcut: sinon.stub(),
+                registerMessageRenderer: sinon.stub(),
                 registerProvider,
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
@@ -125,6 +127,7 @@ describe('Bkper agent built-in extensions', function () {
                         on: sinon.stub() as unknown as ExtensionAPI['on'],
                         registerCommand: sinon.stub(),
                         registerShortcut: sinon.stub(),
+                        registerMessageRenderer: sinon.stub(),
                         registerProvider: sinon.stub(),
                     } as unknown as ExtensionAPI,
                     sinon.stub().resolves(),

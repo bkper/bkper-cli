@@ -1,7 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import {
+    createReadToolDefinition,
+    type BeforeAgentStartEventResult,
+    type ExtensionAPI,
+    type MessageRenderer,
+    type ReadToolInput,
+} from '@earendil-works/pi-coding-agent';
+import { Box } from '@earendil-works/pi-tui';
 
 const DOCS_PATTERN =
     /\b(doc|docs|documentation|readme|guide|guides|example|examples|spec|specs|reference)\b/i;
@@ -22,17 +29,16 @@ export interface CoreConceptsPreloadInput {
     prompt: string;
 }
 
-export interface CoreConceptsPreloadResult {
-    systemPrompt?: string;
-}
+export type CoreConceptsPreloadResult = BeforeAgentStartEventResult;
 
-type ReadToolInput = {
-    path?: unknown;
-};
+export const CORE_CONCEPTS_MESSAGE_TYPE = 'bkper-core-concepts';
 
-type ToolCallEventLike = {
-    toolName: string;
-    input: Record<string, unknown>;
+type ReadToolDefinition = ReturnType<typeof createReadToolDefinition>;
+type ReadToolRenderContext = Parameters<NonNullable<ReadToolDefinition['renderCall']>>[2];
+
+type ContextEntryLike = {
+    type: string;
+    customType?: string;
 };
 
 export function resolveBkperDocPathFromModuleDir(
@@ -56,15 +62,6 @@ export function resolveBkperDocPathFromModuleDir(
 function resolveDocPath(relativePath: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     return resolveBkperDocPathFromModuleDir(thisDir, relativePath);
-}
-
-function normalizePath(filePath: string): string {
-    return path.resolve(filePath);
-}
-
-function getReadToolPath(input: Record<string, unknown>): string | undefined {
-    const maybeReadInput = input as ReadToolInput;
-    return typeof maybeReadInput.path === 'string' ? normalizePath(maybeReadInput.path) : undefined;
 }
 
 export function getCoreConceptsDocPath(): string {
@@ -103,42 +100,81 @@ export function detectCoreConceptsPreloadLevel(
     return 'none';
 }
 
-export function buildCoreConceptsReadInstruction(coreConceptsPath: string): string {
-    return `## Mandatory Bkper Core Concepts Read\nBefore doing anything else for this task, use the \`read\` tool to load the Bkper core concepts from:\n\n\`\`\`\n${coreConceptsPath}\n\`\`\`\n\nRead this file before any other tool call or substantive response. After reading it, continue normally.`;
+function buildCoreConceptsMessageContent(definition: CoreConceptsPreloadDefinition): string {
+    return `## Bkper Core Concepts\nLoaded from \`${definition.docPath}\`. Base all reasoning about Bkper data on this reference.\n\n${definition.markdown}`;
 }
 
-function buildCoreConceptsPreloadResult(
-    systemPrompt: string,
-    definition: CoreConceptsPreloadDefinition
-): CoreConceptsPreloadResult {
-    return {
-        systemPrompt: `${systemPrompt}\n\n${buildCoreConceptsReadInstruction(definition.docPath)}`,
-    };
+function hasCoreConceptsInContext(entries: ContextEntryLike[]): boolean {
+    return entries.some(
+        entry => entry.type === 'custom_message' && entry.customType === CORE_CONCEPTS_MESSAGE_TYPE
+    );
 }
 
-function shouldAllowReadToolCall(event: ToolCallEventLike, definition: CoreConceptsPreloadDefinition): boolean {
-    return event.toolName === 'read' && getReadToolPath(event.input) === normalizePath(definition.docPath);
-}
-
-export function registerBkperCoreConceptsPreloadExtension(
-    pi: Pick<ExtensionAPI, 'on'>,
-    definition: CoreConceptsPreloadDefinition = getDefaultCoreConceptsPreloadDefinition()
-): void {
-    let hasLoadedCoreConcepts = false;
-
-    pi.on('before_agent_start', event => {
-        if (hasLoadedCoreConcepts || detectCoreConceptsPreloadLevel({prompt: event.prompt}) === 'none') {
+/**
+ * Renders the injected message with Pi's own read tool renderers, so it looks
+ * like a read of the doc: collapsed shows the path, expanded shows the content.
+ */
+function createCoreConceptsMessageRenderer(definition: CoreConceptsPreloadDefinition): MessageRenderer {
+    return (_message, options, theme) => {
+        const cwd = process.cwd();
+        const read = createReadToolDefinition(cwd);
+        if (!read.renderCall || !read.renderResult) {
             return undefined;
         }
 
-        return buildCoreConceptsPreloadResult(event.systemPrompt, definition);
-    });
+        const args: ReadToolInput = {path: definition.docPath};
+        const context: ReadToolRenderContext = {
+            args,
+            toolCallId: CORE_CONCEPTS_MESSAGE_TYPE,
+            invalidate: () => undefined,
+            lastComponent: undefined,
+            state: {},
+            cwd,
+            executionStarted: true,
+            argsComplete: true,
+            isPartial: false,
+            expanded: options.expanded,
+            showImages: false,
+            isError: false,
+        };
 
-    pi.on('tool_call', event => {
-        if (shouldAllowReadToolCall(event, definition)) {
-            hasLoadedCoreConcepts = true;
+        // Same shell Pi uses for a successful tool row.
+        const box = new Box(1, 1, text => theme.bg('toolSuccessBg', text));
+        box.addChild(read.renderCall(args, theme, context));
+        box.addChild(
+            read.renderResult(
+                {content: [{type: 'text', text: definition.markdown}], details: undefined},
+                {expanded: options.expanded, isPartial: false},
+                theme,
+                context
+            )
+        );
+        return box;
+    };
+}
+
+export function registerBkperCoreConceptsPreloadExtension(
+    pi: Pick<ExtensionAPI, 'on' | 'registerMessageRenderer'>,
+    definition: CoreConceptsPreloadDefinition = getDefaultCoreConceptsPreloadDefinition()
+): void {
+    pi.registerMessageRenderer(CORE_CONCEPTS_MESSAGE_TYPE, createCoreConceptsMessageRenderer(definition));
+
+    pi.on('before_agent_start', (event, ctx) => {
+        if (detectCoreConceptsPreloadLevel({prompt: event.prompt}) === 'none') {
+            return undefined;
         }
 
-        return undefined;
+        // Compaction-aware: content summarized away by compaction is injected again.
+        if (hasCoreConceptsInContext(ctx.sessionManager.buildContextEntries())) {
+            return undefined;
+        }
+
+        return {
+            message: {
+                customType: CORE_CONCEPTS_MESSAGE_TYPE,
+                content: buildCoreConceptsMessageContent(definition),
+                display: true,
+            },
+        };
     });
 }

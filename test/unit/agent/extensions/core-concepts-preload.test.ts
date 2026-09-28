@@ -1,64 +1,151 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
+import {
+    initTheme,
+    Theme,
+    type ExtensionAPI,
+    type MessageRenderer,
+    type MessageRenderOptions,
+} from '@earendil-works/pi-coding-agent';
+import type { Component } from '@earendil-works/pi-tui';
 import { expect } from '../../helpers/test-setup.js';
 import {
-    buildCoreConceptsReadInstruction,
+    CORE_CONCEPTS_MESSAGE_TYPE,
     detectCoreConceptsPreloadLevel,
-    getCoreConceptsDocPath,
     registerBkperCoreConceptsPreloadExtension,
     resolveBkperDocPathFromModuleDir,
     type CoreConceptsPreloadResult,
 } from '../../../../src/agent/extensions/core-concepts-preload.js';
+
+type ContextEntryLike = {
+    type: string;
+    customType?: string;
+};
+
+type PreloadContextLike = {
+    sessionManager: {
+        buildContextEntries(): ContextEntryLike[];
+    };
+};
 
 type RegisteredBeforeAgentStartHandler = (
     event: {
         prompt: string;
         systemPrompt: string;
     },
-    context: {
-        cwd: string;
-    }
+    context: PreloadContextLike
 ) => Promise<CoreConceptsPreloadResult | void> | CoreConceptsPreloadResult | void;
 
-type RegisteredToolCallHandler = (
-    event: {
-        toolName: string;
-        input: Record<string, unknown>;
-    },
-    context: {
-        cwd: string;
-    }
-) => Promise<{block: true; reason?: string} | void> | {block: true; reason?: string} | void;
+const REVIEW_PROMPT = 'review tax bot, check code and spot any inconsistency';
+const DOC_PATH = '/docs/core/core-concepts.md';
+const CORE_CONCEPTS_MARKDOWN = '# Core Concepts\n\nResources move from one Account to another.';
 
-const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
-const WORKSPACE_ROOT = path.dirname(REPO_ROOT);
-const REVIEW_PROMPT = `review tax bot on ${WORKSPACE_ROOT}, check code and spot any inconsistency`;
-const FIND_WORKSPACE_COMMAND = `find ${WORKSPACE_ROOT} -maxdepth 2`;
+function relevantEvent() {
+    return {prompt: REVIEW_PROMPT, systemPrompt: 'Base prompt'};
+}
 
-function registerPreloadExtension() {
+function contextWith(entries: ContextEntryLike[]): PreloadContextLike {
+    return {sessionManager: {buildContextEntries: () => entries}};
+}
+
+function injectedEntry(): ContextEntryLike {
+    return {type: 'custom_message', customType: CORE_CONCEPTS_MESSAGE_TYPE};
+}
+
+type InjectedMessage = NonNullable<CoreConceptsPreloadResult['message']>;
+
+type RenderInjectedMessage = (
+    message: InjectedMessage,
+    options: MessageRenderOptions,
+    theme: Theme
+) => Component | undefined;
+
+type RegisteredPreloadExtension = {
+    beforeAgentStart: RegisteredBeforeAgentStartHandler;
+    renderMessage: RenderInjectedMessage;
+};
+
+function registerPreloadExtensionHandlers(): RegisteredPreloadExtension {
     let beforeAgentStartHandler: RegisteredBeforeAgentStartHandler | undefined;
-    let toolCallHandler: RegisteredToolCallHandler | undefined;
+    const registeredEvents: string[] = [];
+    const renderers = new Map<string, RenderInjectedMessage>();
 
-    registerBkperCoreConceptsPreloadExtension({
-        on: ((event: string, handler: unknown) => {
-            if (event === 'before_agent_start') {
-                beforeAgentStartHandler = handler as RegisteredBeforeAgentStartHandler;
-            }
-            if (event === 'tool_call') {
-                toolCallHandler = handler as RegisteredToolCallHandler;
-            }
-        }) as ExtensionAPI['on'],
-    });
+    registerBkperCoreConceptsPreloadExtension(
+        {
+            on: ((event: string, handler: unknown) => {
+                registeredEvents.push(event);
+                if (event === 'before_agent_start') {
+                    beforeAgentStartHandler = handler as RegisteredBeforeAgentStartHandler;
+                }
+            }) as ExtensionAPI['on'],
+            registerMessageRenderer: <T>(customType: string, renderer: MessageRenderer<T>) => {
+                renderers.set(customType, (message, options, theme) =>
+                    renderer(
+                        {
+                            role: 'custom',
+                            timestamp: 0,
+                            customType: message.customType,
+                            content: message.content,
+                            display: message.display,
+                        },
+                        options,
+                        theme
+                    )
+                );
+            },
+        },
+        {docPath: DOC_PATH, markdown: CORE_CONCEPTS_MARKDOWN}
+    );
 
+    expect(registeredEvents).to.deep.equal(['before_agent_start']);
     expect(beforeAgentStartHandler).to.not.equal(undefined);
-    expect(toolCallHandler).to.not.equal(undefined);
+    const renderMessage = renderers.get(CORE_CONCEPTS_MESSAGE_TYPE);
+    expect(renderMessage).to.not.equal(undefined);
 
     return {
-        beforeAgentStartHandler: beforeAgentStartHandler as RegisteredBeforeAgentStartHandler,
-        toolCallHandler: toolCallHandler as RegisteredToolCallHandler,
+        beforeAgentStart: beforeAgentStartHandler as RegisteredBeforeAgentStartHandler,
+        renderMessage: renderMessage as RenderInjectedMessage,
     };
+}
+
+function registerPreloadExtension(): RegisteredBeforeAgentStartHandler {
+    return registerPreloadExtensionHandlers().beforeAgentStart;
+}
+
+type ThemeFgColors = ConstructorParameters<typeof Theme>[0];
+type ThemeBgColors = ConstructorParameters<typeof Theme>[1];
+
+const PI_DARK_THEME_PATH = path.resolve(
+    import.meta.dirname,
+    '../../../../node_modules/@earendil-works/pi-coding-agent/dist/modes/interactive/theme/dark.json'
+);
+
+/** A theme with every color key Pi's bundled theme defines, all mapped to one plain color. */
+function createPlainTheme(): Theme {
+    const themeJson: {colors: Record<string, unknown>} = JSON.parse(readFileSync(PI_DARK_THEME_PATH, 'utf8'));
+    const colors = Object.fromEntries(Object.keys(themeJson.colors).map(key => [key, 7]));
+    return new Theme(colors as ThemeFgColors, colors as ThemeBgColors, '256color');
+}
+
+async function renderInjectedMessage(expanded: boolean): Promise<string> {
+    const {beforeAgentStart, renderMessage} = registerPreloadExtensionHandlers();
+    const result = await beforeAgentStart(relevantEvent(), contextWith([]));
+    const message = result?.message;
+    expect(message).to.not.equal(undefined);
+    if (!message) {
+        return '';
+    }
+
+    const component = renderMessage(
+        message,
+        {expanded, outputPad: 1},
+        createPlainTheme()
+    );
+    expect(component).to.not.equal(undefined);
+
+    // Strip ANSI styling so assertions check visible text only.
+    return (component?.render(120) ?? []).join('\n').replace(/\x1b\[[0-9;]*m/g, '');
 }
 
 describe('core concepts preload', function () {
@@ -122,155 +209,80 @@ describe('core concepts preload', function () {
         expect(docPath).to.equal(path.join(coreDir, 'core-concepts.md'));
     });
 
-    it('should build an explicit read-first instruction with the canonical doc path', function () {
-        const instruction = buildCoreConceptsReadInstruction(getCoreConceptsDocPath());
+    it('should inject the core concepts content on the first relevant turn', async function () {
+        const beforeAgentStart = registerPreloadExtension();
 
-        expect(instruction).to.include('Before doing anything else for this task');
-        expect(instruction).to.include('use the `read` tool');
-        expect(instruction).to.include(getCoreConceptsDocPath());
+        const result = await beforeAgentStart(relevantEvent(), contextWith([]));
+
+        expect(result?.message?.customType).to.equal(CORE_CONCEPTS_MESSAGE_TYPE);
+        expect(result?.message?.content).to.include(CORE_CONCEPTS_MARKDOWN);
+        expect(result?.message?.content).to.include(DOC_PATH);
+        expect(result?.systemPrompt).to.equal(undefined);
     });
 
-    it('should append a read-first instruction before relevant turns', async function () {
-        const {beforeAgentStartHandler} = registerPreloadExtension();
+    it('should not inject on turns without Bkper semantics', async function () {
+        const beforeAgentStart = registerPreloadExtension();
 
-        const result = await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        expect(result).to.not.equal(undefined);
-        expect(result?.systemPrompt).to.include('Base prompt');
-        expect(result?.systemPrompt).to.include(getCoreConceptsDocPath());
-        expect(result?.systemPrompt).to.include('Before doing anything else for this task');
-    });
-
-    it('should not block non-read tools while core concepts read is pending', async function () {
-        const {beforeAgentStartHandler, toolCallHandler} = registerPreloadExtension();
-
-        await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        const result = await toolCallHandler(
-            {
-                toolName: 'bash',
-                input: {command: FIND_WORKSPACE_COMMAND},
-            },
-            {
-                cwd: REPO_ROOT,
-            }
+        const result = await beforeAgentStart(
+            {prompt: 'review the README for clarity', systemPrompt: 'Base prompt'},
+            contextWith([])
         );
 
         expect(result).to.equal(undefined);
     });
 
-    it('should allow the canonical core concepts read and then allow other tools', async function () {
-        const {beforeAgentStartHandler, toolCallHandler} = registerPreloadExtension();
+    it('should not inject again while the content is in the model context', async function () {
+        const beforeAgentStart = registerPreloadExtension();
 
-        await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        const readResult = await toolCallHandler(
-            {
-                toolName: 'read',
-                input: {path: getCoreConceptsDocPath()},
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        const bashResult = await toolCallHandler(
-            {
-                toolName: 'bash',
-                input: {command: FIND_WORKSPACE_COMMAND},
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        expect(readResult).to.equal(undefined);
-        expect(bashResult).to.equal(undefined);
-    });
-
-    it('should require only the first successful read in the session', async function () {
-        const {beforeAgentStartHandler, toolCallHandler} = registerPreloadExtension();
-
-        await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        await toolCallHandler(
-            {
-                toolName: 'read',
-                input: {path: getCoreConceptsDocPath()},
-            },
-            {
-                cwd: REPO_ROOT,
-            }
-        );
-
-        const result = await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
+        const result = await beforeAgentStart(
+            relevantEvent(),
+            contextWith([{type: 'message'}, injectedEntry()])
         );
 
         expect(result).to.equal(undefined);
     });
 
-    it('should keep appending read instructions on relevant turns until core concepts are read', async function () {
-        const {beforeAgentStartHandler} = registerPreloadExtension();
+    it('should inject again once compaction removed the content from the model context', async function () {
+        const beforeAgentStart = registerPreloadExtension();
 
-        await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
+        await beforeAgentStart(relevantEvent(), contextWith([]));
+        const result = await beforeAgentStart(
+            relevantEvent(),
+            contextWith([{type: 'compaction'}, {type: 'message'}])
         );
 
-        const result = await beforeAgentStartHandler(
-            {
-                prompt: REVIEW_PROMPT,
-                systemPrompt: 'Base prompt',
-            },
-            {
-                cwd: REPO_ROOT,
-            }
+        expect(result?.message?.customType).to.equal(CORE_CONCEPTS_MESSAGE_TYPE);
+    });
+
+    it('should ignore custom messages from other extensions', async function () {
+        const beforeAgentStart = registerPreloadExtension();
+
+        const result = await beforeAgentStart(
+            relevantEvent(),
+            contextWith([{type: 'custom_message', customType: 'other-extension'}])
         );
 
-        expect(result?.systemPrompt).to.include(getCoreConceptsDocPath());
+        expect(result?.message?.customType).to.equal(CORE_CONCEPTS_MESSAGE_TYPE);
+    });
+
+    describe('message rendering', function () {
+        before(function () {
+            initTheme('dark', false);
+        });
+
+        it('should render collapsed like a read tool call showing only the doc path', async function () {
+            const output = await renderInjectedMessage(false);
+
+            expect(output).to.include('read');
+            expect(output).to.include(DOC_PATH);
+            expect(output).to.not.include('Resources move from one Account to another.');
+        });
+
+        it('should render the doc content when expanded', async function () {
+            const output = await renderInjectedMessage(true);
+
+            expect(output).to.include(DOC_PATH);
+            expect(output).to.include('Resources move from one Account to another.');
+        });
     });
 });
