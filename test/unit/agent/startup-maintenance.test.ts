@@ -4,157 +4,92 @@ import {runStartupMaintenance} from '../../../src/agent/startup-maintenance.js';
 
 describe('agent startup maintenance', function () {
     const originalDisableAutoUpdate = process.env.BKPER_DISABLE_AUTOUPDATE;
+    const originalCi = process.env.CI;
+
+    beforeEach(function () {
+        delete process.env.BKPER_DISABLE_AUTOUPDATE;
+        delete process.env.CI;
+    });
 
     afterEach(function () {
-        if (originalDisableAutoUpdate === undefined) {
-            delete process.env.BKPER_DISABLE_AUTOUPDATE;
-        } else {
-            process.env.BKPER_DISABLE_AUTOUPDATE = originalDisableAutoUpdate;
+        for (const [key, value] of [
+            ['BKPER_DISABLE_AUTOUPDATE', originalDisableAutoUpdate],
+            ['CI', originalCi],
+        ] as const) {
+            if (value === undefined) {
+                delete process.env[key];
+            } else {
+                process.env[key] = value;
+            }
         }
     });
 
-    it('should start background upgrade and notify when update is available', async function () {
-        delete process.env.BKPER_DISABLE_AUTOUPDATE;
-
-        const getAvailableUpgrade = sinon.stub().resolves({
-            current: '4.9.0',
-            latest: '5.0.0',
-            method: 'npm',
-        });
-        const isVersionInstalled = sinon.stub().resolves(false);
-        const startDetachedUpgrade = sinon.stub();
+    it('should start the background update check', async function () {
+        const readNotice = sinon.stub().returns(undefined);
+        const startUpdateCheck = sinon.stub().returns(true);
         const notify = sinon.stub();
 
-        await runStartupMaintenance(
-            {notify},
-            {
-                getAvailableUpgrade,
-                isVersionInstalled,
-                startDetachedUpgrade,
-            }
-        );
+        await runStartupMaintenance({notify}, {readNotice, startUpdateCheck});
 
-        expect(isVersionInstalled.calledOnceWithExactly('npm', '5.0.0')).to.be.true;
-        expect(startDetachedUpgrade.calledOnceWithExactly('npm', '5.0.0')).to.be.true;
+        expect(startUpdateCheck.calledOnce).to.be.true;
+        expect(notify.called).to.be.false;
+    });
+
+    it('should ask for a restart when a newer version was installed', async function () {
+        const readNotice = sinon.stub().returns({kind: 'installed', current: '5.0.0', latest: '5.1.0'});
+        const startUpdateCheck = sinon.stub().returns(false);
+        const notify = sinon.stub();
+
+        await runStartupMaintenance({notify}, {readNotice, startUpdateCheck});
+
         expect(
             notify.calledOnceWithExactly(
-                'Updating bkper to 5.0.0 in background. Restart later to use it.',
+                'bkper 5.1.0 installed (current 5.0.0). Restart to use it.',
                 'info'
             )
         ).to.be.true;
     });
 
-    it('should only notify when the latest version is already installed', async function () {
-        delete process.env.BKPER_DISABLE_AUTOUPDATE;
-
-        const getAvailableUpgrade = sinon.stub().resolves({
-            current: '4.9.0',
-            latest: '5.0.0',
-            method: 'npm',
+    it('should warn with the manual instruction when the copy cannot update itself', async function () {
+        const readNotice = sinon.stub().returns({
+            kind: 'manual',
+            current: '5.0.0',
+            latest: '5.1.0',
+            instruction: 'Run: bkper upgrade',
         });
-        const isVersionInstalled = sinon.stub().resolves(true);
-        const startDetachedUpgrade = sinon.stub();
+        const startUpdateCheck = sinon.stub().returns(false);
         const notify = sinon.stub();
 
-        await runStartupMaintenance(
-            {notify},
-            {
-                getAvailableUpgrade,
-                isVersionInstalled,
-                startDetachedUpgrade,
-            }
-        );
+        await runStartupMaintenance({notify}, {readNotice, startUpdateCheck});
 
-        expect(isVersionInstalled.calledOnceWithExactly('npm', '5.0.0')).to.be.true;
-        expect(startDetachedUpgrade.called).to.be.false;
         expect(
             notify.calledOnceWithExactly(
-                'bkper 5.0.0 is already installed. Restart this session to use it.',
-                'info'
-            )
-        ).to.be.true;
-    });
-
-    it('should show manual upgrade hint when installation method is unknown', async function () {
-        delete process.env.BKPER_DISABLE_AUTOUPDATE;
-
-        const getAvailableUpgrade = sinon.stub().resolves({
-            current: '4.9.0',
-            latest: '5.0.0',
-            method: 'unknown',
-        });
-        const isVersionInstalled = sinon.stub().resolves(false);
-        const startDetachedUpgrade = sinon.stub();
-        const notify = sinon.stub();
-
-        await runStartupMaintenance(
-            {notify},
-            {
-                getAvailableUpgrade,
-                isVersionInstalled,
-                startDetachedUpgrade,
-            }
-        );
-
-        expect(isVersionInstalled.called).to.be.false;
-        expect(startDetachedUpgrade.called).to.be.false;
-        expect(
-            notify.calledOnceWithExactly(
-                'bkper 5.0.0 available. Run bkper upgrade after exit.',
+                'bkper 5.1.0 available (current 5.0.0). Run: bkper upgrade',
                 'warning'
             )
         ).to.be.true;
     });
 
-    it('should show manual upgrade hint when background upgrade cannot be started', async function () {
-        delete process.env.BKPER_DISABLE_AUTOUPDATE;
-
-        const getAvailableUpgrade = sinon.stub().resolves({
-            current: '4.9.0',
-            latest: '5.0.0',
-            method: 'npm',
-        });
-        const isVersionInstalled = sinon.stub().resolves(false);
-        const startDetachedUpgrade = sinon.stub().throws(new Error('spawn failed'));
-        const notify = sinon.stub();
-
-        await runStartupMaintenance(
-            {notify},
-            {
-                getAvailableUpgrade,
-                isVersionInstalled,
-                startDetachedUpgrade,
-            }
-        );
-
-        expect(
-            notify.calledOnceWithExactly(
-                'bkper 5.0.0 available. Run bkper upgrade after exit.',
-                'warning'
-            )
-        ).to.be.true;
-    });
-
-    it('should skip auto-upgrade when disabled', async function () {
+    it('should skip everything when disabled', async function () {
         process.env.BKPER_DISABLE_AUTOUPDATE = '1';
-
-        const getAvailableUpgrade = sinon.stub().resolves(null);
-        const isVersionInstalled = sinon.stub().resolves(false);
-        const startDetachedUpgrade = sinon.stub();
+        const readNotice = sinon.stub();
+        const startUpdateCheck = sinon.stub();
         const notify = sinon.stub();
 
-        await runStartupMaintenance(
-            {notify},
-            {
-                getAvailableUpgrade,
-                isVersionInstalled,
-                startDetachedUpgrade,
-            }
-        );
+        await runStartupMaintenance({notify}, {readNotice, startUpdateCheck});
 
-        expect(getAvailableUpgrade.called).to.be.false;
-        expect(isVersionInstalled.called).to.be.false;
-        expect(startDetachedUpgrade.called).to.be.false;
+        expect(readNotice.called).to.be.false;
+        expect(startUpdateCheck.called).to.be.false;
+        expect(notify.called).to.be.false;
+    });
+
+    it('should never throw', async function () {
+        const readNotice = sinon.stub().throws(new Error('boom'));
+        const startUpdateCheck = sinon.stub();
+        const notify = sinon.stub();
+
+        await runStartupMaintenance({notify}, {readNotice, startUpdateCheck});
+
         expect(notify.called).to.be.false;
     });
 });

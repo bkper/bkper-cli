@@ -55,17 +55,39 @@ function wait(ms: number): Promise<void> {
     });
 }
 
+async function waitForInstallDecision(cacheDir: string, timeoutMs: number): Promise<string> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        try {
+            for (const file of await fs.readdir(cacheDir)) {
+                if (!file.endsWith('.json')) continue;
+                const content = await fs.readFile(path.join(cacheDir, file), 'utf8');
+                if (content.includes('"install"')) {
+                    return content;
+                }
+            }
+        } catch {
+            // Cache not written yet
+        }
+        await wait(100);
+    }
+    throw new Error('Update worker did not record an install decision in time');
+}
+
 describe('cli autoupdate startup', function () {
-    it('should not start background auto-update for non-agent CLI startup', async function () {
-        this.timeout(10000);
+    it('should never install from a plain command when the running copy is not a global install', async function () {
+        this.timeout(30000);
         const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'bkper-cli-autoupdate-'));
         const fakeBinDir = path.join(tempDir, 'bin');
+        const homeDir = path.join(tempDir, 'home');
         const writerPath = path.join(tempDir, 'write-marker.mjs');
         const markerPath = path.join(tempDir, 'autoupdate-started');
         await fs.mkdir(fakeBinDir);
+        await fs.mkdir(homeDir);
         await Promise.all([
             writeFakePackageManager(fakeBinDir, 'bun'),
             writeFakePackageManager(fakeBinDir, 'npm'),
+            writeFakePackageManager(fakeBinDir, 'pnpm'),
             writeFakePackageManager(fakeBinDir, 'yarn'),
         ]);
         await fs.writeFile(
@@ -75,6 +97,8 @@ describe('cli autoupdate startup', function () {
 
         const env: NodeJS.ProcessEnv = {
             ...process.env,
+            HOME: homeDir,
+            USERPROFILE: homeDir,
             PATH: `${fakeBinDir}${path.delimiter}${process.env.PATH ?? ''}`,
             TS_NODE_PROJECT: path.join(REPO_ROOT, 'tsconfig.test.json'),
             BKPER_AUTOUPDATE_LATEST_VERSION: '999.0.0',
@@ -83,12 +107,23 @@ describe('cli autoupdate startup', function () {
             )} ${JSON.stringify(markerPath)}`,
         };
         delete env.BKPER_DISABLE_AUTOUPDATE;
+        delete env.CI;
         delete env.TS_NODE_TRANSPILE_ONLY;
 
         try {
-            const result = await runCliWithEnvironment(env);
-            expect(result.exitCode).to.equal(0, result.stderr);
-            await wait(500);
+            const first = await runCliWithEnvironment(env);
+            expect(first.exitCode).to.equal(0, first.stderr);
+
+            const decision = await waitForInstallDecision(
+                path.join(homeDir, '.config', 'bkper', 'update-check'),
+                20000
+            );
+            expect(decision).to.contain('"status":"manual"');
+            expect(await fileExists(markerPath)).to.equal(false);
+
+            const second = await runCliWithEnvironment(env);
+            expect(second.exitCode).to.equal(0, second.stderr);
+            expect(second.stderr).to.contain('bkper 999.0.0 available');
             expect(await fileExists(markerPath)).to.equal(false);
         } finally {
             await fs.rm(tempDir, {recursive: true, force: true});

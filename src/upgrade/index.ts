@@ -1,17 +1,19 @@
 export {
+    PACKAGE_DIR,
     VERSION,
-    detectMethod,
-    detectMethodAsync,
+    detectInstallMethod,
     fetchLatestVersion,
-    getUpgradeCommand,
-    isVersionInstalledAsync,
-    startDetachedUpgrade,
+    getInstallCommand,
+    getSelfUpdatePlan,
 } from './installation.js';
+export { foregroundUpgrade, isNewerVersion, runUpgrade } from './upgrade.js';
 export {
-    autoUpgrade,
-    foregroundUpgrade,
-    getAvailableUpgrade,
-    isNewerVersion,
-} from './upgrade.js';
-export type { InstallMethod } from './installation.js';
-export type { AvailableUpgrade } from './upgrade.js';
+    formatUpdateNotice,
+    getUpdateNotice,
+    isUpdateCheckDisabled,
+    maybeStartUpdateCheck,
+    readUpdateState,
+    runCommandUpdateCheck,
+} from './update-check.js';
+export type { InstallMethod, SelfUpdatePlan } from './installation.js';
+export type { UpdateNotice } from './update-check.js';

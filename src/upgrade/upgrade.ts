@@ -1,13 +1,11 @@
 import {
     VERSION,
     fetchLatestVersion,
-    detectMethod,
-    detectMethodAsync,
-    executeUpgrade,
-    getUpgradeCommand,
-    startDetachedUpgrade,
+    getSelfUpdatePlan,
+    readInstalledVersion,
+    runInstallCommand,
 } from './installation.js';
-import type { InstallMethod } from './installation.js';
+import type { SelfUpdatePlan } from './installation.js';
 
 /**
  * Compares two semver version strings.
@@ -23,161 +21,90 @@ export function isNewerVersion(current: string, latest: string): boolean {
     return lPatch > cPatch;
 }
 
-export interface AvailableUpgrade {
-    current: string;
-    latest: string;
-    method: InstallMethod;
-}
-
-export interface AvailableUpgradeDependencies {
+export interface UpgradeDependencies {
     version: string;
     fetchLatestVersion: () => Promise<string | null>;
-    detectMethod: () => Promise<InstallMethod>;
+    getSelfUpdatePlan: (version: string) => SelfUpdatePlan;
+    runInstall: (command: string) => void;
+    readInstalledVersion: (packageJsonPath: string) => string | undefined;
+    log: (message: string) => void;
+    error: (message: string) => void;
 }
 
-export interface AutoUpgradeDependencies extends AvailableUpgradeDependencies {
-    startUpgrade: (method: InstallMethod, version: string) => void;
-    writeStderr: (message: string) => void;
-}
-
-function writeAutoUpgradeMessage(message: string): void {
-    if (process.stdout.isTTY === true && process.stderr.isTTY === true) {
-        return;
-    }
-    process.stderr.write(message);
-}
-
-function createDefaultAvailableUpgradeDependencies(): AvailableUpgradeDependencies {
+function createDefaultUpgradeDependencies(): UpgradeDependencies {
     return {
         version: VERSION,
-        fetchLatestVersion,
-        detectMethod: detectMethodAsync,
-    };
-}
-
-function createDefaultAutoUpgradeDependencies(): AutoUpgradeDependencies {
-    return {
-        ...createDefaultAvailableUpgradeDependencies(),
-        startUpgrade: startDetachedUpgrade,
-        writeStderr: writeAutoUpgradeMessage,
-    };
-}
-
-function getManualUpgradeMessage(current: string, latest: string): string {
-    return (
-        `\nbkper ${latest} available (current: ${current}). ` +
-        `Upgrade manually: npm install -g bkper@${latest}\n`
-    );
-}
-
-/**
- * Checks whether a newer version is available and returns the target version
- * plus the detected install method.
- */
-export async function getAvailableUpgrade(
-    dependencies: AvailableUpgradeDependencies = createDefaultAvailableUpgradeDependencies()
-): Promise<AvailableUpgrade | null> {
-    const latest = await dependencies.fetchLatestVersion();
-    if (!latest) return null;
-    if (!isNewerVersion(dependencies.version, latest)) return null;
-
-    const method = await dependencies.detectMethod();
-    return {
-        current: dependencies.version,
-        latest,
-        method,
+        fetchLatestVersion: () => fetchLatestVersion(),
+        getSelfUpdatePlan: version => getSelfUpdatePlan(version),
+        runInstall: runInstallCommand,
+        readInstalledVersion,
+        log: message => console.log(message),
+        error: message => console.error(message),
     };
 }
 
 /**
- * Runs the silent auto-upgrade check in the background.
- *
- * This function:
- * 1. Fetches the latest version from npm
- * 2. Compares with the current installed version
- * 3. If newer, starts a detached background upgrade using the detected install method
- * 4. Prints a brief message to stderr on fallback or when running non-interactively
- *
- * All errors are swallowed silently to never disrupt the user's command.
+ * Upgrades the running copy of bkper and returns the process exit code.
+ * Refuses to touch anything that is not a verified, writable global install.
  */
-export async function autoUpgrade(
-    dependencies: AutoUpgradeDependencies = createDefaultAutoUpgradeDependencies()
-): Promise<void> {
-    try {
-        const availableUpgrade = await getAvailableUpgrade(dependencies);
-        if (!availableUpgrade) return;
-
-        if (availableUpgrade.method === 'unknown') {
-            dependencies.writeStderr(
-                getManualUpgradeMessage(availableUpgrade.current, availableUpgrade.latest)
-            );
-            return;
-        }
-
-        try {
-            dependencies.startUpgrade(availableUpgrade.method, availableUpgrade.latest);
-            dependencies.writeStderr(
-                `\nbkper update started in background: ` +
-                    `${availableUpgrade.current} \u2192 ${availableUpgrade.latest} ` +
-                    `(restart later to use)\n`
-            );
-        } catch {
-            dependencies.writeStderr(
-                getManualUpgradeMessage(availableUpgrade.current, availableUpgrade.latest)
-            );
-        }
-    } catch {
-        // Silent failure — never break the user's command
+export async function runUpgrade(
+    targetVersion: string | undefined,
+    deps: UpgradeDependencies = createDefaultUpgradeDependencies()
+): Promise<number> {
+    const latest = targetVersion ?? (await deps.fetchLatestVersion());
+    if (!latest) {
+        deps.error('Could not determine the latest version. Check your network connection.');
+        return 1;
     }
+
+    if (!targetVersion && !isNewerVersion(deps.version, latest)) {
+        deps.log(`Already on the latest version (${deps.version}).`);
+        return 0;
+    }
+
+    const plan = deps.getSelfUpdatePlan(latest);
+    if (plan.kind === 'manual') {
+        deps.error(
+            `Cannot upgrade this bkper automatically.\n` +
+                `Running bkper: ${plan.packageDir}\n` +
+                `Detected method: ${plan.method}\n` +
+                plan.instruction
+        );
+        return 1;
+    }
+
+    deps.log(`Upgrading bkper: ${deps.version} \u2192 ${latest}`);
+    deps.log(`Running: ${plan.command}`);
+
+    try {
+        deps.runInstall(plan.command);
+    } catch (err) {
+        deps.error(`Upgrade failed: ${err instanceof Error ? err.message : String(err)}`);
+        deps.error(`Try upgrading manually: ${plan.command}`);
+        return 1;
+    }
+
+    const installed = deps.readInstalledVersion(plan.packageJsonPath);
+    if (installed !== latest) {
+        deps.error(
+            `bkper@${latest} was installed elsewhere; the running bkper at ${plan.packageDir} ` +
+                `is still ${installed ?? 'unknown'}.\n` +
+                `Update it with the package manager that provides it.`
+        );
+        return 1;
+    }
+
+    deps.log(`Successfully upgraded to bkper@${latest}. Restart your terminal to use the new version.`);
+    return 0;
 }
 
 /**
  * Runs an explicit foreground upgrade with user-facing output.
  * Used by the `bkper upgrade` command.
  */
-export async function foregroundUpgrade(
-    targetVersion?: string,
-    methodOverride?: string
-): Promise<void> {
-    const latest = targetVersion ?? (await fetchLatestVersion());
-    if (!latest) {
-        console.error('Could not determine the latest version. Check your network connection.');
-        process.exit(1);
+export async function foregroundUpgrade(targetVersion?: string): Promise<void> {
+    const exitCode = await runUpgrade(targetVersion);
+    if (exitCode !== 0) {
+        process.exit(exitCode);
     }
-
-    if (!isNewerVersion(VERSION, latest) && !targetVersion) {
-        console.log(`Already on the latest version (${VERSION}).`);
-        return;
-    }
-
-    const method: InstallMethod =
-        methodOverride && isValidMethod(methodOverride) ? methodOverride : detectMethod();
-
-    if (method === 'unknown') {
-        console.error(
-            `Could not detect how bkper was installed.\n` +
-                `Please upgrade manually: npm install -g bkper@${latest}\n` +
-                `Or specify the method: bkper upgrade --method npm`
-        );
-        process.exit(1);
-    }
-
-    const command = getUpgradeCommand(method, latest);
-    console.log(`Upgrading bkper: ${VERSION} \u2192 ${latest}`);
-    console.log(`Running: ${command}`);
-
-    try {
-        executeUpgrade(method, latest);
-        console.log(
-            `Successfully upgraded to bkper@${latest}. Restart your terminal to use the new version.`
-        );
-    } catch (err) {
-        console.error(`Upgrade failed:`, err);
-        console.error(`\nTry upgrading manually: ${command}`);
-        process.exit(1);
-    }
-}
-
-function isValidMethod(method: string): method is InstallMethod {
-    return ['npm', 'bun', 'yarn'].includes(method);
 }

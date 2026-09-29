@@ -1,19 +1,76 @@
-import {readFileSync} from 'node:fs';
-import sinon from 'sinon';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import {expect} from '../helpers/test-setup.js';
 import {
-    detectMethodAsync,
-    getUpgradeCommand,
-    isVersionInstalledAsync,
-    startDetachedUpgrade,
+    detectInstallMethod,
+    getInstallCommand,
+    getSelfUpdatePlan,
+    inferNpmPrefix,
+    readInstalledVersion,
     VERSION,
 } from '../../../src/upgrade/installation.js';
-import type { InstallMethod } from '../../../src/upgrade/installation.js';
+import type {
+    InstallMethod,
+    ManualPlan,
+    RuntimeLocation,
+    SelfUpdateEnvironment,
+    SelfUpdatePlan,
+} from '../../../src/upgrade/installation.js';
+
+function expectManual(plan: SelfUpdatePlan): ManualPlan {
+    if (plan.kind !== 'manual') {
+        throw new Error(`Expected a manual plan, got ${plan.kind}`);
+    }
+    return plan;
+}
+
+function location(packageDir: string, overrides: Partial<RuntimeLocation> = {}): RuntimeLocation {
+    return {
+        packageDir,
+        entrypoint: path.join(packageDir, 'lib', 'cli.js'),
+        execPath: '/usr/bin/node',
+        isBunRuntime: false,
+        platform: 'linux',
+        ...overrides,
+    };
+}
+
+function environment(
+    homedir: string,
+    commandOutputs: Record<string, string> = {},
+    overrides: Partial<SelfUpdateEnvironment> = {}
+): SelfUpdateEnvironment {
+    return {
+        homedir,
+        readCommandOutput: command => commandOutputs[command],
+        isWritable: () => true,
+        ...overrides,
+    };
+}
+
+function writePackage(packageDir: string, version: string): void {
+    fs.mkdirSync(path.join(packageDir, 'lib'), {recursive: true});
+    fs.writeFileSync(
+        path.join(packageDir, 'package.json'),
+        JSON.stringify({name: 'bkper', version})
+    );
+}
 
 describe('installation', function () {
+    let tempDir: string;
+
+    beforeEach(function () {
+        tempDir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bkper-install-')));
+    });
+
+    afterEach(function () {
+        fs.rmSync(tempDir, {recursive: true, force: true});
+    });
+
     describe('runtime dependencies', function () {
         it('should directly install the Pi TUI version used by the embedded agent', function () {
-            const packageJson = JSON.parse(readFileSync('package.json', 'utf8')) as {
+            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {
                 dependencies: Record<string, string>;
             };
 
@@ -27,168 +84,212 @@ describe('installation', function () {
         it('should be a valid semver string', function () {
             expect(VERSION).to.match(/^\d+\.\d+\.\d+/);
         });
-
-        it('should match package.json version', function () {
-            // The VERSION constant is read from package.json at runtime,
-            // so it should always match.
-            expect(VERSION).to.be.a('string');
-            expect(VERSION.length).to.be.greaterThan(0);
-        });
     });
 
-    describe('getUpgradeCommand', function () {
-        it('should return npm install command for npm method', function () {
-            const cmd = getUpgradeCommand('npm', '5.0.0');
-            expect(cmd).to.equal('npm install -g bkper@5.0.0');
-        });
+    describe('detectInstallMethod', function () {
+        const cases: Array<{packageDir: string; expected: InstallMethod; extra?: Partial<RuntimeLocation>}> =
+            [
+                {
+                    packageDir:
+                        '/home/u/.local/share/pnpm/global/5/.pnpm/bkper@5.0.0/node_modules/bkper',
+                    expected: 'pnpm',
+                },
+                {packageDir: '/home/u/.config/yarn/global/node_modules/bkper', expected: 'yarn'},
+                {packageDir: '/home/u/.bun/install/global/node_modules/bkper', expected: 'bun'},
+                {packageDir: '/tmp/somewhere/bkper', expected: 'bun', extra: {isBunRuntime: true}},
+                {packageDir: '/usr/local/lib/node_modules/bkper', expected: 'npm'},
+                {packageDir: '/home/u/.npm/_npx/abc123/node_modules/bkper', expected: 'npm'},
+                {
+                    packageDir: 'C:\\Users\\u\\AppData\\Roaming\\npm\\node_modules\\bkper',
+                    expected: 'npm',
+                    extra: {platform: 'win32', execPath: 'C:\\Program Files\\nodejs\\node.exe'},
+                },
+                {packageDir: '/workspace/bkper-cli', expected: 'unknown'},
+            ];
 
-        it('should return bun add command for bun method', function () {
-            const cmd = getUpgradeCommand('bun', '5.0.0');
-            expect(cmd).to.equal('bun add -g bkper@5.0.0');
-        });
-
-        it('should return yarn global add command for yarn method', function () {
-            const cmd = getUpgradeCommand('yarn', '5.0.0');
-            expect(cmd).to.equal('yarn global add bkper@5.0.0');
-        });
-
-        it('should return null for unknown method', function () {
-            const cmd = getUpgradeCommand('unknown' as InstallMethod, '5.0.0');
-            expect(cmd).to.be.null;
-        });
-
-        it('should include the specified version in the command', function () {
-            const cmd = getUpgradeCommand('npm', '4.3.1');
-            expect(cmd).to.include('4.3.1');
-        });
-    });
-
-    describe('detectMethodAsync', function () {
-        it('should return first method that reports bkper in output', async function () {
-            const commandRunner = async (command: string, _timeoutMs: number): Promise<string> => {
-                if (command.includes('bun pm ls -g')) {
-                    return '';
-                }
-                if (command.includes('npm list -g')) {
-                    return 'bkper@5.0.0';
-                }
-                return '';
-            };
-
-            const method = await detectMethodAsync(commandRunner);
-            expect(method).to.equal('npm');
-        });
-    });
-
-    describe('isVersionInstalledAsync', function () {
-        const installedVersionCases: Array<{
-            method: InstallMethod;
-            command: string;
-            output: string;
-        }> = [
-            {
-                method: 'npm',
-                command: 'npm list -g bkper --depth=0',
-                output: '└── bkper@5.0.0',
-            },
-            {
-                method: 'bun',
-                command: 'bun pm ls -g',
-                output: '└── bkper@5.0.0',
-            },
-            {
-                method: 'yarn',
-                command: 'yarn global list --depth=0',
-                output: 'info "bkper@5.0.0" has binaries:',
-            },
-        ];
-
-        for (const {method, command, output} of installedVersionCases) {
-            it(`should detect the exact globally installed version for ${method}`, async function () {
-                const commandRunner = sinon.stub().resolves(output);
-
-                const installed = await isVersionInstalledAsync(
-                    method,
-                    '5.0.0',
-                    commandRunner
-                );
-
-                expect(installed).to.be.true;
-                expect(commandRunner.calledOnceWithExactly(command, 10000)).to.be.true;
+        for (const {packageDir, expected, extra} of cases) {
+            it(`should detect ${expected} for ${packageDir}`, function () {
+                expect(detectInstallMethod(location(packageDir, extra))).to.equal(expected);
             });
         }
+    });
 
-        it('should not match another package or version', async function () {
-            const commandRunner = sinon.stub().resolves(
-                [
-                    '├── other-bkper@5.0.0',
-                    '├── bkper@5.0.00',
-                    '└── bkper@5.0.0-beta.1',
-                ].join('\n')
+    describe('inferNpmPrefix', function () {
+        it('should infer the prefix of a global npm install', function () {
+            expect(inferNpmPrefix('/usr/local/lib/node_modules/bkper', 'linux')).to.equal(
+                '/usr/local'
             );
-
-            const installed = await isVersionInstalledAsync('npm', '5.0.0', commandRunner);
-
-            expect(installed).to.be.false;
         });
 
-        it('should return false when the package-manager command fails', async function () {
-            const commandRunner = sinon.stub().rejects(new Error('command failed'));
-
-            const installed = await isVersionInstalledAsync('npm', '5.0.0', commandRunner);
-
-            expect(installed).to.be.false;
+        it('should not infer a prefix for a project-local install', function () {
+            expect(inferNpmPrefix('/home/u/project/node_modules/bkper', 'linux')).to.be
+                .undefined;
         });
 
-        it('should return false without running a command for an unknown method', async function () {
-            const commandRunner = sinon.stub();
-
-            const installed = await isVersionInstalledAsync('unknown', '5.0.0', commandRunner);
-
-            expect(installed).to.be.false;
-            expect(commandRunner.called).to.be.false;
+        it('should not infer a prefix on Windows', function () {
+            expect(
+                inferNpmPrefix('C:\\Users\\u\\AppData\\Roaming\\npm\\node_modules\\bkper', 'win32')
+            ).to.be.undefined;
         });
     });
 
-    describe('startDetachedUpgrade', function () {
-        const originalCommandOverride = process.env.BKPER_AUTOUPDATE_COMMAND;
+    describe('getInstallCommand', function () {
+        it('should build the install command for each package manager', function () {
+            expect(getInstallCommand('npm', '5.1.0')).to.equal('npm install -g bkper@5.1.0');
+            expect(getInstallCommand('npm', '5.1.0', '/opt/my prefix')).to.equal(
+                'npm --prefix "/opt/my prefix" install -g bkper@5.1.0'
+            );
+            expect(getInstallCommand('pnpm', '5.1.0')).to.equal('pnpm add -g bkper@5.1.0');
+            expect(getInstallCommand('yarn', '5.1.0')).to.equal('yarn global add bkper@5.1.0');
+            expect(getInstallCommand('bun', '5.1.0')).to.equal('bun add -g bkper@5.1.0');
+            expect(getInstallCommand('unknown', '5.1.0')).to.be.null;
+        });
+    });
 
-        afterEach(function () {
-            if (originalCommandOverride === undefined) {
-                delete process.env.BKPER_AUTOUPDATE_COMMAND;
-            } else {
-                process.env.BKPER_AUTOUPDATE_COMMAND = originalCommandOverride;
-            }
+    describe('getSelfUpdatePlan', function () {
+        it('should install into the running global npm prefix', function () {
+            const prefix = path.join(tempDir, 'prefix');
+            const packageDir = path.join(prefix, 'lib', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
+
+            const plan = getSelfUpdatePlan('5.1.0', location(packageDir), environment(tempDir));
+
+            expect(plan).to.deep.equal({
+                kind: 'install',
+                method: 'npm',
+                packageDir,
+                command: `npm --prefix "${prefix}" install -g bkper@5.1.0`,
+                packageJsonPath: path.join(packageDir, 'package.json'),
+            });
         });
 
-        it('should start upgrade command for known method', function () {
-            let startedCommand = '';
-            const commandStarter = (command: string): void => {
-                startedCommand = command;
-            };
+        it('should verify through the prefix of the running copy when npm root -g points elsewhere', function () {
+            const prefix = path.join(tempDir, 'nvm-node-20');
+            const packageDir = path.join(prefix, 'lib', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
+            const otherRoot = path.join(tempDir, 'nvm-node-22', 'lib', 'node_modules');
+            writePackage(path.join(otherRoot, 'bkper'), '5.0.0');
 
-            startDetachedUpgrade('npm', '5.0.0', commandStarter);
-            expect(startedCommand).to.equal('npm install -g bkper@5.0.0');
+            const plan = getSelfUpdatePlan(
+                '5.1.0',
+                location(packageDir),
+                environment(tempDir, {'npm root -g': otherRoot})
+            );
+
+            expect(plan).to.deep.include({
+                kind: 'install',
+                command: `npm --prefix "${prefix}" install -g bkper@5.1.0`,
+                packageJsonPath: path.join(packageDir, 'package.json'),
+            });
         });
 
-        it('should use command override when configured', function () {
-            process.env.BKPER_AUTOUPDATE_COMMAND = 'echo simulated-upgrade';
+        it('should refuse a writable-less global install without suggesting sudo', function () {
+            const prefix = path.join(tempDir, 'prefix');
+            const packageDir = path.join(prefix, 'lib', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
 
-            let startedCommand = '';
-            const commandStarter = (command: string): void => {
-                startedCommand = command;
-            };
+            const plan = getSelfUpdatePlan(
+                '5.1.0',
+                location(packageDir),
+                environment(tempDir, {}, {isWritable: () => false})
+            );
 
-            startDetachedUpgrade('npm', '5.0.0', commandStarter);
-            expect(startedCommand).to.equal('echo simulated-upgrade');
+            const manual = expectManual(plan);
+            expect(manual.method).to.equal('npm');
+            expect(manual.instruction).to.contain(`npm --prefix "${prefix}" install -g bkper@5.1.0`);
+            expect(manual.instruction).to.not.contain('sudo');
         });
 
-        it('should throw for unknown method', function () {
-            const commandStarter = (_command: string): void => {};
+        it('should refuse a project-local npm install', function () {
+            const packageDir = path.join(tempDir, 'project', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
+            const globalRoot = path.join(tempDir, 'global', 'lib', 'node_modules');
+            fs.mkdirSync(globalRoot, {recursive: true});
 
-            expect(() => {
-                startDetachedUpgrade('unknown', '5.0.0', commandStarter);
-            }).to.throw(Error);
+            const plan = getSelfUpdatePlan(
+                '5.1.0',
+                location(packageDir),
+                environment(tempDir, {'npm root -g': globalRoot})
+            );
+
+            expect(expectManual(plan).instruction).to.contain(packageDir);
+        });
+
+        it('should refuse a source checkout', function () {
+            const packageDir = path.join(tempDir, 'bkper-cli');
+            writePackage(packageDir, '5.0.0');
+
+            const plan = getSelfUpdatePlan('5.1.0', location(packageDir), environment(tempDir));
+
+            expect(plan.kind).to.equal('manual');
+            expect(plan.method).to.equal('unknown');
+        });
+
+        it('should install a global bun copy from bun global directory', function () {
+            const packageDir = path.join(tempDir, '.bun', 'install', 'global', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
+
+            const plan = getSelfUpdatePlan('5.1.0', location(packageDir), environment(tempDir));
+
+            expect(plan).to.deep.include({
+                kind: 'install',
+                method: 'bun',
+                command: 'bun add -g bkper@5.1.0',
+                packageJsonPath: path.join(packageDir, 'package.json'),
+            });
+        });
+
+        it('should verify pnpm upgrades through the global root, not the versioned store path', function () {
+            const globalDir = path.join(tempDir, 'pnpm', 'global', '5');
+            const storeDir = path.join(globalDir, '.pnpm', 'bkper@5.0.0', 'node_modules', 'bkper');
+            const rootNodeModules = path.join(globalDir, 'node_modules');
+            writePackage(storeDir, '5.0.0');
+            fs.mkdirSync(rootNodeModules, {recursive: true});
+            fs.symlinkSync(storeDir, path.join(rootNodeModules, 'bkper'), 'dir');
+
+            const plan = getSelfUpdatePlan(
+                '5.1.0',
+                location(storeDir, {
+                    entrypoint: path.join(rootNodeModules, 'bkper', 'lib', 'cli.js'),
+                }),
+                environment(tempDir, {'pnpm root -g': rootNodeModules})
+            );
+
+            expect(plan).to.deep.include({
+                kind: 'install',
+                method: 'pnpm',
+                command: 'pnpm add -g bkper@5.1.0',
+                packageJsonPath: path.join(rootNodeModules, 'bkper', 'package.json'),
+            });
+        });
+
+        it('should refuse non-npm self-update on Windows', function () {
+            const packageDir = path.join(tempDir, '.bun', 'install', 'global', 'node_modules', 'bkper');
+            writePackage(packageDir, '5.0.0');
+
+            const plan = getSelfUpdatePlan(
+                '5.1.0',
+                location(packageDir, {platform: 'win32'}),
+                environment(tempDir)
+            );
+
+            expect(expectManual(plan).instruction).to.contain('bun add -g bkper@5.1.0');
+        });
+    });
+
+    describe('readInstalledVersion', function () {
+        it('should read the version from disk on every call', function () {
+            const packageDir = path.join(tempDir, 'bkper');
+            writePackage(packageDir, '5.0.0');
+            const packageJsonPath = path.join(packageDir, 'package.json');
+
+            expect(readInstalledVersion(packageJsonPath)).to.equal('5.0.0');
+            writePackage(packageDir, '5.1.0');
+            expect(readInstalledVersion(packageJsonPath)).to.equal('5.1.0');
+        });
+
+        it('should return undefined when the file is missing', function () {
+            expect(readInstalledVersion(path.join(tempDir, 'missing.json'))).to.be.undefined;
         });
     });
 });

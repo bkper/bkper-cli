@@ -21,7 +21,7 @@ import {
     shouldShowHelpForBareInvocation,
 } from './agent/cli-dispatch.js';
 import { runAgentCommandInChild } from './agent/agent-command-runner.js';
-import { VERSION } from './upgrade/index.js';
+import { VERSION, runCommandUpdateCheck } from './upgrade/index.js';
 import { getUnsupportedNodeVersionMessage } from './utils/node-version.js';
 
 function registerAgentCommands(command: Command): void {
@@ -47,6 +47,11 @@ async function main(): Promise<void> {
             console.error('Error running agent command:', err);
             process.exit(1);
         }
+    }
+
+    // Daily background update check (never blocks, installs only safe global copies)
+    if (process.argv[2] !== 'upgrade') {
+        runCommandUpdateCheck();
     }
 
     // Version

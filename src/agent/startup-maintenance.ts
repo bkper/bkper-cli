@@ -1,9 +1,10 @@
 import {
-    getAvailableUpgrade,
-    isVersionInstalledAsync,
-    startDetachedUpgrade,
-    type AvailableUpgrade,
-    type InstallMethod,
+    formatUpdateNotice,
+    getUpdateNotice,
+    isUpdateCheckDisabled,
+    maybeStartUpdateCheck,
+    readUpdateState,
+    type UpdateNotice,
 } from '../upgrade/index.js';
 
 type NotificationType = 'info' | 'warning' | 'error';
@@ -13,66 +14,38 @@ export interface StartupMaintenanceCallbacks {
 }
 
 export interface StartupMaintenanceDependencies {
-    getAvailableUpgrade: () => Promise<AvailableUpgrade | null>;
-    isVersionInstalled: (method: InstallMethod, version: string) => Promise<boolean>;
-    startDetachedUpgrade: (method: InstallMethod, version: string) => void;
+    readNotice: () => UpdateNotice | undefined;
+    startUpdateCheck: () => boolean;
 }
 
 function createDefaultDependencies(): StartupMaintenanceDependencies {
     return {
-        getAvailableUpgrade,
-        isVersionInstalled: isVersionInstalledAsync,
-        startDetachedUpgrade,
+        readNotice: () => getUpdateNotice(readUpdateState()),
+        startUpdateCheck: () => maybeStartUpdateCheck(),
     };
 }
 
-function getManualUpgradeMessage(latest: string): string {
-    return `bkper ${latest} available. Run bkper upgrade after exit.`;
-}
-
+/**
+ * Reports the outcome of the last background update and starts the daily
+ * check. The install itself runs in the detached update worker.
+ */
 export async function runStartupMaintenance(
     callbacks: StartupMaintenanceCallbacks,
     dependencies: StartupMaintenanceDependencies = createDefaultDependencies()
 ): Promise<void> {
-    if (process.env.BKPER_DISABLE_AUTOUPDATE) {
+    if (isUpdateCheckDisabled()) {
         return;
     }
 
     try {
-        const availableUpgrade = await dependencies.getAvailableUpgrade();
-        if (!availableUpgrade) {
-            return;
-        }
-
-        if (availableUpgrade.method === 'unknown') {
-            callbacks.notify(getManualUpgradeMessage(availableUpgrade.latest), 'warning');
-            return;
-        }
-
-        if (
-            await dependencies.isVersionInstalled(
-                availableUpgrade.method,
-                availableUpgrade.latest
-            )
-        ) {
+        const notice = dependencies.readNotice();
+        if (notice) {
             callbacks.notify(
-                `bkper ${availableUpgrade.latest} is already installed. ` +
-                    `Restart this session to use it.`,
-                'info'
+                formatUpdateNotice(notice),
+                notice.kind === 'installed' ? 'info' : 'warning'
             );
-            return;
         }
-
-        try {
-            dependencies.startDetachedUpgrade(availableUpgrade.method, availableUpgrade.latest);
-            callbacks.notify(
-                `Updating bkper to ${availableUpgrade.latest} in background. ` +
-                    `Restart later to use it.`,
-                'info'
-            );
-        } catch {
-            callbacks.notify(getManualUpgradeMessage(availableUpgrade.latest), 'warning');
-        }
+        dependencies.startUpdateCheck();
     } catch {
         // Silent failure — never break the TUI
     }
