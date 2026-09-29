@@ -6,10 +6,10 @@ This guide covers a server-side, non-streaming language response. It uses AI SDK
 
 ## Choose the kind of response
 
-- **A bounded yes/no, choice, or score?** Use a typed evaluation (Jev) at `POST /v1/evaluations`.
+- **A bounded yes/no, choice, or score?** Use a typed evaluation at `POST /v1/evaluations`.
 - **Generated text or a custom JSON object?** Use a language model at `POST /v1/responses`. AI SDK is an option for this path.
 
-Pick a model of the corresponding `type` from the live [`GET /v1/models` catalog](https://ai.bkper.app/v1/models). The catalog also tells you which language models support strict structured output. AI SDK's **Open Responses provider** covers language responses, not Bkper's typed evaluation endpoint. For Jev, use HTTP or implement an AI SDK evaluation-model adapter for `experimental_evaluate`, as `bkper-agent` does. See [Typed evaluations](https://bkper.com/docs/ai/ai-gateway.md#typed-evaluations) and the [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) for a human-reviewed HTTP example.
+Pick a model of the corresponding `type` from the live [`GET /v1/models` catalog](https://ai.bkper.app/v1/models). The catalog also tells you which language models support strict structured output. AI SDK's **Open Responses provider** covers language responses, not Bkper's typed evaluation endpoint. For evaluation models, use HTTP or implement an AI SDK evaluation-model adapter for `experimental_evaluate`, as `bkper-agent` does. See the [Typed Evaluations guide](https://bkper.com/docs/ai/evaluations.md) for requests, responses, decision thresholds, and errors, and the [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) for a human-reviewed HTTP example.
 
 ## Keep authentication in the platform
 
