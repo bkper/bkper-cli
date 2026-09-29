@@ -1,16 +1,18 @@
 # Changelog
 
-## [Unreleased]
+## [5.0.0] - 2026-09-29
 
 -   **Breaking: JSON-only output**
     -   Data commands now always output JSON; `--format table` and `--format csv` were removed and fail with guidance to reshape output with `jq`. `--json` and `--format json` are still accepted and have no effect
+    -   To migrate CSV exports, pipe to `jq`: `jq -r '.items[] | [...] | @csv'` for lists, or `jq -r '.[] | @csv'` for balances
     -   List and batch-write output always uses the `{"items":[...]}` envelope, adding `"cursor"` only when another page exists, with one record per line
     -   Single items are pretty-printed on an interactive terminal and compact otherwise
     -   Next-page hints and notices such as `collection delete` confirmations are written to stderr, keeping stdout parseable
 -   **Data Management**
     -   Transaction output adds `creditAccount.name` and `debitAccount.name` and omits inline agent logo images, reducing typical transaction list output by about two thirds
     -   Event output (`event list`, `event replay`) omits agent logo images, including those on embedded transactions, reducing typical event list output by about 40%
-    -   Balance values are unformatted JSON numbers with ISO dates and account/group property columns, instead of locale-formatted strings such as `"1234,56"`
+    -   Balance values are unformatted JSON numbers with ISO dates and account/group property columns, instead of locale-formatted strings such as `"1234,56"`. Group hierarchy indentation in names is unchanged
+    -   Balance date columns use ISO dates in the book time zone, fixing CSV headers that showed full JavaScript date strings
     -   `transaction list -p/--properties` is now a no-op because properties are always included
 
 ## [4.31.0] - 2026-09-24
