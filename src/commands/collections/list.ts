@@ -1,6 +1,6 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Collection } from 'bkper-js';
-import type { OutputFormat, ListResult } from '../../render/output.js';
+import type { ListResult } from '../../render/output.js';
 
 /**
  * Fetches all collections for the authenticated user.
@@ -15,23 +15,8 @@ export async function listCollections(): Promise<Collection[]> {
 
 /**
  * Lists collections and returns a ListResult ready for rendering.
- * Absorbs manual matrix building and JSON mapping.
  */
-export async function listCollectionsFormatted(format: OutputFormat): Promise<ListResult> {
+export async function listCollectionsFormatted(): Promise<ListResult> {
     const collections = await listCollections();
-
-    if (format === 'json') {
-        return { kind: 'json', items: collections.map(c => c.json()) };
-    }
-
-    if (collections.length === 0) {
-        return { kind: 'matrix', matrix: [['No collections found.']] };
-    }
-
-    const matrix: unknown[][] = [['ID', 'Name', 'Books']];
-    for (const col of collections) {
-        const books = col.getBooks();
-        matrix.push([col.getId() || '', col.getName() || '', books.length.toString()]);
-    }
-    return { kind: 'matrix', matrix };
+    return { items: collections.map(c => c.json()) };
 }

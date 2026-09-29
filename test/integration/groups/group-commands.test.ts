@@ -7,6 +7,7 @@ import {
     runBkper,
     runBkperJson,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - group commands', function () {
@@ -111,7 +112,7 @@ describe('CLI - group commands', function () {
 
     describe('group list', function () {
         it('should return an array of groups', async function () {
-            const result = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookId]);
+            const result = await runBkperJsonItems<bkper.Group>(['group', 'list', '-b', bookId]);
 
             expect(result).to.be.an('array');
             expect(result.length).to.be.greaterThanOrEqual(4);

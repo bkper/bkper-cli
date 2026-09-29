@@ -1,6 +1,6 @@
 import { File as BkperFile } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
-import type { OutputFormat, ListResult } from '../../render/output.js';
+import type { ListResult } from '../../render/output.js';
 import { quoteShellArg } from '../../utils/shell-quote.js';
 
 export const DEFAULT_FILE_LIST_LIMIT = 100;
@@ -43,30 +43,25 @@ export async function listFiles(
 
 /**
  * Lists files and returns a ListResult ready for rendering.
+ * File content is omitted from list output.
  */
 export async function listFilesFormatted(
     bookId: string,
-    options: ListFilesOptions,
-    format: OutputFormat
+    options: ListFilesOptions
 ): Promise<ListResult> {
     const result = await listFiles(bookId, options);
 
-    if (format === 'json') {
-        const jsonResult: ListResult = {
-            kind: 'json',
-            items: result.items.map(file => fileToListJson(file)),
-        };
-        if (result.cursor) {
-            jsonResult.cursor = result.cursor;
-        }
-        return jsonResult;
-    }
-
-    return {
-        kind: 'matrix',
-        matrix: buildFilesMatrix(result.items),
-        footer: buildFileListFooter(bookId, options, result.cursor),
+    const listResult: ListResult = {
+        items: result.items.map(file => fileToListJson(file)),
     };
+    if (result.cursor) {
+        listResult.cursor = result.cursor;
+    }
+    const hint = buildFileListHint(bookId, options, result.cursor);
+    if (hint) {
+        listResult.hint = hint;
+    }
+    return listResult;
 }
 
 function fileToListJson(file: BkperFile): bkper.File {
@@ -75,36 +70,7 @@ function fileToListJson(file: BkperFile): bkper.File {
     return json;
 }
 
-function buildFilesMatrix(files: BkperFile[]): unknown[][] {
-    const matrix: unknown[][] = [
-        ['ID', 'Name', 'Content Type', 'Size', 'Created At', 'Updated At', 'URL', 'Properties'],
-    ];
-
-    for (const file of files) {
-        const json = fileToListJson(file);
-        matrix.push([
-            json.id || '',
-            json.name || '',
-            json.contentType || '',
-            json.size ?? '',
-            json.createdAt || '',
-            json.updatedAt || '',
-            json.url || '',
-            formatProperties(json.properties),
-        ]);
-    }
-
-    return matrix;
-}
-
-function formatProperties(properties: {[name: string]: string} | undefined): string {
-    if (!properties || Object.keys(properties).length === 0) {
-        return '';
-    }
-    return JSON.stringify(properties);
-}
-
-function buildFileListFooter(
+function buildFileListHint(
     bookId: string,
     options: ListFilesOptions,
     cursor: string | undefined

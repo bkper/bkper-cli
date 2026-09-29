@@ -31,6 +31,8 @@ describe('CLI - transaction batch-update Command', function () {
                 batchCalls.push({ transactions, updateChecked });
                 return transactions.map((_: any, idx: number) => ({
                     json: () => ({ id: `tx-${idx}`, amount: '100', description: 'updated' }),
+                    getCreditAccount: async () => undefined,
+                    getDebitAccount: async () => undefined,
                 }));
             },
         };
@@ -54,7 +56,7 @@ describe('CLI - transaction batch-update Command', function () {
         expect(batchCalls[0].transactions).to.have.length(1);
     });
 
-    it('should output flat JSON array for updated transactions', async function () {
+    it('should output updated transactions in an items envelope', async function () {
         await batchUpdateTransactions('book-123', [
             { id: 'tx-1', date: '2024-01-15', amount: '100' },
             { id: 'tx-2', date: '2024-01-16', amount: '200' },
@@ -62,9 +64,8 @@ describe('CLI - transaction batch-update Command', function () {
 
         expect(consoleOutput).to.have.length(1);
         const parsed = JSON.parse(consoleOutput[0]);
-        expect(parsed).to.be.an('array').with.length(2);
-        expect(parsed[0]).to.have.property('id');
-        expect(parsed[1]).to.have.property('id');
+        expect(parsed).to.have.property('items').that.is.an('array').with.length(2);
+        parsed.items.forEach((item: unknown) => expect(item).to.have.property('id'));
     });
 
     it('should send all items in a single batch call', async function () {

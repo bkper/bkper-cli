@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
-import { renderTable } from '../../render/index.js';
+import { renderMatrix } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listBalancesMatrix } from './index.js';
 
@@ -15,7 +15,7 @@ export function registerBalanceCommands(program: Command): void {
         .option('--expanded <level>', 'Expand groups to specified depth (0+)', parseInt)
         .option('--trial', 'Split total balances into debit and credit columns')
         .action(options =>
-            withAction('listing balances', async format => {
+            withAction('listing balances', async () => {
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -25,10 +25,9 @@ export function registerBalanceCommands(program: Command): void {
                 const matrix = await listBalancesMatrix(options.book, {
                     query: options.query,
                     expanded: options.expanded,
-                    format,
                     trial: options.trial,
                 });
-                renderTable(matrix, format);
+                renderMatrix(matrix);
             })()
         );
 }

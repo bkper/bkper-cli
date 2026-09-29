@@ -116,9 +116,5 @@ export function materializeCommand(
         };
     }
 
-    if (!materialized.includes('--format ')) {
-        materialized = `${materialized} --format csv`;
-    }
-
     return {command: materialized};
 }

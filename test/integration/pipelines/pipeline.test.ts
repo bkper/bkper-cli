@@ -8,6 +8,8 @@ import {
     runBkperJson,
     runBkperWithStdin,
     uniqueTestName,
+    parseItems,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - pipeline (end-to-end)', function () {
@@ -89,7 +91,7 @@ describe('CLI - pipeline (end-to-end)', function () {
             // List accounts from book A as JSON
             const listResult = await runBkper(['--format', 'json', 'account', 'list', '-b', bookA]);
             expect(listResult.exitCode).to.equal(0);
-            const listedAccounts = JSON.parse(listResult.stdout);
+            const listedAccounts = parseItems(listResult.stdout);
             expect(listedAccounts).to.be.an('array');
             expect(listedAccounts.length).to.be.greaterThanOrEqual(3);
 
@@ -103,7 +105,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 expect(pipeResult.exitCode).to.equal(0);
 
                 // Verify accounts exist in book C
-                const verifyResult = await runBkperJson<bkper.Account[]>([
+                const verifyResult = await runBkperJsonItems<bkper.Account>([
                     'account',
                     'list',
                     '-b',
@@ -126,8 +128,8 @@ describe('CLI - pipeline (end-to-end)', function () {
             );
             expect(createResult.exitCode).to.equal(0);
 
-            // Parse batch output (flat JSON array) and pipe to a fresh book
-            const parsed = JSON.parse(createResult.stdout);
+            // Parse batch output ({"items":[...]} envelope) and pipe to a fresh book
+            const parsed = parseItems(createResult.stdout);
             expect(parsed).to.be.an('array').with.length(1);
 
             const bookC = await createTestBook(uniqueTestName('test-pipe-acct-batch'));
@@ -138,7 +140,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(pipeResult.exitCode).to.equal(0);
 
-                const verifyResult = await runBkperJson<bkper.Account[]>([
+                const verifyResult = await runBkperJsonItems<bkper.Account>([
                     'account',
                     'list',
                     '-b',
@@ -153,7 +155,7 @@ describe('CLI - pipeline (end-to-end)', function () {
 
         it('should pipe single account get output as account create input', async function () {
             // Get an account from book A
-            const accounts = await runBkperJson<bkper.Account[]>(['account', 'list', '-b', bookA]);
+            const accounts = await runBkperJsonItems<bkper.Account>(['account', 'list', '-b', bookA]);
             const targetAcct = accounts.find(a => a.name === 'Pipe Cash');
             expect(targetAcct).to.exist;
 
@@ -177,7 +179,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(pipeResult.exitCode).to.equal(0);
 
-                const verifyResult = await runBkperJson<bkper.Account[]>([
+                const verifyResult = await runBkperJsonItems<bkper.Account>([
                     'account',
                     'list',
                     '-b',
@@ -243,7 +245,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-05-31',
             ]);
             expect(listResult.exitCode).to.equal(0);
-            const listedTx = JSON.parse(listResult.stdout);
+            const listedTx = parseItems<bkper.Transaction>(listResult.stdout);
             expect(listedTx).to.be.an('array');
             expect(listedTx.length).to.be.greaterThanOrEqual(2);
 
@@ -253,7 +255,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 listResult.stdout
             );
             expect(pipeResult.exitCode).to.equal(0);
-            const created = JSON.parse(pipeResult.stdout);
+            const created = parseItems<bkper.Transaction>(pipeResult.stdout);
             expect(created).to.be.an('array');
             expect(created.length).to.be.greaterThanOrEqual(2);
 
@@ -269,7 +271,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-05-31',
             ]);
             expect(verifyResult.exitCode).to.equal(0);
-            const bookBTx = JSON.parse(verifyResult.stdout);
+            const bookBTx = parseItems<bkper.Transaction>(verifyResult.stdout);
             const descriptions = bookBTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Pipe tx sale');
             expect(descriptions).to.include('Pipe tx expense');
@@ -291,8 +293,8 @@ describe('CLI - pipeline (end-to-end)', function () {
             );
             expect(createResult.exitCode).to.equal(0);
 
-            // Parse batch output (flat JSON array) and pipe to book B
-            const parsed = JSON.parse(createResult.stdout);
+            // Parse batch output ({"items":[...]} envelope) and pipe to book B
+            const parsed = parseItems(createResult.stdout);
             expect(parsed).to.be.an('array').with.length(1);
 
             const pipeResult = await runBkperWithStdin(
@@ -313,7 +315,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-06-30',
             ]);
             expect(verifyResult.exitCode).to.equal(0);
-            const bookBTx = JSON.parse(verifyResult.stdout);
+            const bookBTx = parseItems<bkper.Transaction>(verifyResult.stdout);
             const descriptions = bookBTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Batch pipe tx');
         });
@@ -359,7 +361,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-10-31 before:2025-11-03',
             ]);
             expect(listResult.exitCode).to.equal(0);
-            const listedTx = JSON.parse(listResult.stdout);
+            const listedTx = parseItems<bkper.Transaction>(listResult.stdout);
             expect(listedTx).to.be.an('array');
             expect(listedTx.length).to.be.greaterThanOrEqual(2);
 
@@ -374,7 +376,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 JSON.stringify(modified)
             );
             expect(updateResult.exitCode).to.equal(0);
-            const updated = JSON.parse(updateResult.stdout);
+            const updated = parseItems<bkper.Transaction>(updateResult.stdout);
             expect(updated).to.be.an('array');
             expect(updated.length).to.be.greaterThanOrEqual(2);
 
@@ -390,13 +392,13 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-10-31 before:2025-11-03',
             ]);
             expect(verifyResult.exitCode).to.equal(0);
-            const verifiedTx = JSON.parse(verifyResult.stdout);
+            const verifiedTx = parseItems<bkper.Transaction>(verifyResult.stdout);
             const descriptions = verifiedTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Update pipe tx 1 [reviewed]');
             expect(descriptions).to.include('Update pipe tx 2 [reviewed]');
         });
 
-        it('should output batch transaction update as a flat JSON array', async function () {
+        it('should output batch transaction update in an items envelope', async function () {
             // Create a transaction
             const createResult = await runBkperWithStdin(
                 ['transaction', 'create', '-b', bookA],
@@ -411,7 +413,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 ])
             );
             expect(createResult.exitCode).to.equal(0);
-            const created = JSON.parse(createResult.stdout);
+            const created = parseItems<bkper.Transaction>(createResult.stdout);
 
             // Update and check output format
             const updateResult = await runBkperWithStdin(
@@ -419,7 +421,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 JSON.stringify(created)
             );
             expect(updateResult.exitCode).to.equal(0);
-            const parsed = JSON.parse(updateResult.stdout);
+            const parsed = parseItems(updateResult.stdout);
             expect(parsed).to.be.an('array');
         });
     });
@@ -463,7 +465,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 );
                 expect(result.exitCode).to.equal(0);
 
-                const verifyResult = await runBkperJson<bkper.Account[]>([
+                const verifyResult = await runBkperJsonItems<bkper.Account>([
                     'account',
                     'list',
                     '-b',
@@ -506,7 +508,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                     wrappedInput
                 );
                 expect(result.exitCode).to.equal(0);
-                const created = JSON.parse(result.stdout);
+                const created = parseItems<bkper.Transaction>(result.stdout);
                 expect(created).to.be.an('array').with.length(1);
                 expect(created[0].description).to.equal('Wrapped tx');
             } finally {
@@ -523,7 +525,7 @@ describe('CLI - pipeline (end-to-end)', function () {
         it('should handle empty array stdin gracefully for accounts', async function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookA], '[]');
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems(result.stdout);
             expect(parsed).to.be.an('array').with.length(0);
         });
 
@@ -536,7 +538,7 @@ describe('CLI - pipeline (end-to-end)', function () {
         it('should handle empty array stdin gracefully for transactions', async function () {
             const result = await runBkperWithStdin(['transaction', 'create', '-b', bookA], '[]');
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems(result.stdout);
             expect(parsed).to.be.an('array').with.length(0);
         });
 
@@ -667,7 +669,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 expect(txPipe.exitCode).to.equal(0);
 
                 // Step 6: Verify everything in dest
-                const destGroups = await runBkperJson<bkper.Group[]>([
+                const destGroups = await runBkperJsonItems<bkper.Group>([
                     'group',
                     'list',
                     '-b',
@@ -677,7 +679,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                 expect(groupNames).to.include('XFlow Assets');
                 expect(groupNames).to.include('XFlow Income');
 
-                const destAccounts = await runBkperJson<bkper.Account[]>([
+                const destAccounts = await runBkperJsonItems<bkper.Account>([
                     'account',
                     'list',
                     '-b',
@@ -698,7 +700,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                     'after:2025-08-31',
                 ]);
                 expect(destTxResult.exitCode).to.equal(0);
-                const destTx = JSON.parse(destTxResult.stdout);
+                const destTx = parseItems<bkper.Transaction>(destTxResult.stdout);
                 const txDescriptions = destTx.map((t: bkper.Transaction) => t.description);
                 expect(txDescriptions).to.include('XFlow sale');
                 expect(txDescriptions).to.include('XFlow refund');
@@ -714,21 +716,21 @@ describe('CLI - pipeline (end-to-end)', function () {
     // ----------------------------------------------------------------
 
     describe('JSON output format consistency', function () {
-        it('should output groups list as a flat JSON array', async function () {
+        it('should output groups list in an items envelope', async function () {
             const result = await runBkper(['--format', 'json', 'group', 'list', '-b', bookA]);
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems(result.stdout);
             expect(parsed).to.be.an('array');
         });
 
-        it('should output accounts list as a flat JSON array', async function () {
+        it('should output accounts list in an items envelope', async function () {
             const result = await runBkper(['--format', 'json', 'account', 'list', '-b', bookA]);
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems(result.stdout);
             expect(parsed).to.be.an('array');
         });
 
-        it('should output transactions list as a flat JSON array', async function () {
+        it('should output transactions list in an items envelope', async function () {
             const result = await runBkper([
                 '--format',
                 'json',
@@ -740,11 +742,11 @@ describe('CLI - pipeline (end-to-end)', function () {
                 'after:2025-01-01',
             ]);
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems(result.stdout);
             expect(parsed).to.be.an('array');
         });
 
-        it('should output batch account create as a flat JSON array', async function () {
+        it('should output batch account create in an items envelope', async function () {
             const bookC = await createTestBook(uniqueTestName('test-fmt-acct'));
             try {
                 const result = await runBkperWithStdin(
@@ -752,7 +754,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                     JSON.stringify([{ name: 'Fmt Acct', type: 'ASSET' }])
                 );
                 expect(result.exitCode).to.equal(0);
-                const parsed = JSON.parse(result.stdout);
+                const parsed = parseItems(result.stdout);
                 expect(parsed).to.be.an('array');
             } finally {
                 await deleteTestBook(bookC);
@@ -773,7 +775,7 @@ describe('CLI - pipeline (end-to-end)', function () {
             }
         });
 
-        it('should output batch transaction create as a flat JSON array', async function () {
+        it('should output batch transaction create in an items envelope', async function () {
             const bookC = await createTestBook(uniqueTestName('test-fmt-tx'));
             try {
                 await runBkperWithStdin(
@@ -797,7 +799,7 @@ describe('CLI - pipeline (end-to-end)', function () {
                     ])
                 );
                 expect(result.exitCode).to.equal(0);
-                const parsed = JSON.parse(result.stdout);
+                const parsed = parseItems(result.stdout);
                 expect(parsed).to.be.an('array');
             } finally {
                 await deleteTestBook(bookC);

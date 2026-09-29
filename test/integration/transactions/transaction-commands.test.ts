@@ -11,6 +11,7 @@ import {
     runBkperJson,
     runBkperWithStdin,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - transaction commands', function () {
@@ -272,7 +273,7 @@ describe('CLI - transaction commands', function () {
 
     describe('transaction list', function () {
         it('should list transactions with a query', async function () {
-            const result = await runBkperJson<bkper.Transaction[]>([
+            const result = await runBkperJsonItems<bkper.Transaction>([
                 'transaction',
                 'list',
                 '-b',

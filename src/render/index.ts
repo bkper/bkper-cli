@@ -1,4 +1,11 @@
-export { formatTable, formatItem } from './table-formatter.js';
-export { formatCsv } from './csv-formatter.js';
-export { renderTable, renderItem, renderListResult } from './output.js';
-export type { OutputFormat, ListResult } from './output.js';
+export {
+    formatItem,
+    formatList,
+    formatMatrix,
+    isInteractiveOutput,
+    renderItem,
+    renderList,
+    renderMatrix,
+    renderNotice,
+} from './output.js';
+export type { ListResult } from './output.js';

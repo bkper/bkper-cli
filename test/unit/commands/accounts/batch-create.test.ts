@@ -58,14 +58,13 @@ describe('CLI - account batch-create Command', function () {
         expect(batchCalls[0][0].getName()).to.equal('Checking');
     });
 
-    it('should output flat JSON array for created accounts', async function () {
+    it('should output created accounts in an items envelope', async function () {
         await batchCreateAccounts('book-123', [{ name: 'Checking' }, { name: 'Savings' }]);
 
         expect(consoleOutput).to.have.length(1);
         const parsed = JSON.parse(consoleOutput[0]);
-        expect(parsed).to.be.an('array').with.length(2);
-        expect(parsed[0]).to.have.property('name');
-        expect(parsed[1]).to.have.property('name');
+        expect(parsed).to.have.property('items').that.is.an('array').with.length(2);
+        parsed.items.forEach((item: unknown) => expect(item).to.have.property('name'));
     });
 
     it('should send all items in a single batch call', async function () {

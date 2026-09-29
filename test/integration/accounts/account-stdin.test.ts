@@ -7,6 +7,8 @@ import {
     runBkperJson,
     runBkperWithStdin,
     uniqueTestName,
+    parseItems,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - account stdin', function () {
@@ -41,7 +43,7 @@ describe('CLI - account stdin', function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Account>(result.stdout);
             expect(parsed).to.be.an('array').with.length(2);
             expect(parsed[0].name).to.equal('Stdin Cash');
             expect(parsed[1].name).to.equal('Stdin Revenue');
@@ -56,7 +58,7 @@ describe('CLI - account stdin', function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Account>(result.stdout);
             expect(parsed).to.be.an('array').with.length(1);
             expect(parsed[0].name).to.equal('Stdin Expenses');
             expect(parsed[0].type).to.equal('OUTGOING');
@@ -83,7 +85,7 @@ describe('CLI - account stdin', function () {
             const result = await runBkperWithStdin(['account', 'create', '-b', bookId], jsonInput);
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Account>(result.stdout);
             expect(parsed).to.be.an('array').with.length(1);
             expect(parsed[0].name).to.equal('Stdin Grouped Cash');
 
@@ -101,7 +103,7 @@ describe('CLI - account stdin', function () {
 
     describe('verification', function () {
         it('should list all created accounts', async function () {
-            const result = await runBkperJson<bkper.Account[]>(['account', 'list', '-b', bookId]);
+            const result = await runBkperJsonItems<bkper.Account>(['account', 'list', '-b', bookId]);
 
             const names = result.map(a => a.name);
             expect(names).to.include('Stdin Cash');

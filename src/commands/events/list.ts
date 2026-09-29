@@ -1,10 +1,9 @@
 import { Event, EventType, type ListEventsOptions } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
-import type { OutputFormat, ListResult } from '../../render/output.js';
+import type { ListResult } from '../../render/output.js';
 import { quoteShellArg } from '../../utils/shell-quote.js';
 
 export const DEFAULT_EVENT_LIST_LIMIT = 50;
-const PREVIEW_MAX_LENGTH = 80;
 
 /**
  * Options for listing events from a book.
@@ -55,31 +54,25 @@ export async function listEvents(
 
 /**
  * Lists events and returns a ListResult ready for rendering.
- * JSON includes full event payloads with botResponses for LLM debugging.
+ * Includes full event payloads with botResponses for LLM debugging.
  */
 export async function listEventsFormatted(
     bookId: string,
-    options: ListBookEventsOptions,
-    format: OutputFormat
+    options: ListBookEventsOptions
 ): Promise<ListResult> {
     const result = await listEvents(bookId, options);
 
-    if (format === 'json') {
-        const jsonResult: ListResult = {
-            kind: 'json',
-            items: result.items.map(event => event.json()),
-        };
-        if (result.cursor) {
-            jsonResult.cursor = result.cursor;
-        }
-        return jsonResult;
-    }
-
-    return {
-        kind: 'matrix',
-        matrix: buildEventsMatrix(result.items),
-        footer: buildEventListFooter(bookId, options, result.cursor),
+    const listResult: ListResult = {
+        items: result.items.map(event => event.json()),
     };
+    if (result.cursor) {
+        listResult.cursor = result.cursor;
+    }
+    const hint = buildEventListHint(bookId, options, result.cursor);
+    if (hint) {
+        listResult.hint = hint;
+    }
+    return listResult;
 }
 
 function toListEventsOptions(options: ListBookEventsOptions): ListEventsOptions {
@@ -109,66 +102,7 @@ function toListEventsOptions(options: ListBookEventsOptions): ListEventsOptions 
     return listOptions;
 }
 
-function buildEventsMatrix(events: Event[]): unknown[][] {
-    const matrix: unknown[][] = [
-        ['ID', 'Type', 'Created', 'Resource', 'User', 'Agent', 'Responses', 'Errors', 'Preview'],
-    ];
-
-    for (const event of events) {
-        const json = event.json();
-        const botResponses = json.botResponses || [];
-        const errorResponses = botResponses.filter(response => response.type === 'ERROR');
-
-        matrix.push([
-            json.id || '',
-            json.type || '',
-            json.createdOn || json.createdAt || '',
-            json.resource || '',
-            formatUser(json.user),
-            formatAgent(json.agent),
-            botResponses.length,
-            errorResponses.length,
-            formatBotResponsePreview(botResponses),
-        ]);
-    }
-
-    return matrix;
-}
-
-function formatUser(user: bkper.User | undefined): string {
-    if (!user) {
-        return '';
-    }
-    return user.email || user.name || user.id || '';
-}
-
-function formatAgent(agent: bkper.Agent | undefined): string {
-    if (!agent) {
-        return '';
-    }
-    return agent.name || agent.id || '';
-}
-
-function formatBotResponsePreview(botResponses: bkper.BotResponse[]): string {
-    const preferred =
-        botResponses.find(response => response.type === 'ERROR' && response.message) ||
-        botResponses.find(response => response.message);
-
-    if (!preferred?.message) {
-        return '';
-    }
-
-    return truncate(preferred.message, PREVIEW_MAX_LENGTH);
-}
-
-function truncate(value: string, maxLength: number): string {
-    if (value.length <= maxLength) {
-        return value;
-    }
-    return `${value.slice(0, maxLength - 1)}…`;
-}
-
-function buildEventListFooter(
+function buildEventListHint(
     bookId: string,
     options: ListBookEventsOptions,
     cursor: string | undefined

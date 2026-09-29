@@ -1,10 +1,11 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Account, Book } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import { renderList } from '../../render/index.js';
 
 /**
  * Creates multiple accounts from stdin items using the batch API.
- * Outputs a flat JSON array of all created accounts.
+ * Outputs all created accounts in an `{"items":[...]}` envelope.
  *
  * Stdin items must follow the bkper.Account format exactly.
  *
@@ -41,9 +42,7 @@ export async function batchCreateAccounts(
     }
 
     const results = await book.batchCreateAccounts(accounts);
-    const allResults = results.map(result => result.json());
-
-    console.log(JSON.stringify(allResults, null, 2));
+    renderList({ items: results.map(result => result.json()) });
 }
 
 async function buildAccountFromStdin(book: Book, item: Record<string, unknown>): Promise<Account> {

@@ -1,6 +1,6 @@
 import { getBkperInstance } from '../../bkper-factory.js';
-import { Group, GroupsDataTableBuilder } from 'bkper-js';
-import type { OutputFormat, ListResult } from '../../render/output.js';
+import { Group } from 'bkper-js';
+import type { ListResult } from '../../render/output.js';
 
 /**
  * Retrieves all groups from the specified book.
@@ -20,22 +20,8 @@ export async function listGroups(bookId: string): Promise<Group[]> {
 
 /**
  * Lists groups and returns a ListResult ready for rendering.
- * Absorbs GroupsDataTableBuilder config and JSON mapping.
  */
-export async function listGroupsFormatted(
-    bookId: string,
-    format: OutputFormat
-): Promise<ListResult> {
+export async function listGroupsFormatted(bookId: string): Promise<ListResult> {
     const groups = await listGroups(bookId);
-
-    if (format === 'json') {
-        return { kind: 'json', items: groups.map(g => g.json()) };
-    }
-
-    const builder = new GroupsDataTableBuilder(groups).ids(true).tree(true);
-    if (format === 'csv') {
-        builder.properties(true).hiddenProperties(true);
-    }
-    const matrix = builder.build();
-    return { kind: 'matrix', matrix };
+    return { items: groups.map(g => g.json()) };
 }

@@ -7,6 +7,7 @@ import {
     runBkper,
     runBkperJson,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - collection commands', function () {
@@ -49,7 +50,7 @@ describe('CLI - collection commands', function () {
         });
 
         it('should list collections and find the created one', async function () {
-            const result = await runBkperJson<bkper.Collection[]>(['collection', 'list']);
+            const result = await runBkperJsonItems<bkper.Collection>(['collection', 'list']);
 
             expect(result).to.be.an('array');
             const found = result.find(c => c.id === collectionId);
@@ -90,7 +91,7 @@ describe('CLI - collection commands', function () {
         });
 
         it('should add a book to the collection', async function () {
-            const result = await runBkperJson<bkper.Book[]>([
+            const result = await runBkperJsonItems<bkper.Book>([
                 'collection',
                 'add-book',
                 collectionId,
@@ -103,7 +104,7 @@ describe('CLI - collection commands', function () {
         });
 
         it('should remove a book from the collection', async function () {
-            const result = await runBkperJson<bkper.Book[]>([
+            const result = await runBkperJsonItems<bkper.Book>([
                 'collection',
                 'remove-book',
                 collectionId,

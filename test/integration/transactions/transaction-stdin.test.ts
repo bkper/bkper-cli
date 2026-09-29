@@ -8,6 +8,7 @@ import {
     runBkperJson,
     runBkperWithStdin,
     uniqueTestName,
+    parseItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - transaction stdin', function () {
@@ -90,7 +91,7 @@ describe('CLI - transaction stdin', function () {
 
             expect(result.exitCode).to.equal(0);
             // Output should be a flat JSON array
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Transaction>(result.stdout);
             expect(parsed).to.be.an('array').with.length(2);
             expect(parsed[0].description).to.equal('Stdin JSON tx 1');
             expect(parsed[1].description).to.equal('Stdin JSON tx 2');
@@ -111,7 +112,7 @@ describe('CLI - transaction stdin', function () {
             );
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Transaction>(result.stdout);
             expect(parsed).to.be.an('array').with.length(1);
             expect(parsed[0].description).to.equal('Stdin single JSON tx');
         });
@@ -136,7 +137,7 @@ describe('CLI - transaction stdin', function () {
             );
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Transaction>(result.stdout);
             expect(parsed).to.be.an('array').with.length(1);
             expect(parsed[0].description).to.equal('With props');
             expect(parsed[0].properties).to.deep.include({ invoice: 'INV-100' });
@@ -166,7 +167,7 @@ describe('CLI - transaction stdin', function () {
                 ])
             );
             expect(createResult.exitCode).to.equal(0);
-            const created = JSON.parse(createResult.stdout);
+            const created = parseItems<bkper.Transaction>(createResult.stdout);
             expect(created).to.be.an('array').with.length(2);
 
             // Modify descriptions and pipe to update
@@ -180,7 +181,7 @@ describe('CLI - transaction stdin', function () {
                 JSON.stringify(updatedInput)
             );
             expect(updateResult.exitCode).to.equal(0);
-            const updated = JSON.parse(updateResult.stdout);
+            const updated = parseItems<bkper.Transaction>(updateResult.stdout);
             expect(updated).to.be.an('array');
             expect(updated.length).to.be.greaterThanOrEqual(2);
             const descriptions = updated.map((t: bkper.Transaction) => t.description);
@@ -191,7 +192,7 @@ describe('CLI - transaction stdin', function () {
         it('should handle empty array stdin gracefully for update', async function () {
             const result = await runBkperWithStdin(['transaction', 'update', '-b', bookId], '[]');
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
+            const parsed = parseItems<bkper.Transaction>(result.stdout);
             expect(parsed).to.be.an('array').with.length(0);
         });
 
@@ -210,7 +211,7 @@ describe('CLI - transaction stdin', function () {
                 ])
             );
             expect(createResult.exitCode).to.equal(0);
-            const created = JSON.parse(createResult.stdout);
+            const created = parseItems<bkper.Transaction>(createResult.stdout);
 
             // Update with property override
             const updateResult = await runBkperWithStdin(
@@ -218,14 +219,14 @@ describe('CLI - transaction stdin', function () {
                 JSON.stringify(created)
             );
             expect(updateResult.exitCode).to.equal(0);
-            const updated = JSON.parse(updateResult.stdout);
+            const updated = parseItems<bkper.Transaction>(updateResult.stdout);
             expect(updated).to.be.an('array');
             expect(updated.length).to.be.greaterThanOrEqual(1);
             const propsTarget = updated.find(
                 (t: bkper.Transaction) => t.description === 'Props override test'
             );
             expect(propsTarget).to.exist;
-            expect(propsTarget.properties).to.deep.include({ status: 'reviewed' });
+            expect(propsTarget?.properties).to.deep.include({ status: 'reviewed' });
         });
     });
 });

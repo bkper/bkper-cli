@@ -158,11 +158,22 @@ describe('CLI - transaction list Command', function () {
         expect(result.cursor).to.equal('page-2-cursor');
     });
 
-    it('should return JSON formatted transactions in an items envelope', async function () {
+    it('should return transaction JSON with account names and without agent logos', async function () {
         mockBook = {
             listTransactions: async () => ({
                 getItems: () => [
-                    { getId: () => 'tx-1', json: () => ({ id: 'tx-1', amount: '100' }) },
+                    {
+                        getId: () => 'tx-1',
+                        json: () => ({
+                            id: 'tx-1',
+                            amount: '100',
+                            agentLogo: 'data:image/png;base64,AAAA',
+                            creditAccount: { id: 'acc-1' },
+                            debitAccount: { id: 'acc-2' },
+                        }),
+                        getCreditAccount: async () => ({ getName: () => 'Bank' }),
+                        getDebitAccount: async () => ({ getName: () => 'Rent' }),
+                    },
                 ],
                 getAccount: async () => null,
                 getCursor: () => undefined,
@@ -174,16 +185,43 @@ describe('CLI - transaction list Command', function () {
             getBook: async () => mockBook,
         });
 
-        const result = await listTransactionsFormatted(
-            'book-123',
-            { query: 'after:2024-01-01' },
-            'json'
-        );
+        const result = await listTransactionsFormatted('book-123', { query: 'after:2024-01-01' });
 
         expect(result).to.deep.equal({
-            kind: 'json',
-            items: [{ id: 'tx-1', amount: '100' }],
+            items: [
+                {
+                    id: 'tx-1',
+                    amount: '100',
+                    creditAccount: { id: 'acc-1', name: 'Bank' },
+                    debitAccount: { id: 'acc-2', name: 'Rent' },
+                },
+            ],
         });
+    });
+
+    it('should expose cursor and a next-page hint when more pages exist', async function () {
+        mockBook = {
+            listTransactions: async () => ({
+                getItems: () => [],
+                getAccount: async () => null,
+                getCursor: () => 'next-cursor',
+            }),
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        const result = await listTransactionsFormatted('book-123', {
+            query: 'after:2024-01-01',
+            limit: 10,
+        });
+
+        expect(result.cursor).to.equal('next-cursor');
+        expect(result.hint).to.contain(
+            "Next page: bkper transaction list -b 'book-123' -q 'after:2024-01-01' --limit 10 --cursor 'next-cursor'"
+        );
     });
 
     it('should return account when available', async function () {

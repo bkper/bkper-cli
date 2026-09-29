@@ -1,175 +1,138 @@
 import { expect } from '../../unit/helpers/test-setup.js';
 import sinon from 'sinon';
-import { renderTable, renderItem, renderListResult } from '../../../src/render/output.js';
+import {
+    formatItem,
+    formatList,
+    formatMatrix,
+    renderItem,
+    renderList,
+    renderMatrix,
+    renderNotice,
+} from '../../../src/render/output.js';
 
 describe('output', function () {
     let consoleLogStub: sinon.SinonStub;
+    let consoleErrorStub: sinon.SinonStub;
 
     beforeEach(function () {
         consoleLogStub = sinon.stub(console, 'log');
+        consoleErrorStub = sinon.stub(console, 'error');
     });
 
     afterEach(function () {
         consoleLogStub.restore();
+        consoleErrorStub.restore();
     });
 
-    describe('renderTable', function () {
-        it('should output formatted table by default', function () {
-            const matrix = [
-                ['Name', 'Type'],
-                ['Revenue', 'INCOMING'],
-                ['Expenses', 'OUTGOING'],
-            ];
-
-            renderTable(matrix, 'table');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.contain('Name');
-            expect(output).to.contain('Revenue');
-            expect(output).to.contain('INCOMING');
-            // Should have underscore divider
-            expect(output).to.match(/_+/);
+    describe('formatList', function () {
+        it('should always wrap items in an items envelope', function () {
+            const parsed = JSON.parse(formatList([{ id: 'tx-1' }]));
+            expect(parsed).to.deep.equal({ items: [{ id: 'tx-1' }] });
         });
 
-        it('should output JSON when format is json', function () {
-            const matrix = [
-                ['Name', 'Type'],
-                ['Revenue', 'INCOMING'],
-            ];
-
-            renderTable(matrix, 'json');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
-            expect(parsed).to.be.an('array');
-            expect(parsed).to.have.length(2);
-            expect(parsed[0]).to.deep.equal(['Name', 'Type']);
+        it('should render an empty list as an empty items envelope', function () {
+            expect(JSON.parse(formatList([]))).to.deep.equal({ items: [] });
         });
 
-        it('should output CSV when format is csv', function () {
-            const matrix = [
-                ['Name', 'Type'],
-                ['Revenue', 'INCOMING'],
-                ['Expenses', 'OUTGOING'],
-            ];
-
-            renderTable(matrix, 'csv');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const lines = output.split('\r\n');
-            expect(lines).to.have.length(3);
-            expect(lines[0]).to.equal('Name,Type');
-            expect(lines[1]).to.equal('Revenue,INCOMING');
-            expect(lines[2]).to.equal('Expenses,OUTGOING');
-        });
-
-        it('should render a single-row headerless matrix as table', function () {
-            const matrix = [['Total Equity', '-1753687.09']];
-
-            renderTable(matrix, 'table');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.contain('Total Equity');
-            expect(output).to.contain('-1753687.09');
-        });
-
-        it('should print "No results found." for empty matrix', function () {
-            renderTable([], 'table');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.equal('No results found.');
-        });
-
-        it('should output empty JSON array when format is json and no data', function () {
-            renderTable([], 'json');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
-            expect(parsed).to.deep.equal([]);
-        });
-
-        it('should output "No results found." when format is csv and no data', function () {
-            renderTable([], 'csv');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.equal('No results found.');
-        });
-    });
-
-    describe('renderListResult', function () {
-        it('should output JSON list results as a flat array when there is no cursor', function () {
-            renderListResult({ kind: 'json', items: [{ id: 'tx-1' }] }, 'json');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
-            expect(parsed).to.deep.equal([{ id: 'tx-1' }]);
-        });
-
-        it('should include cursor in JSON list result envelope when present', function () {
-            renderListResult({ kind: 'json', items: [{ id: 'file-1' }], cursor: 'next-page' }, 'json');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
+        it('should include cursor only when present', function () {
+            const parsed = JSON.parse(formatList([{ id: 'file-1' }], 'next-page'));
             expect(parsed).to.deep.equal({ items: [{ id: 'file-1' }], cursor: 'next-page' });
         });
 
-        it('should print table footer only for table output', function () {
-            const matrix = [['ID'], ['file-1']];
+        it('should place each record on its own line', function () {
+            const items = [
+                { id: 'tx-1', creditAccount: { id: 'a1', name: 'Bank' } },
+                { id: 'tx-2', creditAccount: { id: 'a2', name: 'Sales' } },
+            ];
 
-            renderListResult({ kind: 'matrix', matrix, footer: 'Next page command' }, 'table');
+            const output = formatList(items, 'c1');
+            const recordLines = output.split('\n').filter(line => line.includes('"id":"tx-'));
 
-            expect(consoleLogStub.callCount).to.equal(2);
-            expect(consoleLogStub.secondCall.args[0]).to.equal('Next page command');
+            expect(recordLines).to.have.length(2);
+            expect(JSON.parse(recordLines[0].replace(/,$/, ''))).to.deep.equal(items[0]);
+            expect(JSON.parse(recordLines[1].replace(/,$/, ''))).to.deep.equal(items[1]);
+        });
+    });
+
+    describe('formatMatrix', function () {
+        it('should place each row on its own line and remain valid JSON', function () {
+            const matrix = [
+                ['', '2024-01-31', '2024-02-29'],
+                ['Assets', 100.5, 200],
+                ['Liabilities', -100.5, -200],
+            ];
+
+            const output = formatMatrix(matrix);
+
+            expect(JSON.parse(output)).to.deep.equal(matrix);
+            const rowLines = output.split('\n').filter(line => line.trim().startsWith('['));
+            expect(rowLines.filter(line => line !== '[')).to.have.length(3);
         });
 
-        it('should not print table footer for CSV output', function () {
-            const matrix = [['ID'], ['file-1']];
+        it('should render an empty matrix as an empty array', function () {
+            expect(JSON.parse(formatMatrix([]))).to.deep.equal([]);
+        });
+    });
 
-            renderListResult({ kind: 'matrix', matrix, footer: 'Next page command' }, 'csv');
+    describe('formatItem', function () {
+        it('should pretty print when requested', function () {
+            const output = formatItem({ name: 'Checking', type: 'ASSET' }, true);
+            expect(output).to.contain('\n  "name": "Checking"');
+            expect(JSON.parse(output)).to.deep.equal({ name: 'Checking', type: 'ASSET' });
+        });
 
-            expect(consoleLogStub.callCount).to.equal(1);
-            expect(consoleLogStub.firstCall.args[0]).to.equal('ID\r\nfile-1');
+        it('should print compact single-line JSON otherwise', function () {
+            const output = formatItem({ name: 'Checking', type: 'ASSET' }, false);
+            expect(output).to.equal('{"name":"Checking","type":"ASSET"}');
+        });
+    });
+
+    describe('renderList', function () {
+        it('should write data to stdout and the hint to stderr', function () {
+            renderList({ items: [{ id: 'f1' }], cursor: 'c1', hint: 'Next page: bkper file list' });
+
+            expect(consoleLogStub.calledOnce).to.equal(true);
+            expect(JSON.parse(consoleLogStub.firstCall.args[0])).to.deep.equal({
+                items: [{ id: 'f1' }],
+                cursor: 'c1',
+            });
+            expect(consoleErrorStub.calledOnceWithExactly('Next page: bkper file list')).to.equal(
+                true
+            );
+        });
+
+        it('should not write to stderr when there is no hint', function () {
+            renderList({ items: [] });
+            expect(consoleErrorStub.called).to.equal(false);
+        });
+    });
+
+    describe('renderMatrix', function () {
+        it('should write the matrix as JSON to stdout', function () {
+            renderMatrix([['Cash', 10]]);
+            expect(JSON.parse(consoleLogStub.firstCall.args[0])).to.deep.equal([['Cash', 10]]);
         });
     });
 
     describe('renderItem', function () {
-        it('should output key-value pairs by default', function () {
-            const item = { name: 'Checking', type: 'ASSET' };
-
-            renderItem(item, 'table');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.contain('name:');
-            expect(output).to.contain('Checking');
-            expect(output).to.contain('type:');
-            expect(output).to.contain('ASSET');
+        it('should write compact JSON when pretty is false', function () {
+            renderItem({ id: 'acc-1' }, false);
+            expect(consoleLogStub.firstCall.args[0]).to.equal('{"id":"acc-1"}');
         });
 
-        it('should output JSON when format is json', function () {
-            const item = { name: 'Checking', type: 'ASSET' };
-
-            renderItem(item, 'json');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
-            expect(parsed).to.deep.equal({ name: 'Checking', type: 'ASSET' });
+        it('should write pretty JSON when pretty is true', function () {
+            renderItem({ id: 'acc-1' }, true);
+            expect(consoleLogStub.firstCall.args[0]).to.equal('{\n  "id": "acc-1"\n}');
         });
+    });
 
-        it('should output JSON when format is csv (single-item fallback)', function () {
-            const item = { name: 'Checking', type: 'ASSET' };
-
-            renderItem(item, 'csv');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            const parsed = JSON.parse(output);
-            expect(parsed).to.deep.equal({ name: 'Checking', type: 'ASSET' });
-        });
-
-        it('should handle empty item in table mode', function () {
-            renderItem({}, 'table');
-
-            const output = consoleLogStub.firstCall.args[0] as string;
-            expect(output).to.equal('No results found.');
+    describe('renderNotice', function () {
+        it('should write notices to stderr, never stdout', function () {
+            renderNotice('Collection col-1 deleted.');
+            expect(consoleErrorStub.calledOnceWithExactly('Collection col-1 deleted.')).to.equal(
+                true
+            );
+            expect(consoleLogStub.called).to.equal(false);
         });
     });
 });

@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty, parsePositiveInteger } from '../cli-helpers.js';
-import { renderItem, renderListResult } from '../../render/index.js';
+import { renderItem, renderList } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { deleteFile, getFile, listFilesFormatted, uploadFile } from './index.js';
 
@@ -19,14 +19,13 @@ export function registerFileCommands(program: Command): void {
         )
         .option('--cursor <cursor>', 'Cursor for fetching the next page')
         .action(options =>
-            withAction('listing files', async format => {
+            withAction('listing files', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const result = await listFilesFormatted(
-                    options.book,
-                    { limit: options.limit, cursor: options.cursor },
-                    format
-                );
-                renderListResult(result, format);
+                const result = await listFilesFormatted(options.book, {
+                    limit: options.limit,
+                    cursor: options.cursor,
+                });
+                renderList(result);
             })()
         );
 
@@ -35,10 +34,10 @@ export function registerFileCommands(program: Command): void {
         .description('Get a file by ID')
         .option('-b, --book <bookId>', 'Book ID')
         .action((fileId: string, options) =>
-            withAction('getting file', async format => {
+            withAction('getting file', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const file = await getFile(options.book, fileId);
-                renderItem(file.json(), format);
+                renderItem(file.json());
             })()
         );
 
@@ -47,10 +46,10 @@ export function registerFileCommands(program: Command): void {
         .description('Delete a file by ID')
         .option('-b, --book <bookId>', 'Book ID')
         .action((fileId: string, options) =>
-            withAction('deleting file', async format => {
+            withAction('deleting file', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const file = await deleteFile(options.book, fileId);
-                renderItem(file.json(), format);
+                renderItem(file.json());
             })()
         );
 
@@ -65,14 +64,14 @@ export function registerFileCommands(program: Command): void {
             collectProperty
         )
         .action((filePath: string, options) =>
-            withAction('uploading file', async format => {
+            withAction('uploading file', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const file = await uploadFile(options.book, {
                     path: filePath,
                     account: options.account,
                     property: options.property,
                 });
-                renderItem(file.json(), format);
+                renderItem(file.json());
             })()
         );
 }

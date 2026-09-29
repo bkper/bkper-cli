@@ -1,7 +1,5 @@
 import { getErrorMessage } from '../auth/auth-errors.js';
 import { setupBkper } from '../bkper-factory.js';
-import { getFormat } from './cli-helpers.js';
-import type { OutputFormat } from '../render/output.js';
 
 /**
  * Options for the action wrapper.
@@ -18,12 +16,12 @@ interface ActionOptions {
  * from every command handler.
  *
  * @param label - Human-readable label for error messages (e.g. "listing books")
- * @param fn - The action function. Receives the resolved OutputFormat.
+ * @param fn - The action function.
  * @param options - Optional configuration (e.g. skipSetup)
  */
 export function withAction(
     label: string,
-    fn: (format: OutputFormat) => Promise<void>,
+    fn: () => Promise<void>,
     options?: ActionOptions
 ): () => Promise<void> {
     return async () => {
@@ -31,7 +29,7 @@ export function withAction(
             if (!options?.skipSetup) {
                 setupBkper();
             }
-            await fn(getFormat());
+            await fn();
         } catch (err) {
             console.error(`Error ${label}: ${getErrorMessage(err)}`);
             process.exit(1);

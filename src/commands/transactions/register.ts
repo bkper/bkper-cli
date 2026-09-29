@@ -1,7 +1,8 @@
-import type { Command } from 'commander';
+import { Option, type Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty, collectRepeatable, parsePositiveInteger } from '../cli-helpers.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem } from '../../render/index.js';
+import { transactionToJson } from './transaction-json.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { parseStdinItems } from '../../input/index.js';
 import {
@@ -34,26 +35,23 @@ export function registerTransactionCommands(program: Command): void {
             parsePositiveInteger
         )
         .option('--cursor <cursor>', 'Cursor for fetching the next page')
-        .option('-p, --properties', 'Include custom properties')
+        .addOption(
+            new Option('-p, --properties', 'No-op: properties are always included').hideHelp()
+        )
         .action(options =>
-            withAction('listing transactions', async format => {
+            withAction('listing transactions', async () => {
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
                         { name: 'query', flag: '--query' },
                     ])
                 );
-                const result = await listTransactionsFormatted(
-                    options.book,
-                    {
-                        query: options.query,
-                        properties: options.properties,
-                        limit: options.limit,
-                        cursor: options.cursor,
-                    },
-                    format
-                );
-                renderListResult(result, format);
+                const result = await listTransactionsFormatted(options.book, {
+                    query: options.query,
+                    limit: options.limit,
+                    cursor: options.cursor,
+                });
+                renderList(result);
             })()
         );
 
@@ -62,10 +60,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Get a transaction by ID')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('getting transaction', async format => {
+            withAction('getting transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await getTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -87,7 +85,7 @@ export function registerTransactionCommands(program: Command): void {
             collectProperty
         )
         .action(options =>
-            withAction('creating transaction', async format => {
+            withAction('creating transaction', async () => {
                 const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
                 const filePath = resolveCreateTransactionFilePath(
                     options.file,
@@ -100,7 +98,7 @@ export function registerTransactionCommands(program: Command): void {
                     );
                     await batchCreateTransactions(options.book, stdinData.items, options.property);
                 } else if (stdinData && stdinData.items.length === 0) {
-                    console.log(JSON.stringify([], null, 2));
+                    renderList({ items: [] });
                 } else {
                     throwIfErrors(
                         validateRequiredOptions(options, [{ name: 'book', flag: '--book' }])
@@ -116,7 +114,7 @@ export function registerTransactionCommands(program: Command): void {
                         property: options.property,
                         file: filePath,
                     });
-                    renderItem(transaction.json(), format);
+                    renderItem(await transactionToJson(transaction));
                 }
             })()
         );
@@ -126,10 +124,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Post a transaction')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('posting transaction', async format => {
+            withAction('posting transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await postTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -150,7 +148,7 @@ export function registerTransactionCommands(program: Command): void {
             collectProperty
         )
         .action((transactionId: string | undefined, options) =>
-            withAction('updating transaction', async format => {
+            withAction('updating transaction', async () => {
                 const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
 
                 if (stdinData && stdinData.items.length > 0) {
@@ -164,7 +162,7 @@ export function registerTransactionCommands(program: Command): void {
                         options.updateChecked
                     );
                 } else if (stdinData && stdinData.items.length === 0) {
-                    console.log(JSON.stringify([], null, 2));
+                    renderList({ items: [] });
                 } else {
                     if (!transactionId) {
                         throw new Error('Transaction ID is required when not using stdin');
@@ -181,7 +179,7 @@ export function registerTransactionCommands(program: Command): void {
                         url: options.url,
                         property: options.property,
                     });
-                    renderItem(transaction.json(), format);
+                    renderItem(await transactionToJson(transaction));
                 }
             })()
         );
@@ -191,10 +189,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Check a transaction')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('checking transaction', async format => {
+            withAction('checking transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await checkTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -203,10 +201,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Uncheck a transaction')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('unchecking transaction', async format => {
+            withAction('unchecking transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await uncheckTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -215,10 +213,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Trash a transaction')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('trashing transaction', async format => {
+            withAction('trashing transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await trashTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -227,10 +225,10 @@ export function registerTransactionCommands(program: Command): void {
         .description('Restore a transaction from the trash')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId: string, options) =>
-            withAction('restoring transaction', async format => {
+            withAction('restoring transaction', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await untrashTransaction(options.book, transactionId);
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 
@@ -239,14 +237,14 @@ export function registerTransactionCommands(program: Command): void {
         .description('Merge two transactions')
         .option('-b, --book <bookId>', 'Book ID')
         .action((transactionId1: string, transactionId2: string, options) =>
-            withAction('merging transactions', async format => {
+            withAction('merging transactions', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const transaction = await mergeTransactions(
                     options.book,
                     transactionId1,
                     transactionId2
                 );
-                renderItem(transaction.json(), format);
+                renderItem(await transactionToJson(transaction));
             })()
         );
 }

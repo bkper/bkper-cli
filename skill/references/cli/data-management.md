@@ -188,7 +188,7 @@ Upload local files to a book and optionally route them with properties.
 # List the first page of files in a book
 bkper file list -b abc123
 
-# Fetch the next page using the cursor shown in table output or JSON
+# Fetch the next page using the cursor from the previous output
 bkper file list -b abc123 --limit 100 --cursor cursor_123
 
 # Upload a file to a book
@@ -258,9 +258,6 @@ bkper transaction list -b abc123 -q 'on:2025'
 # List transactions for a month (on:YYYY-MM)
 bkper transaction list -b abc123 -q 'on:2025-01'
 
-# List with custom properties included
-bkper transaction list -b abc123 -q 'account:Sales' -p
-
 # Fetch one page of transactions explicitly
 bkper transaction list -b abc123 -q 'on:2025' --limit 100
 
@@ -296,7 +293,6 @@ bkper transaction merge tx_123 tx_456 -b abc123
 -   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results unless `--limit` or `--cursor` is provided)
     -   `--limit <number>` - Fetch one page with up to this many transactions
     -   `--cursor <cursor>` - Cursor for fetching the next page
-    -   `-p, --properties` - Include custom properties in the output
 -   `transaction create -b <bookId>` - Create a transaction
     -   `--date <date>` - Transaction date
     -   `--amount <amount>` - Transaction amount
@@ -336,11 +332,11 @@ Inspect book events and bot responses — useful for debugging automations and r
 # List recent events (one page, default limit 50)
 bkper event list -b abc123
 
-# List only events with error bot responses, as JSON (includes full botResponses)
-bkper event list -b abc123 --error --json
+# List only events with error bot responses (includes full botResponses)
+bkper event list -b abc123 --error
 
 # Filter by resource (transaction, account, or group id)
-bkper event list -b abc123 --resource tx_456 --json
+bkper event list -b abc123 --resource tx_456
 
 # Filter by event type and date range
 bkper event list -b abc123 --type TRANSACTION_POSTED --after 2026-01-01T00:00:00Z
@@ -349,13 +345,13 @@ bkper event list -b abc123 --type TRANSACTION_POSTED --after 2026-01-01T00:00:00
 bkper event list -b abc123 --limit 50 --cursor cursor_123
 
 # Replay one bot response after inspecting an error
-bkper event replay evt_789 -b abc123 --agent-id tax-bot --json
+bkper event replay evt_789 -b abc123 --agent-id tax-bot
 ```
 
 <details>
 <summary>Command reference</summary>
 
--   `event list -b <bookId>` - List one page of events in a book (includes bot responses in JSON)
+-   `event list -b <bookId>` - List one page of events in a book (includes bot responses)
     -   `--after <date>` - Start date inclusive (RFC3339)
     -   `--before <date>` - End date exclusive (RFC3339)
     -   `--resource <resourceId>` - Filter by resource ID (Transaction, Account, or Group). When set, `--error` and `--type` are ignored by the API
@@ -365,7 +361,7 @@ bkper event replay evt_789 -b abc123 --agent-id tax-bot --json
     -   `--cursor <cursor>` - Cursor for fetching the next page
 -   `event replay <eventId> -b <bookId> --agent-id <agentId>` - Replay one bot response for an event (returns the updated event with bot responses)
 
-JSON output includes the full event payload, including nested `botResponses` (`agentId`, `type`, `message`, `createdAt`), for LLM-assisted debugging.
+Output includes the full event payload, including nested `botResponses` (`agentId`, `type`, `message`, `createdAt`), for LLM-assisted debugging.
 
 </details>
 
@@ -474,53 +470,56 @@ bkper collection delete col_789
 
 ## Output Format
 
-All commands support three output formats via the `--format` global flag:
+All data commands output **JSON only**. Results go to stdout; hints (such as the next-page command), warnings, and notices go to stderr, so stdout is always parseable.
 
-| Format | Flag                       | Best for                                    |
-| ------ | -------------------------- | ------------------------------------------- |
-| Table  | `--format table` (default) | Human reading in the terminal               |
-| JSON   | `--format json`            | Programmatic access, cursors, single-item detail |
-| CSV    | `--format csv`             | LLM consumption, spreadsheets, list reports |
+| Output                                              | Shape                                                   |
+| --------------------------------------------------- | ------------------------------------------------------- |
+| Lists (`book list`, `transaction list`, batch writes, ...) | `{"items":[...]}`, plus `"cursor"` only when another page exists |
+| Single items (`get`, `create`, `update`, ...)       | One JSON object                                         |
+| Balances (`balance list`)                           | A 2D matrix: header row first, then one row per account or group |
 
 ```bash
-# Table output (default)
+# List output: one record per line inside the envelope
 bkper account list -b abc123
-
-# JSON output
-bkper account list -b abc123 --format json
-# { "items": [...] }
-
-# CSV output -- raw data, no truncation, RFC 4180
-bkper account list -b abc123 --format csv
+# {"items":[
+# {"id":"acc-abc","name":"Cash","type":"ASSET",...},
+# {"id":"acc-def","name":"Revenue","type":"INCOMING",...}
+# ]}
 ```
 
-**JSON list output details:**
+**Layout:**
 
--   Resource list commands return an object with an `items` array: `{ "items": [...] }`.
--   Paginated list commands include `cursor` only when another page is available: `{ "items": [...], "cursor": "..." }`.
--   Use `jq '.items[]'` to iterate list output.
+-   Lists and balance matrices put one record or row per line, so `head`, `grep`, and `wc -l` work on records.
+-   Single items are pretty-printed on an interactive terminal and compact (one line) otherwise.
 
-**CSV output details:**
+**Transactions** keep the [Bkper API Types](https://raw.githubusercontent.com/bkper/bkper-api-types/refs/heads/master/index.d.ts) shape, with `creditAccount.name` and `debitAccount.name` added so the from/to flow is readable without a separate account lookup. Custom properties are always included. Inline agent logo images are omitted.
 
--   **RFC 4180 compliant** -- proper quoting, CRLF line endings, no truncation
--   **All metadata included** -- IDs, properties, hidden properties, URLs, and timestamps are enabled
--   **Raw values** -- dates stay in ISO format, numbers are unformatted (no locale formatting)
--   **Single-item commands** (e.g. `account get`, `transaction create`) fall back to JSON since CSV adds no value for non-tabular data
+**Balances** values are unformatted JSON numbers (never locale-formatted strings), dates are ISO `yyyy-MM-dd`, and account/group properties are included as extra columns. Transaction `amount` values are exact decimal strings.
 
-**LLM-first output guidance (important):**
+**Reshape with jq** instead of output flags:
 
-When command output will be loaded into an LLM context (chat, prompt, memory, or agent reasoning), prefer:
+```bash
+# Iterate list items
+bkper transaction list -b abc123 -q 'on:2025-01' | jq '.items[]'
 
--   **`--format csv` for list commands** (`balance list`, `transaction list`, `account list`, etc.).
--   **`--format json` for single-item commands** (`get`, `create`, `update`), cursor pagination, and CLI-to-CLI pipelines.
+# Pick columns
+bkper transaction list -b abc123 -q 'on:2025-01' | \
+  jq '.items[] | {date, amount, from: .creditAccount.name, to: .debitAccount.name, description}'
 
-CSV is significantly more token-efficient than JSON for tabular data, and for wide balance outputs it can reduce token usage by up to **95%**.
+# Export to CSV
+bkper transaction list -b abc123 -q 'on:2025-01' | \
+  jq -r '.items[] | [.date, .amount, .creditAccount.name, .debitAccount.name, .description] | @csv'
 
-**Quick rule:**
+# Balance matrix to CSV
+bkper balance list -b abc123 -q 'on:2025-12-31' | jq -r '.[] | @csv'
 
--   **LLM consumption of lists/reports** → CSV
--   **Programmatic processing / pipelines** → JSON
--   **Human terminal reading** → Table
+# Read the next-page cursor
+bkper transaction list -b abc123 -q 'on:2025' --limit 100 | jq -r '.cursor // empty'
+```
+
+For accounting numbers, compute with a deterministic script or query rather than summing by eye. Balance values are JSON numbers, so extremely large values with many decimal places (beyond ~15 significant digits) can lose their last digits; use transaction `amount` strings when exact digits matter.
+
+`--json` and `--format json` are accepted for compatibility and have no effect. Table and CSV output formats were removed; any other `--format` value fails with a jq hint.
 
 ---
 
@@ -564,43 +563,46 @@ echo '[{"name":"Cash","type":"ASSET"}]' | \
   bkper account create -b abc123 -p "region=LATAM"
 ```
 
-**Batch output:** write commands output created or updated resources as a flat JSON array:
+**Batch output:** write commands output created or updated resources in the same `{"items":[...]}` envelope as lists:
 
 ```bash
 bkper account create -b abc123 < accounts.json
-# Output: [{"id":"acc-abc","name":"Cash",...}, {"id":"acc-def","name":"Revenue",...}]
+# {"items":[
+# {"id":"acc-abc","name":"Cash",...},
+# {"id":"acc-def","name":"Revenue",...}
+# ]}
 ```
 
-List JSON output uses an `{ "items": [...] }` envelope, and stdin batch commands unwrap that envelope automatically for CLI-to-CLI pipes.
+Stdin accepts a single object, an array, or the `{"items":[...]}` envelope, so list and batch output can be piped directly into another command.
 
 **Piping between commands:**
 
-For resources that support stdin creation, JSON output can be piped directly into create or update commands:
+For resources that support stdin creation, output can be piped directly into create or update commands:
 
 ```bash
 # Copy all accounts from one book to another
-bkper account list -b $BOOK_A --format json | bkper account create -b $BOOK_B
+bkper account list -b $BOOK_A | bkper account create -b $BOOK_B
 
 # Copy transactions matching a query
-bkper transaction list -b $BOOK_A -q 'after:2025-01-01' --format json | \
+bkper transaction list -b $BOOK_A -q 'after:2025-01-01' | \
   bkper transaction create -b $BOOK_B
 
 # Clone accounts, then transactions
-bkper account list -b $SOURCE --format json | bkper account create -b $DEST
-bkper transaction list -b $SOURCE -q 'after:2025-01-01' --format json | \
+bkper account list -b $SOURCE | bkper account create -b $DEST
+bkper transaction list -b $SOURCE -q 'after:2025-01-01' | \
   bkper transaction create -b $DEST
 
 # Batch update: list transactions, modify, and pipe back to update
-bkper transaction list -b $BOOK -q 'after:2025-01-01' --format json | \
-  jq '[.[] | .description = "Updated: " + .description]' | \
+bkper transaction list -b $BOOK -q 'after:2025-01-01' | \
+  jq '[.items[] | .description = "Updated: " + .description]' | \
   bkper transaction update -b $BOOK
 
 # Batch update: add a property to all matching transactions
-bkper transaction list -b $BOOK -q 'account:Expenses' --format json | \
+bkper transaction list -b $BOOK -q 'account:Expenses' | \
   bkper transaction update -b $BOOK -p "reviewed=true"
 
 # Batch update checked transactions
-bkper transaction list -b $BOOK -q 'is:checked after:2025-01-01' --format json | \
+bkper transaction list -b $BOOK -q 'is:checked after:2025-01-01' | \
   bkper transaction update -b $BOOK --update-checked -p "migrated=true"
 ```
 

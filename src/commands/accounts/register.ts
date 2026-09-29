@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { parseStdinItems } from '../../input/index.js';
 import {
@@ -21,10 +21,10 @@ export function registerAccountCommands(program: Command): void {
         .description('List all accounts in a book')
         .option('-b, --book <bookId>', 'Book ID')
         .action(options =>
-            withAction('listing accounts', async format => {
+            withAction('listing accounts', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const result = await listAccountsFormatted(options.book, format);
-                renderListResult(result, format);
+                const result = await listAccountsFormatted(options.book);
+                renderList(result);
             })()
         );
 
@@ -33,10 +33,10 @@ export function registerAccountCommands(program: Command): void {
         .description('Get an account by ID or name')
         .option('-b, --book <bookId>', 'Book ID')
         .action((idOrName: string, options) =>
-            withAction('getting account', async format => {
+            withAction('getting account', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const account = await getAccount(options.book, idOrName);
-                renderItem(account.json(), format);
+                renderItem(account.json());
             })()
         );
 
@@ -50,7 +50,7 @@ export function registerAccountCommands(program: Command): void {
         .option('--groups <groups>', 'Comma-separated group names')
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action(options =>
-            withAction('creating account', async format => {
+            withAction('creating account', async () => {
                 const stdinData = !process.stdin.isTTY ? await parseStdinItems() : null;
 
                 if (stdinData && stdinData.items.length > 0) {
@@ -59,7 +59,7 @@ export function registerAccountCommands(program: Command): void {
                     );
                     await batchCreateAccounts(options.book, stdinData.items, options.property);
                 } else if (stdinData && stdinData.items.length === 0) {
-                    console.log(JSON.stringify([], null, 2));
+                    renderList({ items: [] });
                 } else {
                     throwIfErrors(
                         validateRequiredOptions(options, [
@@ -76,7 +76,7 @@ export function registerAccountCommands(program: Command): void {
                             : undefined,
                         property: options.property,
                     });
-                    renderItem(account.json(), format);
+                    renderItem(account.json());
                 }
             })()
         );
@@ -90,7 +90,7 @@ export function registerAccountCommands(program: Command): void {
         .option('--archived <archived>', 'Archive status (true/false)')
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action((idOrName: string, options) =>
-            withAction('updating account', async format => {
+            withAction('updating account', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const account = await updateAccount(options.book, idOrName, {
                     name: options.name,
@@ -99,7 +99,7 @@ export function registerAccountCommands(program: Command): void {
                         options.archived !== undefined ? options.archived === 'true' : undefined,
                     property: options.property,
                 });
-                renderItem(account.json(), format);
+                renderItem(account.json());
             })()
         );
 
@@ -108,10 +108,10 @@ export function registerAccountCommands(program: Command): void {
         .description('Delete an account')
         .option('-b, --book <bookId>', 'Book ID')
         .action((idOrName: string, options) =>
-            withAction('deleting account', async format => {
+            withAction('deleting account', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const account = await deleteAccount(options.book, idOrName);
-                renderItem(account.json(), format);
+                renderItem(account.json());
             })()
         );
 }

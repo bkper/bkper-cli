@@ -51,7 +51,7 @@ bkper transaction list -b abc123 -q "on:2025" --format json | jq .
         expect(commands).to.deep.equal([]);
     });
 
-    it('should materialize known placeholders and append csv output', function () {
+    it('should materialize known placeholders without adding output flags', function () {
         const config: LiveCheckConfig = {
             cliCmd: 'bkper',
             bookId: 'book-123',
@@ -67,7 +67,7 @@ bkper transaction list -b abc123 -q "on:2025" --format json | jq .
 
         expect(materialized.skipReason).to.equal(undefined);
         expect(materialized.command).to.equal(
-            "bkper balance list -b book-123 -q \"account:'Cash' group:'Total Equity' before:2026-01-01\" --format csv"
+            "bkper balance list -b book-123 -q \"account:'Cash' group:'Total Equity' before:2026-01-01\""
         );
     });
 

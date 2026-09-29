@@ -53,100 +53,62 @@ describe('CLI - output format', function () {
         }
     });
 
-    describe('--format table (default)', function () {
-        it('should output table format for account list', async function () {
+    describe('JSON by default', function () {
+        it('should output an items envelope for lists without any flag', async function () {
             const result = await runBkper(['account', 'list', '-b', bookId]);
 
             expect(result.exitCode).to.equal(0);
-            // Table format should have aligned columns and underscore divider
-            expect(result.stdout).to.contain('Cash');
-            expect(result.stdout).to.contain('Revenue');
-            expect(result.stdout).to.match(/_+/);
+            const parsed = JSON.parse(result.stdout);
+            expect(parsed).to.have.property('items').that.is.an('array');
+            const names = parsed.items.map((a: bkper.Account) => a.name);
+            expect(names).to.include.members(['Cash', 'Revenue']);
         });
 
-        it('should output key-value format for single item', async function () {
+        it('should place one record per line in list output', async function () {
+            const result = await runBkper(['account', 'list', '-b', bookId]);
+
+            const recordLines = result.stdout
+                .split('\n')
+                .filter(line => line.startsWith('{"') && !line.startsWith('{"items"'));
+            expect(recordLines.length).to.be.greaterThanOrEqual(2);
+            for (const line of recordLines) {
+                expect(() => JSON.parse(line.replace(/,$/, ''))).to.not.throw();
+            }
+        });
+
+        it('should output compact JSON for a single item when not on a terminal', async function () {
             const result = await runBkper(['account', 'get', 'Cash', '-b', bookId]);
 
             expect(result.exitCode).to.equal(0);
-            expect(result.stdout).to.contain('name:');
-            expect(result.stdout).to.contain('Cash');
+            expect(result.stdout.trim().split('\n')).to.have.length(1);
+            expect(JSON.parse(result.stdout).name).to.equal('Cash');
         });
     });
 
-    describe('--format json', function () {
-        it('should output valid JSON array for list', async function () {
-            const result = await runBkper(['--format', 'json', 'account', 'list', '-b', bookId]);
-
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array');
-        });
-
-        it('should output valid JSON object for single item', async function () {
-            const result = await runBkper([
-                '--format',
-                'json',
-                'account',
-                'get',
-                'Cash',
-                '-b',
-                bookId,
-            ]);
-
-            expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('object');
-            expect(parsed.name).to.equal('Cash');
-        });
-    });
-
-    describe('--json (backward compatibility)', function () {
-        it('should work as alias for --format json', async function () {
+    describe('legacy flags', function () {
+        it('should accept --json as a no-op', async function () {
             const result = await runBkper(['--json', 'account', 'list', '-b', bookId]);
 
             expect(result.exitCode).to.equal(0);
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('array');
+            expect(JSON.parse(result.stdout)).to.have.property('items');
         });
-    });
 
-    describe('--format csv', function () {
-        it('should output CSV for account list', async function () {
-            const result = await runBkper(['--format', 'csv', 'account', 'list', '-b', bookId]);
+        it('should accept --format json as a no-op', async function () {
+            const result = await runBkper(['--format', 'json', 'account', 'list', '-b', bookId]);
 
             expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split(/\r?\n/);
-            // Should have at least a header row and two data rows
-            expect(lines.length).to.be.greaterThanOrEqual(3);
-            // First line should be headers
-            expect(lines[0]).to.contain('Name');
+            expect(JSON.parse(result.stdout)).to.have.property('items');
         });
 
-        it('should fall back to JSON for single item', async function () {
-            const result = await runBkper([
-                '--format',
-                'csv',
-                'account',
-                'get',
-                'Cash',
-                '-b',
-                bookId,
-            ]);
+        for (const legacy of ['table', 'csv']) {
+            it(`should fail with jq guidance for --format ${legacy}`, async function () {
+                const result = await runBkper(['--format', legacy, 'account', 'list', '-b', bookId]);
 
-            expect(result.exitCode).to.equal(0);
-            // renderItem falls back to JSON for csv format
-            const parsed = JSON.parse(result.stdout);
-            expect(parsed).to.be.an('object');
-            expect(parsed.name).to.equal('Cash');
-        });
-
-        it('should include IDs in CSV output', async function () {
-            const result = await runBkper(['--format', 'csv', 'account', 'list', '-b', bookId]);
-
-            expect(result.exitCode).to.equal(0);
-            const lines = result.stdout.trim().split(/\r?\n/);
-            // CSV builder is configured with .ids(true), header is "Account Id"
-            expect(lines[0]).to.contain('Id');
-        });
+                expect(result.exitCode).to.not.equal(0);
+                expect(result.stdout).to.equal('');
+                expect(result.stderr).to.contain('JSON only');
+                expect(result.stderr).to.contain('jq');
+            });
+        }
     });
 });

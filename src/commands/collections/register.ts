@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectBook } from '../cli-helpers.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem, renderNotice } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import {
     listCollectionsFormatted,
@@ -20,9 +20,9 @@ export function registerCollectionCommands(program: Command): void {
         .command('list')
         .description('List all collections')
         .action(
-            withAction('listing collections', async format => {
-                const result = await listCollectionsFormatted(format);
-                renderListResult(result, format);
+            withAction('listing collections', async () => {
+                const result = await listCollectionsFormatted();
+                renderList(result);
             })
         );
 
@@ -30,9 +30,9 @@ export function registerCollectionCommands(program: Command): void {
         .command('get <collectionId>')
         .description('Get a collection by ID')
         .action((collectionId: string) =>
-            withAction('getting collection', async format => {
+            withAction('getting collection', async () => {
                 const collection = await getCollection(collectionId);
-                renderItem(collection.json(), format);
+                renderItem(collection.json());
             })()
         );
 
@@ -41,10 +41,10 @@ export function registerCollectionCommands(program: Command): void {
         .description('Create a new collection')
         .option('--name <name>', 'Collection name')
         .action(options =>
-            withAction('creating collection', async format => {
+            withAction('creating collection', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
                 const collection = await createCollection({ name: options.name });
-                renderItem(collection.json(), format);
+                renderItem(collection.json());
             })()
         );
 
@@ -53,11 +53,11 @@ export function registerCollectionCommands(program: Command): void {
         .description('Update a collection')
         .option('--name <name>', 'Collection name')
         .action((collectionId: string, options) =>
-            withAction('updating collection', async format => {
+            withAction('updating collection', async () => {
                 const collection = await updateCollection(collectionId, {
                     name: options.name,
                 });
-                renderItem(collection.json(), format);
+                renderItem(collection.json());
             })()
         );
 
@@ -67,7 +67,7 @@ export function registerCollectionCommands(program: Command): void {
         .action((collectionId: string) =>
             withAction('deleting collection', async () => {
                 await deleteCollection(collectionId);
-                console.log(`Collection ${collectionId} deleted.`);
+                renderNotice(`Collection ${collectionId} deleted.`);
             })()
         );
 
@@ -76,22 +76,10 @@ export function registerCollectionCommands(program: Command): void {
         .description('Add books to a collection')
         .option('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
         .action((collectionId: string, options) =>
-            withAction('adding books to collection', async format => {
+            withAction('adding books to collection', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const books = await addBookToCollection(collectionId, options.book);
-                if (format === 'json' || format === 'csv') {
-                    console.log(
-                        JSON.stringify(
-                            books.map(b => b.json()),
-                            null,
-                            2
-                        )
-                    );
-                } else {
-                    console.log(
-                        `Added ${options.book.length} book(s) to collection ${collectionId}.`
-                    );
-                }
+                renderList({ items: books.map(b => b.json()) });
             })()
         );
 
@@ -100,22 +88,10 @@ export function registerCollectionCommands(program: Command): void {
         .description('Remove books from a collection')
         .option('-b, --book <bookId>', 'Book ID (repeatable)', collectBook)
         .action((collectionId: string, options) =>
-            withAction('removing books from collection', async format => {
+            withAction('removing books from collection', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const books = await removeBookFromCollection(collectionId, options.book);
-                if (format === 'json' || format === 'csv') {
-                    console.log(
-                        JSON.stringify(
-                            books.map(b => b.json()),
-                            null,
-                            2
-                        )
-                    );
-                } else {
-                    console.log(
-                        `Removed ${options.book.length} book(s) from collection ${collectionId}.`
-                    );
-                }
+                renderList({ items: books.map(b => b.json()) });
             })()
         );
 }

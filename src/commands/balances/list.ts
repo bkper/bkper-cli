@@ -1,6 +1,5 @@
 import { BalanceType } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
-import type { OutputFormat } from '../../render/output.js';
 import { warnIfSuspiciousDateVariableQuery } from '../../utils/query-warning.js';
 
 /**
@@ -9,7 +8,6 @@ import { warnIfSuspiciousDateVariableQuery } from '../../utils/query-warning.js'
 export interface ListBalancesOptions {
     query: string;
     expanded?: number;
-    format?: OutputFormat;
     trial?: boolean;
 }
 
@@ -27,10 +25,10 @@ export function resolveBalanceType(query: string, trial = false): BalanceType {
 
 /**
  * Adds the missing trial balance headers from the bkper-js total table builder.
- * CSV total tables already contain a header for metadata, so replace its balance
- * column while preserving property columns.
+ * Total tables built with properties already contain a `name, balance, ...`
+ * header row, so replace its balance column while preserving property columns.
  */
-function addTrialHeaders(matrix: unknown[][], csv: boolean): unknown[][] {
+function addTrialHeaders(matrix: unknown[][]): unknown[][] {
     if (matrix.length === 0) {
         return matrix;
     }
@@ -40,11 +38,8 @@ function addTrialHeaders(matrix: unknown[][], csv: boolean): unknown[][] {
         return matrix;
     }
 
-    if (csv) {
-        const [header, ...rows] = matrix;
-        return [['Name', 'Debit', 'Credit', ...header.slice(2)], ...rows];
-    }
-    return [['Name', 'Debit', 'Credit'], ...matrix];
+    const [header, ...rows] = matrix;
+    return [['Name', 'Debit', 'Credit', ...header.slice(2)], ...rows];
 }
 
 /**
@@ -72,18 +67,14 @@ export async function listBalancesMatrix(
         builder.trial(true).period(options.query.includes('after:'));
     }
 
-    if (options.format === 'csv') {
-        // CSV: raw values for machine consumption, all metadata
-        builder.properties(true).hiddenProperties(true);
-    } else {
-        // Table/JSON: human-readable formatted values
-        builder.formatValues(true).formatDates(true);
-    }
+    // Machine-readable output: unformatted numeric values (never locale-formatted
+    // strings), ISO dates, and all account/group properties.
+    builder.formatDates(true).properties(true).hiddenProperties(true);
 
     if (options.expanded) {
         builder.expanded(options.expanded);
     }
 
     const matrix = builder.build();
-    return options.trial ? addTrialHeaders(matrix, options.format === 'csv') : matrix;
+    return options.trial ? addTrialHeaders(matrix) : matrix;
 }

@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listGroupsFormatted, getGroup, createGroup, updateGroup, deleteGroup } from './index.js';
 
@@ -13,10 +13,10 @@ export function registerGroupCommands(program: Command): void {
         .description('List all groups in a book')
         .option('-b, --book <bookId>', 'Book ID')
         .action(options =>
-            withAction('listing groups', async format => {
+            withAction('listing groups', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const result = await listGroupsFormatted(options.book, format);
-                renderListResult(result, format);
+                const result = await listGroupsFormatted(options.book);
+                renderList(result);
             })()
         );
 
@@ -25,10 +25,10 @@ export function registerGroupCommands(program: Command): void {
         .description('Get a group by ID or name')
         .option('-b, --book <bookId>', 'Book ID')
         .action((idOrName: string, options) =>
-            withAction('getting group', async format => {
+            withAction('getting group', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const group = await getGroup(options.book, idOrName);
-                renderItem(group.json(), format);
+                renderItem(group.json());
             })()
         );
 
@@ -41,7 +41,7 @@ export function registerGroupCommands(program: Command): void {
         .option('--hidden', 'Hide the group')
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action(options =>
-            withAction('creating group', async format => {
+            withAction('creating group', async () => {
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -54,7 +54,7 @@ export function registerGroupCommands(program: Command): void {
                     hidden: options.hidden,
                     property: options.property,
                 });
-                renderItem(group.json(), format);
+                renderItem(group.json());
             })()
         );
 
@@ -66,14 +66,14 @@ export function registerGroupCommands(program: Command): void {
         .option('--hidden <hidden>', 'Hide status (true/false)')
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action((idOrName: string, options) =>
-            withAction('updating group', async format => {
+            withAction('updating group', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const group = await updateGroup(options.book, idOrName, {
                     name: options.name,
                     hidden: options.hidden !== undefined ? options.hidden === 'true' : undefined,
                     property: options.property,
                 });
-                renderItem(group.json(), format);
+                renderItem(group.json());
             })()
         );
 
@@ -82,10 +82,10 @@ export function registerGroupCommands(program: Command): void {
         .description('Delete a group')
         .option('-b, --book <bookId>', 'Book ID')
         .action((idOrName: string, options) =>
-            withAction('deleting group', async format => {
+            withAction('deleting group', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const group = await deleteGroup(options.book, idOrName);
-                renderItem(group.json(), format);
+                renderItem(group.json());
             })()
         );
 }

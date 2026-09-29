@@ -1,5 +1,7 @@
-import { program } from 'commander';
-import type { OutputFormat } from '../render/output.js';
+import { InvalidArgumentError, Option, type Command } from 'commander';
+
+const JSON_ONLY_MESSAGE =
+    "Output is JSON only. Reshape with jq, e.g. jq -r '.items[] | [.date, .amount] | @csv'";
 
 /**
  * Commander option collector for repeatable scalar flags.
@@ -34,17 +36,25 @@ export function parsePositiveInteger(value: string): number {
 }
 
 /**
- * Returns the active output format, considering both --format and --json flags.
- * --json acts as a silent alias for --format json.
+ * Commander parser for the legacy --format flag. Output is JSON only, so only
+ * `json` is accepted; other formats fail with guidance to reshape via jq.
  */
-export function getFormat(): OutputFormat {
-    const opts = program.opts();
-    if (opts.json === true) {
-        return 'json';
+export function parseOutputFormat(value: string): 'json' {
+    if (value === 'json') {
+        return value;
     }
-    const format = opts.format as string;
-    if (format === 'json' || format === 'csv') {
-        return format;
-    }
-    return 'table';
+    throw new InvalidArgumentError(JSON_ONLY_MESSAGE);
+}
+
+/**
+ * Registers the legacy global output flags as hidden options.
+ * `--json` and `--format json` are accepted no-ops kept for compatibility.
+ */
+export function registerOutputOptions(command: Command): void {
+    command.addOption(
+        new Option('--format <format>', 'Output format (JSON only)')
+            .argParser(parseOutputFormat)
+            .hideHelp()
+    );
+    command.addOption(new Option('--json', 'Output as JSON (default)').hideHelp());
 }

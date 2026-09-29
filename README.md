@@ -110,13 +110,20 @@ Use direct commands for scripts, exports, automation, and repeatable workflows.
 bkper book list
 
 # Query transactions
-bkper transaction list -b <bookId> -q 'on:2026-06' --format csv
+bkper transaction list -b <bookId> -q 'on:2026-06'
 
 # Query balances
 bkper balance list -b <bookId> -q 'on:2026-06-30'
 
 # Show separate debit and credit columns
 bkper balance list -b <bookId> -q 'on:2026-06-30' --trial
+```
+
+Commands output JSON, ready for scripts and AI agents. Reshape it with `jq`, for example to export a CSV:
+
+```bash
+bkper transaction list -b <bookId> -q 'on:2026-06' | \
+  jq -r '.items[] | [.date, .amount, .creditAccount.name, .debitAccount.name, .description] | @csv'
 ```
 
 Capture a receipt as a draft, then review and complete it in Bkper or with the agent:
@@ -202,9 +209,9 @@ Manage books, files, accounts, transactions, events, and balances.
 bkper book list
 bkper account list -b <bookId>
 bkper file list -b <bookId> --limit 100
-bkper transaction list -b <bookId> -q 'on:2026' --format csv
-bkper event list -b <bookId> --error --json
-bkper balance list -b <bookId> -q 'on:2026-12-31' --format csv
+bkper transaction list -b <bookId> -q 'on:2026'
+bkper event list -b <bookId> --error
+bkper balance list -b <bookId> -q 'on:2026-12-31'
 ```
 
 → [Full Data Management reference](https://github.com/bkper/bkper-cli/blob/main/skill/references/cli/data-management.md)
@@ -218,7 +225,7 @@ Build, deploy, and manage Bkper apps. Sync and deploy require clean, committed s
 ```bash
 bkper app init my-app
 cd my-app
-bkper app get my-app --json
+bkper app get my-app
 bkper app dev
 bkper app sync
 bkper app deploy

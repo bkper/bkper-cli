@@ -2,7 +2,7 @@ import type { Command } from 'commander';
 import { EventType } from 'bkper-js';
 import { withAction } from '../action.js';
 import { parsePositiveInteger } from '../cli-helpers.js';
-import { renderItem, renderListResult } from '../../render/index.js';
+import { renderItem, renderList } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listEventsFormatted, replayEventBotResponse } from './index.js';
 
@@ -39,22 +39,18 @@ export function registerEventCommands(program: Command): void {
         )
         .option('--cursor <cursor>', 'Cursor for fetching the next page')
         .action(options =>
-            withAction('listing events', async format => {
+            withAction('listing events', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
-                const result = await listEventsFormatted(
-                    options.book,
-                    {
-                        afterDate: options.after,
-                        beforeDate: options.before,
-                        resourceId: options.resource,
-                        onError: options.error === true ? true : undefined,
-                        type: options.type,
-                        limit: options.limit,
-                        cursor: options.cursor,
-                    },
-                    format
-                );
-                renderListResult(result, format);
+                const result = await listEventsFormatted(options.book, {
+                    afterDate: options.after,
+                    beforeDate: options.before,
+                    resourceId: options.resource,
+                    onError: options.error === true ? true : undefined,
+                    type: options.type,
+                    limit: options.limit,
+                    cursor: options.cursor,
+                });
+                renderList(result);
             })()
         );
 
@@ -64,7 +60,7 @@ export function registerEventCommands(program: Command): void {
         .option('-b, --book <bookId>', 'Book ID')
         .option('--agent-id <agentId>', 'Bot/agent ID to replay')
         .action((eventId: string, options) =>
-            withAction('replaying event bot response', async format => {
+            withAction('replaying event bot response', async () => {
                 throwIfErrors(
                     validateRequiredOptions(options, [
                         { name: 'book', flag: '--book' },
@@ -72,7 +68,7 @@ export function registerEventCommands(program: Command): void {
                     ])
                 );
                 const event = await replayEventBotResponse(options.book, eventId, options.agentId);
-                renderItem(event.json(), format);
+                renderItem(event.json());
             })()
         );
 }

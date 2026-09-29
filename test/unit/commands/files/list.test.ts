@@ -72,7 +72,7 @@ describe('CLI - file list Command', function () {
         expect(capturedCursor).to.equal('page-2');
     });
 
-    it('should return JSON formatted files in an items envelope without content', async function () {
+    it('should return file JSON without content, with cursor and next-page hint', async function () {
         mockBook = {
             listFiles: async () => ({
                 getItems: () => [
@@ -95,31 +95,26 @@ describe('CLI - file list Command', function () {
             getBook: async () => mockBook,
         });
 
-        const result = await listFilesFormatted('book-123', {}, 'json');
+        const result = await listFilesFormatted('book-123', {});
 
-        expect(result).to.deep.equal({
-            kind: 'json',
-            items: [
-                {
-                    id: 'file-1',
-                    name: 'receipt.pdf',
-                    contentType: 'application/pdf',
-                },
-            ],
-            cursor: 'next-cursor',
-        });
+        expect(result.items).to.deep.equal([
+            {
+                id: 'file-1',
+                name: 'receipt.pdf',
+                contentType: 'application/pdf',
+            },
+        ]);
+        expect(result.cursor).to.equal('next-cursor');
+        expect(result.hint).to.contain(
+            "Next page: bkper file list -b 'book-123' --limit 100 --cursor 'next-cursor'"
+        );
     });
 
-    it('should include a next page command footer for table output when cursor is present', async function () {
+    it('should not include a hint when there are no more pages', async function () {
         mockBook = {
             listFiles: async () => ({
-                getItems: () => [
-                    {
-                        getId: () => 'file-1',
-                        json: () => ({ id: 'file-1', name: 'receipt.pdf' }),
-                    },
-                ],
-                getCursor: () => 'next-cursor',
+                getItems: () => [],
+                getCursor: () => undefined,
             }),
         };
 
@@ -128,15 +123,8 @@ describe('CLI - file list Command', function () {
             getBook: async () => mockBook,
         });
 
-        const result = await listFilesFormatted('book-123', {}, 'table');
+        const result = await listFilesFormatted('book-123', {});
 
-        expect(result.kind).to.equal('matrix');
-        if (result.kind !== 'matrix') {
-            throw new Error('Expected matrix list result');
-        }
-        expect(result.footer).to.contain('Next cursor: next-cursor');
-        expect(result.footer).to.contain(
-            "Next page: bkper file list -b 'book-123' --limit 100 --cursor 'next-cursor'"
-        );
+        expect(result).to.deep.equal({ items: [] });
     });
 });

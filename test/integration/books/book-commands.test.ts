@@ -7,6 +7,7 @@ import {
     runBkper,
     runBkperJson,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - book commands', function () {
@@ -34,14 +35,14 @@ describe('CLI - book commands', function () {
 
     describe('book list', function () {
         it('should return an array of books', async function () {
-            const result = await runBkperJson<bkper.Book[]>(['book', 'list']);
+            const result = await runBkperJsonItems<bkper.Book>(['book', 'list']);
 
             expect(result).to.be.an('array');
             expect(result.length).to.be.greaterThan(0);
         });
 
         it('should find the test book by name query', async function () {
-            const result = await runBkperJson<bkper.Book[]>(['book', 'list', '--query', bookName]);
+            const result = await runBkperJsonItems<bkper.Book>(['book', 'list', '--query', bookName]);
 
             expect(result).to.be.an('array');
             const found = result.find(b => b.id === bookId);

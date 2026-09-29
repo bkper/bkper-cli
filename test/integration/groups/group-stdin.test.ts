@@ -7,6 +7,7 @@ import {
     runBkperJson,
     runBkperWithStdin,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - group stdin', function () {
@@ -47,7 +48,7 @@ describe('CLI - group stdin', function () {
 
     describe('verification', function () {
         it('should not create groups from stdin input', async function () {
-            const result = await runBkperJson<bkper.Group[]>(['group', 'list', '-b', bookId]);
+            const result = await runBkperJsonItems<bkper.Group>(['group', 'list', '-b', bookId]);
 
             const names = result.map(g => g.name);
             expect(names).to.not.include('Stdin Group A');

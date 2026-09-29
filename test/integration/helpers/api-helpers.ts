@@ -241,6 +241,28 @@ export async function runBkperJson<T = unknown>(
 }
 
 /**
+ * Parse list/batch CLI output (`{"items":[...]}` envelope) and return its items.
+ */
+export function parseItems<T = unknown>(stdout: string): T[] {
+    const parsed = JSON.parse(stdout) as {items?: unknown};
+    if (!parsed || !Array.isArray(parsed.items)) {
+        throw new Error(`Expected {"items":[...]} envelope, got: ${stdout}`);
+    }
+    return parsed.items as T[];
+}
+
+/**
+ * Run a list-style bkper CLI command and return the envelope items.
+ */
+export async function runBkperJsonItems<T = unknown>(
+    args: string[],
+    envOverrides?: Record<string, string>
+): Promise<T[]> {
+    const result = await runBkperJson<{items: T[]}>(args, envOverrides);
+    return result.items;
+}
+
+/**
  * Run a bkper CLI command with stdin data piped in.
  *
  * Spawns `node lib/cli.js` with the given args and pipes stdinData

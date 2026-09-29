@@ -7,6 +7,7 @@ import {
     runBkper,
     runBkperJson,
     uniqueTestName,
+    runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
 describe('CLI - account commands', function () {
@@ -99,7 +100,7 @@ describe('CLI - account commands', function () {
 
     describe('account list', function () {
         it('should return an array of accounts', async function () {
-            const result = await runBkperJson<bkper.Account[]>(['account', 'list', '-b', bookId]);
+            const result = await runBkperJsonItems<bkper.Account>(['account', 'list', '-b', bookId]);
 
             expect(result).to.be.an('array');
             expect(result.length).to.be.greaterThanOrEqual(3);

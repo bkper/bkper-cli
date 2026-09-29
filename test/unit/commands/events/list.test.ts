@@ -1,5 +1,6 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
+import { EventType } from 'bkper-js';
 
 const { DEFAULT_EVENT_LIST_LIMIT, listEvents, listEventsFormatted } = await import(
     '../../../../src/commands/events/list.js'
@@ -139,35 +140,16 @@ describe('CLI - event list Command', function () {
             getBook: async () => mockBook,
         });
 
-        const result = await listEventsFormatted('book-123', {}, 'json');
+        const result = await listEventsFormatted('book-123', {});
 
-        expect(result).to.deep.equal({
-            kind: 'json',
-            items: [eventJson],
-            cursor: 'next-cursor',
-        });
+        expect(result.items).to.deep.equal([eventJson]);
+        expect(result.cursor).to.equal('next-cursor');
     });
 
-    it('should build a summary matrix and next-page footer with active filters', async function () {
+    it('should build a next-page hint with active filters', async function () {
         mockBook = {
             listEvents: async () => ({
-                getItems: () => [
-                    {
-                        getId: () => 'evt-1',
-                        json: () => ({
-                            id: 'evt-1',
-                            type: 'TRANSACTION_POSTED',
-                            createdOn: '2026-01-15T12:00:00Z',
-                            resource: 'tx-1',
-                            user: { email: 'user@example.com' },
-                            agent: { id: 'cli', name: 'Bkper CLI' },
-                            botResponses: [
-                                { agentId: 'tax-bot', type: 'ERROR', message: 'rate limit exceeded' },
-                                { agentId: 'exchange-bot', type: 'INFO', message: 'ok' },
-                            ],
-                        }),
-                    },
-                ],
+                getItems: () => [],
                 getCursor: () => 'next-cursor',
             }),
         };
@@ -177,45 +159,14 @@ describe('CLI - event list Command', function () {
             getBook: async () => mockBook,
         });
 
-        const result = await listEventsFormatted(
-            'book-123',
-            {
-                onError: true,
-                type: 'TRANSACTION_POSTED' as any,
-                limit: 50,
-            },
-            'table'
-        );
+        const result = await listEventsFormatted('book-123', {
+            onError: true,
+            type: EventType.TRANSACTION_POSTED,
+            limit: 50,
+        });
 
-        expect(result.kind).to.equal('matrix');
-        if (result.kind !== 'matrix') {
-            throw new Error('Expected matrix list result');
-        }
-
-        expect(result.matrix[0]).to.deep.equal([
-            'ID',
-            'Type',
-            'Created',
-            'Resource',
-            'User',
-            'Agent',
-            'Responses',
-            'Errors',
-            'Preview',
-        ]);
-        expect(result.matrix[1]).to.deep.equal([
-            'evt-1',
-            'TRANSACTION_POSTED',
-            '2026-01-15T12:00:00Z',
-            'tx-1',
-            'user@example.com',
-            'Bkper CLI',
-            2,
-            1,
-            'rate limit exceeded',
-        ]);
-        expect(result.footer).to.contain('Next cursor: next-cursor');
-        expect(result.footer).to.contain(
+        expect(result.hint).to.contain('Next cursor: next-cursor');
+        expect(result.hint).to.contain(
             "Next page: bkper event list -b 'book-123' --error --type 'TRANSACTION_POSTED' --limit 50 --cursor 'next-cursor'"
         );
     });

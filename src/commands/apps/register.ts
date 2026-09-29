@@ -2,7 +2,7 @@ import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
 import { setupBkper } from '../../bkper-factory.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import {
     getApp,
@@ -79,9 +79,9 @@ export function registerAppCommands(program: Command): void {
         .command('get <appId>')
         .description('Get an app by ID')
         .action((appId: string) =>
-            withAction('getting app', async format => {
+            withAction('getting app', async () => {
                 const app = await getApp(appId);
-                renderItem(app.json(), format);
+                renderItem(app.json());
             })()
         );
 
@@ -89,9 +89,9 @@ export function registerAppCommands(program: Command): void {
         .command('list')
         .description('List all apps you have access to')
         .action(
-            withAction('listing apps', async format => {
-                const result = await listAppsFormatted(format);
-                renderListResult(result, format);
+            withAction('listing apps', async () => {
+                const result = await listAppsFormatted();
+                renderList(result);
             })
         );
 
@@ -256,10 +256,10 @@ export function registerAppCommands(program: Command): void {
         .description('Install an app into a book')
         .option('-b, --book <bookId>', 'Book ID')
         .action((appId: string, options) =>
-            withAction('installing app', async format => {
+            withAction('installing app', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const integration = await installApp(options.book, appId);
-                renderItem(integration.json(), format);
+                renderItem(integration.json());
             })()
         );
 
@@ -268,10 +268,10 @@ export function registerAppCommands(program: Command): void {
         .description('Uninstall an app from a book')
         .option('-b, --book <bookId>', 'Book ID')
         .action((appId: string, options) =>
-            withAction('uninstalling app', async format => {
+            withAction('uninstalling app', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
                 const integration = await uninstallApp(options.book, appId);
-                renderItem(integration.json(), format);
+                renderItem(integration.json());
             })()
         );
 }

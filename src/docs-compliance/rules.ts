@@ -116,6 +116,17 @@ export function evaluateReadmeCompliance(content: string): ComplianceResult {
         });
     }
 
+    const legacyOutputFormatPattern = /--format(?:\s+|=)(?:table|csv)\b/g;
+    let legacyOutputFormatMatch: RegExpExecArray | null;
+    while ((legacyOutputFormatMatch = legacyOutputFormatPattern.exec(content)) !== null) {
+        errors.push({
+            code: 'legacy-output-format-documented',
+            message:
+                'Found `--format table|csv`. CLI output is JSON only; reshape with jq instead.',
+            line: getLineNumber(content, legacyOutputFormatMatch.index),
+        });
+    }
+
     const internalReleaseDetailPattern =
         /release:(patch|minor|major)|Trusted Publisher|GitHub Actions|CI\/CD|publishing policy|publish(?:ing)?\s+is\s+handled|maintainer-only procedures/i;
     const internalReleaseDetailMatch = internalReleaseDetailPattern.exec(content);

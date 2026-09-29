@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+-   **Breaking: JSON-only output**
+    -   Data commands now always output JSON; `--format table` and `--format csv` were removed and fail with guidance to reshape output with `jq`. `--json` and `--format json` are still accepted and have no effect
+    -   List and batch-write output always uses the `{"items":[...]}` envelope, adding `"cursor"` only when another page exists, with one record per line
+    -   Single items are pretty-printed on an interactive terminal and compact otherwise
+    -   Next-page hints and notices such as `collection delete` confirmations are written to stderr, keeping stdout parseable
+-   **Data Management**
+    -   Transaction output adds `creditAccount.name` and `debitAccount.name` and omits inline agent logo images, reducing typical transaction list output by about two thirds
+    -   Balance values are unformatted JSON numbers with ISO dates and account/group property columns, instead of locale-formatted strings such as `"1234,56"`
+    -   `transaction list -p/--properties` is now a no-op because properties are always included
+
 ## [4.31.0] - 2026-09-24
 
 -   **Data Management**

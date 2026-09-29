@@ -59,6 +59,7 @@ describe('balances list', function () {
     describe('listBalancesMatrix', function () {
         it('should build a cumulative trial balance with debit and credit columns', async function () {
             const matrix = [
+                ['name', 'balance'],
                 ['Cash', 100, 0],
                 ['Payables', 0, 100],
             ];
@@ -86,11 +87,35 @@ describe('balances list', function () {
             expect(builder.period.calledOnceWithExactly(false)).to.equal(true);
             expect(result).to.deep.equal([
                 ['Name', 'Debit', 'Credit'],
-                ...matrix,
+                ...matrix.slice(1),
             ]);
         });
 
-        it('should build a period trial balance with aligned CSV metadata', async function () {
+        it('should build machine-readable values: unformatted numbers, ISO dates, all properties', async function () {
+            const builder = createBuilder([['Cash', 1234.56]]);
+
+            setMockBkper({
+                setConfig: () => {},
+                getBook: async () => ({
+                    json: () => ({ id: 'book-123' }),
+                    getBalancesReport: async () => ({
+                        getBalances: async () => [],
+                        getBalancesContainers: () => [],
+                        createDataTable: () => builder,
+                    }),
+                }),
+            });
+
+            await listBalancesMatrix('book-123', { query: "group:'Assets' before:2026-01-01" });
+
+            // Locale-formatted strings (e.g. "1234,56") are not parseable by agents
+            expect(builder.formatValues.calledWith(true)).to.equal(false);
+            expect(builder.formatDates.calledOnceWithExactly(true)).to.equal(true);
+            expect(builder.properties.calledOnceWithExactly(true)).to.equal(true);
+            expect(builder.hiddenProperties.calledOnceWithExactly(true)).to.equal(true);
+        });
+
+        it('should build a period trial balance with aligned property metadata', async function () {
             const matrix = [
                 ['name', 'balance', 'code'],
                 ['Sales', 0, 250, '4000'],
@@ -113,7 +138,6 @@ describe('balances list', function () {
             const result = await listBalancesMatrix('book-123', {
                 query: "group:'Profit and Loss' after:2025-01-01 before:2026-01-01",
                 trial: true,
-                format: 'csv',
             });
 
             expect(builder.period.calledOnceWithExactly(true)).to.equal(true);

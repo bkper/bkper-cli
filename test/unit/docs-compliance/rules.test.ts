@@ -17,7 +17,7 @@ bkper balance list -b abc123 -q 'on:2025-12-31'
     });
 
     it('should fail when transaction list command misses -q', function () {
-        const readme = 'bkper transaction list -b abc123 --format csv';
+        const readme = 'bkper transaction list -b abc123';
 
         const result = evaluateReadmeCompliance(readme);
 
@@ -26,7 +26,7 @@ bkper balance list -b abc123 -q 'on:2025-12-31'
     });
 
     it('should fail when balance list command misses -q', function () {
-        const readme = 'bkper balance list -b abc123 --format csv';
+        const readme = 'bkper balance list -b abc123';
 
         const result = evaluateReadmeCompliance(readme);
 
@@ -69,7 +69,7 @@ bkper balance list -b abc123 -q 'on:2025-12-31'
         const readme = `
 Write commands (\`account create\`, \`group create\`, \`transaction create\`) accept JSON data piped via stdin.
 \`\`\`bash
-bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
+bkper group list -b $BOOK_A | bkper group create -b $BOOK_B
 \`\`\`
 
 **Group** (\`bkper.Group\`)
@@ -80,6 +80,23 @@ bkper group list -b $BOOK_A --format json | bkper group create -b $BOOK_B
         expect(codes).to.include('group-create-stdin-documented');
         expect(codes).to.include('group-create-pipe-documented');
         expect(codes).to.include('group-stdin-fields-documented');
+    });
+
+    it('should report when README documents removed table/csv output formats', function () {
+        for (const readme of [
+            "bkper transaction list -b abc123 -q 'on:2025' --format csv",
+            "bkper account list -b abc123 --format table",
+        ]) {
+            const result = evaluateReadmeCompliance(readme);
+            expect(result.errors.map(e => e.code)).to.include('legacy-output-format-documented');
+        }
+    });
+
+    it('should not report JSON-only command examples as legacy formats', function () {
+        const result = evaluateReadmeCompliance(
+            "bkper transaction list -b abc123 -q 'on:2025' | jq -r '.items[] | [.date, .amount] | @csv'"
+        );
+        expect(result.errors.map(e => e.code)).to.not.include('legacy-output-format-documented');
     });
 
     it('should report when README documents internal release workflow details', function () {

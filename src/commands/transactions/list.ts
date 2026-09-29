@@ -1,12 +1,13 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Book, Transaction, Account } from 'bkper-js';
-import type { OutputFormat, ListResult } from '../../render/output.js';
+import type { ListResult } from '../../render/output.js';
+import { transactionsToJson } from './transaction-json.js';
 import { quoteShellArg } from '../../utils/shell-quote.js';
 import { warnIfSuspiciousDateVariableQuery } from '../../utils/query-warning.js';
 
 export const DEFAULT_TRANSACTION_LIST_LIMIT = 100;
 
-function buildTransactionListFooter(
+function buildTransactionListHint(
     bookId: string,
     options: ListTransactionsOptions,
     cursor: string | undefined
@@ -16,12 +17,11 @@ function buildTransactionListFooter(
     }
 
     const pageLimit = options.limit ?? DEFAULT_TRANSACTION_LIST_LIMIT;
-    const propertiesFlag = options.properties ? ' -p' : '';
     return [
         `Next cursor: ${cursor}`,
         `Next page: bkper transaction list -b ${quoteShellArg(bookId)} -q ${quoteShellArg(
             options.query
-        )} --limit ${pageLimit} --cursor ${quoteShellArg(cursor)}${propertiesFlag}`,
+        )} --limit ${pageLimit} --cursor ${quoteShellArg(cursor)}`,
     ].join('\n');
 }
 
@@ -30,7 +30,6 @@ function buildTransactionListFooter(
  */
 export interface ListTransactionsOptions {
     query: string;
-    properties?: boolean;
     limit?: number;
     cursor?: string;
 }
@@ -50,9 +49,8 @@ export interface ListTransactionsResult {
  * results until no more pages remain.
  *
  * Fetches the book with accounts pre-loaded in a single API call, so that
- * account name resolution during table building (getCreditAccountName,
- * getDebitAccountName) resolves from the in-memory cache instead of making
- * individual API calls per transaction.
+ * account name resolution during serialization resolves from the in-memory
+ * cache instead of making individual API calls per transaction.
  *
  * @param bookId - The book ID to query
  * @param options - Query parameters including search string
@@ -115,41 +113,22 @@ export async function listTransactions(
 
 /**
  * Lists transactions and returns a ListResult ready for rendering.
- * Absorbs TransactionsDataTableBuilder config and JSON mapping.
  */
 export async function listTransactionsFormatted(
     bookId: string,
-    options: ListTransactionsOptions,
-    format: OutputFormat
+    options: ListTransactionsOptions
 ): Promise<ListResult> {
     const result = await listTransactions(bookId, options);
 
-    if (format === 'json') {
-        const jsonResult: ListResult = {
-            kind: 'json',
-            items: result.items.map(tx => tx.json()),
-        };
-        if (result.cursor) {
-            jsonResult.cursor = result.cursor;
-        }
-        return jsonResult;
-    }
-
-    const builder = result.book.createTransactionsDataTable(result.items, result.account).ids(true);
-
-    if (format === 'csv') {
-        builder.properties(true).hiddenProperties(true).urls(true).recordedAt(true);
-    } else {
-        builder.formatDates(true).formatValues(true).recordedAt(false);
-        if (options.properties) {
-            builder.properties(true);
-        }
-    }
-
-    const matrix = await builder.build();
-    return {
-        kind: 'matrix',
-        matrix,
-        footer: buildTransactionListFooter(bookId, options, result.cursor),
+    const listResult: ListResult = {
+        items: await transactionsToJson(result.items),
     };
+    if (result.cursor) {
+        listResult.cursor = result.cursor;
+    }
+    const hint = buildTransactionListHint(bookId, options, result.cursor);
+    if (hint) {
+        listResult.hint = hint;
+    }
+    return listResult;
 }

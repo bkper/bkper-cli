@@ -1,7 +1,7 @@
 import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
-import { renderListResult, renderItem } from '../../render/index.js';
+import { renderList, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listBooksFormatted, getBook, createBook, copyBook, updateBook } from './index.js';
 
@@ -13,9 +13,9 @@ export function registerBookCommands(program: Command): void {
         .description('List all books')
         .option('-q, --query <query>', 'Search query')
         .action(options =>
-            withAction('listing books', async format => {
-                const result = await listBooksFormatted(options.query, format);
-                renderListResult(result, format);
+            withAction('listing books', async () => {
+                const result = await listBooksFormatted(options.query);
+                renderList(result);
             })()
         );
 
@@ -23,9 +23,9 @@ export function registerBookCommands(program: Command): void {
         .command('get <bookId>')
         .description('Get a book by ID')
         .action((bookId: string) =>
-            withAction('getting book', async format => {
+            withAction('getting book', async () => {
                 const book = await getBook(bookId);
-                renderItem(book.json(), format);
+                renderItem(book.json());
             })()
         );
 
@@ -43,7 +43,7 @@ export function registerBookCommands(program: Command): void {
         .option('--period <period>', 'Period (MONTH, QUARTER, or YEAR)')
         .option('-p, --property <key=value>', 'Set a property (repeatable)', collectProperty)
         .action(options =>
-            withAction('creating book', async format => {
+            withAction('creating book', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
                 const book = await createBook({
                     name: options.name,
@@ -54,7 +54,7 @@ export function registerBookCommands(program: Command): void {
                     period: options.period,
                     property: options.property,
                 });
-                renderItem(book.json(), format);
+                renderItem(book.json());
             })()
         );
 
@@ -65,14 +65,14 @@ export function registerBookCommands(program: Command): void {
         .option('--transactions', 'Copy transactions (source book owner only)')
         .option('--from-date <date>', 'Copy transactions from this date (YYYY-MM-DD)')
         .action((bookId: string, options) =>
-            withAction('copying book', async format => {
+            withAction('copying book', async () => {
                 throwIfErrors(validateRequiredOptions(options, [{ name: 'name', flag: '--name' }]));
                 const book = await copyBook(bookId, {
                     name: options.name,
                     transactions: options.transactions,
                     fromDate: options.fromDate,
                 });
-                renderItem(book.json(), format);
+                renderItem(book.json());
             })()
         );
 
@@ -96,7 +96,7 @@ export function registerBookCommands(program: Command): void {
             collectProperty
         )
         .action((bookId: string, options) =>
-            withAction('updating book', async format => {
+            withAction('updating book', async () => {
                 const book = await updateBook(bookId, {
                     name: options.name,
                     fractionDigits: options.fractionDigits,
@@ -108,7 +108,7 @@ export function registerBookCommands(program: Command): void {
                     period: options.period,
                     property: options.property,
                 });
-                renderItem(book.json(), format);
+                renderItem(book.json());
             })()
         );
 }

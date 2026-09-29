@@ -14,6 +14,7 @@ import { registerCollectionCommands } from './commands/collections/register.js';
 import { registerFileCommands } from './commands/files/register.js';
 import { registerEventCommands } from './commands/events/register.js';
 import { registerUpgradeCommand } from './commands/upgrade.js';
+import { registerOutputOptions } from './commands/cli-helpers.js';
 import {
     getAgentCommandArgs,
     shouldRunAgentCommand,
@@ -52,9 +53,8 @@ async function main(): Promise<void> {
     program.name('bkper');
     program.version(VERSION, '-v, --version');
 
-    // Global output format options
-    program.option('--format <format>', 'Output format: table, json, or csv', 'table');
-    program.option('--json', 'Output as JSON (alias for --format json)');
+    // Output is JSON only; legacy --json / --format json are accepted no-ops
+    registerOutputOptions(program);
 
     // Auth commands
     registerAuthCommands(program);

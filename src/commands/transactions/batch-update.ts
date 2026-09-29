@@ -1,10 +1,12 @@
 import { getBkperInstance } from '../../bkper-factory.js';
 import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
+import { renderList } from '../../render/index.js';
+import { transactionsToJson } from './transaction-json.js';
 
 /**
  * Updates multiple transactions from stdin items using the batch API.
- * Outputs a flat JSON array of all updated transactions.
+ * Outputs all updated transactions in an `{"items":[...]}` envelope.
  *
  * Each stdin item must have an `id` field identifying the transaction to update.
  *
@@ -49,7 +51,5 @@ export async function batchUpdateTransactions(
     }
 
     const results = await book.batchUpdateTransactions(transactions, updateChecked);
-    const allResults = results.map(result => result.json());
-
-    console.log(JSON.stringify(allResults, null, 2));
+    renderList({ items: await transactionsToJson(results) });
 }
