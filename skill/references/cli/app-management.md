@@ -459,6 +459,7 @@ events:
     - BOOK_UPDATED
     - BOOK_DELETED
     - BOOK_AUDITED
+    - BOOK_OVERNIGHT # Daily per-Book event, at or after 01:00 in the Book's time zone
 
 # -----------------------------------------------------------------------------
 # FILE PATTERNS (optional)
