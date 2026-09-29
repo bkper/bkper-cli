@@ -5,6 +5,15 @@ import path from 'path';
 
 import { resolveMiniflareModulePath } from '../../../src/dev/miniflare.js';
 
+function isResolvableFromAncestors(dir: string): boolean {
+    try {
+        resolveMiniflareModulePath(dir);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 describe('Miniflare module resolution', function () {
     let tempDir: string;
 
@@ -43,6 +52,11 @@ describe('Miniflare module resolution', function () {
     });
 
     it('should throw when miniflare cannot be resolved from the project root', function () {
+        // Node resolution walks up parent directories, so a stray node_modules above
+        // the OS temp dir (e.g. /tmp/node_modules/miniflare) makes this case unreachable.
+        if (isResolvableFromAncestors(os.tmpdir())) {
+            this.skip();
+        }
         expect(() => resolveMiniflareModulePath(tempDir)).to.throw();
     });
 });
