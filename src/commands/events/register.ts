@@ -5,6 +5,7 @@ import { parsePositiveInteger } from '../cli-helpers.js';
 import { renderItem, renderList } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listEventsFormatted, replayEventBotResponse } from './index.js';
+import { eventToJson } from './event-json.js';
 
 const EVENT_TYPE_VALUES = new Set<string>(Object.values(EventType));
 
@@ -68,7 +69,7 @@ export function registerEventCommands(program: Command): void {
                     ])
                 );
                 const event = await replayEventBotResponse(options.book, eventId, options.agentId);
-                renderItem(event.json());
+                renderItem(eventToJson(event.json()));
             })()
         );
 }

@@ -2,6 +2,7 @@ import { Event, EventType, type ListEventsOptions } from 'bkper-js';
 import { getBkperInstance } from '../../bkper-factory.js';
 import type { ListResult } from '../../render/output.js';
 import { quoteShellArg } from '../../utils/shell-quote.js';
+import { eventToJson } from './event-json.js';
 
 export const DEFAULT_EVENT_LIST_LIMIT = 50;
 
@@ -54,7 +55,8 @@ export async function listEvents(
 
 /**
  * Lists events and returns a ListResult ready for rendering.
- * Includes full event payloads with botResponses for LLM debugging.
+ * Includes full event payloads with botResponses for LLM debugging,
+ * without agent logo images.
  */
 export async function listEventsFormatted(
     bookId: string,
@@ -63,7 +65,7 @@ export async function listEventsFormatted(
     const result = await listEvents(bookId, options);
 
     const listResult: ListResult = {
-        items: result.items.map(event => event.json()),
+        items: result.items.map(event => eventToJson(event.json())),
     };
     if (result.cursor) {
         listResult.cursor = result.cursor;

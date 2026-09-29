@@ -146,6 +146,32 @@ describe('CLI - event list Command', function () {
         expect(result.cursor).to.equal('next-cursor');
     });
 
+    it('should drop agent logos from listed events', async function () {
+        mockBook = {
+            listEvents: async () => ({
+                getItems: () => [
+                    {
+                        getId: () => 'evt-1',
+                        json: () => ({
+                            id: 'evt-1',
+                            agent: { id: 'bot', name: 'Bot', logo: 'data:image/png;base64,AAAA' },
+                        }),
+                    },
+                ],
+                getCursor: () => undefined,
+            }),
+        };
+
+        setMockBkper({
+            setConfig: () => {},
+            getBook: async () => mockBook,
+        });
+
+        const result = await listEventsFormatted('book-123', {});
+
+        expect(result.items).to.deep.equal([{ id: 'evt-1', agent: { id: 'bot', name: 'Bot' } }]);
+    });
+
     it('should build a next-page hint with active filters', async function () {
         mockBook = {
             listEvents: async () => ({

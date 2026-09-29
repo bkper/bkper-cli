@@ -9,6 +9,7 @@
     -   Next-page hints and notices such as `collection delete` confirmations are written to stderr, keeping stdout parseable
 -   **Data Management**
     -   Transaction output adds `creditAccount.name` and `debitAccount.name` and omits inline agent logo images, reducing typical transaction list output by about two thirds
+    -   Event output (`event list`, `event replay`) omits agent logo images, including those on embedded transactions, reducing typical event list output by about 40%
     -   Balance values are unformatted JSON numbers with ISO dates and account/group property columns, instead of locale-formatted strings such as `"1234,56"`
     -   `transaction list -p/--properties` is now a no-op because properties are always included
 
