@@ -41,6 +41,7 @@ describe('Bkper agent built-in extensions', function () {
         registerBkperAgentBuiltins({
             on: ((event: string) => {
                 registeredEvents.push(event);
+                return () => undefined;
             }) as ExtensionAPI['on'],
             registerCommand: sinon.stub(),
             registerShortcut: sinon.stub(),

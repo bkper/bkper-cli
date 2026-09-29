@@ -3,10 +3,14 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     createReadToolDefinition,
+    type BeforeAgentStartEvent,
     type BeforeAgentStartEventResult,
     type ExtensionAPI,
+    type ExtensionContext,
     type MessageRenderer,
+    type MessageRenderOptions,
     type ReadToolInput,
+    type Theme,
 } from '@earendil-works/pi-coding-agent';
 import { Box } from '@earendil-works/pi-tui';
 
@@ -106,7 +110,7 @@ function buildCoreConceptsMessageContent(definition: CoreConceptsPreloadDefiniti
 
 function hasCoreConceptsInContext(entries: ContextEntryLike[]): boolean {
     return entries.some(
-        entry => entry.type === 'custom_message' && entry.customType === CORE_CONCEPTS_MESSAGE_TYPE
+        (entry: ContextEntryLike) => entry.type === 'custom_message' && entry.customType === CORE_CONCEPTS_MESSAGE_TYPE
     );
 }
 
@@ -115,7 +119,7 @@ function hasCoreConceptsInContext(entries: ContextEntryLike[]): boolean {
  * like a read of the doc: collapsed shows the path, expanded shows the content.
  */
 function createCoreConceptsMessageRenderer(definition: CoreConceptsPreloadDefinition): MessageRenderer {
-    return (_message, options, theme) => {
+    return (_message: Parameters<MessageRenderer>[0], options: MessageRenderOptions, theme: Theme) => {
         const cwd = process.cwd();
         const read = createReadToolDefinition(cwd);
         if (!read.renderCall || !read.renderResult) {
@@ -139,7 +143,7 @@ function createCoreConceptsMessageRenderer(definition: CoreConceptsPreloadDefini
         };
 
         // Same shell Pi uses for a successful tool row.
-        const box = new Box(1, 1, text => theme.bg('toolSuccessBg', text));
+        const box = new Box(1, 1, (text: string) => theme.bg('toolSuccessBg', text));
         box.addChild(read.renderCall(args, theme, context));
         box.addChild(
             read.renderResult(
@@ -159,7 +163,7 @@ export function registerBkperCoreConceptsPreloadExtension(
 ): void {
     pi.registerMessageRenderer(CORE_CONCEPTS_MESSAGE_TYPE, createCoreConceptsMessageRenderer(definition));
 
-    pi.on('before_agent_start', (event, ctx) => {
+    pi.on('before_agent_start', (event: BeforeAgentStartEvent, ctx: ExtensionContext) => {
         if (detectCoreConceptsPreloadLevel({prompt: event.prompt}) === 'none') {
             return undefined;
         }

@@ -22,6 +22,7 @@ describe('CLI - book copy Command', function () {
             getBook: async (bookId: string) => {
                 requestedBookId = bookId;
                 return {
+                    json: () => ({id: bookId}),
                     copy: async (
                         name: string,
                         copyTransactions: boolean,

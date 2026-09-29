@@ -23,6 +23,7 @@ describe('CLI - transaction get Command', function () {
             getBook: async (bookId: string) => {
                 requestedBookId = bookId;
                 return {
+                    json: () => ({id: bookId}),
                     getTransaction: async (transactionId: string) => {
                         requestedTransactionId = transactionId;
                         return transactionId === 'not-found' ? undefined : mockTransaction;
