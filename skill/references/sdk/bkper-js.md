@@ -1403,6 +1403,7 @@ Enum that represents event types.
 - `BOOK_AUDITED`
 - `BOOK_CREATED`
 - `BOOK_DELETED`
+- `BOOK_OVERNIGHT` — Daily per-Book event for Apps subscribed to it, delivered at or after 01:00 in the Book's time zone.
 - `BOOK_UPDATED`
 - `COLLABORATOR_ADDED`
 - `COLLABORATOR_REMOVED`

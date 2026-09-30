@@ -244,5 +244,17 @@ The complete API set of event types is listed below. `COMMENT_CREATED` and `COMM
 | `INTEGRATION_DELETED` | An integration was deleted. |
 | `BOOK_CREATED` | A book was created. |
 | `BOOK_AUDITED` | A balances audit completed for the book. |
+| `BOOK_OVERNIGHT` | Daily scheduled event for the book, delivered at or after 01:00 in the book's time zone. |
 | `BOOK_UPDATED` | Book settings were updated. |
 | `BOOK_DELETED` | The book was deleted. |
+
+### Scheduled work with `BOOK_OVERNIGHT`
+
+`BOOK_OVERNIGHT` lets your app run daily work on a book without waiting for a user action — for example, end-of-day recalculations, fetching external data, or consistency checks.
+
+- **When:** once per day, at or after 01:00 in the book's time zone (UTC if the book has no time zone). Delivery may be up to about an hour later.
+- **Which books:** only books where an installed app subscribes to `BOOK_OVERNIGHT`. Books without such an app receive nothing.
+- **What day:** each event represents the local day that just ended. A book gets at most one `BOOK_OVERNIGHT` event per local day.
+- **Idempotency:** the event `id` is stable for the book and day, so use it to skip repeated deliveries.
+- **User:** the event `user` is the book owner. Your handler still runs on behalf of the user who installed the app.
+- **Development webhook:** `webhookUrlDev` is used when the user who installed the app is its owner or one of its developers.
