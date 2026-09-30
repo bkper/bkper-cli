@@ -1,5 +1,14 @@
 # Changelog
 
+## [5.1.0] - 2026-09-29
+
+-   **Updates**
+    -   bkper now keeps itself up to date: at most once a day, commands and `bkper agent` check npm in the background and install a newer version into the running global install (npm, pnpm, yarn or bun) when its folder is writable. Nothing is installed in CI or when `BKPER_DISABLE_AUTOUPDATE` is set
+    -   When the running copy can't update itself (npx, project-local installs, source checkouts, read-only folders), commands print one line on stderr with the exact command to run
+    -   `bkper upgrade` now updates only the copy that is running, checks the installed version afterwards, and refuses unmanaged or read-only installs with the manual command instead of guessing. The `--method` option was removed
+-   **Documentation**
+    -   Documented the `BOOK_OVERNIGHT` event in the `bkper.yaml` events reference and the synced app and SDK references
+
 ## [5.0.0] - 2026-09-29
 
 -   **Breaking: JSON-only output**
