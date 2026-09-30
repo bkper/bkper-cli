@@ -36,6 +36,34 @@ describe('prompt history store', function () {
         ]);
     });
 
+    it('sees inputs recorded by another open session', function () {
+        const sessionA = new FilePromptHistory(historyPath);
+        const sessionB = new FilePromptHistory(historyPath);
+
+        sessionB.record('from b', 'standard', 1);
+        sessionA.record('from a', 'standard', 2);
+
+        expect(sessionB.getEntries().map(entry => entry.text)).to.deep.equal([
+            'from a',
+            'from b',
+        ]);
+    });
+
+    it('keeps inputs from another open session when rotating', function () {
+        const options = {maxEntries: 3, trimRecordCount: 3, maxFileBytes: 1024};
+        const sessionA = new FilePromptHistory(historyPath, options);
+        const sessionB = new FilePromptHistory(historyPath, options);
+
+        sessionA.record('a1', 'standard', 1);
+        sessionB.record('b1', 'standard', 2);
+        sessionA.record('a2', 'standard', 3);
+        sessionA.record('a3', 'standard', 4);
+
+        expect(
+            new FilePromptHistory(historyPath, options).getEntries().map(entry => entry.text)
+        ).to.deep.equal(['a3', 'a2', 'b1']);
+    });
+
     it('shows only the latest exact duplicate and can omit Bash inputs', function () {
         const entries: PromptHistoryEntry[] = [
             {text: 'deploy the worker', kind: 'standard', timestamp: 4},

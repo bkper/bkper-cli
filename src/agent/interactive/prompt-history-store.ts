@@ -123,6 +123,14 @@ export class FilePromptHistory implements PromptHistoryRepository {
     }
 
     getEntries(): readonly PromptHistoryEntry[] {
+        // Other open sessions append to the same file; reload when its size changed.
+        try {
+            if (statSync(this.filePath).size !== this.fileBytes) {
+                this.load();
+            }
+        } catch {
+            // Keep in-memory entries when the file is unavailable.
+        }
         return this.entries;
     }
 
@@ -156,13 +164,22 @@ export class FilePromptHistory implements PromptHistoryRepository {
     }
 
     private load(): void {
+        if (
+            this.readFromDisk() &&
+            (this.recordCount >= this.trimRecordCount || this.fileBytes >= this.maxFileBytes)
+        ) {
+            this.rotate();
+        }
+    }
+
+    private readFromDisk(): boolean {
         let content: string;
         try {
             content = readFileSync(this.filePath, 'utf8');
             chmodSync(this.filePath, 0o600);
             this.fileBytes = statSync(this.filePath).size;
         } catch {
-            return;
+            return false;
         }
 
         const lines = content.split('\n').filter(line => line.trim().length > 0);
@@ -172,16 +189,12 @@ export class FilePromptHistory implements PromptHistoryRepository {
             .filter((entry): entry is PromptHistoryEntry => entry !== undefined)
             .slice(-this.maxEntries)
             .reverse();
-
-        if (
-            this.recordCount >= this.trimRecordCount ||
-            this.fileBytes >= this.maxFileBytes
-        ) {
-            this.rotate();
-        }
+        return true;
     }
 
     private rotate(): void {
+        // Include entries appended by other open sessions before rewriting the file.
+        this.readFromDisk();
         const retainedNewest: PromptHistoryEntry[] = [];
         let retainedBytes = 0;
 
