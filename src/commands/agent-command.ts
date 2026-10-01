@@ -91,6 +91,7 @@ const PI_MANAGEMENT_COMMANDS = new Set([
     'update',
     'list',
     'config',
+    'mcp',
 ]);
 
 function isPiManagementCommand(args: string[]): boolean {

@@ -74,6 +74,26 @@ describe('CLI - agent command', function () {
         expect(runPi.firstCall.args[0]).to.deep.equal(['install', 'npm:pi-slopchop']);
     });
 
+    it('should forward pi mcp commands without injecting system prompt', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['mcp', 'add', 'docs', '--url', 'https://example.com/mcp'], {
+            runPi,
+            runInteractiveMode,
+        });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+        expect(runPi.firstCall.args[0]).to.deep.equal([
+            'mcp',
+            'add',
+            'docs',
+            '--url',
+            'https://example.com/mcp',
+        ]);
+    });
+
     it('should not inject system prompt when user provides --system-prompt', async function () {
         const runPi = sinon.stub().resolves();
         const runInteractiveMode = sinon.stub().resolves();

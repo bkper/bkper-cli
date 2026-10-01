@@ -1,5 +1,7 @@
 import {
     createCodemodeExtension,
+    createMcpExtension,
+    createToolSearchExtension,
     getAgentDir,
     type Extension,
     type ExtensionAPI,
@@ -123,4 +125,8 @@ export function registerBkperAgentBuiltins(
     );
     // Registered inactive; the Bkper default tool selection activates it.
     createCodemodeExtension()(pi);
+    // Connects servers the user configures in mcp.json; none are configured by default.
+    // tool_search is registered inactive and activated by servers with deferred exposure.
+    createToolSearchExtension()(pi);
+    createMcpExtension()(pi);
 }

@@ -50,7 +50,8 @@ describe('Bkper agent built-in extensions', function () {
             registerTool: sinon.stub(),
         } as unknown as ExtensionAPI);
 
-        expect(registeredEvents).to.deep.equal([
+        // Bkper's own handlers come first; pi's MCP extension registers its lifecycle after them.
+        expect(registeredEvents.slice(0, 3)).to.deep.equal([
             'before_agent_start',
             'session_start',
             'session_start',
@@ -79,6 +80,34 @@ describe('Bkper agent built-in extensions', function () {
             .filter(tool => tool.name === 'codemode');
         expect(codemodeTools).to.have.length(1);
         expect(codemodeTools[0]?.defaultActive).to.equal(false);
+    });
+
+    it('registers MCP support and tool search so users can connect their own servers', function () {
+        const registerCommand = sinon.stub();
+        const registerTool = sinon.stub();
+
+        registerBkperAgentBuiltins(
+            {
+                on: sinon.stub() as unknown as ExtensionAPI['on'],
+                registerCommand,
+                registerShortcut: sinon.stub(),
+                registerMessageRenderer: sinon.stub(),
+                registerProvider: sinon.stub(),
+                registerTool,
+            } as unknown as ExtensionAPI,
+            sinon.stub().resolves(),
+            undefined,
+            {}
+        );
+
+        const commandNames = registerCommand.args.map(([name]) => name as string);
+        expect(commandNames).to.include('mcp');
+
+        const toolSearchTools = registerTool.args
+            .map(([tool]) => tool as {name: string; defaultActive?: boolean})
+            .filter(tool => tool.name === 'tool_search');
+        expect(toolSearchTools).to.have.length(1);
+        expect(toolSearchTools[0]?.defaultActive).to.equal(false);
     });
 
     it('registers Bkper AI through Pi standard OpenAI Responses transport', function () {
