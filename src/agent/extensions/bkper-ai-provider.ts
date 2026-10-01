@@ -19,7 +19,10 @@ export interface BkperAiModelMetadata {
     bkperDefaultThinkingLevel?: BkperAiThinkingLevel;
 }
 
-interface BkperAiModelConfig extends ProviderModelConfig {
+/** The chat member of Pi's provider model union; the package root exports only the union. */
+type ProviderChatModelConfig = Extract<ProviderModelConfig, {type?: 'chat'}>;
+
+interface BkperAiModelConfig extends ProviderChatModelConfig {
     bkperDefault: boolean;
     bkperDefaultThinkingLevel?: BkperAiThinkingLevel;
 }
@@ -99,7 +102,7 @@ function getDefaultThinkingLevel(model: BkperAiCatalogModel): BkperAiThinkingLev
 
 function getThinkingLevelMap(
     levels: string[]
-): NonNullable<ProviderModelConfig['thinkingLevelMap']> {
+): NonNullable<ProviderChatModelConfig['thinkingLevelMap']> {
     const supports = (level: string): string | null => (levels.includes(level) ? level : null);
     return {
         off: levels.includes('none') ? 'none' : null,

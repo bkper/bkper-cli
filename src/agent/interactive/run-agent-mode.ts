@@ -29,6 +29,7 @@ import {
     applyBkperAgentToolSelection,
     collectSettingsDiagnostics,
     createStartupSessionManager,
+    overrideDefaultTools,
 } from './settings.js';
 
 export interface AgentModeDependencies {
@@ -124,7 +125,7 @@ export function createAgentModeDependencies(
                     },
                 });
                 applyBkperAgentSettingsDefaults(settingsManager);
-                settingsManager.applyOverrides({defaultTools: selectedTools});
+                overrideDefaultTools(settingsManager, selectedTools);
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,
                     {
