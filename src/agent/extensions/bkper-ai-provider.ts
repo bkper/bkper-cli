@@ -1,3 +1,4 @@
+import {typesafeSystemOneApi} from '@earendil-works/pi-ai/api/typesafe-system-one.lazy';
 import type {
     ExtensionAPI,
     ProviderConfig,
@@ -10,6 +11,7 @@ export const BKPER_AI_PRODUCTION_BASE_URL = 'https://ai.bkper.app/v1';
 const BKPER_AI_BASE_URL_ENV_VAR = 'BKPER_AI_BASE_URL';
 const BKPER_AI_DEVELOPMENT_ORIGIN = 'https://ai-dev.bkper.app';
 const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
+const BKPER_AI_CLASSIFIER_API = 'typesafe-system-one';
 
 export type BkperAiThinkingLevel = (typeof THINKING_LEVELS)[number];
 
@@ -22,13 +24,18 @@ export interface BkperAiModelMetadata {
 /** The chat member of Pi's provider model union; the package root exports only the union. */
 type ProviderChatModelConfig = Extract<ProviderModelConfig, {type?: 'chat'}>;
 
+/** The classifier member of Pi's provider model union. */
+type ProviderClassifierModelConfig = Extract<ProviderModelConfig, {type: 'classifier'}>;
+
 interface BkperAiModelConfig extends ProviderChatModelConfig {
     bkperDefault: boolean;
     bkperDefaultThinkingLevel?: BkperAiThinkingLevel;
 }
 
+/** A gateway chat model; the catalog marks these `language` or omits `type`. */
 interface BkperAiCatalogModel {
     id: string;
+    type?: string;
     display_name?: string;
     input_modalities?: string[];
     pricing: {
@@ -44,9 +51,33 @@ interface BkperAiCatalogModel {
     prompt_cache_ttl_seconds?: number;
 }
 
+/** A gateway decision model, served through the System One classify API. */
+interface BkperAiDecisionCatalogModel {
+    id: string;
+    type: 'decision';
+    display_name?: string;
+    pricing: {
+        inputNanoUsdPerToken: number;
+        outputNanoUsdPerToken: number;
+    };
+    context_window: number;
+}
+
 interface BkperAiCatalog {
     default_model?: string;
-    data: BkperAiCatalogModel[];
+    data: Array<BkperAiCatalogModel | BkperAiDecisionCatalogModel>;
+}
+
+function isDecisionModel(
+    model: BkperAiCatalogModel | BkperAiDecisionCatalogModel
+): model is BkperAiDecisionCatalogModel {
+    return model.type === 'decision';
+}
+
+function isChatModel(
+    model: BkperAiCatalogModel | BkperAiDecisionCatalogModel
+): model is BkperAiCatalogModel {
+    return model.type === undefined || model.type === 'language';
 }
 
 function invalidBkperAiBaseUrlError(): Error {
@@ -156,6 +187,23 @@ function toProviderModel(
     };
 }
 
+function toClassifierModel(model: BkperAiDecisionCatalogModel): ProviderClassifierModelConfig {
+    return {
+        type: 'classifier',
+        id: model.id,
+        name: model.display_name ?? model.id,
+        api: BKPER_AI_CLASSIFIER_API,
+        input: ['text'],
+        cost: {
+            input: nanoUsdPerTokenToUsdPerMillion(model.pricing.inputNanoUsdPerToken),
+            output: nanoUsdPerTokenToUsdPerMillion(model.pricing.outputNanoUsdPerToken),
+            cacheRead: 0,
+            cacheWrite: 0,
+        },
+        contextWindow: model.context_window,
+    };
+}
+
 /**
  * Maps the catalog's prompt cache lifetime to Pi's cache warming metadata.
  * Models without a valid lifetime stay ineligible for cache warming.
@@ -172,7 +220,7 @@ async function fetchBkperAiModels(
     baseUrl: string,
     fetchFn: typeof fetch,
     signal?: AbortSignal
-): Promise<BkperAiModelConfig[]> {
+): Promise<Array<BkperAiModelConfig | ProviderClassifierModelConfig>> {
     const response = await fetchFn(`${baseUrl}/models`, {signal});
     if (!response.ok) {
         throw new Error(`Bkper AI model request failed (${response.status}).`);
@@ -183,10 +231,17 @@ async function fetchBkperAiModels(
         throw new Error('Bkper AI model response is invalid.');
     }
 
-    const models = catalog.data.filter(model => model.input_modalities?.includes('image'));
+    // Split by type first: decision entries lack the chat fields toProviderModel reads.
+    const classifierModels = catalog.data.filter(isDecisionModel).map(toClassifierModel);
+    const chatModels = catalog.data
+        .filter(isChatModel)
+        .filter(model => model.input_modalities?.includes('image'));
     const defaultModelId =
-        models.find(model => model.id === catalog.default_model)?.id ?? models[0]?.id;
-    return models.map(model => toProviderModel(model, defaultModelId));
+        chatModels.find(model => model.id === catalog.default_model)?.id ?? chatModels[0]?.id;
+    return [
+        ...chatModels.map(model => toProviderModel(model, defaultModelId)),
+        ...classifierModels,
+    ];
 }
 
 export function findDefaultBkperAiModel<TModel extends BkperAiModelMetadata>(
@@ -223,6 +278,8 @@ export function getBkperAiProviderConfig(
             'User-Agent': 'bkper-cli',
         },
         api: 'openai-responses',
+        classifiers: {[BKPER_AI_CLASSIFIER_API]: typesafeSystemOneApi()},
+        // Every model type arrives through refreshModels, so the static list stays empty.
         models: [],
         refreshModels: ({signal}) => fetchBkperAiModels(baseUrl, fetchFn, signal),
     };

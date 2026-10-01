@@ -3,9 +3,9 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./test-lib",
-    "module": "ESNext",
+    "module": "node16",
     "target": "es2022",
-    "moduleResolution": "Node",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "allowJs": true,
     "esModuleInterop": true,

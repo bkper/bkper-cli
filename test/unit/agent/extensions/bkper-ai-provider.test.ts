@@ -18,6 +18,23 @@ function createRefreshContext(): Parameters<
 }
 
 type ProviderChatModelConfig = Extract<ProviderModelConfig, {type?: 'chat'}>;
+type ProviderClassifierModelConfig = Extract<ProviderModelConfig, {type: 'classifier'}>;
+
+function isClassifierModel(model: ProviderModelConfig): model is ProviderClassifierModelConfig {
+    return model.type === 'classifier';
+}
+
+/** Gateway decision entry as served by GET /v1/models. */
+const jevCatalogEntry = {
+    id: 'jev',
+    type: 'decision',
+    display_name: 'Jev',
+    input_modalities: ['text'],
+    pricing: {inputNanoUsdPerToken: 53, outputNanoUsdPerToken: 0},
+    context_window: 65536,
+    max_state_question_tokens: 32768,
+    question_types: ['noul', 'choice', 'score'],
+};
 
 function isChatModel(model: ProviderModelConfig): model is ProviderChatModelConfig {
     return model.type === undefined || model.type === 'chat';
@@ -175,29 +192,25 @@ describe('agent/bkper-ai-provider', function () {
         expect(await config.refreshModels?.(createRefreshContext())).to.deep.equal([]);
     });
 
-    it('skips decision models listed in the catalog', async function () {
+    it('offers decision models as System One classifiers beside chat models', async function () {
         const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
             new Response(JSON.stringify({
                 default_model: 'vision',
                 data: [
+                    // Image input must not route a decision model into the chat mapping.
+                    {...jevCatalogEntry, id: 'jev-vision', input_modalities: ['text', 'image']},
+                    jevCatalogEntry,
                     {
-                        id: 'jev',
-                        object: 'model',
-                        type: 'decision',
-                        input_modalities: ['text'],
-                        pricing: {
-                            inputNanoUsdPerToken: 0,
-                            cachedInputNanoUsdPerToken: 0,
-                            cacheWriteNanoUsdPerToken: 0,
-                            outputNanoUsdPerToken: 0,
-                        },
-                        context_window: 128000,
-                        max_state_question_tokens: 8192,
-                        question_types: ['noul', 'choice', 'score'],
+                        id: 'future-embedding',
+                        type: 'embedding',
+                        input_modalities: ['text', 'image'],
+                        pricing: {inputNanoUsdPerToken: 1, outputNanoUsdPerToken: 0},
+                        context_window: 8192,
                     },
                     {
                         id: 'vision',
                         object: 'model',
+                        type: 'language',
                         input_modalities: ['text', 'image'],
                         pricing: {
                             inputNanoUsdPerToken: 0,
@@ -213,9 +226,26 @@ describe('agent/bkper-ai-provider', function () {
             }))
         ));
 
-        const models = await refreshChatModels(config);
+        const models = (await config.refreshModels?.(createRefreshContext())) ?? [];
 
-        expect(models.map(model => model.id)).to.deep.equal(['vision']);
+        expect(models.filter(isChatModel).map(model => model.id)).to.deep.equal(['vision']);
+        const classifiers = models.filter(isClassifierModel);
+        expect(classifiers.map(model => model.id)).to.deep.equal(['jev-vision', 'jev']);
+        expect(classifiers[1]).to.deep.equal({
+            type: 'classifier',
+            id: 'jev',
+            name: 'Jev',
+            api: 'typesafe-system-one',
+            input: ['text'],
+            cost: {input: 0.053, output: 0, cacheRead: 0, cacheWrite: 0},
+            contextWindow: 65536,
+        });
+        expect(models).to.have.length(3);
+
+        // Pi resolves a classifier model's api against the provider's classifiers map.
+        for (const model of classifiers) {
+            expect(config.classifiers?.[model.api ?? '']?.classify).to.be.a('function');
+        }
     });
 
     it('enables cache warming only for models with a catalog prompt cache lifetime', async function () {

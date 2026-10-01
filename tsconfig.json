@@ -3,8 +3,8 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "node16",
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "typeRoots" : ["node_modules/@bkper", "node_modules/@types" ],
     "skipLibCheck": true,
