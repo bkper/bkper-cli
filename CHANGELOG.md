@@ -6,6 +6,7 @@
     -   Bkper CLI Agent has a new look: the startup screen shows the Bkper logo in its account type colors, and new Bkper light and dark themes replace Pi's default colors, following your terminal's light or dark background. Custom themes you selected are kept
     -   The startup screen no longer breaks in narrow terminals
     -   Updated Pi to 0.99.2
+    -   The agent can now run several tool calls in one JavaScript script (codemode), so batch lookups and large outputs are handled in one step and only the result reaches the conversation. Scripts that write to a Book follow the same rule as single commands: the agent shows the exact script and every change first, and runs it only after you confirm. Codemode is on by default; a `defaultTools` setting you set is kept, and `+codemode` or `-codemode` turns it on or off
 
 ## [5.2.0] - 2026-10-01
 

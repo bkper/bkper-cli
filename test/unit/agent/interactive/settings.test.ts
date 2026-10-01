@@ -19,7 +19,7 @@ describe('interactive agent settings', function () {
                 powershell: true,
             })
         ).to.deep.equal({
-            tools: ['read', 'powershell', 'edit', 'write'],
+            tools: ['read', 'powershell', 'edit', 'write', 'codemode'],
         });
         expect(
             resolveBkperAgentTools(undefined, 'linux', {
@@ -27,7 +27,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'bash', 'edit', 'write'],
+            tools: ['read', 'bash', 'edit', 'write', 'codemode'],
         });
     });
 
@@ -45,7 +45,7 @@ describe('interactive agent settings', function () {
 
             expect(
                 applyOverrides.calledOnceWithExactly({
-                    defaultTools: ['read', 'powershell', 'edit', 'write'],
+                    defaultTools: ['read', 'powershell', 'edit', 'write', 'codemode'],
                 })
             ).to.be.true;
             expect(diagnostics).to.deep.equal([]);
@@ -65,7 +65,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'bash', 'edit', 'write'],
+            tools: ['read', 'bash', 'edit', 'write', 'codemode'],
             warning: 'PowerShell is unavailable; using Bash instead.',
         });
     });
@@ -77,7 +77,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'edit', 'write'],
+            tools: ['read', 'edit', 'write', 'codemode'],
             warning: 'No supported shell is available; command execution is disabled.',
         });
     });
@@ -93,6 +93,25 @@ describe('interactive agent settings', function () {
             tools: ['read', 'powershell', 'edit', 'custom-tool'],
             warning: 'Unavailable configured shell tools were disabled: bash.',
         });
+    });
+
+    it('keeps an explicit tool selection without adding codemode', function () {
+        expect(
+            resolveBkperAgentTools(['read', 'bash'], 'linux', {
+                bash: true,
+                powershell: false,
+            })
+        ).to.deep.equal({tools: ['read', 'bash']});
+    });
+
+    it('enables codemode from a +codemode settings entry', function () {
+        const settingsManager = SettingsManager.inMemory({
+            defaultTools: ['read', 'bash', '+codemode'],
+        });
+
+        applyBkperAgentToolSelection(settingsManager, 'linux');
+
+        expect(settingsManager.getDefaultTools()).to.deep.equal(['read', 'bash', 'codemode']);
     });
 
     it('disables configured shells even when no configured tool remains', function () {

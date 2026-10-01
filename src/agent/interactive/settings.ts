@@ -21,6 +21,9 @@ export interface ResolvedBkperAgentTools {
     warning?: string;
 }
 
+// Always selected so the tool set, and with it the prompt cache, stays stable across turns.
+const CODEMODE_TOOL = 'codemode';
+
 export function resolveBkperAgentTools(
     configuredTools: string[] | undefined,
     platform: NodeJS.Platform,
@@ -44,20 +47,20 @@ export function resolveBkperAgentTools(
     }
 
     if (platform === 'win32' && availability.powershell) {
-        return {tools: ['read', 'powershell', 'edit', 'write']};
+        return {tools: ['read', 'powershell', 'edit', 'write', CODEMODE_TOOL]};
     }
 
     if (availability.bash) {
         return platform === 'win32'
             ? {
-                  tools: ['read', 'bash', 'edit', 'write'],
+                  tools: ['read', 'bash', 'edit', 'write', CODEMODE_TOOL],
                   warning: 'PowerShell is unavailable; using Bash instead.',
               }
-            : {tools: ['read', 'bash', 'edit', 'write']};
+            : {tools: ['read', 'bash', 'edit', 'write', CODEMODE_TOOL]};
     }
 
     return {
-        tools: ['read', 'edit', 'write'],
+        tools: ['read', 'edit', 'write', CODEMODE_TOOL],
         warning: 'No supported shell is available; command execution is disabled.',
     };
 }

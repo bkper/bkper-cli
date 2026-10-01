@@ -81,14 +81,25 @@ function getCodingToolDefinitions(selectedTools: string[]) {
     ].filter(definition => selectedTools.includes(definition.name));
 }
 
+// Pi drops tool prompt snippets and guidelines when the system prompt is replaced, and does not
+// export codemode's, so Bkper describes codemode itself.
+const CODEMODE_PROMPT_SNIPPET =
+    'Run JavaScript that calls other tools (chains, loops, Promise.all, filtering large results)';
+const CODEMODE_PROMPT_GUIDELINES = [
+    'Use codemode to batch or chain tool calls, or to filter large tool output down to what you need, instead of issuing many individual tool calls.',
+    'A codemode script that writes to a Book follows the same confirmation rule as a single command. First resolve the targets read-only, then show the exact script and every change it will make, and run it only after the user confirms. Return a per-item result so partial failures are visible.',
+];
+
 function buildToolPromptSection(selectedTools: string[]): string {
     const toolDefinitions = getCodingToolDefinitions(selectedTools);
-    const toolLines = toolDefinitions
-        .flatMap(definition => {
+    const hasCodemode = selectedTools.includes('codemode');
+    const toolLines = [
+        ...toolDefinitions.flatMap(definition => {
             const snippet = normalizePromptSnippet(definition.promptSnippet);
             return snippet ? [`- ${definition.name}: ${snippet}`] : [];
-        })
-        .join('\n');
+        }),
+        ...(hasCodemode ? [`- codemode: ${CODEMODE_PROMPT_SNIPPET}`] : []),
+    ].join('\n');
 
     const guidelineLines: string[] = [];
     const seenGuidelines = new Set<string>();
@@ -114,6 +125,9 @@ function buildToolPromptSection(selectedTools: string[]): string {
         for (const guideline of normalizePromptGuidelines(definition.promptGuidelines)) {
             addGuideline(guideline);
         }
+    }
+    if (hasCodemode) {
+        CODEMODE_PROMPT_GUIDELINES.forEach(addGuideline);
     }
     addGuideline('Do not claim builds, tests, or command results unless you actually ran them.');
 

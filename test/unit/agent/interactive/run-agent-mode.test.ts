@@ -50,10 +50,12 @@ describe('runAgentMode', function () {
                     'powershell',
                     'edit',
                     'write',
+                    'codemode',
                 ]);
                 expect(runtime.session.systemPrompt).to.include(
                     '- powershell: Execute PowerShell commands'
                 );
+                expect(runtime.session.systemPrompt).to.include('- codemode:');
                 expect(runtime.session.systemPrompt).to.not.include('- bash:');
             } finally {
                 await runtime.dispose();
