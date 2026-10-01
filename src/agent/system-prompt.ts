@@ -86,8 +86,8 @@ function getCodingToolDefinitions(selectedTools: string[]) {
 const CODEMODE_PROMPT_SNIPPET =
     'Run JavaScript that calls other tools (chains, loops, Promise.all, filtering large results)';
 const CODEMODE_PROMPT_GUIDELINES = [
-    'Use codemode to batch or chain tool calls, or to filter large tool output down to what you need, instead of issuing many individual tool calls.',
-    'A codemode script that writes to a Book follows the same confirmation rule as a single command. First resolve the targets read-only, then show the exact script and every change it will make, and run it only after the user confirms. Return a per-item result so partial failures are visible.',
+    'Use codemode, not shell loops or jq pipelines, to repeat commands across items, chain their output, or filter large results.',
+    'Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item\'s result.',
 ];
 
 function buildToolPromptSection(selectedTools: string[]): string {

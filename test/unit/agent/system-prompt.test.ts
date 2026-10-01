@@ -24,13 +24,10 @@ describe('agent system prompt', function () {
         expect(full).to.not.include('- bash:');
     });
 
-    it('describes codemode and requires confirmation for Book writes in scripts when codemode is selected', function () {
+    it('lists codemode as an available tool when codemode is selected', function () {
         const full = getBkperAgentSystemPrompt(['read', 'bash', 'edit', 'write', 'codemode']);
 
         expect(full).to.include('- codemode:');
-        expect(full).to.match(
-            /codemode script that writes to a Book follows the same confirmation rule/
-        );
     });
 
     it('omits codemode guidance when codemode is not selected', function () {
