@@ -25,6 +25,10 @@ const DOCS: readonly DocSpec[] = [
         outputPath: 'core/core-concepts.md',
     },
     {
+        url: 'https://bkper.com/docs/ai/decision-models.md',
+        outputPath: 'ai/decision-models.md',
+    },
+    {
         url: 'https://bkper.com/docs/api/bkper-js.md',
         outputPath: 'sdk/bkper-js.md',
     },
