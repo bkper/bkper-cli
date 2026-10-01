@@ -175,7 +175,7 @@ ${referenceDocsDir}
 - ALWAYS read index docs and follow references to specific docs before running any bkper CLI command.
 - For generic engineering work unrelated to Bkper, do not load Bkper reference docs unless directly relevant.
 - When scope is unclear, inspect local files and project instructions first; load reference docs only after identifying a concrete need.
-- If the task involves building or debugging pi extensions, custom tools, themes, or skills — read the pi docs directory and follow cross-references within:
+- If the task involves building or debugging pi extensions, custom tools, themes, or skills — read the pi docs directory and follow cross-references within. Pi CLI commands in those docs run as \`bkper agent <command>\` (for example, \`pi mcp add\` is \`bkper agent mcp add\`):
 
 \`\`\`
 ${piDocsPath}

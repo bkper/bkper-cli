@@ -199,6 +199,22 @@ Use `/handoff <goal>` to continue long-running work in a new focused session. If
 
 Press `Ctrl+R` in the standard or handoff input to search recently submitted inputs by case-insensitive substring, newest first. Search history starts with inputs submitted after this feature is installed; it does not scan existing sessions. The handoff search omits Bash commands. Press `Ctrl+Alt+R` to open the session tree.
 
+### Connect MCP servers
+
+The agent can use tools from [MCP](https://modelcontextprotocol.io) servers you add, such as file storage, email, or other services. No servers are added by default. You can also ask the agent to add one for you.
+
+```bash
+bkper agent mcp add docs --url https://example.com/mcp                        # remote server
+bkper agent mcp add files -- npx -y @modelcontextprotocol/server-filesystem .  # local server
+bkper agent mcp list                                                          # check connections and tools
+bkper agent mcp login docs                                                    # sign in, for servers that use OAuth
+bkper agent mcp remove docs
+```
+
+Run `/reload` in an open session after adding or removing a server, and use `/mcp` to see connections, sign in, or turn a server off. Servers are stored in `~/.pi/agent/mcp.json`, shared with Pi; a project's `.pi/mcp.json` is read only after you trust the project. `bkper agent mcp --help` lists all options; it names the commands `pi mcp ...`, which you run as `bkper agent mcp ...`.
+
+MCP tools run with your permissions. Add only servers you trust.
+
 ---
 
 ## Data Management

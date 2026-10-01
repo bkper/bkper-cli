@@ -27,7 +27,9 @@ import { getUnsupportedNodeVersionMessage } from './utils/node-version.js';
 function registerAgentCommands(command: Command): void {
     command
         .command('agent [piArgs...]')
-        .description('Start Bkper Agent or run Pi CLI with Bkper defaults')
+        .description(
+            'Start Bkper Agent, or run Pi CLI commands as `bkper agent <command>` (e.g. `bkper agent mcp add`)'
+        )
         .allowUnknownOption(true)
         .allowExcessArguments(true);
 }

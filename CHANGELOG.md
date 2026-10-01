@@ -7,6 +7,7 @@
     -   The startup screen no longer breaks in narrow terminals
     -   Updated Pi to 0.99.2
     -   The agent can now run several tool calls in one JavaScript script (codemode), so batch lookups and large outputs are handled in one step and only the result reaches the conversation. Scripts that write to a Book follow the same rule as single commands: the agent shows the exact script and every change first, and runs it only after you confirm. Codemode is on by default; a `defaultTools` setting you set is kept, and `+codemode` or `-codemode` turns it on or off
+    -   Codemode scripts can ask Bkper AI decision models (Jev) bounded questions about many items at once, such as which account fits each bank line, using your Bkper login. Each answer comes with probabilities, so the agent can propose results and send uncertain cases to you for review. Usage counts toward your Bkper AI allowance and shows in the session cost
     -   The agent can now connect to MCP servers you add, such as file storage, email, or other services: add one with `bkper agent mcp add`, check it with `bkper agent mcp list`, sign in with `bkper agent mcp login`, and manage it in a session with `/mcp`. No servers are added by default
 
 ## [5.2.0] - 2026-10-01
