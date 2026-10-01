@@ -6,6 +6,7 @@ import {
     getKeybindings,
     KeybindingsManager,
     setKeybindings,
+    visibleWidth,
     type KeybindingsConfig,
 } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
@@ -17,6 +18,7 @@ type NotificationType = 'info' | 'warning' | 'error';
 type StartupTheme = {
     bold: (text: string) => string;
     fg: (color: string, text: string) => string;
+    getColorMode: () => 'truecolor';
 };
 
 type StartupHeaderFactory = (
@@ -46,6 +48,7 @@ function createThemeStub(): StartupTheme {
     return {
         bold: (text: string) => text,
         fg: (_color: string, text: string) => text,
+        getColorMode: () => 'truecolor',
     };
 }
 
@@ -58,18 +61,26 @@ const STARTUP_TEST_KEYBINDINGS = {
     'app.session.tree': {defaultKeys: 'ctrl+alt+r'},
 } as const;
 
-function renderStartupHeaderWithKeybindings(
+function renderStartupHeaderLinesWithKeybindings(
     factory: StartupHeaderFactory,
-    userBindings: KeybindingsConfig = {}
-): string {
+    userBindings: KeybindingsConfig = {},
+    width = 120
+): string[] {
     const previousKeybindings = getKeybindings();
     setKeybindings(new KeybindingsManager(STARTUP_TEST_KEYBINDINGS, userBindings));
 
     try {
-        return factory(undefined, createThemeStub()).render(120).join('\n');
+        return factory(undefined, createThemeStub()).render(width);
     } finally {
         setKeybindings(previousKeybindings);
     }
+}
+
+function renderStartupHeaderWithKeybindings(
+    factory: StartupHeaderFactory,
+    userBindings: KeybindingsConfig = {}
+): string {
+    return renderStartupHeaderLinesWithKeybindings(factory, userBindings).join('\n');
 }
 
 function registerStartupExtension(
@@ -272,7 +283,6 @@ describe('Bkper agent startup extension', function () {
         const headerText = startupHeaderFactory
             ? renderStartupHeaderWithKeybindings(startupHeaderFactory)
             : '';
-        expect(headerText).to.include('██████╗');
         expect(headerText).to.include(`pi v${PI_VERSION}`);
         expect(headerText).to.include('to interrupt');
         expect(headerText).to.include('for session tree');
@@ -290,5 +300,33 @@ describe('Bkper agent startup extension', function () {
         expect(headerText).to.include('Use /login for Bkper AI');
         expect(headerText).to.include('/connect for another model provider');
         expect(notify.called).to.be.false;
+    });
+
+    it('keeps every header line within the terminal width', async function () {
+        let startupHeaderFactory: StartupHeaderFactory | undefined;
+        const {sessionStartHandler} = registerStartupExtension();
+
+        await sessionStartHandler(
+            {},
+            {
+                ui: {
+                    notify: sinon.stub(),
+                    setHeader: factory => {
+                        startupHeaderFactory = factory;
+                    },
+                },
+                modelRegistry: {getAvailable: () => []},
+            }
+        );
+
+        for (const width of [24, 60, 80, 120, 200]) {
+            const lines = startupHeaderFactory
+                ? renderStartupHeaderLinesWithKeybindings(startupHeaderFactory, {}, width)
+                : [];
+            expect(lines.join('\n')).to.include(`pi v${PI_VERSION}`);
+            for (const line of lines) {
+                expect(visibleWidth(line), `width ${width}: ${line}`).to.be.at.most(width);
+            }
+        }
     });
 });

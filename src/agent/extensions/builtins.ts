@@ -55,6 +55,8 @@ function normalizeBkperAgentExtension(extension: Extension): Extension {
 
     return {
         ...extension,
+        // Built-ins are part of the agent, not user extensions to list at startup.
+        hidden: true,
         path: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
         resolvedPath: BKPER_AGENT_BUILTINS_EXTENSION_PATH,
         sourceInfo: {

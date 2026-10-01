@@ -31,6 +31,7 @@ import {
     createStartupSessionManager,
     overrideDefaultTools,
 } from './settings.js';
+import {getBkperThemesDir, resolveBkperInitialThemeSetting} from './themes.js';
 
 export interface AgentModeDependencies {
     createRuntime: () => Promise<{
@@ -104,6 +105,7 @@ export function createAgentModeDependencies(
                     settingsManager,
                     modelRuntime,
                     resourceLoaderOptions: {
+                        additionalThemePaths: [getBkperThemesDir()],
                         systemPromptOverride: () =>
                             getBkperAgentSystemPrompt(selectedTools),
                         extensionFactories: [
@@ -188,6 +190,9 @@ export function createAgentModeDependencies(
         createInteractiveMode: (runtime, modelFallbackMessage) =>
             new BkperInteractiveMode(runtime, {
                 modelFallbackMessage,
+                initialThemeSetting: resolveBkperInitialThemeSetting(
+                    runtime.services.settingsManager
+                ),
             }),
     };
 }
