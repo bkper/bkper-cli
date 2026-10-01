@@ -2,6 +2,7 @@ import {
     getPowerShellConfig,
     getShellConfig,
     type AgentSessionRuntimeDiagnostic,
+    type CacheWarmingMode,
     type TuiMode,
 } from '@earendil-works/pi-coding-agent';
 
@@ -103,6 +104,7 @@ type BkperAgentSettingsDefaultsManager = {
     getGlobalSettings(): {
         showCacheMissNotices?: boolean;
         tuiMode?: TuiMode;
+        cacheWarming?: CacheWarmingMode;
     };
     getProjectSettings(): {
         showCacheMissNotices?: boolean;
@@ -110,6 +112,7 @@ type BkperAgentSettingsDefaultsManager = {
     };
     setShowCacheMissNotices(show: boolean): void;
     setTuiMode(mode: TuiMode): void;
+    setCacheWarmingMode(mode: CacheWarmingMode): void;
 };
 
 export function applyBkperAgentSettingsDefaults(
@@ -131,6 +134,13 @@ export function applyBkperAgentSettingsDefaults(
 
     if (!hasExplicitTuiMode) {
         settingsManager.setTuiMode('fullscreen');
+    }
+
+    // Pi reads cacheWarming from global settings only. Idle warming bridges the pauses
+    // between prompts; Pi warms only models with a known cache lifetime and only when
+    // the expected savings outweigh the refresh cost.
+    if (globalSettings.cacheWarming === undefined) {
+        settingsManager.setCacheWarmingMode('idle');
     }
 }
 

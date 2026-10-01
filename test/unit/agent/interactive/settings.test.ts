@@ -97,42 +97,54 @@ describe('interactive agent settings', function () {
     it('persists Bkper agent defaults when no user settings are present', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
+        const setCacheWarmingMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
             getProjectSettings: () => ({}),
             setShowCacheMissNotices,
             setTuiMode,
+            setCacheWarmingMode,
         });
 
         expect(setShowCacheMissNotices.calledOnceWithExactly(true)).to.be.true;
         expect(setTuiMode.calledOnceWithExactly('fullscreen')).to.be.true;
+        expect(setCacheWarmingMode.calledOnceWithExactly('idle')).to.be.true;
     });
 
     it('preserves explicit global Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
+        const setCacheWarmingMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
-            getGlobalSettings: () => ({showCacheMissNotices: false, tuiMode: 'regular'}),
+            getGlobalSettings: () => ({
+                showCacheMissNotices: false,
+                tuiMode: 'regular',
+                cacheWarming: 'off',
+            }),
             getProjectSettings: () => ({}),
             setShowCacheMissNotices,
             setTuiMode,
+            setCacheWarmingMode,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;
         expect(setTuiMode.called).to.be.false;
+        expect(setCacheWarmingMode.called).to.be.false;
     });
 
     it('preserves explicit project Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
+        const setCacheWarmingMode = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
             getProjectSettings: () => ({showCacheMissNotices: false, tuiMode: 'regular'}),
             setShowCacheMissNotices,
             setTuiMode,
+            setCacheWarmingMode,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;

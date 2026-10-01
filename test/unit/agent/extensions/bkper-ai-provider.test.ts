@@ -161,6 +161,42 @@ describe('agent/bkper-ai-provider', function () {
         expect(await config.refreshModels?.(createRefreshContext())).to.deep.equal([]);
     });
 
+    it('enables cache warming only for models with a catalog prompt cache lifetime', async function () {
+        const catalogModel = (id: string, promptCacheTtlSeconds?: unknown) => ({
+            id,
+            input_modalities: ['text', 'image'],
+            pricing: {
+                inputNanoUsdPerToken: 5000,
+                cachedInputNanoUsdPerToken: 250,
+                cacheWriteNanoUsdPerToken: 6300,
+                outputNanoUsdPerToken: 25000,
+            },
+            context_window: 200000,
+            max_output_tokens: 32000,
+            thinking_levels: ['low', 'medium'],
+            ...(promptCacheTtlSeconds === undefined
+                ? {}
+                : {prompt_cache_ttl_seconds: promptCacheTtlSeconds}),
+        });
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({
+                data: [
+                    catalogModel('documented', 300),
+                    catalogModel('undocumented'),
+                    catalogModel('invalid', 0),
+                ],
+            }))
+        ));
+
+        const models = await config.refreshModels?.(createRefreshContext());
+
+        expect(models?.map(model => [model.id, model.promptCache])).to.deep.equal([
+            ['documented', {short: 300}],
+            ['undocumented', undefined],
+            ['invalid', undefined],
+        ]);
+    });
+
     it('reports a failed model request', async function () {
         const config = getBkperAiProviderConfig(
             {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/v1'},

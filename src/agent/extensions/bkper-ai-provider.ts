@@ -38,6 +38,7 @@ interface BkperAiCatalogModel {
     context_window: number;
     max_output_tokens: number;
     thinking_levels: string[];
+    prompt_cache_ttl_seconds?: number;
 }
 
 interface BkperAiCatalog {
@@ -139,6 +140,7 @@ function toProviderModel(
                 model.pricing.cacheWriteNanoUsdPerToken
             ),
         },
+        ...getPromptCache(model.prompt_cache_ttl_seconds),
         contextWindow: model.context_window,
         maxTokens: model.max_output_tokens,
         compat: {
@@ -149,6 +151,18 @@ function toProviderModel(
         bkperDefault: model.id === defaultModelId,
         bkperDefaultThinkingLevel: getDefaultThinkingLevel(model),
     };
+}
+
+/**
+ * Maps the catalog's prompt cache lifetime to Pi's cache warming metadata.
+ * Models without a valid lifetime stay ineligible for cache warming.
+ */
+function getPromptCache(
+    ttlSeconds: number | undefined
+): Pick<BkperAiModelConfig, 'promptCache'> {
+    return typeof ttlSeconds === 'number' && Number.isFinite(ttlSeconds) && ttlSeconds > 0
+        ? {promptCache: {short: ttlSeconds}}
+        : {};
 }
 
 async function fetchBkperAiModels(
