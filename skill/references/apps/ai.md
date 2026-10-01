@@ -1,123 +1,155 @@
 # Add Bkper AI to an App
 
-Bkper Platform apps can call [Bkper AI](https://bkper.com/docs/ai/ai-gateway.md) without storing a model-provider key. The platform authorizes the Worker's request using the current user and attributes usage to the app. Model output is a suggestion, not permission to change a Book: keep decisions about resource movements and any resulting writes in application code.
+Bkper Platform apps can call [Bkper AI](https://bkper.com/docs/ai/ai-gateway.md) without storing a model-provider key. The platform authorizes each request as the current user and attributes usage to the app. Scripts and servers outside the platform use the same code with their own Bkper token.
 
-This guide covers a server-side, non-streaming language response. It uses AI SDK to draft a review note from a transaction description. No Book data is written by the example.
+Model output is a suggestion, not permission to change a Book. Keep decisions about resource movements, and any resulting writes, in application code.
 
 ## Choose the kind of response
 
-- **A bounded yes/no, choice, or score?** Use a typed evaluation at `POST /v1/evaluations`.
-- **Generated text or a custom JSON object?** Use a language model at `POST /v1/responses`. AI SDK is an option for this path.
+- **A yes/no, a choice, or a level on a scale?** Ask a decision model, such as `jev`, with TypeSafe's SDK, `@typesafe-ai/sdk`.
+- **Text or a custom JSON object?** Ask a language model (LLM), such as `gpt-luna`, with AI SDK's Open Responses provider, `@ai-sdk/open-responses`.
 
-Pick a model of the corresponding `type` from the live [`GET /v1/models` catalog](https://ai.bkper.app/v1/models). The catalog also tells you which language models support strict structured output. AI SDK's **Open Responses provider** covers language responses, not Bkper's typed evaluation endpoint. For evaluation models, use HTTP or implement an AI SDK evaluation-model adapter for `experimental_evaluate`, as `bkper-agent` does. See the [Typed Evaluations guide](https://bkper.com/docs/ai/evaluations.md) for requests, responses, decision thresholds, and errors, and the [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) for a human-reviewed HTTP example.
+Add the SDK to the **Worker** package. Keep the call in a server service used by your authenticated app API route, and define the route's request and response in the app's Zod/OpenAPI contract.
 
 ## Keep authentication in the platform
 
 For an interactive app, the flow is:
 
-1. The client calls a typed app `/api/*` route through `auth.authenticatedFetch()` (or another authenticated client). The template's generated API client can use that fetch provider.
+1. The client calls a typed app `/api/*` route through `auth.authenticatedFetch()` or another authenticated client.
 2. Bkper verifies the user's token, removes it before invoking the Worker, and establishes user and app context for outbound requests.
-3. The Worker calls `https://ai.bkper.app/v1/*`. Platform outbound adds authorization and app attribution. **Do not read, forward, or store the user's token in the Worker.**
+3. The Worker calls Bkper AI. Platform outbound adds authorization and app attribution. **Do not read, forward, or store the user's token in the Worker.**
 
-An authenticated `/events` handler has the same outbound context. A page request does not; start interactive inference from an authenticated `/api/*` route, not from the page handler or the browser.
+An authenticated `/events` handler has the same outbound context. A page request does not; start inference from an authenticated `/api/*` route, not from the page handler or the browser.
 
-## Example: draft a review note with AI SDK
+## Ask a decision model
 
-Add `ai`, `@ai-sdk/open-responses`, and `zod` to the **Worker** package. Keep this code in a server service called from your authenticated app API route; define the route's request and response in the app's Zod/OpenAPI contract. The service takes only the description needed for this task, discovers the current language model, and validates its output before returning it to the caller.
+```ts
+import { score, TypeSafeClient } from '@typesafe-ai/sdk';
+
+const decisionClient = new TypeSafeClient({
+    apiKey: 'bkper-platform-outbound',
+    baseURL: 'https://ai.bkper.app',
+    defaultModel: 'jev',
+});
+
+export async function scoreRecurring(description: string) {
+    const { answers } = await decisionClient.systemOne({
+        state: { description },
+        questions: {
+            recurring: score('How likely is this a recurring charge?', [
+                'Unlikely',
+                'Possible',
+                'Likely',
+            ]),
+        },
+    });
+    return answers.recurring;
+}
+```
+
+- **`apiKey`** is required by the SDK. In a Platform Worker, pass any placeholder: platform outbound replaces it with the user's authorization.
+- **`baseURL`** has no `/v1`. The SDK calls `POST /v1/systemone`, which behaves exactly like `POST /v1/decisions`.
+- **The answer is typed** from the question. Bkper AI validates every answer against its question before responding, so your code can use it directly.
+
+The Decision Models guide covers questions, state, answers, and thresholds. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
+
+## Generate a language response
 
 ```ts
 import { createOpenResponses } from '@ai-sdk/open-responses';
 import { generateText, Output } from 'ai';
 import { z } from 'zod';
 
-const BASE_URL = 'https://ai.bkper.app/v1';
-const ReviewNote = z.strictObject({ note: z.string() });
+const llmClient = createOpenResponses({
+    name: 'bkper-ai',
+    url: 'https://ai.bkper.app/v1/responses',
+});
 
-export async function draftReviewNote(
-    description: string,
-    fetcher: typeof fetch = fetch
-): Promise<{ note: string }> {
-    const response = await fetcher(`${BASE_URL}/models`);
-    if (!response.ok) throw new Error(`Model discovery failed (${response.status}).`);
-
-    const catalog = z
-        .object({
-            default_model: z.string(),
-            data: z.array(
-                z.object({
-                    id: z.string(),
-                    type: z.string(),
-                    structured_output: z
-                        .object({
-                            json_schema: z.boolean(),
-                            strict: z.boolean(),
-                        })
-                        .optional(),
-                })
-            ),
-        })
-        .parse(await response.json());
-    const model = catalog.data.find(item => item.id === catalog.default_model);
-    if (
-        model?.type !== 'language' ||
-        !model.structured_output?.json_schema ||
-        !model.structured_output.strict
-    ) {
-        throw new Error('The default model does not support strict JSON output.');
-    }
-
-    const provider = createOpenResponses({
-        name: 'bkper-ai',
-        url: `${BASE_URL}/responses`,
-        fetch: fetcher,
-    });
+export async function draftReviewNote(description: string) {
     const { output } = await generateText({
-        model: provider(model.id),
-        system: 'Draft a short, neutral review note. Do not invent facts or change Accounts.',
+        model: llmClient('gpt-luna'),
+        system: 'Draft a short, neutral review note. Do not invent facts.',
         prompt: description,
-        output: Output.object({ schema: ReviewNote }),
-        maxRetries: 0,
+        output: Output.object({ schema: z.object({ note: z.string() }) }),
     });
-    return ReviewNote.parse(output);
+    return output;
 }
 ```
 
-**This example is for a Bkper Platform Worker.** With no SDK `apiKey`, the Open Responses provider sends no `Authorization` header; platform outbound supplies authorization and app attribution. A standalone integration such as `bkper-agent` must instead obtain and send its own Bkper OAuth token. Open Responses always requests `strict: true` for structured JSON and omits `store`; Bkper AI treats an omitted `store` as `false` and never persists response state. If you need `strict: false` for a model-supported flexible schema, use `@ai-sdk/openai` with its `.responses()` model and `strictJsonSchema: false`, as `bkper-agent` does. You may cache the catalog briefly instead of fetching it for every call.
+- **No `apiKey`.** The provider then sends no `Authorization` header, and platform outbound adds it.
+- **`url`** is the full `/v1/responses` URL.
+- **`output`** is parsed and validated against your schema by AI SDK. The provider requests strict structured output, which every Bkper language model supports.
 
-The schema deliberately checks only that a `note` string exists. Constraints such as a minimum or maximum string length are **not needed for this example** and may not be supported by every model's strict JSON Schema subset. If your app needs a length limit, check it in application code after generation.
+Keep schemas simple. Constraints such as a string's minimum or maximum length may not be supported by every model's strict JSON Schema subset; check them in code after generation.
+
+## Outside a Platform app
+
+Scripts, servers, and tools send their own Bkper token. Pass it as `apiKey`: both SDKs send it as a bearer token. Get a client each time you need one, so every call uses a current token:
+
+```ts
+import { createOpenResponses } from '@ai-sdk/open-responses';
+import { noul, TypeSafeClient } from '@typesafe-ai/sdk';
+import { generateText } from 'ai';
+import { getOAuthToken } from 'bkper';
+
+const decisionClient = async () =>
+    new TypeSafeClient({
+        apiKey: await getOAuthToken(),
+        baseURL: 'https://ai.bkper.app',
+        defaultModel: 'jev',
+    });
+
+const llmClient = async () =>
+    createOpenResponses({
+        name: 'bkper-ai',
+        url: 'https://ai.bkper.app/v1/responses',
+        apiKey: await getOAuthToken(),
+    });
+
+const client = await decisionClient();
+const { answers } = await client.systemOne({
+    state: { description: 'NETFLIX.COM monthly plan' },
+    questions: { streaming: noul('Is this a streaming service?') },
+});
+
+const { text } = await generateText({
+    model: (await llmClient())('gpt-luna'),
+    prompt: 'Describe NETFLIX.COM monthly plan in five words.',
+});
+```
+
+- **`getOAuthToken()`** reads the credentials from `bkper auth login` and refreshes them when needed. In your own server, use your own token provider.
+- **Creating a client is cheap.** Neither SDK makes a request until you ask a question.
+- **Label your usage** with a `bkper-ai-source` header, such as `my-script`: `defaultHeaders` in the TypeSafe SDK, `headers` in Open Responses. In a Platform app, outbound sets the source to the app.
+
+## Handle errors
+
+Every Bkper AI error has the same envelope: `{ error: { message, type, param, code } }`. Branch on `error.code`, not only on the HTTP status: a `429` can mean an exhausted allowance or a throttled provider.
+
+- **TypeSafe SDK:** an `APIError` with `status` and the envelope in `body`, so read `error.body.error.code`. Network failures and timeouts throw `APIConnectionError`.
+- **AI SDK:** an `APICallError` with `statusCode` and the envelope in `data`, so read `error.data.error.code`. Output that does not match your schema throws `NoObjectGeneratedError`.
+
+Both SDKs retry rate limits and server errors twice by default. A failed attempt costs nothing: Bkper AI charges only successful answers.
+
+Map these errors to your route's typed error response. Keep the code and message so users understand failures such as an exhausted allowance, but never return prompts, raw responses, or stack traces.
+
+## SDK notes
+
+- **Passing your own `fetch`.** The TypeSafe SDK calls `fetch` as its own method, which the Workers runtime rejects with `Illegal invocation`. Wrap it: `fetch: (input, init) => myFetch(input, init)`. Without the option, the SDK's default works.
+- **No `null` values.** The TypeSafe SDK's types accept `null` for state, instructions, and some criteria. Bkper AI rejects them with `400`.
+- **No `client.models.list()`.** It expects TypeSafe's catalog shape. Use the [`GET /v1/models`](https://ai.bkper.app/v1/models) catalog.
+- **Other System One clients** take `https://ai.bkper.app/v1` as their base URL.
+- **Flexible JSON schemas.** Open Responses always requests `strict: true`. For a schema that needs `strict: false`, such as a typed dynamic map, use `@ai-sdk/openai` with base URL `https://ai.bkper.app/v1`, its `.responses()` model, and `strictJsonSchema: false`.
 
 ## Before using the result
 
-- Send only task-relevant data. Validate input and Book permissions at the app API boundary. A generated note must not create, merge, or alter a transaction without deterministic application rules and any required human confirmation.
-- If model discovery fails or output does not match the schema, fail safely. Avoid automatic retries on actions that may consume allowance.
-- When the AI request fails, preserve the upstream HTTP status, error code, and message **when Bkper AI supplies them**, so users can understand failures such as an exhausted allowance. AI SDK exposes HTTP failures as `APICallError`; read the Bkper AI error envelope from `responseBody`, not from the SDK's generic message. For `NoObjectGeneratedError` or transport errors, return a safe app-defined error instead. Do not return prompts, raw responses, or stack traces to clients.
-- Unit-test the server service with a mocked `fetch`: verify the model's type and capability, that no `Authorization` or attribution headers leave the Worker, that only necessary data is sent and `store: true` is never requested, that malformed output is rejected, and that errors remain actionable. Then run the app's normal check/build.
+- **Send only task-relevant data.** Validate input and Book permissions at the app API boundary.
+- **Keep writes deterministic.** An answer or generated text must not create, merge, or alter a Transaction without application rules and any required human confirmation.
+- **Test the service.** Mock `fetch` and check what is sent, that the Worker adds no user token, and that errors stay actionable. Then run the app's normal check and build.
 
-For example, a route can extract the safe fields before mapping them into its typed error response:
+## Next steps
 
-```ts
-import { APICallError } from 'ai';
-
-function bkperAiError(error: unknown) {
-    if (!APICallError.isInstance(error)) return null;
-    let body: unknown;
-    try {
-        body = JSON.parse(error.responseBody ?? '');
-    } catch {
-        return null;
-    }
-    const parsed = z
-        .object({
-            error: z.object({ code: z.string(), message: z.string() }),
-        })
-        .safeParse(body);
-    if (!parsed.success) return null;
-    return {
-        status: error.statusCode ?? 502,
-        code: parsed.data.error.code,
-        message: parsed.data.error.message,
-    };
-}
-```
-
-For direct HTTP calls, advanced features, or exact request and response fields, use the [Bkper AI API reference](https://bkper.com/docs/api/ai.md) and [AI Gateway guide](https://bkper.com/docs/ai/ai-gateway.md). Bkper AI implements a documented subset of Open Responses, not every OpenAI or AI SDK feature.
+- [Decision Models](https://bkper.com/docs/ai/decision-models.md): questions, answers, thresholds, and caching.
+- [Bkper AI Gateway](https://bkper.com/docs/ai/ai-gateway.md): tokens, raw HTTP requests, errors, and privacy.
+- [Models and Usage](https://bkper.com/docs/ai/models.md): model IDs, capabilities, and usage rates.
+- [Bkper AI API reference](https://bkper.com/docs/api/ai.md): every request and response field.
