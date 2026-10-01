@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+-   **Agent Experience**
+    -   Bkper CLI Agent has a new look: the startup screen shows the Bkper logo in its account type colors, and new Bkper light and dark themes replace Pi's default colors, following your terminal's light or dark background. Custom themes you selected are kept
+    -   The startup screen no longer breaks in narrow terminals
+    -   Updated Pi to 0.99.2
+
 ## [5.2.0] - 2026-10-01
 
 -   **Agent Experience**
