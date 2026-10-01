@@ -11,7 +11,7 @@ A decision model answers bounded questions about a state. Each answer is typed: 
 | A yes/no, one of known options, or a level on a scale         | A decision model                                                |
 | Text, explanations, code, tool calls, or a custom JSON object | A [language model](https://bkper.com/docs/ai/ai-gateway.md#send-a-complete-request) |
 
-Why bounded, calibrated, and consistent answers suit accounting operations is covered in [AI Fundamentals](https://bkper.com/docs/ai/fundamentals.md#decision-models).
+Why decision models suit accounting operations is covered in [AI Fundamentals](https://bkper.com/docs/ai/fundamentals.md#decision-models).
 
 ## How a request works
 
@@ -244,6 +244,7 @@ TypeSafe's JavaScript SDK, `@typesafe-ai/sdk`, works with Bkper AI and infers an
 
 - **In a Bkper Platform app Worker**, send no `Authorization` header. Platform outbound adds authorization and app attribution.
 - **In scripts and servers**, send your own Bkper access token as a bearer token.
+- **In [Bkper CLI Agent](https://bkper.com/docs/ai/bkper-cli-agent.md#what-it-can-do)**, no setup is needed. Describe the outcome and the agent asks the decision model for you.
 
 See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md#ask-a-decision-model) for the SDK setup in both cases and its limits with Bkper AI.
 
