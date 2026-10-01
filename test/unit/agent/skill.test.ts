@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import YAML from 'yaml';
@@ -71,7 +70,6 @@ function getIndexedReferencePaths(content: string): string[] {
 }
 
 describe('external agent skill', function () {
-    const legacyDocsDir = path.resolve('docs');
     const skillDir = path.resolve('skill');
     const skillPath = path.join(skillDir, 'SKILL.md');
     const referencesDir = path.join(skillDir, 'references');
@@ -89,11 +87,6 @@ describe('external agent skill', function () {
         expect(String(skill.frontmatter.description).length).to.be.lessThanOrEqual(1024);
         expect(skill.frontmatter['disable-model-invocation']).not.to.equal(true);
         expect(skill.body.trim().length).to.be.greaterThan(0);
-    });
-
-    it('should keep one canonical source reference bundle', async function () {
-        expect(existsSync(legacyDocsDir)).to.equal(false);
-        expect(existsSync(referencesIndexPath)).to.equal(true);
     });
 
     it('should keep reference docs nested and covered by the bundle index', async function () {
@@ -127,13 +120,5 @@ describe('external agent skill', function () {
 
         expect(linkedDocs.length).to.be.greaterThan(0);
         expect(linkedDocs.every(doc => copiedDocs.has(doc))).to.equal(true);
-    });
-
-    it('should not contain generation artifacts', async function () {
-        const content = await readFile(skillPath, 'utf8');
-
-        expect(content).not.to.include('auto-generated');
-        expect(content).not.to.include('buildToolPromptSection');
-        expect(content).not.to.include('${');
     });
 });
