@@ -1,5 +1,14 @@
 # Changelog
 
+## [5.2.0] - 2026-10-01
+
+-   **Agent Experience**
+    -   Bkper AI prompt caches now stay warm between prompts. The agent reads each model's cache lifetime from the Bkper AI catalog and defaults `cacheWarming` to `idle`, so long sessions avoid paying to rebuild the cache after a pause. The cache is refreshed only when the expected savings outweigh the cost; an existing `cacheWarming` setting is kept and can be changed with `/settings`
+    -   Prompt history is now shared across open agent sessions: `Ctrl+R` picks up prompts entered in other sessions, and history rotation no longer drops their entries
+-   **App Development**
+    -   Updated the Bkper AI app guidance: ask decision models with TypeSafe's SDK and language models with AI SDK Open Responses, call Bkper AI from scripts and tools outside the platform with a Bkper token, and handle errors from both SDKs
+    -   Bundled the Bkper AI decision models reference with the agent and skill, covering how to write questions and state, read calibrated answers, and turn them into thresholded actions that send uncertain cases to a person
+
 ## [5.1.0] - 2026-09-29
 
 -   **Updates**
