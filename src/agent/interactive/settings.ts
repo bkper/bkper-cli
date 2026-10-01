@@ -201,19 +201,26 @@ export function applyBkperAgentToolSelection(
     return resolved.warning ? [{type: 'warning', message: resolved.warning}] : [];
 }
 
+type WarningSettings = {
+    anthropicExtraUsage?: boolean;
+};
+
 type BkperAgentSettingsDefaultsManager = {
     getGlobalSettings(): {
         showCacheMissNotices?: boolean;
         tuiMode?: TuiMode;
         cacheWarming?: CacheWarmingMode;
+        warnings?: WarningSettings;
     };
     getProjectSettings(): {
         showCacheMissNotices?: boolean;
         tuiMode?: TuiMode;
+        warnings?: WarningSettings;
     };
     setShowCacheMissNotices(show: boolean): void;
     setTuiMode(mode: TuiMode): void;
     setCacheWarmingMode(mode: CacheWarmingMode): void;
+    setWarnings(warnings: WarningSettings): void;
 };
 
 export function applyBkperAgentSettingsDefaults(
@@ -235,6 +242,17 @@ export function applyBkperAgentSettingsDefaults(
 
     if (!hasExplicitTuiMode) {
         settingsManager.setTuiMode('fullscreen');
+    }
+
+    const hasExplicitAnthropicExtraUsageWarning = [
+        globalSettings.warnings?.anthropicExtraUsage,
+        projectSettings.warnings?.anthropicExtraUsage,
+    ].some(value => value !== undefined);
+
+    // Pi warns about Anthropic subscription extra usage by default; the Bkper agent opts out.
+    // setWarnings replaces the global warnings object, so keep any other global warning keys.
+    if (!hasExplicitAnthropicExtraUsageWarning) {
+        settingsManager.setWarnings({...globalSettings.warnings, anthropicExtraUsage: false});
     }
 
     // Pi reads cacheWarming from global settings only. Idle warming bridges the pauses

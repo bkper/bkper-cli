@@ -236,6 +236,7 @@ describe('interactive agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
         const setCacheWarmingMode = sinon.stub();
+        const setWarnings = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
@@ -243,50 +244,63 @@ describe('interactive agent settings', function () {
             setShowCacheMissNotices,
             setTuiMode,
             setCacheWarmingMode,
+            setWarnings,
         });
 
         expect(setShowCacheMissNotices.calledOnceWithExactly(true)).to.be.true;
         expect(setTuiMode.calledOnceWithExactly('fullscreen')).to.be.true;
         expect(setCacheWarmingMode.calledOnceWithExactly('idle')).to.be.true;
+        expect(setWarnings.calledOnceWithExactly({anthropicExtraUsage: false})).to.be.true;
     });
 
     it('preserves explicit global Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
         const setCacheWarmingMode = sinon.stub();
+        const setWarnings = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({
                 showCacheMissNotices: false,
                 tuiMode: 'regular',
                 cacheWarming: 'off',
+                warnings: {anthropicExtraUsage: true},
             }),
             getProjectSettings: () => ({}),
             setShowCacheMissNotices,
             setTuiMode,
             setCacheWarmingMode,
+            setWarnings,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;
         expect(setTuiMode.called).to.be.false;
         expect(setCacheWarmingMode.called).to.be.false;
+        expect(setWarnings.called).to.be.false;
     });
 
     it('preserves explicit project Bkper agent settings', function () {
         const setShowCacheMissNotices = sinon.stub();
         const setTuiMode = sinon.stub();
         const setCacheWarmingMode = sinon.stub();
+        const setWarnings = sinon.stub();
 
         applyBkperAgentSettingsDefaults({
             getGlobalSettings: () => ({}),
-            getProjectSettings: () => ({showCacheMissNotices: false, tuiMode: 'regular'}),
+            getProjectSettings: () => ({
+                showCacheMissNotices: false,
+                tuiMode: 'regular',
+                warnings: {anthropicExtraUsage: true},
+            }),
             setShowCacheMissNotices,
             setTuiMode,
             setCacheWarmingMode,
+            setWarnings,
         });
 
         expect(setShowCacheMissNotices.called).to.be.false;
         expect(setTuiMode.called).to.be.false;
+        expect(setWarnings.called).to.be.false;
     });
 
     it('creates the startup session manager with sessionDir from settings', function () {
