@@ -19,7 +19,7 @@ describe('interactive agent settings', function () {
                 powershell: true,
             })
         ).to.deep.equal({
-            tools: ['read', 'powershell', 'edit', 'write'],
+            tools: ['read', 'powershell', 'edit', 'write', 'codemode'],
         });
         expect(
             resolveBkperAgentTools(undefined, 'linux', {
@@ -27,7 +27,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'bash', 'edit', 'write'],
+            tools: ['read', 'bash', 'edit', 'write', 'codemode'],
         });
     });
 
@@ -39,13 +39,15 @@ describe('interactive agent settings', function () {
         try {
             const diagnostics = applyBkperAgentToolSelection({
                 getDefaultTools: () => undefined,
+                getGlobalSettings: () => ({}),
+                getProjectSettings: () => ({}),
                 getShellPath: () => undefined,
                 applyOverrides,
             });
 
             expect(
                 applyOverrides.calledOnceWithExactly({
-                    defaultTools: ['read', 'powershell', 'edit', 'write'],
+                    defaultTools: ['read', 'powershell', 'edit', 'write', 'codemode'],
                 })
             ).to.be.true;
             expect(diagnostics).to.deep.equal([]);
@@ -65,7 +67,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'bash', 'edit', 'write'],
+            tools: ['read', 'bash', 'edit', 'write', 'codemode'],
             warning: 'PowerShell is unavailable; using Bash instead.',
         });
     });
@@ -77,7 +79,7 @@ describe('interactive agent settings', function () {
                 powershell: false,
             })
         ).to.deep.equal({
-            tools: ['read', 'edit', 'write'],
+            tools: ['read', 'edit', 'write', 'codemode'],
             warning: 'No supported shell is available; command execution is disabled.',
         });
     });
@@ -92,6 +94,124 @@ describe('interactive agent settings', function () {
         ).to.deep.equal({
             tools: ['read', 'powershell', 'edit', 'custom-tool'],
             warning: 'Unavailable configured shell tools were disabled: bash.',
+        });
+    });
+
+    it('keeps an explicit tool selection without adding codemode', function () {
+        expect(
+            resolveBkperAgentTools(['read', 'bash'], 'linux', {
+                bash: true,
+                powershell: false,
+            })
+        ).to.deep.equal({tools: ['read', 'bash']});
+    });
+
+    it('enables codemode from a +codemode settings entry', function () {
+        const settingsManager = SettingsManager.inMemory({
+            defaultTools: ['read', 'bash', '+codemode'],
+        });
+
+        applyBkperAgentToolSelection(settingsManager, 'linux');
+
+        expect(settingsManager.getDefaultTools()).to.deep.equal(['read', 'bash', 'codemode']);
+    });
+
+    it('applies modifier-only settings to the Bkper defaults', function () {
+        const settingsManager = SettingsManager.inMemory({defaultTools: ['+grep']});
+
+        applyBkperAgentToolSelection(settingsManager, 'linux');
+
+        expect(settingsManager.getDefaultTools()).to.deep.equal([
+            'read',
+            'bash',
+            'edit',
+            'write',
+            'codemode',
+            'grep',
+        ]);
+    });
+
+    it('removes only codemode for a -codemode settings entry', function () {
+        const settingsManager = SettingsManager.inMemory({defaultTools: ['-codemode']});
+
+        applyBkperAgentToolSelection(settingsManager, 'linux');
+
+        expect(settingsManager.getDefaultTools()).to.deep.equal(['read', 'bash', 'edit', 'write']);
+    });
+
+    it('keeps PowerShell on Windows for modifier-only settings', function () {
+        const previousOverride = process.env.BKPER_AGENT_FORCE_PLATFORM;
+        process.env.BKPER_AGENT_FORCE_PLATFORM = 'win32';
+
+        try {
+            const settingsManager = SettingsManager.inMemory({defaultTools: ['+grep']});
+
+            applyBkperAgentToolSelection(settingsManager);
+
+            expect(settingsManager.getDefaultTools()).to.deep.equal([
+                'read',
+                'powershell',
+                'edit',
+                'write',
+                'codemode',
+                'grep',
+            ]);
+        } finally {
+            if (previousOverride === undefined) {
+                delete process.env.BKPER_AGENT_FORCE_PLATFORM;
+            } else {
+                process.env.BKPER_AGENT_FORCE_PLATFORM = previousOverride;
+            }
+        }
+    });
+
+    it('applies global then project modifiers in order', function () {
+        const applyOverrides = sinon.stub();
+
+        applyBkperAgentToolSelection(
+            {
+                getDefaultTools: () => ['read', 'bash', 'edit', 'write', 'grep'],
+                getGlobalSettings: () => ({defaultTools: ['+grep']}),
+                getProjectSettings: () => ({defaultTools: ['-codemode']}),
+                getShellPath: () => undefined,
+                applyOverrides,
+            },
+            'linux'
+        );
+
+        expect(
+            applyOverrides.calledOnceWithExactly({
+                defaultTools: ['read', 'bash', 'edit', 'write', 'grep'],
+            })
+        ).to.be.true;
+    });
+
+    it('uses the resolved selection when any settings layer lists plain tool names', function () {
+        const applyOverrides = sinon.stub();
+
+        applyBkperAgentToolSelection(
+            {
+                getDefaultTools: () => ['read', 'grep'],
+                getGlobalSettings: () => ({defaultTools: ['+codemode']}),
+                getProjectSettings: () => ({defaultTools: ['read', 'grep']}),
+                getShellPath: () => undefined,
+                applyOverrides,
+            },
+            'linux'
+        );
+
+        expect(applyOverrides.calledOnceWithExactly({defaultTools: ['read', 'grep']})).to.be
+            .true;
+    });
+
+    it('disables an unavailable shell added by a modifier', function () {
+        expect(
+            resolveBkperAgentTools(undefined, 'linux', {bash: true, powershell: false}, [
+                '+powershell',
+            ])
+        ).to.deep.equal({
+            tools: ['read', 'bash', 'edit', 'write', 'codemode'],
+            warning: 'Unavailable configured shell tools were disabled: powershell.',
         });
     });
 

@@ -47,6 +47,7 @@ describe('Bkper agent built-in extensions', function () {
             registerShortcut: sinon.stub(),
             registerMessageRenderer: sinon.stub(),
             registerProvider: sinon.stub(),
+            registerTool: sinon.stub(),
         } as unknown as ExtensionAPI);
 
         expect(registeredEvents).to.deep.equal([
@@ -54,6 +55,30 @@ describe('Bkper agent built-in extensions', function () {
             'session_start',
             'session_start',
         ]);
+    });
+
+    it('registers the codemode tool inactive so tool selection decides activation', function () {
+        const registerTool = sinon.stub();
+
+        registerBkperAgentBuiltins(
+            {
+                on: sinon.stub() as unknown as ExtensionAPI['on'],
+                registerCommand: sinon.stub(),
+                registerShortcut: sinon.stub(),
+                registerMessageRenderer: sinon.stub(),
+                registerProvider: sinon.stub(),
+                registerTool,
+            } as unknown as ExtensionAPI,
+            sinon.stub().resolves(),
+            undefined,
+            {}
+        );
+
+        const codemodeTools = registerTool.args
+            .map(([tool]) => tool as {name: string; defaultActive?: boolean})
+            .filter(tool => tool.name === 'codemode');
+        expect(codemodeTools).to.have.length(1);
+        expect(codemodeTools[0]?.defaultActive).to.equal(false);
     });
 
     it('registers Bkper AI through Pi standard OpenAI Responses transport', function () {
@@ -68,6 +93,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerProvider: (name: string, config: ProviderConfig) => {
                     providers.push({name, config});
                 },
+                registerTool: sinon.stub(),
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
             undefined,
@@ -100,6 +126,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerShortcut: sinon.stub(),
                 registerMessageRenderer: sinon.stub(),
                 registerProvider,
+                registerTool: sinon.stub(),
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
             undefined,

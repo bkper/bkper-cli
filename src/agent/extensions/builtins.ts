@@ -1,4 +1,5 @@
 import {
+    createCodemodeExtension,
     getAgentDir,
     type Extension,
     type ExtensionAPI,
@@ -120,4 +121,6 @@ export function registerBkperAgentBuiltins(
         dispatchHandoffCommand,
         getBkperHandoffShortcutFromFile(getAgentDir())
     );
+    // Registered inactive; the Bkper default tool selection activates it.
+    createCodemodeExtension()(pi);
 }

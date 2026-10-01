@@ -21,43 +21,116 @@ export interface ResolvedBkperAgentTools {
     warning?: string;
 }
 
+// Always selected so the tool set, and with it the prompt cache, stays stable across turns.
+const CODEMODE_TOOL = 'codemode';
+
+function isToolModifier(entry: unknown): boolean {
+    return typeof entry === 'string' && (entry.startsWith('+') || entry.startsWith('-'));
+}
+
+/** Applies `+name`/`-name` entries in order, as Pi does for `defaultTools`. */
+function applyToolModifiers(tools: string[], modifiers: string[]): string[] {
+    const result = [...tools];
+    for (const modifier of modifiers) {
+        const name = modifier.slice(1);
+        const index = result.indexOf(name);
+        if (modifier.startsWith('+') && index === -1 && name) {
+            result.push(name);
+        } else if (modifier.startsWith('-') && index !== -1) {
+            result.splice(index, 1);
+        }
+    }
+    return result;
+}
+
+/**
+ * Pi resolves a `defaultTools` selection without plain tool names in any settings layer against
+ * its own defaults, which lack codemode and PowerShell. Returns those modifiers, global layer
+ * first, so they can be applied to the Bkper defaults instead.
+ */
+function getModifierOnlyToolSelection(layers: unknown[]): string[] | undefined {
+    const modifiers: string[] = [];
+    for (const layer of layers) {
+        if (layer === undefined) {
+            continue;
+        }
+        if (!isModifierList(layer)) {
+            return undefined;
+        }
+        modifiers.push(...layer);
+    }
+    return modifiers.length > 0 ? modifiers : undefined;
+}
+
+function isModifierList(layer: unknown): layer is string[] {
+    return Array.isArray(layer) && layer.every(isToolModifier);
+}
+
+function disableUnavailableShells(
+    configuredTools: string[],
+    availability: ShellAvailability
+): ResolvedBkperAgentTools {
+    const unavailableShells = configuredTools.filter(
+        tool =>
+            (tool === 'bash' && !availability.bash) ||
+            (tool === 'powershell' && !availability.powershell)
+    );
+    const tools = configuredTools.filter(tool => !unavailableShells.includes(tool));
+    return unavailableShells.length > 0
+        ? {
+              tools,
+              warning: `Unavailable configured shell tools were disabled: ${unavailableShells.join(
+                  ', '
+              )}.`,
+          }
+        : {tools};
+}
+
 export function resolveBkperAgentTools(
     configuredTools: string[] | undefined,
     platform: NodeJS.Platform,
-    availability: ShellAvailability
+    availability: ShellAvailability,
+    toolModifiers: string[] = []
 ): ResolvedBkperAgentTools {
     if (configuredTools) {
-        const unavailableShells = configuredTools.filter(
-            tool =>
-                (tool === 'bash' && !availability.bash) ||
-                (tool === 'powershell' && !availability.powershell)
-        );
-        const tools = configuredTools.filter(tool => !unavailableShells.includes(tool));
-        return unavailableShells.length > 0
-            ? {
-                  tools,
-                  warning: `Unavailable configured shell tools were disabled: ${unavailableShells.join(
-                      ', '
-                  )}.`,
-              }
-            : {tools};
+        return disableUnavailableShells(configuredTools, availability);
     }
 
+    const defaults = selectDefaultBkperAgentTools(platform, availability);
+    if (toolModifiers.length === 0) {
+        return defaults;
+    }
+    const modified = disableUnavailableShells(
+        applyToolModifiers(defaults.tools, toolModifiers),
+        availability
+    );
+    const warnings = [defaults.warning, modified.warning].filter(
+        (warning): warning is string => warning !== undefined
+    );
+    return warnings.length > 0
+        ? {tools: modified.tools, warning: warnings.join(' ')}
+        : {tools: modified.tools};
+}
+
+function selectDefaultBkperAgentTools(
+    platform: NodeJS.Platform,
+    availability: ShellAvailability
+): ResolvedBkperAgentTools {
     if (platform === 'win32' && availability.powershell) {
-        return {tools: ['read', 'powershell', 'edit', 'write']};
+        return {tools: ['read', 'powershell', 'edit', 'write', CODEMODE_TOOL]};
     }
 
     if (availability.bash) {
         return platform === 'win32'
             ? {
-                  tools: ['read', 'bash', 'edit', 'write'],
+                  tools: ['read', 'bash', 'edit', 'write', CODEMODE_TOOL],
                   warning: 'PowerShell is unavailable; using Bash instead.',
               }
-            : {tools: ['read', 'bash', 'edit', 'write']};
+            : {tools: ['read', 'bash', 'edit', 'write', CODEMODE_TOOL]};
     }
 
     return {
-        tools: ['read', 'edit', 'write'],
+        tools: ['read', 'edit', 'write', CODEMODE_TOOL],
         warning: 'No supported shell is available; command execution is disabled.',
     };
 }
@@ -68,6 +141,8 @@ type DefaultToolsSettingsManager = {
 };
 
 type BkperAgentToolSettingsManager = DefaultToolsSettingsManager & {
+    getGlobalSettings(): {defaultTools?: string[]};
+    getProjectSettings(): {defaultTools?: string[]};
     getShellPath(): string | undefined;
 };
 
@@ -109,11 +184,17 @@ export function applyBkperAgentToolSelection(
             effectivePlatform === 'win32' &&
             (forceWindows || canResolveShell(() => getPowerShellConfig())),
     };
-    const resolved = resolveBkperAgentTools(
-        settingsManager.getDefaultTools(),
-        effectivePlatform,
-        availability
-    );
+    const toolModifiers = getModifierOnlyToolSelection([
+        settingsManager.getGlobalSettings().defaultTools,
+        settingsManager.getProjectSettings().defaultTools,
+    ]);
+    const resolved = toolModifiers
+        ? resolveBkperAgentTools(undefined, effectivePlatform, availability, toolModifiers)
+        : resolveBkperAgentTools(
+              settingsManager.getDefaultTools(),
+              effectivePlatform,
+              availability
+          );
 
     overrideDefaultTools(settingsManager, resolved.tools);
 
