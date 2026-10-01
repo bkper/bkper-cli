@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-10-01
+
 -   **Agent Experience**
     -   Bkper CLI Agent has a new look: the startup screen shows the Bkper logo in its account type colors, and new Bkper light and dark themes replace Pi's default colors, following your terminal's light or dark background. Custom themes you selected are kept
     -   The startup screen no longer breaks in narrow terminals
@@ -9,10 +11,7 @@
     -   The agent can now run several tool calls in one JavaScript script (codemode), so batch lookups and large outputs are handled in one step and only the result reaches the conversation. Scripts that write to a Book follow the same rule as single commands: the agent shows the exact script and every change first, and runs it only after you confirm. Codemode is on by default; a `defaultTools` setting you set is kept, and `+codemode` or `-codemode` turns it on or off
     -   Codemode scripts can ask Bkper AI decision models (Jev) bounded questions about many items at once, such as which account fits each bank line, using your Bkper login. Each answer comes with probabilities, so the agent can propose results and send uncertain cases to you for review. Usage counts toward your Bkper AI allowance and shows in the session cost
     -   The agent can now connect to MCP servers you add, such as file storage, email, or other services: add one with `bkper agent mcp add`, check it with `bkper agent mcp list`, sign in with `bkper agent mcp login`, and manage it in a session with `/mcp`. No servers are added by default
-
-## [5.2.0] - 2026-10-01
-
--   **Agent Experience**
+    -   The warning about Anthropic subscription extra usage is now off by default. Set `warnings.anthropicExtraUsage` to `true` in your settings to show it again
     -   Bkper AI prompt caches now stay warm between prompts. The agent reads each model's cache lifetime from the Bkper AI catalog and defaults `cacheWarming` to `idle`, so long sessions avoid paying to rebuild the cache after a pause. The cache is refreshed only when the expected savings outweigh the cost; an existing `cacheWarming` setting is kept and can be changed with `/settings`
     -   Prompt history is now shared across open agent sessions: `Ctrl+R` picks up prompts entered in other sessions, and history rotation no longer drops their entries
 -   **App Development**
