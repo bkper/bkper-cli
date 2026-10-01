@@ -37,10 +37,11 @@
         "clean": "rm -rf ./lib & rm -rf ./node_modules & wait",
         "sync:docs": "bun ./scripts/sync-docs.ts",
         "prebuild": "bun install && bun sync:docs",
-        "build": "run-s build:clean build:compile build:copy-docs",
+        "build": "run-s build:clean build:compile build:copy-docs build:copy-themes",
         "build:clean": "gts clean && rimraf temp",
         "build:compile": "tsc",
         "build:copy-docs": "mkdir -p lib && rm -rf lib/docs && cp -R skill/references lib/docs",
+        "build:copy-themes": "mkdir -p lib/agent && rm -rf lib/agent/themes && cp -R src/agent/themes lib/agent/themes",
         "skill:package": "bun ./scripts/generate-skill-distribution.ts",
         "api:platform": "openapi-typescript https://platform.bkper.app/openapi.json -o src/platform/types.d.ts",
         "api:platform:local": "openapi-typescript http://localhost:8790/openapi.json -o src/platform/types.d.ts",
@@ -62,8 +63,8 @@
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {
-        "@earendil-works/pi-coding-agent": "0.87.1",
-        "@earendil-works/pi-tui": "0.87.1",
+        "@earendil-works/pi-coding-agent": "0.99.2",
+        "@earendil-works/pi-tui": "0.99.2",
         "bkper-js": "^2.42.0",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",

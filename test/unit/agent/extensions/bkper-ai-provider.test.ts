@@ -1,5 +1,5 @@
 import {expect} from '../../helpers/test-setup.js';
-import type {ProviderConfig} from '@earendil-works/pi-coding-agent';
+import type {ProviderConfig, ProviderModelConfig} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {
     findDefaultBkperAiModel,
@@ -15,6 +15,20 @@ function createRefreshContext(): Parameters<
         publish: async () => true,
         signal: new AbortController().signal,
     };
+}
+
+type ProviderChatModelConfig = Extract<ProviderModelConfig, {type?: 'chat'}>;
+
+function isChatModel(model: ProviderModelConfig): model is ProviderChatModelConfig {
+    return model.type === undefined || model.type === 'chat';
+}
+
+/** Refreshes the catalog and asserts the provider only offers chat models. */
+async function refreshChatModels(config: ProviderConfig): Promise<ProviderChatModelConfig[]> {
+    const models = (await config.refreshModels?.(createRefreshContext())) ?? [];
+    const chatModels = models.filter(isChatModel);
+    expect(chatModels).to.have.length(models.length);
+    return chatModels;
 }
 
 describe('agent/bkper-ai-provider', function () {
@@ -68,7 +82,7 @@ describe('agent/bkper-ai-provider', function () {
         );
 
         expect(config.models).to.deep.equal([]);
-        const models = await config.refreshModels?.(createRefreshContext());
+        const models = await refreshChatModels(config);
 
         expect(fetchModels.calledOnce).to.equal(true);
         expect(fetchModels.firstCall.args[0]).to.equal('https://ai-dev.bkper.app/v1/models');
@@ -161,6 +175,49 @@ describe('agent/bkper-ai-provider', function () {
         expect(await config.refreshModels?.(createRefreshContext())).to.deep.equal([]);
     });
 
+    it('skips decision models listed in the catalog', async function () {
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({
+                default_model: 'vision',
+                data: [
+                    {
+                        id: 'jev',
+                        object: 'model',
+                        type: 'decision',
+                        input_modalities: ['text'],
+                        pricing: {
+                            inputNanoUsdPerToken: 0,
+                            cachedInputNanoUsdPerToken: 0,
+                            cacheWriteNanoUsdPerToken: 0,
+                            outputNanoUsdPerToken: 0,
+                        },
+                        context_window: 128000,
+                        max_state_question_tokens: 8192,
+                        question_types: ['noul', 'choice', 'score'],
+                    },
+                    {
+                        id: 'vision',
+                        object: 'model',
+                        input_modalities: ['text', 'image'],
+                        pricing: {
+                            inputNanoUsdPerToken: 0,
+                            cachedInputNanoUsdPerToken: 0,
+                            cacheWriteNanoUsdPerToken: 0,
+                            outputNanoUsdPerToken: 0,
+                        },
+                        context_window: 128000,
+                        max_output_tokens: 8192,
+                        thinking_levels: ['low'],
+                    },
+                ],
+            }))
+        ));
+
+        const models = await refreshChatModels(config);
+
+        expect(models.map(model => model.id)).to.deep.equal(['vision']);
+    });
+
     it('enables cache warming only for models with a catalog prompt cache lifetime', async function () {
         const catalogModel = (id: string, promptCacheTtlSeconds?: unknown) => ({
             id,
@@ -188,9 +245,9 @@ describe('agent/bkper-ai-provider', function () {
             }))
         ));
 
-        const models = await config.refreshModels?.(createRefreshContext());
+        const models = await refreshChatModels(config);
 
-        expect(models?.map(model => [model.id, model.promptCache])).to.deep.equal([
+        expect(models.map(model => [model.id, model.promptCache])).to.deep.equal([
             ['documented', {short: 300}],
             ['undocumented', undefined],
             ['invalid', undefined],

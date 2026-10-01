@@ -62,11 +62,31 @@ export function resolveBkperAgentTools(
     };
 }
 
-type BkperAgentToolSettingsManager = {
+type DefaultToolsSettingsManager = {
     getDefaultTools(): string[] | undefined;
-    getShellPath(): string | undefined;
     applyOverrides(overrides: {defaultTools: string[]}): void;
 };
+
+type BkperAgentToolSettingsManager = DefaultToolsSettingsManager & {
+    getShellPath(): string | undefined;
+};
+
+/**
+ * Replaces the effective `defaultTools` selection. Pi appends an override without plain tool
+ * names, including an empty list, to the inherited selection, so an empty selection is
+ * expressed as removal of every currently selected tool.
+ */
+export function overrideDefaultTools(
+    settingsManager: DefaultToolsSettingsManager,
+    tools: string[]
+): void {
+    settingsManager.applyOverrides({
+        defaultTools:
+            tools.length > 0
+                ? tools
+                : (settingsManager.getDefaultTools() ?? []).map(tool => `-${tool}`),
+    });
+}
 
 function canResolveShell(resolve: () => unknown): boolean {
     try {
@@ -95,7 +115,7 @@ export function applyBkperAgentToolSelection(
         availability
     );
 
-    settingsManager.applyOverrides({defaultTools: resolved.tools});
+    overrideDefaultTools(settingsManager, resolved.tools);
 
     return resolved.warning ? [{type: 'warning', message: resolved.warning}] : [];
 }

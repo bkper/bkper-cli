@@ -1,4 +1,4 @@
-import {getKeybindings} from '@earendil-works/pi-tui';
+import {getKeybindings, truncateToWidth, visibleWidth} from '@earendil-works/pi-tui';
 import {
     getShellConfig,
     keyText,
@@ -13,6 +13,7 @@ import {
 } from '../interactive/session-keybindings.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperHandoffShortcut} from './handoff.js';
+import {getBkperLogoLines} from './startup-logo.js';
 
 type StartupHeaderComponent = {
     render: (width: number) => string[];
@@ -27,7 +28,10 @@ type ModelRegistryLike = {
     getAvailable(): unknown[];
 };
 
+type StartupHint = {key: string; description: string};
+
 const STARTUP_LEFT_PADDING = ' ';
+const HINT_COLUMN_GAP = '    ';
 const NO_MODELS_STARTUP_HINT =
     'No AI model provider configured. Use /login for Bkper AI or /connect for another ' +
     'model provider.';
@@ -82,17 +86,32 @@ function wrapStartupHeaderLine(line: string, width: number): string[] {
     return wrappedLines;
 }
 
-const BKPER_BANNER = [
-    '██████╗ ██╗  ██╗██████╗ ███████╗██████╗ ',
-    '██╔══██╗██║ ██╔╝██╔══██╗██╔════╝██╔══██╗',
-    '██████╔╝█████╔╝ ██████╔╝█████╗  ██████╔╝',
-    '██╔══██╗██╔═██╗ ██╔═══╝ ██╔══╝  ██╔══██╗',
-    '██████╔╝██║  ██╗██║     ███████╗██║  ██║',
-    '╚═════╝ ╚═╝  ╚═╝╚═╝     ╚══════╝╚═╝  ╚═╝',
-];
+function formatStartupHint(theme: Theme, hint: StartupHint): string {
+    return theme.fg('accent', hint.key) + theme.fg('muted', ` ${hint.description}`);
+}
 
-function formatStartupHint(theme: Theme, key: string, description: string): string {
-    return theme.fg('dim', key) + theme.fg('muted', ` ${description}`);
+/**
+ * Lays hints out in two columns when both fit in the width, filling the left column first so
+ * related hints stay together; otherwise one column.
+ */
+function layoutStartupHints(theme: Theme, hints: StartupHint[], width: number): string[] {
+    const cells = hints.map(hint => formatStartupHint(theme, hint));
+    const leftCount = Math.ceil(cells.length / 2);
+    const left = cells.slice(0, leftCount);
+    const right = cells.slice(leftCount);
+    const leftWidth = Math.max(0, ...left.map(visibleWidth));
+    const rightWidth = Math.max(0, ...right.map(visibleWidth));
+
+    if (leftWidth + HINT_COLUMN_GAP.length + rightWidth > width) {
+        return cells;
+    }
+
+    return left.map((cell, index) => {
+        const rightCell = right[index];
+        return rightCell === undefined
+            ? cell
+            : cell + ' '.repeat(leftWidth - visibleWidth(cell)) + HINT_COLUMN_GAP + rightCell;
+    });
 }
 
 function isBashAvailable(shellPath?: string): boolean {
@@ -109,71 +128,69 @@ function formatHandoffStartupCommand(): string {
     return shortcut ? `/handoff (${shortcut})` : '/handoff';
 }
 
+function getStartupHints(showBashShortcut: boolean): StartupHint[] {
+    const showPromptHistory = !isShortcutClaimedByUserBinding(
+        getKeybindings().getUserBindings(),
+        undefined,
+        PROMPT_HISTORY_SHORTCUT
+    );
+
+    return [
+        {key: keyText('app.interrupt'), description: 'to interrupt'},
+        {key: keyText('app.clear'), description: 'to clear'},
+        {key: `${keyText('app.clear')} twice`, description: 'to exit'},
+        ...(showPromptHistory
+            ? [{key: PROMPT_HISTORY_SHORTCUT, description: 'to search prompt history'}]
+            : []),
+        {key: '/', description: 'for commands'},
+        ...(showBashShortcut ? [{key: '!', description: 'to run bash'}] : []),
+        {key: '/new', description: 'to start new session'},
+        {
+            key: formatBkperSessionCommandShortcut('/resume', 'app.session.resume'),
+            description: 'to resume a session',
+        },
+        {key: '/clone', description: 'to duplicate session'},
+        {
+            key: formatBkperSessionCommandShortcut('/fork', 'app.session.fork'),
+            description: 'to branch from a message',
+        },
+        {
+            key: formatBkperSessionCommandShortcut('/tree', 'app.session.tree'),
+            description: 'for session tree',
+        },
+        {key: formatHandoffStartupCommand(), description: 'to continue in a focused session'},
+    ];
+}
+
 function buildStartupHeaderLines(
     theme: Theme,
     modelRegistry: ModelRegistryLike,
     width: number,
     showBashShortcut: boolean
 ): string[] {
+    const contentWidth = Math.max(1, width - STARTUP_LEFT_PADDING.length);
+    const logo = getBkperLogoLines(contentWidth, theme.getColorMode());
     const lines = [
-        ...BKPER_BANNER.map(line => theme.bold(theme.fg('accent', line))),
-        theme.fg('muted', `powered by `) + theme.fg('dim', `pi v${PI_VERSION}`),
+        ...logo,
+        ...(logo.length > 0 ? [''] : []),
+        theme.fg('muted', 'powered by ') + theme.fg('dim', `pi v${PI_VERSION}`),
         '',
-        formatStartupHint(theme, keyText('app.interrupt'), 'to interrupt'),
-        formatStartupHint(theme, keyText('app.clear'), 'to clear'),
-        formatStartupHint(theme, `${keyText('app.clear')} twice`, 'to exit'),
-        ...(!isShortcutClaimedByUserBinding(
-            getKeybindings().getUserBindings(),
-            undefined,
-            PROMPT_HISTORY_SHORTCUT
-        )
-            ? [
-                  formatStartupHint(
-                      theme,
-                      PROMPT_HISTORY_SHORTCUT,
-                      'to search prompt history'
-                  ),
-              ]
-            : []),
-        formatStartupHint(theme, '/', 'for commands'),
-        formatStartupHint(theme, '/new', 'to start new session'),
-        formatStartupHint(
-            theme,
-            formatBkperSessionCommandShortcut('/resume', 'app.session.resume'),
-            'to resume a session'
-        ),
-        formatStartupHint(theme, '/clone', 'to duplicate session'),
-        formatStartupHint(
-            theme,
-            formatBkperSessionCommandShortcut('/fork', 'app.session.fork'),
-            'to branch from a message'
-        ),
-        formatStartupHint(
-            theme,
-            formatBkperSessionCommandShortcut('/tree', 'app.session.tree'),
-            'for session tree'
-        ),
-        formatStartupHint(
-            theme,
-            formatHandoffStartupCommand(),
-            'to continue in a focused session'
-        ),
+        ...layoutStartupHints(theme, getStartupHints(showBashShortcut), contentWidth),
     ];
-
-    if (showBashShortcut) {
-        lines.push(formatStartupHint(theme, '!', 'to run bash'));
-    }
 
     if (modelRegistry.getAvailable().length === 0) {
         lines.push(
             '',
-            ...wrapStartupHeaderLine(NO_MODELS_STARTUP_HINT, width).map(line =>
+            ...wrapStartupHeaderLine(NO_MODELS_STARTUP_HINT, contentWidth).map(line =>
                 theme.fg('warning', line)
             )
         );
     }
 
-    return lines.map(line => (line.length > 0 ? STARTUP_LEFT_PADDING + line : line));
+    // The TUI rejects lines wider than the terminal, so narrow terminals truncate hints.
+    return lines.map(line =>
+        line.length > 0 ? STARTUP_LEFT_PADDING + truncateToWidth(line, contentWidth) : line
+    );
 }
 
 function createStartupHeaderFactory(

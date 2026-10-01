@@ -1,5 +1,6 @@
 import path from 'node:path';
 import sinon from 'sinon';
+import {SettingsManager} from '@earendil-works/pi-coding-agent';
 import {expect} from '../../helpers/test-setup.js';
 import {
     applyBkperAgentSettingsDefaults,
@@ -92,6 +93,23 @@ describe('interactive agent settings', function () {
             tools: ['read', 'powershell', 'edit', 'custom-tool'],
             warning: 'Unavailable configured shell tools were disabled: bash.',
         });
+    });
+
+    it('disables configured shells even when no configured tool remains', function () {
+        const settingsManager = SettingsManager.inMemory({
+            defaultTools: ['bash'],
+            shellPath: path.join(REPO_ROOT, 'missing-shell'),
+        });
+
+        const diagnostics = applyBkperAgentToolSelection(settingsManager, 'linux');
+
+        expect(settingsManager.getDefaultTools()).to.deep.equal([]);
+        expect(diagnostics).to.deep.equal([
+            {
+                type: 'warning',
+                message: 'Unavailable configured shell tools were disabled: bash.',
+            },
+        ]);
     });
 
     it('persists Bkper agent defaults when no user settings are present', function () {

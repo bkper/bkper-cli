@@ -29,7 +29,9 @@ import {
     applyBkperAgentToolSelection,
     collectSettingsDiagnostics,
     createStartupSessionManager,
+    overrideDefaultTools,
 } from './settings.js';
+import {getBkperThemesDir, resolveBkperInitialThemeSetting} from './themes.js';
 
 export interface AgentModeDependencies {
     createRuntime: () => Promise<{
@@ -103,6 +105,7 @@ export function createAgentModeDependencies(
                     settingsManager,
                     modelRuntime,
                     resourceLoaderOptions: {
+                        additionalThemePaths: [getBkperThemesDir()],
                         systemPromptOverride: () =>
                             getBkperAgentSystemPrompt(selectedTools),
                         extensionFactories: [
@@ -124,7 +127,7 @@ export function createAgentModeDependencies(
                     },
                 });
                 applyBkperAgentSettingsDefaults(settingsManager);
-                settingsManager.applyOverrides({defaultTools: selectedTools});
+                overrideDefaultTools(settingsManager, selectedTools);
                 const restoredSessionOptions = restorePersistedSessionOptions(
                     settingsManager,
                     {
@@ -187,6 +190,9 @@ export function createAgentModeDependencies(
         createInteractiveMode: (runtime, modelFallbackMessage) =>
             new BkperInteractiveMode(runtime, {
                 modelFallbackMessage,
+                initialThemeSetting: resolveBkperInitialThemeSetting(
+                    runtime.services.settingsManager
+                ),
             }),
     };
 }

@@ -165,6 +165,25 @@ describe('Bkper agent built-in extensions', function () {
         );
     });
 
+    it('keeps built-ins out of the loaded extensions listing but lists user extensions', function () {
+        const normalized = normalizeBkperAgentExtensions(
+            {
+                extensions: [
+                    createLoadedExtension('<inline:1>'),
+                    createLoadedExtension('/tmp/user-extension.ts'),
+                ],
+                errors: [],
+                runtime: createExtensionRuntime(),
+            },
+            {verbose: false}
+        );
+
+        expect(normalized.extensions.map(extension => extension.hidden === true)).to.deep.equal([
+            true,
+            false,
+        ]);
+    });
+
     it('shows the canonical built-in extension name in diagnostics', function () {
         const normalized = normalizeBkperAgentExtensionErrors(
             [
