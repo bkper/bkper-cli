@@ -5,6 +5,9 @@
 -   **Agent Experience**
     -   Updated Pi to 1.0.0
     -   The `quietStartup: "header"` setting keeps the Bkper startup header (logo, version, and key hints) while hiding the rest of the startup output
+    -   When you ask the agent to rank, score, classify, or filter many items, such as finding the most frustrated customers in a set of support conversations, it now uses Bkper AI decision models (Jev) in a codemode script on its own, instead of reading every item itself. Only the counts and the selected items reach the conversation
+    -   Codemode's instructions to the agent now come from Pi itself, so they stay current as Pi updates
+    -   The Bkper core concepts reference now loads as part of the agent's instructions instead of a conversation message, so it stays in effect for the whole session, including after compaction, and keeps prompt caching working on models that support it
 
 ## [5.2.0] - 2026-10-01
 
