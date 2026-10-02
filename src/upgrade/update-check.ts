@@ -27,6 +27,12 @@ import { isNewerVersion } from './upgrade.js';
 /** At most one npm check (and install attempt) per installed copy per day. */
 export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Interactive agent sessions check on every start. The short gap only keeps
+ * sessions opened together from running overlapping global installs.
+ */
+export const AGENT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
 const REGISTRY_TIMEOUT_MS = 3000;
 const STALE_LOCK_MS = 5000;
 
@@ -163,24 +169,27 @@ function spawnUpdateWorker(): void {
 export interface StartUpdateCheckOptions {
     cachePath?: string;
     now?: number;
+    intervalMs?: number;
     env?: Env;
     spawnWorker?: () => void;
 }
 
 /**
- * Starts the detached update worker when the last attempt is older than a day.
+ * Starts the detached update worker when the last attempt is older than the
+ * interval (a day by default).
  * Never blocks the running command and never installs in this process.
  */
 export function maybeStartUpdateCheck(options: StartUpdateCheckOptions = {}): boolean {
     const cachePath = options.cachePath ?? getUpdateCachePath();
     const now = options.now ?? Date.now();
+    const intervalMs = options.intervalMs ?? CHECK_INTERVAL_MS;
     if (isUpdateCheckDisabled(options.env ?? process.env)) {
         return false;
     }
 
     const claimed = withLock(cachePath, () => {
         const state = readUpdateState(cachePath);
-        if (state.lastAttemptedAt !== undefined && now - state.lastAttemptedAt < CHECK_INTERVAL_MS) {
+        if (state.lastAttemptedAt !== undefined && now - state.lastAttemptedAt < intervalMs) {
             return false;
         }
         return writeUpdateState({ ...state, lastAttemptedAt: now }, cachePath);

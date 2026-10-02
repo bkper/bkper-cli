@@ -8,6 +8,7 @@ export {
 } from './installation.js';
 export { foregroundUpgrade, isNewerVersion, runUpgrade } from './upgrade.js';
 export {
+    AGENT_CHECK_INTERVAL_MS,
     formatUpdateNotice,
     getUpdateNotice,
     isUpdateCheckDisabled,
@@ -16,4 +17,4 @@ export {
     runCommandUpdateCheck,
 } from './update-check.js';
 export type { InstallMethod, SelfUpdatePlan } from './installation.js';
-export type { UpdateNotice } from './update-check.js';
+export type { StartUpdateCheckOptions, UpdateNotice } from './update-check.js';

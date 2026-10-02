@@ -1,6 +1,13 @@
 import {expect} from '../helpers/test-setup.js';
 import sinon from 'sinon';
-import {runStartupMaintenance} from '../../../src/agent/startup-maintenance.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import {
+    runStartupMaintenance,
+    startAgentUpdateCheck,
+} from '../../../src/agent/startup-maintenance.js';
+import {writeUpdateState} from '../../../src/upgrade/update-check.js';
 
 describe('agent startup maintenance', function () {
     const originalDisableAutoUpdate = process.env.BKPER_DISABLE_AUTOUPDATE;
@@ -33,6 +40,30 @@ describe('agent startup maintenance', function () {
 
         expect(startUpdateCheck.calledOnce).to.be.true;
         expect(notify.called).to.be.false;
+    });
+
+    it('should check on every start instead of once a day', async function () {
+        const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bkper-startup-maintenance-'));
+        try {
+            const cachePath = path.join(tempDir, 'copy.json');
+            const spawnWorker = sinon.stub();
+            // Checked an hour ago: plain commands wait a day, the agent checks again.
+            const now = Date.now();
+            writeUpdateState({lastAttemptedAt: now - 60 * 60 * 1000}, cachePath);
+
+            await runStartupMaintenance(
+                {notify: sinon.stub()},
+                {
+                    readNotice: () => undefined,
+                    startUpdateCheck: () =>
+                        startAgentUpdateCheck({cachePath, now, env: {}, spawnWorker}),
+                }
+            );
+
+            expect(spawnWorker.calledOnce).to.be.true;
+        } finally {
+            fs.rmSync(tempDir, {recursive: true, force: true});
+        }
     });
 
     it('should ask for a restart when a newer version was installed', async function () {

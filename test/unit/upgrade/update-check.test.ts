@@ -4,6 +4,7 @@ import path from 'node:path';
 import sinon from 'sinon';
 import {expect} from '../helpers/test-setup.js';
 import {
+    AGENT_CHECK_INTERVAL_MS,
     CHECK_INTERVAL_MS,
     formatUpdateNotice,
     getUpdateCachePath,
@@ -93,6 +94,31 @@ describe('update check', function () {
                 maybeStartUpdateCheck({
                     cachePath,
                     now: 1000 + CHECK_INTERVAL_MS,
+                    env: {},
+                    spawnWorker,
+                })
+            ).to.be.true;
+            expect(spawnWorker.calledOnce).to.be.true;
+        });
+
+        it('should honor a custom interval', function () {
+            const spawnWorker = sinon.stub();
+            writeUpdateState({lastAttemptedAt: 1000}, cachePath);
+
+            expect(
+                maybeStartUpdateCheck({
+                    cachePath,
+                    now: 1000 + AGENT_CHECK_INTERVAL_MS - 1,
+                    intervalMs: AGENT_CHECK_INTERVAL_MS,
+                    env: {},
+                    spawnWorker,
+                })
+            ).to.be.false;
+            expect(
+                maybeStartUpdateCheck({
+                    cachePath,
+                    now: 1000 + AGENT_CHECK_INTERVAL_MS,
+                    intervalMs: AGENT_CHECK_INTERVAL_MS,
                     env: {},
                     spawnWorker,
                 })

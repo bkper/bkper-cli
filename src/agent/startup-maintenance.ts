@@ -1,9 +1,11 @@
 import {
+    AGENT_CHECK_INTERVAL_MS,
     formatUpdateNotice,
     getUpdateNotice,
     isUpdateCheckDisabled,
     maybeStartUpdateCheck,
     readUpdateState,
+    type StartUpdateCheckOptions,
     type UpdateNotice,
 } from '../upgrade/index.js';
 
@@ -18,10 +20,18 @@ export interface StartupMaintenanceDependencies {
     startUpdateCheck: () => boolean;
 }
 
+/**
+ * Unlike plain commands (once a day), interactive sessions check on every
+ * start, so new releases are picked up by the next session.
+ */
+export function startAgentUpdateCheck(options: StartUpdateCheckOptions = {}): boolean {
+    return maybeStartUpdateCheck({...options, intervalMs: AGENT_CHECK_INTERVAL_MS});
+}
+
 function createDefaultDependencies(): StartupMaintenanceDependencies {
     return {
         readNotice: () => getUpdateNotice(readUpdateState()),
-        startUpdateCheck: () => maybeStartUpdateCheck(),
+        startUpdateCheck: () => startAgentUpdateCheck(),
     };
 }
 
