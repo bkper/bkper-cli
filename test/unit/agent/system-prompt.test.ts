@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { createCodemodeExtension, type ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { expect } from '../helpers/test-setup.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 
@@ -28,6 +29,33 @@ describe('agent system prompt', function () {
         const full = getBkperAgentSystemPrompt(['read', 'bash', 'edit', 'write', 'codemode']);
 
         expect(full).to.include('- codemode:');
+    });
+
+    it("carries Pi's own codemode snippet and guidelines when codemode is selected", function () {
+        let snippet: string | undefined;
+        let guidelines: string[] = [];
+        const registrar: Pick<ExtensionAPI, 'registerTool'> = {
+            registerTool: tool => {
+                snippet = tool.promptSnippet;
+                guidelines = tool.promptGuidelines ?? [];
+            },
+        };
+        createCodemodeExtension()(registrar as ExtensionAPI);
+
+        const full = getBkperAgentSystemPrompt(['read', 'bash', 'edit', 'write', 'codemode']);
+
+        expect(snippet).to.be.a('string').that.is.not.empty;
+        expect(guidelines).to.not.be.empty;
+        expect(full).to.include(`- codemode: ${snippet}`);
+        for (const guideline of guidelines) {
+            expect(full).to.include(`- ${guideline}`);
+        }
+    });
+
+    it('steers judgments across many items to codemode classifiers when codemode is selected', function () {
+        const full = getBkperAgentSystemPrompt(['read', 'bash', 'edit', 'write', 'codemode']);
+
+        expect(full).to.include('models.classify(');
     });
 
     it('omits codemode guidance when codemode is not selected', function () {

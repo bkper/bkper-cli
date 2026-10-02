@@ -1,9 +1,11 @@
 import {
     createBashToolDefinition,
+    createCodemodeExtension,
     createEditToolDefinition,
     createPowerShellToolDefinition,
     createReadToolDefinition,
     createWriteToolDefinition,
+    type ExtensionAPI,
 } from '@earendil-works/pi-coding-agent';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -81,24 +83,50 @@ function getCodingToolDefinitions(selectedTools: string[]) {
     ].filter(definition => selectedTools.includes(definition.name));
 }
 
-// Pi drops tool prompt snippets and guidelines when the system prompt is replaced, and does not
-// export codemode's, so Bkper describes codemode itself.
-const CODEMODE_PROMPT_SNIPPET =
-    'Run JavaScript that calls other tools (chains, loops, Promise.all, filtering large results)';
-const CODEMODE_PROMPT_GUIDELINES = [
-    'Use codemode, not shell loops or jq pipelines, to repeat commands across items, chain their output, or filter large results.',
-    'Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item\'s result.',
-];
+interface ToolPromptContribution {
+    snippet?: string;
+    guidelines: string[];
+}
+
+/**
+ * Pi exports codemode only as an extension factory, not its tool definition, so the snippet
+ * and guidelines are read from the definition the factory registers. The factory calls nothing
+ * but registerTool while registering; settings and session entries are read later, in closures.
+ */
+function getCodemodePromptContribution(): ToolPromptContribution {
+    const contribution: ToolPromptContribution = {guidelines: []};
+    const registrar: Pick<ExtensionAPI, 'registerTool'> = {
+        registerTool: tool => {
+            contribution.snippet = normalizePromptSnippet(tool.promptSnippet);
+            contribution.guidelines = normalizePromptGuidelines(tool.promptGuidelines);
+        },
+    };
+    void createCodemodeExtension()(registrar as ExtensionAPI);
+    return contribution;
+}
+
+// Bkper's additions to Pi's codemode guidelines.
+function getBkperCodemodeGuidelines(codemodeDocsPath: string): string[] {
+    return [
+        'Use codemode, not shell loops or jq pipelines, to repeat commands across items.',
+        `For judgments across many items — rank, score, classify, or filter by sentiment, urgency, relevance, or quality — do not read the items yourself: in one codemode script, load them, run a classifier with models.classify() per item, and return only counts and the selected items. Read ${codemodeDocsPath} first; find classifiers with models.getAvailableOfType("classifier").`,
+        'Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item\'s result.',
+    ];
+}
 
 function buildToolPromptSection(selectedTools: string[]): string {
+    // Pi drops tool prompt snippets and guidelines when the system prompt is replaced, so
+    // Bkper adds them from the tool definitions.
     const toolDefinitions = getCodingToolDefinitions(selectedTools);
-    const hasCodemode = selectedTools.includes('codemode');
+    const codemode = selectedTools.includes('codemode')
+        ? getCodemodePromptContribution()
+        : undefined;
     const toolLines = [
         ...toolDefinitions.flatMap(definition => {
             const snippet = normalizePromptSnippet(definition.promptSnippet);
             return snippet ? [`- ${definition.name}: ${snippet}`] : [];
         }),
-        ...(hasCodemode ? [`- codemode: ${CODEMODE_PROMPT_SNIPPET}`] : []),
+        ...(codemode?.snippet ? [`- codemode: ${codemode.snippet}`] : []),
     ].join('\n');
 
     const guidelineLines: string[] = [];
@@ -126,8 +154,11 @@ function buildToolPromptSection(selectedTools: string[]): string {
             addGuideline(guideline);
         }
     }
-    if (hasCodemode) {
-        CODEMODE_PROMPT_GUIDELINES.forEach(addGuideline);
+    if (codemode) {
+        codemode.guidelines.forEach(addGuideline);
+        getBkperCodemodeGuidelines(
+            path.resolve(resolvePiPackageRoot(), 'docs', 'codemode.md')
+        ).forEach(addGuideline);
     }
     addGuideline('Do not claim builds, tests, or command results unless you actually ran them.');
 
