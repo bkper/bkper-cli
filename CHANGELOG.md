@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-10-02
+
 -   **Agent Experience**
     -   Updated Pi to 1.0.0
     -   The `quietStartup: "header"` setting keeps the Bkper startup header (logo, version, and key hints) while hiding the rest of the startup output
