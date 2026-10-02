@@ -6,7 +6,9 @@ import {
 import {
     getKeybindings,
     KeybindingsManager,
+    rgbColor,
     setKeybindings,
+    TuiAltScreen,
     visibleWidth,
     type KeybindingsConfig,
     type TuiMouseEvent,
@@ -123,51 +125,86 @@ function registerStartupExtension(
     };
 }
 
-describe('Bkper agent startup extension', function () {
-    it('leaves logo clicks unhandled outside fullscreen mode', async function () {
-        let startupHeaderFactory: StartupHeaderFactory | undefined;
-        const {sessionStartHandler} = registerStartupExtension(undefined, undefined, undefined, true);
-        await sessionStartHandler(
-            {},
-            {
-                ui: {
-                    notify: sinon.stub(),
-                    setHeader: factory => {
-                        startupHeaderFactory = factory;
-                    },
-                },
-                modelRegistry: {getAvailable: () => []},
-            }
-        );
-        const mainScreenTui = {hasOverlay: () => false, getScreenLines: () => []};
-        const header = startupHeaderFactory?.(mainScreenTui, createThemeStub());
-        header?.render(120);
+function createClick(x: number, y: number): TuiMouseEvent {
+    return {
+        type: 'click',
+        button: 'left',
+        x,
+        y,
+        screenX: x,
+        screenY: y + 1,
+        width: 120,
+        height: 30,
+        shift: false,
+        alt: false,
+        ctrl: false,
+    };
+}
 
-        const clickOnMark: TuiMouseEvent = {
-            type: 'click',
-            button: 'left',
-            x: 3,
-            y: 2,
-            screenX: 3,
-            screenY: 3,
-            width: 120,
-            height: 20,
-            shift: false,
-            alt: false,
-            ctrl: false,
-        };
-        expect(header?.handleMouse).to.be.a('function');
-        expect(header?.handleMouse?.(clickOnMark)).to.equal(undefined);
+/** A fullscreen TUI that captures the screen and then finds an overlay, so the animation never starts. */
+function createFullscreenTuiStub(): TuiAltScreen {
+    let overlayChecks = 0;
+    return Object.assign(Object.create(TuiAltScreen.prototype) as TuiAltScreen, {
+        hasOverlay: () => overlayChecks++ > 0,
+        getScreenLines: () => [],
+        queryTerminalColors: async () => ({}),
+    });
+}
+
+async function createStartupHeader(tui: unknown): Promise<ReturnType<StartupHeaderFactory>> {
+    let startupHeaderFactory: StartupHeaderFactory | undefined;
+    const {sessionStartHandler} = registerStartupExtension(undefined, undefined, undefined, true);
+    await sessionStartHandler(
+        {},
+        {
+            ui: {
+                notify: sinon.stub(),
+                setHeader: factory => {
+                    startupHeaderFactory = factory;
+                },
+            },
+            modelRegistry: {getAvailable: () => []},
+        }
+    );
+    expect(startupHeaderFactory).to.not.equal(undefined);
+    const theme = {
+        ...createThemeStub(),
+        appearance: 'dark',
+        colors: {
+            text: rgbColor(220, 220, 220),
+            muted: rgbColor(150, 150, 150),
+            dim: rgbColor(100, 100, 100),
+        },
+    };
+    const header = (startupHeaderFactory as StartupHeaderFactory)(tui, theme);
+    header.render(120);
+    return header;
+}
+
+describe('Bkper agent startup extension', function () {
+    it('plays the logo easter egg from a click anywhere on the header in fullscreen mode', async function () {
+        const header = await createStartupHeader(createFullscreenTuiStub());
+
+        expect(header?.handleMouse?.(createClick(40, 15))).to.deep.equal({handled: true});
+        expect(header?.handleMouse?.({...createClick(40, 15), button: 'right'})).to.equal(
+            undefined
+        );
+        await new Promise(resolve => setImmediate(resolve));
+    });
+
+    it('leaves header clicks unhandled outside fullscreen mode', async function () {
+        const mainScreenTui = {hasOverlay: () => false, getScreenLines: () => []};
+        const header = await createStartupHeader(mainScreenTui);
+
+        expect(header?.handleMouse?.(createClick(3, 2))).to.equal(undefined);
     });
 
     it('replaces the Pi startup header with Bkper hints and starts maintenance once', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;
-        const setHeader = sinon
-            .stub()
-            .callsFake((factory: StartupHeaderFactory | undefined) => {
-                startupHeaderFactory = factory;
-            });
+        const setHeader = sinon.stub().callsFake((factory: StartupHeaderFactory | undefined) => {
+            startupHeaderFactory = factory;
+        });
 
         const {sessionStartHandler, startupMaintenance} = registerStartupExtension();
 
@@ -222,19 +259,14 @@ describe('Bkper agent startup extension', function () {
     it('hides the Bash shortcut when Bash is not a selected tool', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;
-        const setHeader = sinon
-            .stub()
-            .callsFake((factory: StartupHeaderFactory | undefined) => {
-                startupHeaderFactory = factory;
-            });
+        const setHeader = sinon.stub().callsFake((factory: StartupHeaderFactory | undefined) => {
+            startupHeaderFactory = factory;
+        });
 
-        const {sessionStartHandler} = registerStartupExtension(
-            sinon.stub().resolves(),
-            {
-                getQuietStartup: () => false,
-                getDefaultTools: () => ['read', 'powershell', 'edit', 'write'],
-            }
-        );
+        const {sessionStartHandler} = registerStartupExtension(sinon.stub().resolves(), {
+            getQuietStartup: () => false,
+            getDefaultTools: () => ['read', 'powershell', 'edit', 'write'],
+        });
 
         await sessionStartHandler(
             {},
@@ -323,11 +355,9 @@ describe('Bkper agent startup extension', function () {
     it('shows a setup hint when no models are available', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;
-        const setHeader = sinon
-            .stub()
-            .callsFake((factory: StartupHeaderFactory | undefined) => {
-                startupHeaderFactory = factory;
-            });
+        const setHeader = sinon.stub().callsFake((factory: StartupHeaderFactory | undefined) => {
+            startupHeaderFactory = factory;
+        });
 
         const {sessionStartHandler} = registerStartupExtension();
 

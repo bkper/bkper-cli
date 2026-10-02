@@ -21,7 +21,7 @@ import {
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperHandoffShortcut} from './handoff.js';
 import {playLogo3d} from '../interactive/logo-3d.js';
-import {BKPER_MARK_LOGO, getBkperLogoLines, isOverBkperMark} from './startup-logo.js';
+import {BKPER_MARK_LOGO, getBkperLogoLines} from './startup-logo.js';
 
 type StartupHeaderComponent = {
     render: (width: number) => string[];
@@ -210,14 +210,18 @@ function createStartupHeaderFactory(
         render: (width: number) =>
             buildStartupHeaderLines(theme, modelRegistry, width, showBashShortcut),
         invalidate: () => {},
-        // Clicking the mark plays the 3D logo easter egg in fullscreen mode.
+        // Clicking anywhere on the header plays the 3D logo easter egg in fullscreen mode. Nothing in the
+        // header is clickable otherwise, and drag-selecting its text does not produce a click.
         handleMouse: (event: TuiMouseEvent) => {
-            const column = event.x - STARTUP_LEFT_PADDING.length;
             const contentWidth = event.width - STARTUP_LEFT_PADDING.length;
-            if (event.type !== 'click' || !isOverBkperMark(column, event.y, contentWidth)) {
+            if (event.type !== 'click' || event.button !== 'left') return undefined;
+            if (getBkperLogoLines(contentWidth, theme.getColorMode()).length === 0)
                 return undefined;
-            }
-            const origin = {column: event.screenX - column, row: event.screenY - event.y};
+            // The logo is the header's first line, after the left padding.
+            const origin = {
+                column: event.screenX - event.x + STARTUP_LEFT_PADDING.length,
+                row: event.screenY - event.y,
+            };
             return playLogo3d(tui, theme, BKPER_MARK_LOGO, origin) ? {handled: true} : undefined;
         },
     });

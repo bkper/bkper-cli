@@ -93,20 +93,6 @@ export function renderPixelArt(
     return lines;
 }
 
-/**
- * Whether a cell of the rendered logo, relative to its top-left cell, is on the mark. False when the logo is too
- * wide for `maxWidth` and is not rendered.
- */
-export function isOverBkperMark(column: number, row: number, maxWidth: number): boolean {
-    return (
-        maxWidth >= BKPER_MARK_WIDTH &&
-        column >= 0 &&
-        column < BKPER_MARK_WIDTH &&
-        row >= 0 &&
-        row < Math.ceil(BKPER_MARK_LOGO.pixels.length / 2)
-    );
-}
-
 function cropPixels(pixels: readonly string[], width: number): string[] {
     const cropped = pixels.map(row => row.slice(0, width));
     while (cropped.length > 0 && /^\.*$/.test(cropped[cropped.length - 1])) {
