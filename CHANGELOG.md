@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.3.1] - 2026-10-02
+
 -   **Updates**
     -   `bkper agent` checks for updates on every start again, instead of at most once a day, so a new release is installed in the background and ready on the next session. Plain commands still check at most once a day
 -   **Agent Experience**
