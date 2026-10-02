@@ -2,6 +2,7 @@ import {rgbColor, stripTerminalSequences, visibleWidth} from '@earendil-works/pi
 import {expect} from '../../helpers/test-setup.js';
 import {
     getBkperLogoLines,
+    isOverBkperMark,
     renderPixelArt,
 } from '../../../../src/agent/extensions/startup-logo.js';
 
@@ -31,5 +32,18 @@ describe('Bkper startup logo', function () {
             Math.max(...full.map(visibleWidth))
         );
         expect(getBkperLogoLines(10, 'truecolor')).to.deep.equal([]);
+    });
+
+    it('finds the mark in the rendered logo, apart from the wordmark', function () {
+        const markLines = getBkperLogoLines(30, 'truecolor');
+        const lastMarkRow = markLines.length - 1;
+        const markWidth = Math.max(...markLines.map(visibleWidth));
+
+        expect(isOverBkperMark(0, 0, 80)).to.be.true;
+        expect(isOverBkperMark(markWidth - 1, lastMarkRow, 80)).to.be.true;
+        expect(isOverBkperMark(markWidth, 0, 80)).to.be.false; // the wordmark
+        expect(isOverBkperMark(0, lastMarkRow + 1, 80)).to.be.false;
+        expect(isOverBkperMark(-1, 0, 80)).to.be.false;
+        expect(isOverBkperMark(0, 0, 10)).to.be.false; // no logo is rendered that narrow
     });
 });

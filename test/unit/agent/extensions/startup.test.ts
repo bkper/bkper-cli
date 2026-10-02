@@ -9,6 +9,7 @@ import {
     setKeybindings,
     visibleWidth,
     type KeybindingsConfig,
+    type TuiMouseEvent,
 } from '@earendil-works/pi-tui';
 import sinon from 'sinon';
 import {expect} from '../../helpers/test-setup.js';
@@ -27,6 +28,7 @@ type StartupHeaderFactory = (
     theme: StartupTheme
 ) => {
     render: (width: number) => string[];
+    handleMouse?: (event: TuiMouseEvent) => unknown;
 };
 
 type RegisteredSessionStartHandler = (
@@ -122,6 +124,42 @@ function registerStartupExtension(
 }
 
 describe('Bkper agent startup extension', function () {
+    it('leaves logo clicks unhandled outside fullscreen mode', async function () {
+        let startupHeaderFactory: StartupHeaderFactory | undefined;
+        const {sessionStartHandler} = registerStartupExtension(undefined, undefined, undefined, true);
+        await sessionStartHandler(
+            {},
+            {
+                ui: {
+                    notify: sinon.stub(),
+                    setHeader: factory => {
+                        startupHeaderFactory = factory;
+                    },
+                },
+                modelRegistry: {getAvailable: () => []},
+            }
+        );
+        const mainScreenTui = {hasOverlay: () => false, getScreenLines: () => []};
+        const header = startupHeaderFactory?.(mainScreenTui, createThemeStub());
+        header?.render(120);
+
+        const clickOnMark: TuiMouseEvent = {
+            type: 'click',
+            button: 'left',
+            x: 3,
+            y: 2,
+            screenX: 3,
+            screenY: 3,
+            width: 120,
+            height: 20,
+            shift: false,
+            alt: false,
+            ctrl: false,
+        };
+        expect(header?.handleMouse).to.be.a('function');
+        expect(header?.handleMouse?.(clickOnMark)).to.equal(undefined);
+    });
+
     it('replaces the Pi startup header with Bkper hints and starts maintenance once', async function () {
         const notify = sinon.stub();
         let startupHeaderFactory: StartupHeaderFactory | undefined;

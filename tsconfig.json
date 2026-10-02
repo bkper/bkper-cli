@@ -11,6 +11,7 @@
     "strict": true,
     "esModuleInterop": true,
     "target": "es2015",
+    "lib": ["es2018", "es2022.intl"],
     "declaration": true,
     "sourceMap": true,
     "declarationMap": true

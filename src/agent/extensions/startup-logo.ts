@@ -5,6 +5,7 @@ import {
     type Color,
     type TerminalColorMode,
 } from '@earendil-works/pi-tui';
+import type {PixelLogo} from '../interactive/logo-3d.js';
 
 const RESET = '\x1b[0m';
 
@@ -51,6 +52,12 @@ const BKPER_LOGO_PIXELS = [
 /** Width of the arrow and mark, without the wordmark. */
 const BKPER_MARK_WIDTH = 20;
 
+/** The arrow and mark alone, as the 3D logo easter egg builds it. */
+export const BKPER_MARK_LOGO: PixelLogo = {
+    pixels: cropPixels(BKPER_LOGO_PIXELS, BKPER_MARK_WIDTH),
+    colors: BKPER_LOGO_COLORS,
+};
+
 /**
  * Renders a pixel grid with half blocks: each terminal line shows two pixel rows, the upper one
  * as the foreground of '▀' and the lower one as its background.
@@ -84,6 +91,20 @@ export function renderPixelArt(
         lines.push(line);
     }
     return lines;
+}
+
+/**
+ * Whether a cell of the rendered logo, relative to its top-left cell, is on the mark. False when the logo is too
+ * wide for `maxWidth` and is not rendered.
+ */
+export function isOverBkperMark(column: number, row: number, maxWidth: number): boolean {
+    return (
+        maxWidth >= BKPER_MARK_WIDTH &&
+        column >= 0 &&
+        column < BKPER_MARK_WIDTH &&
+        row >= 0 &&
+        row < Math.ceil(BKPER_MARK_LOGO.pixels.length / 2)
+    );
 }
 
 function cropPixels(pixels: readonly string[], width: number): string[] {

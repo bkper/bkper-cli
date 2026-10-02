@@ -1,4 +1,10 @@
-import {getKeybindings, truncateToWidth, visibleWidth} from '@earendil-works/pi-tui';
+import {
+    getKeybindings,
+    truncateToWidth,
+    visibleWidth,
+    type TuiMouseEvent,
+    type TuiMouseEventResult,
+} from '@earendil-works/pi-tui';
 import {
     getShellConfig,
     keyText,
@@ -14,15 +20,17 @@ import {
 } from '../interactive/session-keybindings.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperHandoffShortcut} from './handoff.js';
-import {getBkperLogoLines} from './startup-logo.js';
+import {playLogo3d} from '../interactive/logo-3d.js';
+import {BKPER_MARK_LOGO, getBkperLogoLines, isOverBkperMark} from './startup-logo.js';
 
 type StartupHeaderComponent = {
     render: (width: number) => string[];
     invalidate: () => void;
+    handleMouse: (event: TuiMouseEvent) => TuiMouseEventResult | undefined;
     dispose?: () => void;
 };
 
-type StartupHeaderFactory = (_tui: unknown, theme: Theme) => StartupHeaderComponent;
+type StartupHeaderFactory = (tui: unknown, theme: Theme) => StartupHeaderComponent;
 type StartupExtensionAPI = Pick<ExtensionAPI, 'on'>;
 
 type ModelRegistryLike = {
@@ -198,10 +206,20 @@ function createStartupHeaderFactory(
     modelRegistry: ModelRegistryLike,
     showBashShortcut: boolean
 ): StartupHeaderFactory {
-    return (_tui, theme) => ({
+    return (tui, theme) => ({
         render: (width: number) =>
             buildStartupHeaderLines(theme, modelRegistry, width, showBashShortcut),
         invalidate: () => {},
+        // Clicking the mark plays the 3D logo easter egg in fullscreen mode.
+        handleMouse: (event: TuiMouseEvent) => {
+            const column = event.x - STARTUP_LEFT_PADDING.length;
+            const contentWidth = event.width - STARTUP_LEFT_PADDING.length;
+            if (event.type !== 'click' || !isOverBkperMark(column, event.y, contentWidth)) {
+                return undefined;
+            }
+            const origin = {column: event.screenX - column, row: event.screenY - event.y};
+            return playLogo3d(tui, theme, BKPER_MARK_LOGO, origin) ? {handled: true} : undefined;
+        },
     });
 }
 
