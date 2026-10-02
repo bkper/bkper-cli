@@ -49,6 +49,8 @@ interface BkperAiCatalogModel {
     max_output_tokens: number;
     thinking_levels: string[];
     prompt_cache_ttl_seconds?: number;
+    /** The gateway keeps later system messages at their position, preserving the cached prefix. */
+    mid_conversation_system_messages?: boolean;
 }
 
 /** A gateway decision model, served through the System One classify API. */
@@ -181,6 +183,10 @@ function toProviderModel(
             supportsDeveloperRole: false,
             sessionAffinityFormat: 'openai',
             supportsLongCacheRetention: false,
+            // Otherwise Pi folds prompt changes into the leading system prompt.
+            ...(model.mid_conversation_system_messages === true
+                ? {supportsMidConvoSystemMessages: true}
+                : {}),
         },
         bkperDefault: model.id === defaultModelId,
         bkperDefaultThinkingLevel: getDefaultThinkingLevel(model),

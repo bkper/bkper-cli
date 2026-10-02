@@ -284,6 +284,49 @@ describe('agent/bkper-ai-provider', function () {
         ]);
     });
 
+    it('keeps mid-conversation system messages in place only for models the catalog marks', async function () {
+        const catalogModel = (id: string, midConversationSystemMessages?: unknown) => ({
+            id,
+            input_modalities: ['text', 'image'],
+            pricing: {
+                inputNanoUsdPerToken: 5000,
+                cachedInputNanoUsdPerToken: 250,
+                cacheWriteNanoUsdPerToken: 6300,
+                outputNanoUsdPerToken: 25000,
+            },
+            context_window: 200000,
+            max_output_tokens: 32000,
+            thinking_levels: ['low', 'medium'],
+            ...(midConversationSystemMessages === undefined
+                ? {}
+                : {mid_conversation_system_messages: midConversationSystemMessages}),
+        });
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({
+                data: [
+                    catalogModel('in-place', true),
+                    catalogModel('folded'),
+                    catalogModel('invalid', 'yes'),
+                ],
+            }))
+        ));
+
+        const models = await refreshChatModels(config);
+
+        const keepsSystemMessagesInPlace = (model: ProviderChatModelConfig): boolean => {
+            const compat = model.compat;
+            return compat !== undefined &&
+                'supportsMidConvoSystemMessages' in compat &&
+                compat.supportsMidConvoSystemMessages === true;
+        };
+        expect(models.map(model => [model.id, keepsSystemMessagesInPlace(model)]))
+            .to.deep.equal([
+                ['in-place', true],
+                ['folded', false],
+                ['invalid', false],
+            ]);
+    });
+
     it('reports a failed model request', async function () {
         const config = getBkperAiProviderConfig(
             {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/v1'},
