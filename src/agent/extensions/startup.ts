@@ -4,6 +4,7 @@ import {
     keyText,
     VERSION as PI_VERSION,
     type ExtensionAPI,
+    type QuietStartup,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
 import {PROMPT_HISTORY_SHORTCUT} from '../interactive/prompt-history-shortcut.js';
@@ -208,7 +209,7 @@ export function registerBkperAgentStartupExtension(
     pi: StartupExtensionAPI,
     startupMaintenance: typeof runStartupMaintenance = runStartupMaintenance,
     settingsManager?: {
-        getQuietStartup(): boolean;
+        getQuietStartup(): QuietStartup;
         getShellPath?(): string | undefined;
         getDefaultTools?(): string[] | undefined;
     },
@@ -218,7 +219,8 @@ export function registerBkperAgentStartupExtension(
     let startupMaintenanceTriggered = false;
 
     pi.on('session_start', async (_event, ctx) => {
-        if (!settingsManager?.getQuietStartup()) {
+        // quietStartup "header" keeps the header (logo, version, key hints); only true hides it.
+        if (settingsManager?.getQuietStartup() !== true) {
             const showBashShortcut =
                 bashAvailable ??
                 ((settingsManager?.getDefaultTools?.()?.includes('bash') ?? true) &&

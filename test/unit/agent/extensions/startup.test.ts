@@ -1,6 +1,7 @@
 import {
     VERSION as PI_VERSION,
     type ExtensionAPI,
+    type QuietStartup,
 } from '@earendil-works/pi-coding-agent';
 import {
     getKeybindings,
@@ -86,7 +87,7 @@ function renderStartupHeaderWithKeybindings(
 function registerStartupExtension(
     startupMaintenance = sinon.stub().resolves(),
     settingsManager?: {
-        getQuietStartup: () => boolean;
+        getQuietStartup: () => QuietStartup;
         getShellPath?: () => string | undefined;
         getDefaultTools?: () => string[] | undefined;
     },
@@ -231,6 +232,27 @@ describe('Bkper agent startup extension', function () {
         expect(notify.called).to.be.false;
         expect(setHeader.called).to.be.false;
         expect(startupMaintenance.calledOnce).to.be.true;
+    });
+
+    it('keeps the Bkper header when quietStartup is "header"', async function () {
+        const setHeader = sinon.stub();
+
+        const {sessionStartHandler} = registerStartupExtension(
+            sinon.stub().resolves(),
+            {getQuietStartup: () => 'header'},
+            undefined,
+            true
+        );
+
+        await sessionStartHandler(
+            {},
+            {
+                ui: {notify: sinon.stub(), setHeader},
+                modelRegistry: {getAvailable: () => []},
+            }
+        );
+
+        expect(setHeader.calledOnce).to.be.true;
     });
 
     it('warns about a Bkper AI endpoint override during quiet startup', async function () {

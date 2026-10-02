@@ -6,6 +6,7 @@ import {
     type Extension,
     type ExtensionAPI,
     type LoadExtensionsResult,
+    type QuietStartup,
 } from '@earendil-works/pi-coding-agent';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {
@@ -30,7 +31,7 @@ type ExtensionLoadError = {
 };
 
 type BuiltinsSettings = {
-    getQuietStartup(): boolean;
+    getQuietStartup(): QuietStartup;
     getShellPath(): string | undefined;
 };
 
