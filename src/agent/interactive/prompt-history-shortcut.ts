@@ -1,4 +1,4 @@
-import {matchesKey} from '@earendil-works/pi-tui';
+import {matchesKey} from '../pi-shared-modules.js';
 import {
     startPromptHistorySearch,
     type PromptHistoryEditor,

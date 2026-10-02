@@ -1,9 +1,9 @@
-import {typesafeSystemOneApi} from '@earendil-works/pi-ai/api/typesafe-system-one.lazy';
 import type {
     ExtensionAPI,
     ProviderConfig,
     ProviderModelConfig,
 } from '@earendil-works/pi-coding-agent';
+import {typesafeSystemOneApi} from '../pi-shared-modules.js';
 
 export const BKPER_AI_PROVIDER_ID = 'bkper';
 export const BKPER_AI_PRODUCTION_BASE_URL = 'https://ai.bkper.app/v1';

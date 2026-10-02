@@ -1,7 +1,5 @@
-import {
-    CombinedAutocompleteProvider,
-    type AutocompleteProvider,
-} from '@earendil-works/pi-tui';
+import type {AutocompleteProvider} from '@earendil-works/pi-tui';
+import {CombinedAutocompleteProvider} from '../pi-shared-modules.js';
 import {
     installPromptHistorySearch,
     type PromptHistoryEditor,

@@ -9,7 +9,7 @@ import {
     type ExtensionCommandContext,
     type ExtensionContext,
 } from '@earendil-works/pi-coding-agent';
-import { type KeyId } from '@earendil-works/pi-tui';
+import type { KeyId } from '@earendil-works/pi-tui';
 import { HANDOFF_GOAL_EDITOR_TITLE } from './handoff-goal-editor.js';
 
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';

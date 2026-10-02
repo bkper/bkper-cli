@@ -3,7 +3,7 @@ import type {
     AutocompleteProvider,
     AutocompleteSuggestions,
 } from '@earendil-works/pi-tui';
-import {getKeybindings, matchesKey} from '@earendil-works/pi-tui';
+import {getKeybindings, matchesKey} from '../pi-shared-modules.js';
 import {
     searchPromptHistoryEntries,
     type PromptHistoryEntry,

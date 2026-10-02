@@ -69,14 +69,18 @@ describe('installation', function () {
     });
 
     describe('runtime dependencies', function () {
-        it('should directly install the Pi TUI version used by the embedded agent', function () {
+        it('should load Pi TUI and Pi AI through the embedded agent instead of installing second copies', function () {
             const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {
                 dependencies: Record<string, string>;
+                devDependencies: Record<string, string>;
             };
+            const piVersion = packageJson.dependencies['@earendil-works/pi-coding-agent'];
 
-            expect(packageJson.dependencies['@earendil-works/pi-tui']).to.equal(
-                packageJson.dependencies['@earendil-works/pi-coding-agent']
-            );
+            for (const name of ['@earendil-works/pi-tui', '@earendil-works/pi-ai']) {
+                expect(packageJson.dependencies, name).not.to.have.property(name);
+                // Types come from the dev copy, so it must match the runtime the agent loads.
+                expect(packageJson.devDependencies[name], name).to.equal(piVersion);
+            }
         });
     });
 

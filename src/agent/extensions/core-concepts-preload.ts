@@ -14,7 +14,7 @@ import {
     type ReadToolInput,
     type Theme,
 } from '@earendil-works/pi-coding-agent';
-import { Box } from '@earendil-works/pi-tui';
+import { Box } from '../pi-shared-modules.js';
 
 const DOCS_PATTERN =
     /\b(doc|docs|documentation|readme|guide|guides|example|examples|spec|specs|reference)\b/i;

@@ -4,6 +4,9 @@
 
 -   **Updates**
     -   `bkper agent` checks for updates on every start again, instead of at most once a day, so a new release is installed in the background and ready on the next session. Plain commands still check at most once a day
+-   **Agent Experience**
+    -   Custom keybindings now also apply to the Bkper parts of `bkper agent`, such as the startup key hints and prompt history search, when the CLI is installed with npm
+    -   npm installs are smaller, because the CLI no longer installs its own second copy of Pi's terminal UI and AI packages
 
 ## [5.3.0] - 2026-10-02
 

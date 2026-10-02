@@ -1,20 +1,22 @@
 import type {Theme} from '@earendil-works/pi-coding-agent';
+import type {
+    Color,
+    Component,
+    TerminalColorMode,
+    TUI,
+    TuiMouseEvent,
+    TuiMouseEventResult,
+} from '@earendil-works/pi-tui';
 import {
     backgroundAnsi,
-    type Color,
-    type Component,
     colorToRgb,
     foregroundAnsi,
     getKeybindings,
     indexedColor,
     rgbColor,
-    type TerminalColorMode,
-    type TUI,
     TuiAltScreen,
-    type TuiMouseEvent,
-    type TuiMouseEventResult,
     visibleWidth,
-} from '@earendil-works/pi-tui';
+} from '../pi-shared-modules.js';
 
 /**
  * Fullscreen 3D logo easter egg, played by clicking the header logo. The logo bitmap is built from one block per

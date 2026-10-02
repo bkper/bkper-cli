@@ -1,10 +1,4 @@
-import {
-    getKeybindings,
-    truncateToWidth,
-    visibleWidth,
-    type TuiMouseEvent,
-    type TuiMouseEventResult,
-} from '@earendil-works/pi-tui';
+import type {TuiMouseEvent, TuiMouseEventResult} from '@earendil-works/pi-tui';
 import {
     getShellConfig,
     keyText,
@@ -18,6 +12,7 @@ import {
     formatBkperSessionCommandShortcut,
     isShortcutClaimedByUserBinding,
 } from '../interactive/session-keybindings.js';
+import {getKeybindings, truncateToWidth, visibleWidth} from '../pi-shared-modules.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperHandoffShortcut} from './handoff.js';
 import {playLogo3d} from '../interactive/logo-3d.js';

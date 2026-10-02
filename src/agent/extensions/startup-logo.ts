@@ -1,11 +1,6 @@
-import {
-    backgroundAnsi,
-    foregroundAnsi,
-    rgbColor,
-    type Color,
-    type TerminalColorMode,
-} from '@earendil-works/pi-tui';
+import type {Color, TerminalColorMode} from '@earendil-works/pi-tui';
 import type {PixelLogo} from '../interactive/logo-3d.js';
+import {backgroundAnsi, foregroundAnsi, rgbColor} from '../pi-shared-modules.js';
 
 const RESET = '\x1b[0m';
 
