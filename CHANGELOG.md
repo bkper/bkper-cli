@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+-   **Agent Experience**
+    -   The core concepts reference now loads based on a Jev decision about your request and recent conversation, covering finance, accounting, and Bkper help—including vague requests about accounts or bots. Keyword detection remains as a fallback when Jev is unavailable
+
 ## [5.3.1] - 2026-10-02
 
 -   **Updates**

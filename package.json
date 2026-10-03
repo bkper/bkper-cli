@@ -60,6 +60,7 @@
         "release:major": "npm version major -m \"chore(release): v%s\"",
         "docs:compliance": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/check.ts",
         "docs:compliance:live": "TS_NODE_PROJECT=tsconfig.test.json node --loader ts-node/esm ./test/tools/docs-compliance/live.ts",
+        "eval:prompt-routing": "bun ./test/tools/prompt-routing/live.ts",
         "upgrade:api": "bun update @bkper/bkper-api-types --latest && bun update bkper-js --latest"
     },
     "dependencies": {

@@ -9,6 +9,7 @@ import {
     type AssistantMessage,
     type SystemMessage,
     type TranscriptContext,
+    type ClassifierContext,
 } from '@earendil-works/pi-ai';
 import {
     createAgentSession,
@@ -45,6 +46,7 @@ interface TestSession {
     session: AgentSession;
     /** The transcript of every model request, in order. */
     requests: TranscriptContext[];
+    routingRequests: ClassifierContext[];
     /**
      * Starts a run from an extension message, which skips before_agent_start. The model
      * calls a tool first, so Pi rebuilds the prompt before the run's second request.
@@ -53,10 +55,14 @@ interface TestSession {
 }
 
 /** A real Pi session whose model records each request transcript instead of calling a provider. */
-async function createTestSession(settings: Parameters<typeof SettingsManager.inMemory>[0] = {}): Promise<TestSession> {
+async function createTestSession(
+    settings: Parameters<typeof SettingsManager.inMemory>[0] = {},
+    routingProbabilities?: number[]
+): Promise<TestSession> {
     const dir = mkdtempSync(path.join(tmpdir(), 'bkper-core-concepts-'));
     const faux = createFauxCore({api: FAUX_API, provider: FAUX_PROVIDER, models: [{id: FAUX_MODEL}]});
     const requests: TranscriptContext[] = [];
+    const routingRequests: ClassifierContext[] = [];
     const scripted: AssistantMessage[] = [];
     const respond = (context: TranscriptContext) => {
         requests.push(context);
@@ -78,6 +84,34 @@ async function createTestSession(settings: Parameters<typeof SettingsManager.inM
         extensionFactories: [
             (pi: ExtensionAPI) => {
                 extensionApi = pi;
+                if (routingProbabilities) {
+                    pi.registerProvider('bkper', {
+                        apiKey: 'test',
+                        baseUrl: 'http://localhost',
+                        classifiers: {
+                            'typesafe-system-one': {
+                                async classify(model, context) {
+                                    routingRequests.push(context);
+                                    return {
+                                        api: model.api,
+                                        provider: model.provider,
+                                        model: model.id,
+                                        timestamp: 0,
+                                        stopReason: 'stop',
+                                        answers: {
+                                            [CORE_CONCEPTS_SECTION]: {type: 'bool', probability: routingProbabilities.shift() ?? 0},
+                                        },
+                                    };
+                                },
+                            },
+                        },
+                        models: [{
+                            type: 'classifier', id: 'jev', name: 'Test Jev', api: 'typesafe-system-one',
+                            input: ['text'], contextWindow: 32_000,
+                            cost: {input: 0, output: 0, cacheRead: 0, cacheWrite: 0},
+                        }],
+                    });
+                }
                 pi.registerProvider(FAUX_PROVIDER, {
                     baseUrl: 'http://localhost',
                     apiKey: 'test',
@@ -125,7 +159,7 @@ async function createTestSession(settings: Parameters<typeof SettingsManager.inM
         await session.waitForIdle();
     };
 
-    return {session, requests, triggerExtensionRunWithToolCall};
+    return {session, requests, routingRequests, triggerExtensionRunWithToolCall};
 }
 
 function isSystemMessage(message: TranscriptContext['messages'][number]): message is SystemMessage {
@@ -172,6 +206,15 @@ describe('core concepts preload', function () {
             ).to.equal('full');
         });
 
+        it('should load for everyday finance questions without Bkper keywords', function () {
+            expect(detectCoreConceptsPreloadLevel({prompt: 'where did my money go this month?'})).to.equal('full');
+            expect(detectCoreConceptsPreloadLevel({prompt: 'help me with accounting'})).to.equal('full');
+        });
+
+        it('should load for underspecified bot troubleshooting in the Bkper CLI', function () {
+            expect(detectCoreConceptsPreloadLevel({prompt: "why isn't my bot working?"})).to.equal('full');
+        });
+
         it('should skip preload for generic README reviews without Bkper semantics', function () {
             expect(detectCoreConceptsPreloadLevel({prompt: UNRELATED_PROMPT})).to.equal('none');
         });
@@ -211,6 +254,43 @@ describe('core concepts preload', function () {
         afterEach(function () {
             session?.dispose();
             session = undefined;
+        });
+
+        it('should use Jev for finance requests without matching keywords', async function () {
+            const test = await createTestSession({}, [0.9]);
+            session = test.session;
+            await session.prompt('how much do I owe my suppliers?');
+            expect(sectionSentIn(test.requests[0])).to.include(CORE_CONCEPTS_MARKDOWN);
+            expect(test.routingRequests).to.have.length(1);
+        });
+
+        it('should avoid keyword false positives when Jev identifies another domain', async function () {
+            const test = await createTestSession({}, [0.02]);
+            session = test.session;
+            await session.prompt('why are PostgreSQL transactions deadlocking?');
+            expect(sectionSentIn(test.requests[0])).to.equal(undefined);
+            expect(loadMarkers(session)).to.have.length(0);
+        });
+
+        it('should send recent user context for vague follow-ups', async function () {
+            const test = await createTestSession({}, [0.1, 0.8]);
+            session = test.session;
+            await session.prompt('We are updating the exchange bot.');
+            await session.prompt('review its README');
+            expect(test.routingRequests[1].state).to.deep.equal({
+                prompt: 'review its README', recentUserMessages: ['We are updating the exchange bot.'],
+            });
+            expect(sectionSentIn(test.requests[1])).to.include(CORE_CONCEPTS_MARKDOWN);
+        });
+
+        it('should stop classifying core concepts after loading while retaining the section', async function () {
+            const test = await createTestSession({}, [0.9]);
+            session = test.session;
+            await session.prompt('show my accounts');
+            await session.prompt(UNRELATED_PROMPT);
+            expect(test.routingRequests).to.have.length(1);
+            expect(sectionSentIn(test.requests[1])).to.include(CORE_CONCEPTS_MARKDOWN);
+            expect(loadMarkers(session)).to.have.length(1);
         });
 
         it('should ground an accounting prompt through the system prompt, not the conversation', async function () {

@@ -3,7 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     createReadToolDefinition,
-    type BeforeAgentStartEvent,
     type EntryRenderer,
     type EntryRenderOptions,
     type ExtensionAPI,
@@ -15,24 +14,15 @@ import {
     type Theme,
 } from '@earendil-works/pi-coding-agent';
 import { Box } from '../pi-shared-modules.js';
+import {CORE_CONCEPTS_ROUTE} from '../core-concepts-routing.js';
+import {registerPromptRoutingExtension, type PromptLoaderRouter} from './prompt-routing.js';
 
-const DOCS_PATTERN =
-    /\b(doc|docs|documentation|readme|guide|guides|example|examples|spec|specs|reference)\b/i;
-const ANALYSIS_PATTERN =
-    /\b(review|audit|validate|verify|critique|rewrite|document|describe|explain|design|model|map|check|spot)\b/i;
-const AUTOMATION_PATTERN = /\b(bot|bots|app|apps|automation|automations)\b/i;
-const SEMANTIC_PATTERN =
-    /\b(bkper|book|books|account|accounts|group|groups|transaction|transactions|balance|balances|incoming|outgoing|asset|assets|liability|liabilities|receivable|receivables|payable|payables|statement|statements|ledger|flow|flows|movement|movements|collection|collections|tax)\b/i;
-
-export type CoreConceptsPreloadLevel = 'none' | 'full';
+export {detectCoreConceptsPreloadLevel} from '../core-concepts-routing.js';
+export type {CoreConceptsPreloadInput, CoreConceptsPreloadLevel} from '../core-concepts-routing.js';
 
 export interface CoreConceptsPreloadDefinition {
     docPath: string;
     markdown: string;
-}
-
-export interface CoreConceptsPreloadInput {
-    prompt: string;
 }
 
 /** System prompt section that grounds the session in the Bkper data model. */
@@ -80,30 +70,6 @@ export function getDefaultCoreConceptsPreloadDefinition(): CoreConceptsPreloadDe
         docPath,
         markdown: readFileSync(docPath, 'utf8'),
     };
-}
-
-export function detectCoreConceptsPreloadLevel(
-    input: CoreConceptsPreloadInput
-): CoreConceptsPreloadLevel {
-    const prompt = input.prompt.trim();
-    if (!prompt) {
-        return 'none';
-    }
-
-    const hasDocs = DOCS_PATTERN.test(prompt);
-    const hasAnalysis = ANALYSIS_PATTERN.test(prompt);
-    const hasAutomation = AUTOMATION_PATTERN.test(prompt);
-    const hasSemantic = SEMANTIC_PATTERN.test(prompt);
-
-    if ((hasDocs || hasAnalysis) && (hasAutomation || hasSemantic)) {
-        return 'full';
-    }
-
-    if (hasSemantic) {
-        return 'full';
-    }
-
-    return 'none';
 }
 
 function buildCoreConceptsSection(definition: CoreConceptsPreloadDefinition): string {
@@ -191,7 +157,8 @@ function createLegacyCoreConceptsMessageRenderer(
  */
 export function registerBkperCoreConceptsPreloadExtension(
     pi: Pick<ExtensionAPI, 'on' | 'registerEntryRenderer' | 'registerMessageRenderer' | 'appendEntry'>,
-    definition: CoreConceptsPreloadDefinition = getDefaultCoreConceptsPreloadDefinition()
+    definition: CoreConceptsPreloadDefinition = getDefaultCoreConceptsPreloadDefinition(),
+    router: PromptLoaderRouter = registerPromptRoutingExtension(pi)
 ): void {
     const section = buildCoreConceptsSection(definition);
     let markLoad = false;
@@ -202,15 +169,15 @@ export function registerBkperCoreConceptsPreloadExtension(
         createLegacyCoreConceptsMessageRenderer(definition)
     );
 
-    pi.on('before_agent_start', (event: BeforeAgentStartEvent, ctx: ExtensionContext) => {
-        const loaded = wasCoreConceptsLoaded(ctx);
-        markLoad = false;
-        if (!loaded && detectCoreConceptsPreloadLevel({prompt: event.prompt}) === 'none') {
-            return;
-        }
-
-        event.systemPromptOptions.sections[CORE_CONCEPTS_SECTION] = section;
-        markLoad = !loaded;
+    router.registerLoader({
+        ...CORE_CONCEPTS_ROUTE,
+        isLoaded: wasCoreConceptsLoaded,
+        apply(event, _ctx, load, alreadyLoaded) {
+            markLoad = false;
+            if (!load) return;
+            event.systemPromptOptions.sections[CORE_CONCEPTS_SECTION] = section;
+            markLoad = !alreadyLoaded;
+        },
     });
 
     // The user prompt is persisted once its message ends, so the first assistant
