@@ -149,7 +149,7 @@ export const CORE_CONCEPTS_EVAL_CASES: readonly PromptRoutingEvalCase[] = [
     },
     {
         id: 'inventory-bot-docs',
-        prompt: 'review the inventory bot README',
+        prompt: 'review how the inventory bot README explains stock movements and cost of goods sold',
         recentUserMessages: [],
         expected: true,
     },
@@ -161,7 +161,7 @@ export const CORE_CONCEPTS_EVAL_CASES: readonly PromptRoutingEvalCase[] = [
     },
     {
         id: 'bkper-app-review',
-        prompt: "I'm building a Bkper app; review how it handles events",
+        prompt: "I'm building a Bkper app; review whether its event handlers record the correct resource movements",
         recentUserMessages: [],
         expected: true,
     },
@@ -284,5 +284,182 @@ export const CORE_CONCEPTS_EVAL_CASES: readonly PromptRoutingEvalCase[] = [
         prompt: 'can you check it?',
         recentUserMessages: ['My app posts transactions into Bkper.'],
         expected: true,
+    },
+
+    // Developer boundaries: the business meaning of the work, not the app's name,
+    // should decide initial loading. These do not test unloading an active reference.
+    {
+        id: 'dev-app-modeling-business',
+        prompt: "I'm building a Bkper app for customer invoices. Help me model what happens when a sale is made and the customer pays later.",
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-app-modeling-technical',
+        prompt: "I'm building a Bkper app for customer invoices. Help me choose the framework and hosting stack; we're not designing the financial logic yet.",
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-structure-business',
+        prompt: 'How should I structure the Books, Accounts, and Groups for this Bkper app that tracks our branches?',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-structure-technical',
+        prompt: 'How should I structure the folders and packages for this Bkper app that tracks our branches?',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-exchange-business',
+        prompt: 'The exchange bot produces the wrong balances after a currency conversion. Review its gain and loss logic.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-exchange-technical',
+        prompt: 'The exchange bot does not build because esbuild cannot resolve a module. Help me fix the bundler configuration.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-inventory-business',
+        prompt: 'Help me design an inventory automation that records stock moving between warehouses and calculates cost of goods sold.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-inventory-technical',
+        prompt: 'The inventory automation has broken TypeScript import paths after a folder rename. Help me repair those imports.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-events-business',
+        prompt: 'Review whether this Bkper bot should create a movement when a transaction is drafted, posted, or checked.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-events-technical',
+        prompt: 'The Bkper bot receives no requests because its HTTP route returns 404. Review the route registration, not the event business rules.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-sdk-business',
+        prompt: 'Review the bkper-js code in my app that records supplier bills and their later payments. Are the resource flows modeled correctly?',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-sdk-technical',
+        prompt: 'The bkper-js dependency will not install in my app because of a package lock conflict. Resolve the dependency installation problem only.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-reporting-ui-business',
+        prompt: 'For this Bkper reporting app, should the balance view use movements within a period or balances up to a date?',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-reporting-ui-technical',
+        prompt: 'For this Bkper reporting app, make the toolbar responsive and fix the CSS spacing.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-readme-business',
+        prompt: 'Review the tax bot README for mistakes in how it explains Accounts, Groups, and the tax calculation flows.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-readme-technical',
+        prompt: 'Review only the npm installation and local build instructions in the tax bot README, not its accounting explanation.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-general-app-business',
+        prompt: 'My app also uses Bkper. Help me design how refunds should reverse the original resource movements.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-general-app-technical',
+        prompt: 'My app also uses Bkper. Help me build a generic landing page and navigation menu; this task does not touch financial data.',
+        recentUserMessages: [],
+        expected: false,
+    },
+    {
+        id: 'dev-context-review-business',
+        prompt: 'can you review it?',
+        recentUserMessages: [
+            "I'm developing a Bkper app.",
+            'I wrote the business rules for when customer payments clear their outstanding invoices.',
+        ],
+        expected: true,
+    },
+    {
+        id: 'dev-context-review-technical',
+        prompt: 'can you review it?',
+        recentUserMessages: [
+            "I'm developing a Bkper app.",
+            'I wrote a Vite configuration to serve its frontend locally.',
+        ],
+        expected: false,
+    },
+    {
+        id: 'dev-context-debug-business',
+        prompt: "why isn't the bot working?",
+        recentUserMessages: [
+            'My Bkper bot is supposed to settle customer invoices.',
+            'It runs successfully but the receivables still have the wrong balance.',
+        ],
+        expected: true,
+    },
+    {
+        id: 'dev-context-debug-technical',
+        prompt: "why isn't the bot working?",
+        recentUserMessages: [
+            'I am working on a Bkper bot.',
+            'It exits before startup with a module-not-found error.',
+        ],
+        expected: false,
+    },
+    {
+        id: 'dev-topic-switch-business',
+        prompt: 'Now help me model how the app records a supplier bill and its payment in Bkper.',
+        recentUserMessages: [
+            'Help me choose a frontend framework for my Bkper app.',
+            'We have finished the folder structure and build configuration.',
+        ],
+        expected: true,
+    },
+    {
+        id: 'dev-topic-switch-technical',
+        prompt: 'Now help me configure CI for the app. Only the build pipeline, not the accounting logic.',
+        recentUserMessages: [
+            'Help me model supplier bills and payments in my Bkper app.',
+            'We have finished the resource-flow design.',
+        ],
+        expected: false,
+    },
+    {
+        id: 'dev-tests-business',
+        prompt: 'Write tests for my Bkper app to verify that loan principal repayments do not count as operating expenses.',
+        recentUserMessages: [],
+        expected: true,
+    },
+    {
+        id: 'dev-tests-technical',
+        prompt: 'Mocha cannot discover the test files in my Bkper app. Fix the test runner configuration without changing the tests or financial logic.',
+        recentUserMessages: [],
+        expected: false,
     },
 ];

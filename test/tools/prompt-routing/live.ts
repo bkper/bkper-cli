@@ -9,7 +9,6 @@ import {
 } from '../../../src/agent/prompt-routing.js';
 import {CORE_CONCEPTS_EVAL_CASES, EVAL_SCHEMA_VERSION} from './cases.js';
 import {summarizeEvaluation, type PromptRoutingEvalResult} from './evaluation.js';
-import {CORE_CONCEPTS_EVAL_ROUTES} from './variants.js';
 
 async function main(): Promise<void> {
     const runtime = await ModelRuntime.create({
@@ -29,7 +28,7 @@ async function main(): Promise<void> {
 
     const results: PromptRoutingEvalResult[] = new Array(CORE_CONCEPTS_EVAL_CASES.length);
     let next = 0;
-    // Bound concurrent requests; both question variants are evaluated in one call per case.
+    // Bound concurrent requests; evaluate only the canonical question for each case.
     await Promise.all(
         Array.from({length: 4}, async () => {
             while (next < CORE_CONCEPTS_EVAL_CASES.length) {
@@ -46,7 +45,7 @@ async function main(): Promise<void> {
                 const started = Date.now();
                 const decisions = await evaluatePromptRoutes(
                     input,
-                    CORE_CONCEPTS_EVAL_ROUTES,
+                    [CORE_CONCEPTS_ROUTE],
                     runtime,
                     {timeoutMs: 30_000}
                 );
@@ -54,14 +53,16 @@ async function main(): Promise<void> {
             }
         })
     );
-    const evaluations = CORE_CONCEPTS_EVAL_ROUTES.map(route => ({
-        id: route.id,
-        question: route.question,
-        threshold: route.threshold,
-        thresholds: [0.3, 0.4, 0.5, 0.6, 0.7].map(threshold =>
-            summarizeEvaluation(results, route.id, threshold)
-        ),
-    }));
+    const evaluations = [
+        {
+            id: CORE_CONCEPTS_ROUTE.id,
+            question: CORE_CONCEPTS_ROUTE.question,
+            threshold: CORE_CONCEPTS_ROUTE.threshold,
+            thresholds: [0.3, 0.4, 0.5, 0.6, 0.7].map(threshold =>
+                summarizeEvaluation(results, CORE_CONCEPTS_ROUTE.id, threshold)
+            ),
+        },
+    ];
     console.log(
         JSON.stringify(
             {
@@ -76,16 +77,12 @@ async function main(): Promise<void> {
             2
         )
     );
-    // Candidate mismatches are expected during experiments; only production misses and errors fail.
-    const production = summarizeEvaluation(
+    const summary = summarizeEvaluation(
         results,
         CORE_CONCEPTS_ROUTE.id,
         CORE_CONCEPTS_ROUTE.threshold
     );
-    const errors = CORE_CONCEPTS_EVAL_ROUTES.some(
-        route => summarizeEvaluation(results, route.id, route.threshold).errors > 0
-    );
-    if (errors || production.falsePositives + production.falseNegatives > 0) process.exitCode = 1;
+    if (summary.errors + summary.falsePositives + summary.falseNegatives > 0) process.exitCode = 1;
 }
 
 main().catch(error => {
