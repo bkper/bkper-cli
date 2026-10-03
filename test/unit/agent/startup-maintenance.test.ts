@@ -7,7 +7,8 @@ import {
     runStartupMaintenance,
     startAgentUpdateCheck,
 } from '../../../src/agent/startup-maintenance.js';
-import {writeUpdateState} from '../../../src/upgrade/update-check.js';
+import {getUpdateNotice, writeUpdateState} from '../../../src/upgrade/update-check.js';
+import {VERSION} from '../../../src/upgrade/installation.js';
 
 describe('agent startup maintenance', function () {
     const originalDisableAutoUpdate = process.env.BKPER_DISABLE_AUTOUPDATE;
@@ -79,6 +80,26 @@ describe('agent startup maintenance', function () {
                 'info'
             )
         ).to.be.true;
+    });
+
+    it('should request a restart instead of warning when a cached failure has been resolved', async function () {
+        const startUpdateCheck = sinon.stub().returns(false);
+        const notify = sinon.stub();
+
+        await runStartupMaintenance(
+            {notify},
+            {
+                readNotice: () => getUpdateNotice(
+                    {latestVersion: VERSION, install: {version: VERSION, status: 'failed'}},
+                    '0.0.0'
+                ),
+                startUpdateCheck,
+            }
+        );
+
+        expect(notify.calledOnce).to.be.true;
+        expect(notify.firstCall.args[1]).to.equal('info');
+        expect(startUpdateCheck.calledOnce).to.be.true;
     });
 
     it('should warn with the manual instruction when the copy cannot update itself', async function () {

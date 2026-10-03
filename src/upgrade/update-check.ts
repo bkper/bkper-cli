@@ -267,12 +267,17 @@ export async function runUpdateWorker(
 }
 
 /**
- * Reads what the running copy should tell the user, based on the cache only.
+ * Checks the running copy on disk before reporting a cached update result.
+ * Another process may have completed the upgrade since the cache was written.
  */
 export function getUpdateNotice(
     state: UpdateCheckState,
-    currentVersion: string = VERSION
+    currentVersion: string = VERSION,
+    installedVersion: string | undefined = readInstalledVersion(path.join(PACKAGE_DIR, 'package.json'))
 ): UpdateNotice | undefined {
+    if (installedVersion && isNewerVersion(currentVersion, installedVersion)) {
+        return { kind: 'installed', current: currentVersion, latest: installedVersion };
+    }
     const latest = state.latestVersion;
     if (!latest || !isNewerVersion(currentVersion, latest)) {
         return undefined;

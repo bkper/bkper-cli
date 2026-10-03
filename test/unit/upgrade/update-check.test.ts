@@ -16,6 +16,7 @@ import {
     writeUpdateState,
 } from '../../../src/upgrade/update-check.js';
 import type {UpdateWorkerDependencies} from '../../../src/upgrade/update-check.js';
+import {VERSION} from '../../../src/upgrade/installation.js';
 import type {SelfUpdatePlan} from '../../../src/upgrade/installation.js';
 
 const INSTALL_PLAN: SelfUpdatePlan = {
@@ -238,10 +239,36 @@ describe('update check', function () {
     });
 
     describe('getUpdateNotice', function () {
+        it('should prefer the version on disk over a cached installation failure', function () {
+            const notice = getUpdateNotice(
+                {latestVersion: VERSION, install: {version: VERSION, status: 'failed'}},
+                '0.0.0'
+            );
+
+            expect(notice).to.deep.equal({kind: 'installed', current: '0.0.0', latest: VERSION});
+        });
+
+        it('should report a newer installed version even without an update cache', function () {
+            expect(getUpdateNotice({}, '5.0.0', '5.1.0')).to.deep.equal({
+                kind: 'installed', current: '5.0.0', latest: '5.1.0',
+            });
+        });
+
+        it('should use the installed version even when the cache describes a different release', function () {
+            const notice = getUpdateNotice(
+                {latestVersion: '5.1.0', install: {version: '5.1.0', status: 'manual', instruction: 'x'}},
+                '5.0.0',
+                '5.2.0'
+            );
+
+            expect(notice).to.deep.equal({kind: 'installed', current: '5.0.0', latest: '5.2.0'});
+        });
+
         it('should return nothing when up to date or before the worker decided', function () {
-            expect(getUpdateNotice({}, '5.0.0')).to.be.undefined;
-            expect(getUpdateNotice({latestVersion: '5.0.0'}, '5.0.0')).to.be.undefined;
-            expect(getUpdateNotice({latestVersion: '5.1.0'}, '5.0.0')).to.be.undefined;
+            expect(getUpdateNotice({}, '5.0.0', '5.0.0')).to.be.undefined;
+            expect(getUpdateNotice({latestVersion: '5.0.0'}, '5.0.0', '5.0.0')).to.be.undefined;
+            expect(getUpdateNotice({latestVersion: '5.1.0'}, '5.0.0', '5.0.0')).to.be.undefined;
+            expect(getUpdateNotice({}, VERSION)).to.be.undefined;
         });
 
         it('should warn with the manual instruction when the copy cannot update itself', function () {
@@ -250,6 +277,7 @@ describe('update check', function () {
                     latestVersion: '5.1.0',
                     install: {version: '5.1.0', status: 'manual', instruction: 'Run: npm install -g bkper@5.1.0'},
                 },
+                '5.0.0',
                 '5.0.0'
             );
 
@@ -267,6 +295,7 @@ describe('update check', function () {
         it('should point to bkper upgrade when the automatic install failed', function () {
             const notice = getUpdateNotice(
                 {latestVersion: '5.1.0', install: {version: '5.1.0', status: 'failed'}},
+                '5.0.0',
                 '5.0.0'
             );
 
@@ -278,7 +307,8 @@ describe('update check', function () {
         it('should report an install that the running process is not using yet', function () {
             const notice = getUpdateNotice(
                 {latestVersion: '5.1.0', install: {version: '5.1.0', status: 'installed'}},
-                '5.0.0'
+                '5.0.0',
+                '5.1.0'
             );
 
             expect(notice).to.deep.equal({kind: 'installed', current: '5.0.0', latest: '5.1.0'});
@@ -287,6 +317,7 @@ describe('update check', function () {
         it('should ignore an install record for an older release', function () {
             const notice = getUpdateNotice(
                 {latestVersion: '5.2.0', install: {version: '5.1.0', status: 'manual', instruction: 'x'}},
+                '5.0.0',
                 '5.0.0'
             );
 
