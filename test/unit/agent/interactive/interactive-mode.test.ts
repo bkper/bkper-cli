@@ -1,5 +1,6 @@
 import {InteractiveMode} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
+import {Container, Text} from '@earendil-works/pi-tui';
 import {expect} from '../../helpers/test-setup.js';
 import {
     BkperInteractiveMode,
@@ -58,6 +59,34 @@ describe('BkperInteractiveMode', function () {
         expect(submitted).to.deep.equal(['/login']);
         expect(unregisterProvider.calledOnceWithExactly('bkper')).to.equal(true);
         expect(registerProvider.called).to.equal(false);
+    });
+
+    it('installs the pending-message adapter after Pi initializes', async function () {
+        const chatContainer = new Container();
+        const requestRender = sinon.spy();
+        let finish!: () => void;
+        const prompt = sinon.stub().callsFake(
+            () => new Promise<void>(resolve => {finish = resolve;})
+        );
+        const session = {prompt, isStreaming: false, isCompacting: false};
+        const mode: Record<string, unknown> = {
+            session,
+            chatContainer,
+            ui: {requestRender},
+            addMessageToChat: () => chatContainer.addChild(new Text('preview')),
+            handleEvent: async () => {},
+        };
+        sinon.stub(InteractiveMode.prototype, 'init').resolves();
+        await BkperInteractiveMode.prototype.init.call(mode);
+
+        const submitted = session.prompt('review it');
+        expect(chatContainer.children).to.have.length(1);
+        expect(requestRender.called).to.equal(true);
+        finish();
+        await submitted;
+        expect(chatContainer.children).to.have.length(0);
+        (mode.restorePendingUserMessage as () => void)();
+        expect(session.prompt).to.equal(prompt);
     });
 
     it('suppresses the Pi exit resume hint', function () {
