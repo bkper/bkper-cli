@@ -28,14 +28,6 @@ function resolveDocsIndexPath(filename: string): string {
     ]);
 }
 
-function resolveReferenceDocPath(relativePath: string): string {
-    const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return resolveFirstExistingPath([
-        path.resolve(thisDir, '..', 'docs', relativePath),
-        path.resolve(thisDir, '..', '..', 'skill', 'references', relativePath),
-    ]);
-}
-
 function resolvePiPackageRoot(): string {
     const piIndexPath = fileURLToPath(import.meta.resolve('@earendil-works/pi-coding-agent'));
     let dir = path.dirname(piIndexPath);
@@ -171,7 +163,7 @@ function buildToolPromptSection(selectedTools: string[]): string {
 export function getBkperAgentSystemPrompt(
     selectedTools: string[] = ['read', 'bash', 'edit', 'write']
 ): string {
-    const coreConceptsPath = resolveReferenceDocPath('core/core-concepts.md');
+    const coreConceptsPath = resolveDocsIndexPath('core/core-concepts.md');
     const indexPath = resolveDocsIndexPath('index.md');
     const referenceDocsDir = path.dirname(indexPath);
     const piRoot = resolvePiPackageRoot();

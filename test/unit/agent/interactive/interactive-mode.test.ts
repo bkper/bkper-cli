@@ -1,6 +1,5 @@
 import {InteractiveMode} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
-import {Container, Text} from '@earendil-works/pi-tui';
 import {expect} from '../../helpers/test-setup.js';
 import {
     BkperInteractiveMode,
@@ -61,32 +60,31 @@ describe('BkperInteractiveMode', function () {
         expect(registerProvider.called).to.equal(false);
     });
 
-    it('installs the pending-message adapter after Pi initializes', async function () {
-        const chatContainer = new Container();
+    it('leaves message rendering and session prompting to Pi after initialization', async function () {
+        const prompt = sinon.stub().resolves();
+        const handleEvent = sinon.stub().resolves();
+        const rebindCurrentSession = sinon.stub().resolves();
+        const addMessageToChat = sinon.spy();
         const requestRender = sinon.spy();
-        let finish!: () => void;
-        const prompt = sinon.stub().callsFake(
-            () => new Promise<void>(resolve => {finish = resolve;})
-        );
         const session = {prompt, isStreaming: false, isCompacting: false};
         const mode: Record<string, unknown> = {
             session,
-            chatContainer,
+            chatContainer: {children: [], removeChild: sinon.spy()},
             ui: {requestRender},
-            addMessageToChat: () => chatContainer.addChild(new Text('preview')),
-            handleEvent: async () => {},
+            addMessageToChat,
+            handleEvent,
+            rebindCurrentSession,
         };
         sinon.stub(InteractiveMode.prototype, 'init').resolves();
         await BkperInteractiveMode.prototype.init.call(mode);
 
-        const submitted = session.prompt('review it');
-        expect(chatContainer.children).to.have.length(1);
-        expect(requestRender.called).to.equal(true);
-        finish();
-        await submitted;
-        expect(chatContainer.children).to.have.length(0);
-        (mode.restorePendingUserMessage as () => void)();
         expect(session.prompt).to.equal(prompt);
+        expect(mode.handleEvent).to.equal(handleEvent);
+        expect(mode.rebindCurrentSession).to.equal(rebindCurrentSession);
+        await session.prompt('review it');
+        expect(prompt.calledOnceWithExactly('review it')).to.equal(true);
+        expect(addMessageToChat.called).to.equal(false);
+        expect(requestRender.called).to.equal(false);
     });
 
     it('suppresses the Pi exit resume hint', function () {

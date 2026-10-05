@@ -89,11 +89,12 @@ describe('external agent skill', function () {
         expect(skill.body.trim().length).to.be.greaterThan(0);
     });
 
-    it('should keep reference docs nested and covered by the bundle index', async function () {
+    it('should index task references without duplicating core concepts required reading', async function () {
         const indexContent = await readFile(referencesIndexPath, 'utf8');
         const indexedDocs = [...new Set(getIndexedReferencePaths(indexContent))].sort();
+        // Core concepts is linked directly by the built-in system prompt and external skill.
         const referenceDocs = (await readMarkdownFilesRecursively(referencesDir)).filter(
-            doc => doc !== 'index.md'
+            doc => doc !== 'index.md' && doc !== 'core/core-concepts.md'
         );
 
         expect(referenceDocs.every(doc => doc.includes('/'))).to.equal(true);

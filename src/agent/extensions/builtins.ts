@@ -17,8 +17,6 @@ import {
     getBkperAiBaseUrlOverride,
     registerBkperAiProvider,
 } from './bkper-ai-provider.js';
-import {registerBkperCoreConceptsPreloadExtension} from './core-concepts-preload.js';
-import {registerPromptRoutingExtension} from './prompt-routing.js';
 import {
     getBkperHandoffShortcutFromFile,
     registerBkperHandoffExtension,
@@ -113,8 +111,6 @@ export function registerBkperAgentBuiltins(
 ): void {
     const bkperAiBaseUrlOverride = getBkperAiBaseUrlOverride(env);
 
-    const promptRouter = registerPromptRoutingExtension(pi);
-    registerBkperCoreConceptsPreloadExtension(pi, undefined, promptRouter);
     registerBkperAgentStartupExtension(
         pi,
         startupMaintenance,

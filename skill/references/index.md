@@ -2,11 +2,8 @@
 
 Reference docs for Bkper tasks. Load only the specific doc(s) relevant to the task — do not load all of them.
 
-For Bkper data, accounting, reporting, tax, or financial-flow tasks, read `core/core-concepts.md` first.
-
 For Bkper app implementation, refactoring, or code review, always read `apps/quality.md` alongside the task-specific references. After implementation, review the changed code against the guidelines before considering the work complete.
 
-- `core/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
 - `cli/data-management.md` — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, per-account balance queries, query operators (on:, after:, before:, account:, group:), JSON output shapes and jq reshaping, human-review Bkper UI links, batch operations via stdin/piping, collections.
 - `cli/app-management.md` — CLI reference for building and deploying Bkper apps: init/git clone/credential helpers, dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference (identity, branding, events, menu integration, deployment).
 - `apps/overview.md` — Platform evaluation and capability overview: use when comparing managed Bkper hosting with self-managed infrastructure or clarifying platform responsibilities; use the task-specific app references for implementation.

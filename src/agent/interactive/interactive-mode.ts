@@ -10,10 +10,6 @@ import {
 } from './prompt-history-search.js';
 import {installPromptHistoryShortcut} from './prompt-history-shortcut.js';
 import {
-    installPendingUserMessage,
-    type PendingUserMessageHost,
-} from './pending-user-message.js';
-import {
     FilePromptHistory,
     getPromptHistoryPath,
 } from './prompt-history-store.js';
@@ -53,8 +49,6 @@ export function suppressPiResumeHintOutput(): () => void {
 }
 
 export class BkperInteractiveMode extends InteractiveMode {
-    private restorePendingUserMessage?: () => void;
-
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
             getChangelogForDisplay: () => undefined;
@@ -67,20 +61,6 @@ export class BkperInteractiveMode extends InteractiveMode {
         }
 
         await super.init();
-
-        this.restorePendingUserMessage?.();
-        const pendingMessageHost = this as unknown as Partial<PendingUserMessageHost>;
-        if (
-            pendingMessageHost.session &&
-            pendingMessageHost.chatContainer &&
-            pendingMessageHost.ui &&
-            pendingMessageHost.addMessageToChat &&
-            pendingMessageHost.handleEvent
-        ) {
-            this.restorePendingUserMessage = installPendingUserMessage(
-                pendingMessageHost as PendingUserMessageHost
-            );
-        }
 
         const authRoutingMode = this as unknown as {
             defaultEditor?: PromptHistoryEditor;
@@ -136,8 +116,6 @@ export class BkperInteractiveMode extends InteractiveMode {
         try {
             await super.run();
         } finally {
-            this.restorePendingUserMessage?.();
-            this.restorePendingUserMessage = undefined;
             restoreResumeHintOutput();
         }
     }

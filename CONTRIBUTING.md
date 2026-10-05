@@ -26,57 +26,6 @@ bun run test:unit
 
 ---
 
-## Prompt routing evaluations
-
-The router batches pending loader questions into one Bkper AI Jev request. Loaders
-own their questions, thresholds, fallbacks, injection, and session persistence.
-Register additional loaders with the shared router in `src/agent/extensions/builtins.ts`.
-
-Core concepts loads for finance, accounting, Bkper user guidance, and development
-that depends on financial/resource-flow business rules or Bkper data semantics.
-Technical-only app work (stacks, source folders, dependencies, builds, HTTP routing,
-styles, CI, or test-runner setup) does not qualify merely because the app uses Bkper.
-Unspecified accounts, transactions, books, and bots normally mean Bkper in this CLI;
-ambiguous bot and documentation reviews default to domain relevance unless context
-establishes technical-only work. Explicit unrelated domains and changes of topic
-should not trigger loading.
-The production threshold is `0.4`. Routing sends at most 16,000 characters of the
-current prompt plus the last three user messages, each capped at 2,000 characters,
-to Bkper AI. It excludes assistant/tool output and images. A five-second deadline
-covers authentication/availability and classification. On failure, each loader uses
-its fallback; core concepts checks domain keywords in the same bounded context.
-This fallback intentionally favors loading and can produce false positives.
-Once loaded, core concepts no longer needs classification on subsequent prompts.
-
-Versioned evaluation sources:
-
-- `src/agent/core-concepts-routing.ts`: the canonical question, threshold, and
-  fallback, shared by runtime routing and all evaluation cases.
-- `test/tools/prompt-routing/cases.ts`: synthetic prompts, recent user context, and
-  expected decisions. Keep case IDs stable and expectations independent of model
-  results. Labels and IDs are never sent to Jev.
-
-Run deterministic behavior tests with `bun run test:unit`. Live evaluations are
-opt-in, use your Bkper login and AI allowance, and do not write to Books:
-
-```bash
-bun run eval:prompt-routing > /tmp/prompt-routing-eval.json
-```
-
-The evaluator tests only the canonical question against every case. The JSON
-report contains that question, thresholds, per-case probabilities, latency,
-confusion counts, and separate provider/fallback errors. It compares thresholds
-from `0.3` through `0.7`; a longer 30-second request deadline isolates question
-quality from the production latency limit. Exit status is nonzero for mismatches
-at the canonical threshold or provider errors.
-Reports are local artifacts, not fixtures. Keep question experiments temporary;
-Git preserves earlier questions. Commit changes to cases and the canonical
-question together when iterating. Synthetic cases are a starting point, not
-evidence of production accuracy; add anonymized real-world misses and re-evaluate
-as Jev changes.
-
----
-
 ## Daily coding workflow
 
 1. **Sync main**

@@ -53,12 +53,13 @@ describe('Bkper agent built-in extensions', function () {
         } as unknown as ExtensionAPI);
 
         // Bkper's own handlers come first; pi's MCP extension registers its lifecycle after them.
-        expect(registeredEvents.slice(0, 4)).to.deep.equal([
-            'before_agent_start',
-            'message_start',
+        expect(registeredEvents.slice(0, 2)).to.deep.equal([
             'session_start',
             'session_start',
         ]);
+        // Only MCP owns a preflight hook; no accounting loader or load marker remains.
+        expect(registeredEvents.filter(event => event === 'before_agent_start')).to.have.length(1);
+        expect(registeredEvents).to.not.include('message_start');
     });
 
     it('registers the codemode tool inactive so tool selection decides activation', function () {

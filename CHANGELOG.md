@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [5.3.4] - 2026-10-05
+
+-   **Agent Experience**
+    -   Removed automatic AI classification before each prompt. The agent now follows its required-reading instructions to load the Bkper core concepts reference when needed, without a separate routing request
+    -   Cancelling the handoff goal editor restores your latest edits to the main input. If handoff generation or session creation fails or is cancelled, your original draft is preserved
+    -   The handoff goal editor uses Pi's standard editor dialog with prompt-template completion and prompt-history search
+
 ## [5.3.2] - 2026-10-03
 
 -   **Agent Experience**
