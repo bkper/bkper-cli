@@ -27,7 +27,7 @@ async function isDeployApiAvailable(platformUrl: string): Promise<boolean> {
 /**
  * Standard setup hook for app command tests.
  * Checks prerequisites and skips if not met.
- * Tries localhost:8790 first, falls back to platform-dev.bkper.app
+ * Tries localhost:8703 first, falls back to platform-dev.bkper.app
  */
 export async function setupAppTest(context: Mocha.Context, timeoutMs: number = 30000): Promise<void> {
     context.timeout(timeoutMs);
@@ -42,7 +42,7 @@ export async function setupAppTest(context: Mocha.Context, timeoutMs: number = 3
     const platformUrl = await initializePlatformUrl();
     if (!platformUrl) {
         console.log('\n  Skipping: Platform not accessible');
-        console.log('   Tried: localhost:8790 and platform-dev.bkper.app');
+        console.log('   Tried: localhost:8703 and platform-dev.bkper.app');
         console.log('   Start a compatible local platform server or set BKPER_PLATFORM_URL\n');
         return context.skip();
     }

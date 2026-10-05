@@ -8,7 +8,7 @@ export { expect };
  */
 export const TestConfig = {
     APP_ID: 'my-app',
-    PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8790',
+    PLATFORM_URL: process.env.BKPER_PLATFORM_URL || 'http://localhost:8703',
     FALLBACK_PLATFORM_URL: 'https://platform-dev.bkper.app',
     DEV_EVENTS_URL: 'http://localhost:8787/events',
     PREVIEW_WEB_URL: 'https://my-app-preview.bkper.app',
@@ -20,7 +20,7 @@ export const TestConfig = {
 } as const;
 
 /**
- * Determine which platform URL to use (localhost:8790 or fallback to preview)
+ * Determine which platform URL to use (localhost:8703 or fallback to preview)
  */
 export async function determinePlatformUrl(): Promise<string | null> {
     // First try localhost
@@ -51,7 +51,7 @@ export async function determinePlatformUrl(): Promise<string | null> {
 }
 
 /**
- * Check if platform worker is accessible at localhost:8790
+ * Check if platform worker is accessible at localhost:8703
  */
 export async function isPlatformRunning(): Promise<boolean> {
     try {
