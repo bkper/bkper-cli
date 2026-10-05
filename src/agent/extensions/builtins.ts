@@ -24,6 +24,7 @@ import {
     registerBkperHandoffExtension,
     type HandoffCommandDispatcher,
 } from './handoff.js';
+import type {HandoffGoalEditor} from './handoff-goal-editor.js';
 import {registerBkperAgentStartupExtension} from './startup.js';
 
 type ExtensionLoadError = {
@@ -107,7 +108,8 @@ export function registerBkperAgentBuiltins(
     settingsManager?: BuiltinsSettings,
     env: Record<string, string | undefined> = process.env,
     credentialManager?: ProviderCredentialManager,
-    dispatchHandoffCommand?: HandoffCommandDispatcher
+    dispatchHandoffCommand?: HandoffCommandDispatcher,
+    editGoal?: HandoffGoalEditor
 ): void {
     const bkperAiBaseUrlOverride = getBkperAiBaseUrlOverride(env);
 
@@ -124,7 +126,8 @@ export function registerBkperAgentBuiltins(
     registerBkperHandoffExtension(
         pi,
         dispatchHandoffCommand,
-        getBkperHandoffShortcutFromFile(getAgentDir())
+        getBkperHandoffShortcutFromFile(getAgentDir()),
+        {editGoal}
     );
     // Registered inactive; the Bkper default tool selection activates it.
     createCodemodeExtension()(pi);

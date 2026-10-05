@@ -5,12 +5,6 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import {installBkperAuthCommandRouting} from '../extensions/auth-commands.js';
 import {
-    installHandoffGoalEditorAutocomplete,
-    installHandoffGoalEditorDraftRecovery,
-    installHandoffGoalEditorPromptHistory,
-    type HandoffGoalEditorHost,
-} from '../extensions/handoff-goal-editor.js';
-import {
     installPromptHistoryEditor,
     type PromptHistoryEditor,
 } from './prompt-history-search.js';
@@ -105,14 +99,6 @@ export class BkperInteractiveMode extends InteractiveMode {
         const promptHistory = new FilePromptHistory(
             getPromptHistoryPath(getAgentDir())
         );
-
-        const handoffGoalMode = this as unknown as Partial<HandoffGoalEditorHost>;
-        if (handoffGoalMode.showExtensionEditor) {
-            const handoffGoalHost = handoffGoalMode as HandoffGoalEditorHost;
-            installHandoffGoalEditorPromptHistory(handoffGoalHost, promptHistory);
-            installHandoffGoalEditorAutocomplete(handoffGoalHost);
-            installHandoffGoalEditorDraftRecovery(handoffGoalHost);
-        }
 
         const providerRegistry = authRoutingMode.session?.modelRuntime;
         if (providerRegistry) {

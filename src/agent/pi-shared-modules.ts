@@ -57,6 +57,7 @@ export const {
     Box,
     colorToRgb,
     CombinedAutocompleteProvider,
+    Editor,
     foregroundAnsi,
     getKeybindings,
     indexedColor,
@@ -67,5 +68,6 @@ export const {
     visibleWidth,
 } = piTui;
 export type Box = PiTui.Box;
+export type Editor = PiTui.Editor;
 
 export const {typesafeSystemOneApi} = piAiTypesafeSystemOne;

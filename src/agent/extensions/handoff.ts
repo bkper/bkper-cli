@@ -10,7 +10,7 @@ import {
     type ExtensionContext,
 } from '@earendil-works/pi-coding-agent';
 import type { KeyId } from '@earendil-works/pi-tui';
-import { HANDOFF_GOAL_EDITOR_TITLE } from './handoff-goal-editor.js';
+import {editHandoffGoal, type HandoffGoalEditor} from './handoff-goal-editor.js';
 
 const BKPER_HANDOFF_SHORTCUT: KeyId = 'ctrl+h';
 const MAX_SESSION_NAME_LENGTH = 80;
@@ -45,6 +45,7 @@ export interface HandoffGenerationRequest {
 
 export interface HandoffDependencies {
     generatePrompt(request: HandoffGenerationRequest, context: ExtensionContext): Promise<string>;
+    editGoal: HandoffGoalEditor;
 }
 
 export type HandoffCommandDispatcher = (command: string) => Promise<void>;
@@ -198,6 +199,7 @@ async function generateWithCurrentModel(
 }
 
 const defaultDependencies: HandoffDependencies = {
+    editGoal: editHandoffGoal,
     generatePrompt: (request, context) =>
         generateWithCurrentModel(
             context,
@@ -220,7 +222,7 @@ function sessionNameFromGoal(goal: string): string {
 async function performHandoff(
     goal: string,
     context: ExtensionCommandContext,
-    dependencies: HandoffDependencies
+    dependencies: Pick<HandoffDependencies, 'generatePrompt'>
 ): Promise<boolean> {
     const conversation = serializeCurrentConversation(context);
     if (!conversation) {
@@ -261,8 +263,12 @@ export function registerBkperHandoffExtension(
     pi: Pick<ExtensionAPI, 'registerCommand' | 'registerShortcut'>,
     dispatchCommand?: HandoffCommandDispatcher,
     handoffShortcut?: KeyId,
-    dependencies: HandoffDependencies = defaultDependencies
+    dependencies: Partial<HandoffDependencies> = {}
 ): void {
+    const resolvedDependencies: HandoffDependencies = {
+        generatePrompt: dependencies.generatePrompt ?? defaultDependencies.generatePrompt,
+        editGoal: dependencies.editGoal ?? defaultDependencies.editGoal,
+    };
     let pendingGoalPrefill: string | undefined;
 
     if (handoffShortcut) {
@@ -309,23 +315,22 @@ export function registerBkperHandoffExtension(
 
                 let goal = args.trim();
                 if (!goal) {
-                    const editedGoal = await context.ui.editor(
-                        HANDOFF_GOAL_EDITOR_TITLE,
-                        draftToRestore ?? ''
+                    const result = await resolvedDependencies.editGoal(
+                        draftToRestore ?? '',
+                        context
                     );
-                    if (editedGoal === undefined) {
-                        // The goal editor recovers its latest text on cancellation.
-                        draftToRestore = undefined;
+                    if (result.status === 'cancelled') {
+                        draftToRestore = result.text;
                     }
-                    if (editedGoal === undefined || !editedGoal.trim()) {
+                    if (result.status === 'cancelled' || !result.text.trim()) {
                         context.ui.notify('Handoff cancelled.', 'info');
                         return;
                     }
-                    goal = editedGoal.trim();
+                    goal = result.text.trim();
                 }
 
                 await context.waitForIdle();
-                completed = await performHandoff(goal, context, dependencies);
+                completed = await performHandoff(goal, context, resolvedDependencies);
             } finally {
                 // A successful replacement invalidates this context and owns a new draft.
                 if (!completed && context.mode === 'tui' && draftToRestore !== undefined) {

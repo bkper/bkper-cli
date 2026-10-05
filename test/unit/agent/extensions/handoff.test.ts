@@ -15,9 +15,9 @@ type CommandHandler = (args: string, context: TestCommandContext) => Promise<voi
 
 interface TestContext {
     mode: 'tui';
+    editGoal: sinon.SinonStub;
     model?: {provider: string; id: string};
     ui: {
-        editor: sinon.SinonStub;
         getEditorText: sinon.SinonStub;
         setEditorText: sinon.SinonStub;
         custom: sinon.SinonStub;
@@ -39,7 +39,7 @@ interface TestCommandContext extends TestContext {
 }
 
 function createDependencies(): {
-    dependencies: HandoffDependencies;
+    dependencies: Pick<HandoffDependencies, 'generatePrompt'>;
     generatePrompt: sinon.SinonStub;
 } {
     const generatePrompt = sinon.stub().resolves('## Context\nExisting work\n\n## Task\nFinish it');
@@ -52,9 +52,9 @@ function createDependencies(): {
 function createContext(): TestContext {
     return {
         mode: 'tui',
+        editGoal: sinon.stub().resolves({status: 'submitted', text: 'Finish the handoff feature'}),
         model: {provider: 'bkper', id: 'test-model'},
         ui: {
-            editor: sinon.stub().resolves('Finish the handoff feature'),
             getEditorText: sinon.stub().returns(''),
             setEditorText: sinon.stub(),
             custom: sinon.stub(),
@@ -112,7 +112,7 @@ function createCommandContext(): TestCommandContext {
 }
 
 function registerHandoff(
-    dependencies?: HandoffDependencies,
+    dependencies?: Partial<HandoffDependencies>,
     shortcut: string | undefined = 'ctrl+h'
 ): {
     command: CommandHandler;
@@ -134,7 +134,11 @@ function registerHandoff(
         },
         dispatchCommand,
         shortcut as 'ctrl+h',
-        dependencies
+        {
+            editGoal: (prefill, context) =>
+                (context as unknown as TestContext).editGoal(prefill),
+            ...dependencies,
+        }
     );
 
     expect(command).to.not.equal(undefined);
@@ -163,14 +167,11 @@ describe('agent handoff', function () {
         await shortcutHandler(shortcutContext);
 
         const commandContext = createCommandContext();
-        commandContext.ui.editor.resolves('Finish the edited feature');
+        commandContext.editGoal.resolves({status: 'submitted', text: 'Finish the edited feature'});
         await command('', commandContext);
 
         expect(
-            commandContext.ui.editor.calledOnceWithExactly(
-                'Next session goal',
-                'Finish the feature I am describing'
-            )
+            commandContext.editGoal.calledOnceWithExactly('Finish the feature I am describing')
         ).to.equal(true);
     });
 
@@ -196,14 +197,11 @@ describe('agent handoff', function () {
 
             // The command may run after the main input has been cleared.
             const context = createCommandContext();
-            context.ui.editor.resolves('Edited goal, not the original draft');
+            context.editGoal.resolves({status: 'submitted', text: 'Edited goal, not the original draft'});
             if (scenario === 'cancelled goal') {
-                context.ui.editor.callsFake(async () => {
-                    context.ui.setEditorText(draft);
-                    return undefined;
-                });
+                context.editGoal.resolves({status: 'cancelled', text: draft});
             }
-            if (scenario === 'empty goal') context.ui.editor.resolves('   ');
+            if (scenario === 'empty goal') context.editGoal.resolves({status: 'submitted', text: '   '});
             if (scenario === 'cancelled generation') {
                 context.ui.custom.resolves({status: 'cancelled'});
             }
@@ -226,31 +224,27 @@ describe('agent handoff', function () {
             if (scenario === 'missing model') {
                 // An early exit must not leave a stale prefill for a later /handoff.
                 const nextContext = createCommandContext();
-                nextContext.ui.editor.resolves(undefined);
+                nextContext.editGoal.resolves({status: 'cancelled', text: ''});
                 await command('', nextContext);
-                expect(
-                    nextContext.ui.editor.calledOnceWithExactly('Next session goal', '')
-                ).to.equal(true);
-                expect(nextContext.ui.setEditorText.called).to.equal(false);
+                expect(nextContext.editGoal.calledOnceWithExactly('')).to.equal(true);
+                expect(nextContext.ui.setEditorText.calledOnceWithExactly('')).to.equal(true);
             }
         });
     }
 
-    it('does not overwrite the latest goal draft recovered by the cancelled editor', async function () {
+    it('restores cancelled goal text from an explicit result without editor side effects', async function () {
         const {dependencies, generatePrompt} = createDependencies();
-        const {shortcutHandler, command} = registerHandoff(dependencies);
+        const latestDraft = '  text for handoff\nwith more edits  ';
+        const editGoal = sinon.stub().resolves({status: 'cancelled', text: latestDraft});
+        const {shortcutHandler, command} = registerHandoff({...dependencies, editGoal});
         const shortcutContext = createContext();
         shortcutContext.ui.getEditorText.returns('Original input');
         await shortcutHandler(shortcutContext);
         const context = createCommandContext();
-        const latestDraft = '  text for handoff\nwith more edits  ';
-        context.ui.editor.callsFake(async () => {
-            context.ui.setEditorText(latestDraft);
-            return undefined;
-        });
 
         await command('', context);
 
+        expect(editGoal.calledOnceWithExactly('Original input', context)).to.equal(true);
         expect(context.ui.setEditorText.calledOnceWithExactly(latestDraft)).to.equal(true);
         expect(context.waitForIdle.called).to.equal(false);
         expect(generatePrompt.called).to.equal(false);
@@ -285,12 +279,10 @@ describe('agent handoff', function () {
 
         expect(context.ui.setEditorText.calledOnceWithExactly('Original draft')).to.equal(true);
         const nextContext = createCommandContext();
-        nextContext.ui.editor.resolves(undefined);
+        nextContext.editGoal.resolves({status: 'cancelled', text: ''});
         await command('', nextContext);
-        expect(
-            nextContext.ui.editor.calledOnceWithExactly('Next session goal', '')
-        ).to.equal(true);
-        expect(nextContext.ui.setEditorText.called).to.equal(false);
+        expect(nextContext.editGoal.calledOnceWithExactly('')).to.equal(true);
+        expect(nextContext.ui.setEditorText.calledOnceWithExactly('')).to.equal(true);
     });
 
     it('preserves a user binding that claims Ctrl+H', function () {
@@ -327,7 +319,7 @@ describe('agent handoff', function () {
         await command('Implement phase two', context);
 
         expect(context.waitForIdle.calledOnce).to.equal(true);
-        expect(context.ui.editor.called).to.equal(false);
+        expect(context.editGoal.called).to.equal(false);
         expect(
             context.waitForIdle.calledBefore(context.sessionManager.buildSessionProjection)
         ).to.equal(true);
@@ -403,12 +395,12 @@ describe('agent handoff', function () {
         const {dependencies, generatePrompt} = createDependencies();
         const {command} = registerHandoff(dependencies);
         const context = createCommandContext();
-        context.ui.editor.resolves('Use my custom goal');
+        context.editGoal.resolves({status: 'submitted', text: 'Use my custom goal'});
 
         await command('', context);
 
-        expect(context.ui.editor.calledOnceWithExactly('Next session goal', '')).to.equal(true);
-        expect(context.ui.editor.calledBefore(context.waitForIdle)).to.equal(true);
+        expect(context.editGoal.calledOnceWithExactly('')).to.equal(true);
+        expect(context.editGoal.calledBefore(context.waitForIdle)).to.equal(true);
         expect(
             context.waitForIdle.calledBefore(context.sessionManager.buildSessionProjection)
         ).to.equal(true);
@@ -425,7 +417,11 @@ describe('agent handoff', function () {
             const {dependencies, generatePrompt} = createDependencies();
             const {command} = registerHandoff(dependencies);
             const context = createCommandContext();
-            context.ui.editor.resolves(cancelledGoal);
+            context.editGoal.resolves(
+                cancelledGoal === undefined
+                    ? {status: 'cancelled', text: ''}
+                    : {status: 'submitted', text: cancelledGoal}
+            );
 
             await command('', context);
 

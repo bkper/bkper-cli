@@ -1,10 +1,16 @@
-import type {AutocompleteProvider} from '@earendil-works/pi-tui';
-import {CombinedAutocompleteProvider} from '../pi-shared-modules.js';
 import {
-    installPromptHistorySearch,
-    type PromptHistoryEditor,
-} from '../interactive/prompt-history-search.js';
-import type {PromptHistoryRepository} from '../interactive/prompt-history-store.js';
+    ExtensionEditorComponent,
+    getAgentDir,
+    type ExtensionContext,
+} from '@earendil-works/pi-coding-agent';
+import type {AutocompleteProvider} from '@earendil-works/pi-tui';
+import {CombinedAutocompleteProvider, Editor} from '../pi-shared-modules.js';
+import {installPromptHistorySearch} from '../interactive/prompt-history-search.js';
+import {
+    FilePromptHistory,
+    getPromptHistoryPath,
+    type PromptHistoryRepository,
+} from '../interactive/prompt-history-store.js';
 
 export const HANDOFF_GOAL_EDITOR_TITLE = 'Next session goal';
 
@@ -15,28 +21,19 @@ export interface HandoffPromptTemplate {
     content: string;
 }
 
-interface HandoffGoalEditor {
-    autocompleteProvider?: AutocompleteProvider;
-    setAutocompleteProvider(provider: AutocompleteProvider): void;
-    requestAutocomplete?(options: {force: boolean; explicitTab: boolean}): void;
-    isShowingAutocomplete?(): boolean;
-    getText?(): string;
-    setText?(text: string): void;
-    handleInput?(data: string): void;
-}
+export type HandoffGoalEditorResult =
+    | {status: 'submitted'; text: string}
+    | {status: 'cancelled'; text: string};
 
-export interface HandoffGoalEditorHost {
-    showExtensionEditor(title: string, prefill?: string): Promise<string | undefined>;
-    editor?: Pick<PromptHistoryEditor, 'setText'>;
-    extensionEditor?: {
-        editor?: HandoffGoalEditor;
-    };
-    session?: {
-        promptTemplates: ReadonlyArray<HandoffPromptTemplate>;
-    };
-    sessionManager?: {
-        getCwd(): string;
-    };
+export type HandoffGoalEditor = (
+    prefill: string,
+    context: ExtensionContext
+) => Promise<HandoffGoalEditorResult>;
+
+export interface HandoffGoalEditorOptions {
+    templates?: ReadonlyArray<HandoffPromptTemplate>;
+    history?: PromptHistoryRepository;
+    externalEditorCommand?: string;
 }
 
 function parseCommandArgs(argsString: string): string[] {
@@ -161,73 +158,47 @@ function createPromptTemplateAutocompleteProvider(
     };
 }
 
-export function installHandoffGoalEditorDraftRecovery(host: HandoffGoalEditorHost): void {
-    const showExtensionEditor = host.showExtensionEditor.bind(host);
-
-    host.showExtensionEditor = async (title, prefill) => {
-        if (title !== HANDOFF_GOAL_EDITOR_TITLE) {
-            return showExtensionEditor(title, prefill);
-        }
-
-        const result = showExtensionEditor(title, prefill);
-        // Pi clears host.extensionEditor before resolving a cancelled dialog.
-        const goalEditor = host.extensionEditor?.editor;
-        const goal = await result;
-        if (goal === undefined && goalEditor?.getText) {
-            host.editor?.setText(goalEditor.getText());
-        }
-        return goal;
-    };
+function getDialogEditor(component: ExtensionEditorComponent): Editor {
+    // Use the public component tree rather than Pi's private editor field.
+    const editor = component.children.find(
+        (child): child is Editor => child instanceof Editor
+    );
+    if (!editor) throw new Error('Pi handoff dialog does not contain an editor.');
+    return editor;
 }
 
-export function installHandoffGoalEditorPromptHistory(
-    host: HandoffGoalEditorHost,
-    history: PromptHistoryRepository
-): void {
-    const showExtensionEditor = host.showExtensionEditor.bind(host);
-
-    host.showExtensionEditor = async (title, prefill) => {
-        if (title !== HANDOFF_GOAL_EDITOR_TITLE) {
-            return showExtensionEditor(title, prefill);
-        }
-
-        const result = showExtensionEditor(title, prefill);
-        queueMicrotask(() => {
-            const editor = host.extensionEditor?.editor;
-            if (editor?.getText && editor.setText && editor.handleInput) {
-                installPromptHistorySearch(editor as PromptHistoryEditor, history, false);
-            }
-        });
-
-        const goal = await result;
-        if (goal?.trim()) {
-            history.record(goal, 'handoff');
-        }
-        return goal;
-    };
-}
-
-export function installHandoffGoalEditorAutocomplete(host: HandoffGoalEditorHost): void {
-    const showExtensionEditor = host.showExtensionEditor.bind(host);
-
-    host.showExtensionEditor = async (title, prefill) => {
-        if (title !== HANDOFF_GOAL_EDITOR_TITLE) {
-            return showExtensionEditor(title, prefill);
-        }
-
-        const templates = [...(host.session?.promptTemplates ?? [])];
-        const result = showExtensionEditor(title, prefill);
-        const editor = host.extensionEditor?.editor;
-        if (editor) {
-            editor.setAutocompleteProvider(
-                createPromptTemplateAutocompleteProvider(
-                    templates,
-                    host.sessionManager?.getCwd() ?? process.cwd()
-                )
+export async function editHandoffGoal(
+    prefill: string,
+    context: {ui: Pick<ExtensionContext['ui'], 'custom'>; cwd: string},
+    options: HandoffGoalEditorOptions = {}
+): Promise<HandoffGoalEditorResult> {
+    const templates = [...(options.templates ?? [])];
+    const history =
+        options.history ?? new FilePromptHistory(getPromptHistoryPath(getAgentDir()));
+    const result = await context.ui.custom<HandoffGoalEditorResult>(
+        (tui, _theme, keybindings, done) => {
+            const component = new ExtensionEditorComponent(
+                tui,
+                keybindings,
+                HANDOFF_GOAL_EDITOR_TITLE,
+                prefill,
+                text => done({status: 'submitted', text}),
+                () => done({status: 'cancelled', text: editor.getText()}),
+                undefined,
+                options.externalEditorCommand
             );
+            const editor = getDialogEditor(component);
+            editor.setAutocompleteProvider(
+                createPromptTemplateAutocompleteProvider(templates, context.cwd)
+            );
+            installPromptHistorySearch(editor, history, false);
+            return component;
         }
+    );
 
-        const goal = await result;
-        return goal === undefined ? undefined : expandHandoffGoalTemplate(goal, templates);
-    };
+    if (result.status === 'submitted') {
+        if (result.text.trim()) history.record(result.text, 'handoff');
+        return {...result, text: expandHandoffGoalTemplate(result.text, templates)};
+    }
+    return result;
 }

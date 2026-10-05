@@ -17,8 +17,10 @@ import {
     registerBkperAgentBuiltins,
 } from '../extensions/builtins.js';
 import {getBkperAiBaseUrlOverride} from '../extensions/bkper-ai-provider.js';
+import {editHandoffGoal} from '../extensions/handoff-goal-editor.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperAgentSystemPrompt} from '../system-prompt.js';
+import {FilePromptHistory, getPromptHistoryPath} from './prompt-history-store.js';
 import {
     BkperInteractiveMode,
     type InteractiveRuntimeHost,
@@ -99,6 +101,7 @@ export function createAgentModeDependencies(
                     }
                     await promptHandoffCommand(command);
                 };
+                const promptHistory = new FilePromptHistory(getPromptHistoryPath(agentDir));
                 const services = await createAgentSessionServices({
                     cwd,
                     agentDir,
@@ -116,7 +119,14 @@ export function createAgentModeDependencies(
                                     settingsManager,
                                     process.env,
                                     modelRuntime,
-                                    dispatchHandoffCommand
+                                    dispatchHandoffCommand,
+                                    (prefill, context) =>
+                                        editHandoffGoal(prefill, context, {
+                                            history: promptHistory,
+                                            templates: services.resourceLoader.getPrompts().prompts,
+                                            externalEditorCommand:
+                                                settingsManager.getExternalEditorCommand(),
+                                        })
                                 );
                             },
                         ],
