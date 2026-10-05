@@ -6,6 +6,7 @@ import {
     expandHandoffGoalTemplate,
     HANDOFF_GOAL_EDITOR_TITLE,
     installHandoffGoalEditorAutocomplete,
+    installHandoffGoalEditorDraftRecovery,
     installHandoffGoalEditorPromptHistory,
     type HandoffGoalEditorHost,
     type HandoffPromptTemplate,
@@ -25,6 +26,69 @@ const templates: HandoffPromptTemplate[] = [
         content: 'Finish the current task',
     },
 ];
+
+describe('handoff goal editor draft recovery', function () {
+    for (const latestDraft of ['text for handoff', '  edited\nsecond line  ', '', '/finish']) {
+        it(`recovers the latest cancelled draft ${JSON.stringify(latestDraft)}`, async function () {
+            let text = 'Original input';
+            let closeEditor: (() => void) | undefined;
+            const setText = sinon.stub();
+            const record = sinon.stub();
+            const host: HandoffGoalEditorHost = {
+                editor: {setText},
+                session: {promptTemplates: templates},
+                showExtensionEditor: () => {
+                    host.extensionEditor = {
+                        editor: {
+                            getText: () => text,
+                            setAutocompleteProvider: () => {},
+                        },
+                    };
+                    return new Promise(resolve => {
+                        closeEditor = () => {
+                            // Match Pi's lifecycle: the dialog disappears before resolution.
+                            host.extensionEditor = undefined;
+                            resolve(undefined);
+                        };
+                    });
+                },
+            };
+            installHandoffGoalEditorPromptHistory(host, {getEntries: () => [], record});
+            installHandoffGoalEditorAutocomplete(host);
+            installHandoffGoalEditorDraftRecovery(host);
+
+            const result = host.showExtensionEditor(HANDOFF_GOAL_EDITOR_TITLE, text);
+            text = latestDraft;
+            if (!closeEditor) throw new Error('Goal editor did not open');
+            closeEditor();
+
+            expect(await result).to.equal(undefined);
+            expect(setText.calledOnceWithExactly(latestDraft)).to.equal(true);
+            expect(record.called).to.equal(false);
+        });
+    }
+
+    it('does not recover submitted goals or cancelled unrelated editors', async function () {
+        const setText = sinon.stub();
+        const host: HandoffGoalEditorHost = {
+            editor: {setText},
+            showExtensionEditor: async title => {
+                host.extensionEditor = {
+                    editor: {
+                        getText: () => 'Dialog draft',
+                        setAutocompleteProvider: () => {},
+                    },
+                };
+                return title === HANDOFF_GOAL_EDITOR_TITLE ? 'Submitted goal' : undefined;
+            },
+        };
+        installHandoffGoalEditorDraftRecovery(host);
+
+        expect(await host.showExtensionEditor(HANDOFF_GOAL_EDITOR_TITLE)).to.equal('Submitted goal');
+        expect(await host.showExtensionEditor('Other editor')).to.equal(undefined);
+        expect(setText.called).to.equal(false);
+    });
+});
 
 describe('handoff goal editor prompt templates', function () {
     it('expands selected slash prompts for review and expands arguments on submit', async function () {

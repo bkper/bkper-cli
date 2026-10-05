@@ -19,6 +19,8 @@ interface TestContext {
     ui: {
         editor: sinon.SinonStub;
         getEditorText: sinon.SinonStub;
+        setEditorText: sinon.SinonStub;
+        custom: sinon.SinonStub;
         notify: sinon.SinonStub;
     };
     sessionManager: {
@@ -54,6 +56,8 @@ function createContext(): TestContext {
         ui: {
             editor: sinon.stub().resolves('Finish the handoff feature'),
             getEditorText: sinon.stub().returns(''),
+            setEditorText: sinon.stub(),
+            custom: sinon.stub(),
             notify: sinon.stub(),
         },
         sessionManager: {
@@ -108,7 +112,7 @@ function createCommandContext(): TestCommandContext {
 }
 
 function registerHandoff(
-    dependencies = createDependencies().dependencies,
+    dependencies?: HandoffDependencies,
     shortcut: string | undefined = 'ctrl+h'
 ): {
     command: CommandHandler;
@@ -168,6 +172,125 @@ describe('agent handoff', function () {
                 'Finish the feature I am describing'
             )
         ).to.equal(true);
+    });
+
+    for (const scenario of [
+        'cancelled goal',
+        'empty goal',
+        'cancelled generation',
+        'failed generation',
+        'cancelled session',
+        'failed session',
+        'missing model',
+        'empty conversation',
+    ]) {
+        it(`restores the original Ctrl+H draft after ${scenario}`, async function () {
+            const {dependencies, generatePrompt} = createDependencies();
+            const {shortcutHandler, command} = registerHandoff(
+                scenario === 'cancelled generation' ? undefined : dependencies
+            );
+            const draft = '  Original draft\nwith another line  ';
+            const shortcutContext = createContext();
+            shortcutContext.ui.getEditorText.returns(draft);
+            await shortcutHandler(shortcutContext);
+
+            // The command may run after the main input has been cleared.
+            const context = createCommandContext();
+            context.ui.editor.resolves('Edited goal, not the original draft');
+            if (scenario === 'cancelled goal') {
+                context.ui.editor.callsFake(async () => {
+                    context.ui.setEditorText(draft);
+                    return undefined;
+                });
+            }
+            if (scenario === 'empty goal') context.ui.editor.resolves('   ');
+            if (scenario === 'cancelled generation') {
+                context.ui.custom.resolves({status: 'cancelled'});
+            }
+            if (scenario === 'failed generation') generatePrompt.rejects(new Error('offline'));
+            if (scenario === 'cancelled session') context.newSession.resolves({cancelled: true});
+            if (scenario === 'failed session') context.newSession.rejects(new Error('unavailable'));
+            if (scenario === 'missing model') context.model = undefined;
+            if (scenario === 'empty conversation') {
+                context.sessionManager.buildSessionProjection.returns({messages: []});
+            }
+
+            try {
+                await command('', context);
+            } catch (error) {
+                if (scenario !== 'failed session') throw error;
+            }
+
+            expect(context.ui.setEditorText.calledOnceWithExactly(draft)).to.equal(true);
+            expect(context.setEditorText.called).to.equal(false);
+            if (scenario === 'missing model') {
+                // An early exit must not leave a stale prefill for a later /handoff.
+                const nextContext = createCommandContext();
+                nextContext.ui.editor.resolves(undefined);
+                await command('', nextContext);
+                expect(
+                    nextContext.ui.editor.calledOnceWithExactly('Next session goal', '')
+                ).to.equal(true);
+                expect(nextContext.ui.setEditorText.called).to.equal(false);
+            }
+        });
+    }
+
+    it('does not overwrite the latest goal draft recovered by the cancelled editor', async function () {
+        const {dependencies, generatePrompt} = createDependencies();
+        const {shortcutHandler, command} = registerHandoff(dependencies);
+        const shortcutContext = createContext();
+        shortcutContext.ui.getEditorText.returns('Original input');
+        await shortcutHandler(shortcutContext);
+        const context = createCommandContext();
+        const latestDraft = '  text for handoff\nwith more edits  ';
+        context.ui.editor.callsFake(async () => {
+            context.ui.setEditorText(latestDraft);
+            return undefined;
+        });
+
+        await command('', context);
+
+        expect(context.ui.setEditorText.calledOnceWithExactly(latestDraft)).to.equal(true);
+        expect(context.waitForIdle.called).to.equal(false);
+        expect(generatePrompt.called).to.equal(false);
+        expect(context.newSession.called).to.equal(false);
+    });
+
+    it('does not restore the old draft into a successful replacement session', async function () {
+        const {dependencies} = createDependencies();
+        const {shortcutHandler, command} = registerHandoff(dependencies);
+        const shortcutContext = createContext();
+        shortcutContext.ui.getEditorText.returns('Original draft');
+        await shortcutHandler(shortcutContext);
+        const context = createCommandContext();
+
+        await command('', context);
+
+        expect(context.ui.setEditorText.called).to.equal(false);
+        expect(
+            context.setEditorText.calledOnceWithExactly(
+                '## Context\nExisting work\n\n## Task\nFinish it'
+            )
+        ).to.equal(true);
+    });
+
+    it('restores the draft when shortcut dispatch fails and clears the pending prefill', async function () {
+        const {shortcutHandler, command, dispatchCommand} = registerHandoff();
+        const context = createContext();
+        context.ui.getEditorText.returns('Original draft');
+        dispatchCommand.rejects(new Error('dispatch failed'));
+
+        await shortcutHandler(context);
+
+        expect(context.ui.setEditorText.calledOnceWithExactly('Original draft')).to.equal(true);
+        const nextContext = createCommandContext();
+        nextContext.ui.editor.resolves(undefined);
+        await command('', nextContext);
+        expect(
+            nextContext.ui.editor.calledOnceWithExactly('Next session goal', '')
+        ).to.equal(true);
+        expect(nextContext.ui.setEditorText.called).to.equal(false);
     });
 
     it('preserves a user binding that claims Ctrl+H', function () {

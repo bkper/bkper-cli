@@ -221,11 +221,11 @@ async function performHandoff(
     goal: string,
     context: ExtensionCommandContext,
     dependencies: HandoffDependencies
-): Promise<void> {
+): Promise<boolean> {
     const conversation = serializeCurrentConversation(context);
     if (!conversation) {
         context.ui.notify('No conversation to hand off.', 'warning');
-        return;
+        return false;
     }
 
     let prompt: string;
@@ -234,10 +234,10 @@ async function performHandoff(
     } catch (error) {
         if (error instanceof HandoffCancelledError) {
             context.ui.notify('Handoff cancelled.', 'info');
-            return;
+            return false;
         }
         context.ui.notify(`Handoff failed: ${normalizeError(error).message}`, 'error');
-        return;
+        return false;
     }
 
     const parentSession = context.sessionManager.getSessionFile();
@@ -254,6 +254,7 @@ async function performHandoff(
     if (result.cancelled) {
         context.ui.notify('Handoff cancelled.', 'info');
     }
+    return !result.cancelled;
 }
 
 export function registerBkperHandoffExtension(
@@ -276,7 +277,11 @@ export function registerBkperHandoffExtension(
                 try {
                     await dispatchCommand('/handoff');
                 } catch (error) {
-                    pendingGoalPrefill = undefined;
+                    // The command restores its draft once it has consumed the prefill.
+                    if (pendingGoalPrefill !== undefined) {
+                        context.ui.setEditorText(pendingGoalPrefill);
+                        pendingGoalPrefill = undefined;
+                    }
                     context.ui.notify(
                         `Handoff shortcut failed: ${normalizeError(error).message}`,
                         'error'
@@ -289,32 +294,44 @@ export function registerBkperHandoffExtension(
     pi.registerCommand('handoff', {
         description: 'Continue the current work in a focused new session',
         handler: async (args, context) => {
-            if (context.mode !== 'tui') {
-                context.ui.notify('Handoff requires interactive mode.', 'error');
-                return;
-            }
-            if (!context.model) {
-                context.ui.notify('No model selected.', 'error');
-                return;
-            }
-
-            let goal = args.trim();
-            if (!goal) {
-                const goalPrefill = pendingGoalPrefill ?? '';
-                pendingGoalPrefill = undefined;
-                const editedGoal = await context.ui.editor(
-                    HANDOFF_GOAL_EDITOR_TITLE,
-                    goalPrefill
-                );
-                if (editedGoal === undefined || !editedGoal.trim()) {
-                    context.ui.notify('Handoff cancelled.', 'info');
+            let draftToRestore = pendingGoalPrefill;
+            pendingGoalPrefill = undefined;
+            let completed = false;
+            try {
+                if (context.mode !== 'tui') {
+                    context.ui.notify('Handoff requires interactive mode.', 'error');
                     return;
                 }
-                goal = editedGoal.trim();
-            }
+                if (!context.model) {
+                    context.ui.notify('No model selected.', 'error');
+                    return;
+                }
 
-            await context.waitForIdle();
-            await performHandoff(goal, context, dependencies);
+                let goal = args.trim();
+                if (!goal) {
+                    const editedGoal = await context.ui.editor(
+                        HANDOFF_GOAL_EDITOR_TITLE,
+                        draftToRestore ?? ''
+                    );
+                    if (editedGoal === undefined) {
+                        // The goal editor recovers its latest text on cancellation.
+                        draftToRestore = undefined;
+                    }
+                    if (editedGoal === undefined || !editedGoal.trim()) {
+                        context.ui.notify('Handoff cancelled.', 'info');
+                        return;
+                    }
+                    goal = editedGoal.trim();
+                }
+
+                await context.waitForIdle();
+                completed = await performHandoff(goal, context, dependencies);
+            } finally {
+                // A successful replacement invalidates this context and owns a new draft.
+                if (!completed && context.mode === 'tui' && draftToRestore !== undefined) {
+                    context.ui.setEditorText(draftToRestore);
+                }
+            }
         },
     });
 }

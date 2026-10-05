@@ -27,6 +27,7 @@ interface HandoffGoalEditor {
 
 export interface HandoffGoalEditorHost {
     showExtensionEditor(title: string, prefill?: string): Promise<string | undefined>;
+    editor?: Pick<PromptHistoryEditor, 'setText'>;
     extensionEditor?: {
         editor?: HandoffGoalEditor;
     };
@@ -157,6 +158,25 @@ function createPromptTemplateAutocompleteProvider(
             };
         },
         shouldTriggerFileCompletion: () => false,
+    };
+}
+
+export function installHandoffGoalEditorDraftRecovery(host: HandoffGoalEditorHost): void {
+    const showExtensionEditor = host.showExtensionEditor.bind(host);
+
+    host.showExtensionEditor = async (title, prefill) => {
+        if (title !== HANDOFF_GOAL_EDITOR_TITLE) {
+            return showExtensionEditor(title, prefill);
+        }
+
+        const result = showExtensionEditor(title, prefill);
+        // Pi clears host.extensionEditor before resolving a cancelled dialog.
+        const goalEditor = host.extensionEditor?.editor;
+        const goal = await result;
+        if (goal === undefined && goalEditor?.getText) {
+            host.editor?.setText(goalEditor.getText());
+        }
+        return goal;
     };
 }
 

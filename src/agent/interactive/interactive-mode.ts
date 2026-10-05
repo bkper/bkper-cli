@@ -6,6 +6,7 @@ import {
 import {installBkperAuthCommandRouting} from '../extensions/auth-commands.js';
 import {
     installHandoffGoalEditorAutocomplete,
+    installHandoffGoalEditorDraftRecovery,
     installHandoffGoalEditorPromptHistory,
     type HandoffGoalEditorHost,
 } from '../extensions/handoff-goal-editor.js';
@@ -110,6 +111,7 @@ export class BkperInteractiveMode extends InteractiveMode {
             const handoffGoalHost = handoffGoalMode as HandoffGoalEditorHost;
             installHandoffGoalEditorPromptHistory(handoffGoalHost, promptHistory);
             installHandoffGoalEditorAutocomplete(handoffGoalHost);
+            installHandoffGoalEditorDraftRecovery(handoffGoalHost);
         }
 
         const providerRegistry = authRoutingMode.session?.modelRuntime;
