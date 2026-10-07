@@ -327,6 +327,28 @@ describe('agent/bkper-ai-provider', function () {
             ]);
     });
 
+    it('reports safe endpoint and status diagnostics for a non-JSON model catalog', async function () {
+        const config = getBkperAiProviderConfig(
+            {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/v1'},
+            sinon.stub().resolves(new Response('<!DOCTYPE html>private-response-value', {
+                status: 200,
+                headers: {'Content-Type': 'text/html'},
+            }))
+        );
+        let error: unknown;
+        try {
+            await config.refreshModels?.(createRefreshContext());
+        } catch (cause) {
+            error = cause;
+        }
+        expect(error).to.be.instanceOf(Error);
+        const message = (error as Error).message;
+        expect(message).to.include('https://ai-dev.bkper.app/v1/models');
+        expect(message).to.include('200');
+        expect(message).to.include('text/html');
+        expect(message).to.not.include('private-response-value');
+    });
+
     it('reports a failed model request', async function () {
         const config = getBkperAiProviderConfig(
             {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/v1'},
@@ -341,6 +363,8 @@ describe('agent/bkper-ai-provider', function () {
         }
 
         expect(error).to.be.instanceOf(Error);
-        expect((error as Error).message).to.equal('Bkper AI model request failed (503).');
+        expect((error as Error).message).to.include('https://ai-dev.bkper.app/v1/models');
+        expect((error as Error).message).to.include('503');
+        expect((error as Error).message).to.not.include('Unavailable');
     });
 });

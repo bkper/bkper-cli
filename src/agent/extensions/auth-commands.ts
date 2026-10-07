@@ -285,24 +285,44 @@ async function handleBkperLogin(
                 if (dialog.signal.aborted) {
                     return;
                 }
-                await ctx.modelRegistry.refresh();
-                const currentModel = ctx.model;
-                const currentModelAvailable = currentModel
-                    ? ctx.modelRegistry
-                          .getAvailable()
-                          .some(
-                              model =>
-                                  model.provider === currentModel.provider &&
-                                  model.id === currentModel.id
-                          )
-                    : false;
-                if (!currentModelAvailable) {
-                    await switchToAuthFallback(pi, ctx, dependencies);
+                let setupWarning: string | undefined;
+                try {
+                    const refreshResult = await ctx.modelRegistry.refresh({
+                        signal: dialog.signal,
+                    });
+                    const refreshError = refreshResult.errors.get(BKPER_AI_PROVIDER_ID);
+                    if (refreshError) {
+                        throw refreshError;
+                    }
+                    const currentModel = ctx.model;
+                    const currentModelAvailable = currentModel
+                        ? ctx.modelRegistry
+                              .getAvailable()
+                              .some(
+                                  model =>
+                                      model.provider === currentModel.provider &&
+                                      model.id === currentModel.id
+                              )
+                        : false;
+                    if (!currentModelAvailable) {
+                        await switchToAuthFallback(pi, ctx, dependencies);
+                    }
+                } catch (error) {
+                    setupWarning = error instanceof Error ? error.message : String(error);
+                }
+                if (dialog.signal.aborted) {
+                    return;
                 }
                 const state = result.alreadyLoggedIn ? 'Already logged in' : 'Logged in';
                 const identity = result.email ? ` as ${result.email}` : '';
                 finish();
                 ctx.ui.notify(`${state} to Bkper${identity}.`, 'info');
+                if (setupWarning) {
+                    ctx.ui.notify(
+                        `Bkper is authenticated, but model setup failed: ${setupWarning}`,
+                        'warning'
+                    );
+                }
             })
             .catch(error => {
                 if (dialog.signal.aborted) {

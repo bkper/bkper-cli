@@ -222,9 +222,17 @@ async function postOAuthForm(
         signal,
     });
 
-    const parsed: unknown = await response.json();
+    const contentType = response.headers.get('content-type') ?? 'unknown content type';
+    const responseInfo = `${url} (HTTP ${response.status}, ${contentType})`;
+    let parsed: unknown;
+    try {
+        parsed = await response.json();
+    } catch {
+        // Do not expose response bodies, which may contain credentials or intermediary HTML.
+        throw new Error(`Expected JSON OAuth response from ${responseInfo}.`);
+    }
     if (!isRecord(parsed)) {
-        throw new Error(`Unexpected OAuth response from ${url}`);
+        throw new Error(`Unexpected OAuth response from ${responseInfo}.`);
     }
 
     return {

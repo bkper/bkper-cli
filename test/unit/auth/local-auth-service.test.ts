@@ -21,7 +21,8 @@ interface AuthServiceModule {
 
 interface FetchResponse {
     status: number;
-    body: Record<string, unknown>;
+    body: Record<string, unknown> | string;
+    contentType?: string;
 }
 
 interface FetchCall {
@@ -56,9 +57,9 @@ describe('auth/local-auth-service', function () {
                 body: init?.body?.toString() ?? '',
             });
 
-            return new Response(JSON.stringify(response.body), {
+            return new Response(typeof response.body === 'string' ? response.body : JSON.stringify(response.body), {
                 status: response.status,
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': response.contentType ?? 'application/json' },
             });
         });
 
@@ -280,6 +281,39 @@ describe('auth/local-auth-service', function () {
         })).to.equal(true);
         expect(consoleLogStub.called).to.equal(false);
     });
+
+    for (const endpoint of ['device/code', 'token']) {
+        it(`reports safe HTTP diagnostics for a non-JSON OAuth ${endpoint} response`, async function () {
+            const responses: FetchResponse[] = [];
+            if (endpoint === 'token') {
+                responses.push({status: 200, body: {
+                    device_code: 'private-device-code',
+                    user_code: 'USER-CODE',
+                    verification_url: 'https://www.google.com/device',
+                    expires_in: 1800,
+                    interval: 0,
+                }});
+            }
+            responses.push({status: 502, body: '<!DOCTYPE html>private-response-value', contentType: 'text/html'});
+            stubFetchResponses(responses);
+            sinon.stub(console, 'log');
+            const authService = await importAuthService();
+            let error: unknown;
+            try {
+                await authService.getOAuthToken();
+            } catch (cause) {
+                error = cause;
+            }
+            expect(error).to.be.instanceOf(Error);
+            const message = (error as Error).message;
+            expect(message).to.include(`https://oauth2.googleapis.com/${endpoint}`);
+            expect(message).to.include('502');
+            expect(message).to.include('text/html');
+            expect(message).to.not.include('private-response-value');
+            expect(message).to.not.include('private-device-code');
+            expect(fs.existsSync(credentialsPath)).to.equal(false);
+        });
+    }
 
     it('should fail device authorization when access is denied', async function () {
         stubFetchResponses([

@@ -227,12 +227,21 @@ async function fetchBkperAiModels(
     fetchFn: typeof fetch,
     signal?: AbortSignal
 ): Promise<Array<BkperAiModelConfig | ProviderClassifierModelConfig>> {
-    const response = await fetchFn(`${baseUrl}/models`, {signal});
+    const url = `${baseUrl}/models`;
+    const response = await fetchFn(url, {signal});
+    const contentType = response.headers.get('content-type') ?? 'unknown content type';
+    const responseInfo = `${url} (HTTP ${response.status}, ${contentType})`;
     if (!response.ok) {
-        throw new Error(`Bkper AI model request failed (${response.status}).`);
+        throw new Error(`Bkper AI model request failed: ${responseInfo}.`);
     }
 
-    const catalog = (await response.json()) as BkperAiCatalog;
+    let catalog: BkperAiCatalog;
+    try {
+        catalog = (await response.json()) as BkperAiCatalog;
+    } catch {
+        // Keep response bodies out of diagnostics, including JSON parse error snippets.
+        throw new Error(`Expected JSON Bkper AI model response from ${responseInfo}.`);
+    }
     if (!Array.isArray(catalog.data)) {
         throw new Error('Bkper AI model response is invalid.');
     }
