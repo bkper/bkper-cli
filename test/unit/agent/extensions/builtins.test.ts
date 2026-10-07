@@ -49,6 +49,7 @@ describe('Bkper agent built-in extensions', function () {
             registerEntryRenderer: sinon.stub(),
             appendEntry: sinon.stub(),
             registerProvider: sinon.stub(),
+            registerToolRenderer: sinon.stub(),
             registerTool: sinon.stub(),
         } as unknown as ExtensionAPI);
 
@@ -74,6 +75,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerEntryRenderer: sinon.stub(),
                 appendEntry: sinon.stub(),
                 registerProvider: sinon.stub(),
+                registerToolRenderer: sinon.stub(),
                 registerTool,
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
@@ -101,6 +103,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerEntryRenderer: sinon.stub(),
                 appendEntry: sinon.stub(),
                 registerProvider: sinon.stub(),
+                registerToolRenderer: sinon.stub(),
                 registerTool,
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
@@ -132,6 +135,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerProvider: (name: string, config: ProviderConfig) => {
                     providers.push({name, config});
                 },
+                registerToolRenderer: sinon.stub(),
                 registerTool: sinon.stub(),
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
@@ -167,6 +171,7 @@ describe('Bkper agent built-in extensions', function () {
                 registerEntryRenderer: sinon.stub(),
                 appendEntry: sinon.stub(),
                 registerProvider,
+                registerToolRenderer: sinon.stub(),
                 registerTool: sinon.stub(),
             } as unknown as ExtensionAPI,
             sinon.stub().resolves(),
