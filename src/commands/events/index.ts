@@ -6,3 +6,4 @@ export {
     type ListBookEventsResult,
 } from './list.js';
 export { replayEventBotResponse } from './replay.js';
+export { deleteEventBotResponse } from './delete.js';

@@ -5,7 +5,7 @@ import { setMockBkper } from '../../helpers/mock-factory.js';
 
 const { replayEventBotResponse } = await import('../../../../src/commands/events/replay.js');
 
-describe('CLI - event replay Command', function () {
+describe('CLI - event response replay Command', function () {
     afterEach(function () {
         sinon.restore();
     });

@@ -326,7 +326,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 
 ## Events
 
-Inspect book events and bot responses — useful for debugging automations and recovering from intermittent bot errors.
+Inspect book events and bot responses — start here when debugging bot errors shown in a Book.
 
 ```bash
 # List recent events (one page, default limit 50)
@@ -345,7 +345,10 @@ bkper event list -b abc123 --type TRANSACTION_POSTED --after 2026-01-01T00:00:00
 bkper event list -b abc123 --limit 50 --cursor cursor_123
 
 # Replay one bot response after inspecting an error
-bkper event replay evt_789 -b abc123 --agent-id tax-bot
+bkper event response replay evt_789 -b abc123 --agent-id tax-bot
+
+# Delete one bot response
+bkper event response delete evt_789 -b abc123 --agent-id tax-bot
 ```
 
 <details>
@@ -359,7 +362,8 @@ bkper event replay evt_789 -b abc123 --agent-id tax-bot
     -   `--type <type>` - Filter by event type (e.g. `TRANSACTION_POSTED`, `ACCOUNT_CREATED`)
     -   `--limit <number>` - Fetch one page with up to this many events (default `50`, max `200`)
     -   `--cursor <cursor>` - Cursor for fetching the next page
--   `event replay <eventId> -b <bookId> --agent-id <agentId>` - Replay one bot response for an event (returns the updated event with bot responses)
+-   `event response replay <eventId> -b <bookId> --agent-id <agentId>` - Replay one bot response for an event (returns the updated event with bot responses)
+-   `event response delete <eventId> -b <bookId> --agent-id <agentId>` - Delete one bot response for an event (does not undo its effects; returns the updated event)
 
 Output includes the full event payload, including nested `botResponses` (`agentId`, `type`, `message`, `createdAt`), for LLM-assisted debugging.
 

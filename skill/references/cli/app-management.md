@@ -566,7 +566,7 @@ Inside the interactive agent:
     -   `--last <n>` - Show newest N requests after filters (default: 100)
     -   `-p, --preview` - Query preview logs instead of production
     -   `-w, --web` - Filter to normal web/API requests
-    -   `-e, --events` - Filter to `/events` requests
+    -   `-e, --events` - Filter to `/events` requests (for bot errors shown in a Book, start with `event list --error`)
     -   `--level <level>` - Minimum log level threshold (`info`, `warn`, or `error`)
     -   `--status-code <code>` - Filter by HTTP status code
 -   `app undeploy` - Remove app from platform
