@@ -49,6 +49,7 @@ Client code has two data paths. Choose based on who owns the behavior:
 
 - **Direct Bkper calls** use `bkper-js` for generic Bkper data needed only by the browser UI.
 - **App API calls** use the generated typed client in `client/src/api/` with `auth.authenticatedFetch()` for app-owned behavior, especially when it needs server-only capabilities or more than one caller.
+- **Direct Bkper AI calls** use `auth.authenticatedFetch()` for inference needed only by the browser UI, when its prompts may be visible to the user. See [Call from the browser](https://bkper.com/docs/platform/apps/ai.md#call-from-the-browser).
 
 Keep app-owned behavior in one place. Do not implement the same behavior separately in the UI and the app API.
 

@@ -9,7 +9,7 @@ Model output is a suggestion, not permission to change a Book. Keep decisions ab
 - **A yes/no, a choice, or a level on a scale?** Ask a decision model, such as `jev`, with TypeSafe's SDK, `@typesafe-ai/sdk`.
 - **Text or a custom JSON object?** Ask a language model (LLM), such as `gpt-luna`, with AI SDK's Open Responses provider, `@ai-sdk/open-responses`.
 
-Add the SDK to the **Worker** package. Keep the call in a server service used by your authenticated app API route, and define the route's request and response in the app's Zod/OpenAPI contract.
+By default, add the SDK to the **Worker** package. Keep the call in a server service used by your authenticated app API route, and define the route's request and response in the app's Zod/OpenAPI contract. For inference used only by the UI, the client can also [call Bkper AI directly](#call-from-the-browser).
 
 ## Keep authentication in the platform
 
@@ -19,7 +19,20 @@ For an interactive app, the flow is:
 2. Bkper verifies the user's token, removes it before invoking the Worker, and establishes user and app context for outbound requests.
 3. The Worker calls Bkper AI. Platform outbound adds authorization and app attribution. **Do not read, forward, or store the user's token in the Worker.**
 
-An authenticated `/events` handler has the same outbound context. A page request does not; start inference from an authenticated `/api/*` route, not from the page handler or the browser.
+An authenticated `/events` handler has the same outbound context. A page request does not, so the page handler cannot call Bkper AI.
+
+## Call from the browser
+
+The client can call Bkper AI directly with `auth.authenticatedFetch()`, which sends the signed-in user's token. Choose the path by what the inference needs:
+
+|                                     | App API route                      | Browser                                         |
+| ----------------------------------- | ---------------------------------- | ----------------------------------------------- |
+| Usage attribution                   | The app, set by platform outbound  | The `bkper-ai-source` header the client sends   |
+| Prompts, questions, and criteria    | Private to the Worker              | Visible to the user                             |
+| Reuse by scripts, agents, or events | Yes, through the route             | No                                              |
+| Request path                        | Client → app Worker → Bkper AI     | Client → Bkper AI                               |
+
+In both cases usage counts against the user's allowance. See [Call from a browser](https://bkper.com/docs/ai/ai-gateway.md#call-from-a-browser) for a request example.
 
 ## Ask a decision model
 

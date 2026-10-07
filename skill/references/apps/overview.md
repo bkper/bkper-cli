@@ -18,7 +18,7 @@ The same Worker can expose app-defined `/api/*` routes. Treat those routes as th
 
 ### AI inference
 
-When an app needs model inference, use Bkper AI by default. An authenticated app API route or event establishes the user and app identity, then platform outbound supplies authorization and usage attribution for the Worker's Bkper AI requests. The app does not need provider credentials.
+When an app needs model inference, use Bkper AI by default. An authenticated app API route or event establishes the user and app identity, then platform outbound supplies authorization and usage attribution for the Worker's Bkper AI requests. The app does not need provider credentials. For inference used only by the UI, the client can also call Bkper AI directly with the signed-in user's token.
 
 See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md) for the client-to-Worker authentication flow and SDK setup for decision and language models.
 

@@ -244,6 +244,7 @@ TypeSafe's JavaScript SDK, `@typesafe-ai/sdk`, works with Bkper AI and infers an
 
 - **In a Bkper Platform app Worker**, send no `Authorization` header. Platform outbound adds authorization and app attribution.
 - **In scripts and servers**, send your own Bkper access token as a bearer token.
+- **In a browser page**, send the signed-in user's access token. Any origin may call, usage counts against that user's allowance, and the user can see your questions. See [Call from a browser](https://bkper.com/docs/ai/ai-gateway.md#call-from-a-browser).
 - **In [Bkper CLI Agent](https://bkper.com/docs/ai/bkper-cli-agent.md#what-it-can-do)**, no setup is needed. Describe the outcome and the agent asks the decision model for you.
 
 See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md#ask-a-decision-model) for the SDK setup in both cases and its limits with Bkper AI.
