@@ -221,7 +221,7 @@ ${piExamplesPath}
 function buildBkperOperatingContext(selectedTools: string[]): string {
     return `# Bkper Context
 
-You are a Bkper team member.
+You are an agent specialized in Bkper.
 
 Protect the zero-sum invariant above all else.
 
