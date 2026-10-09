@@ -1,6 +1,6 @@
 # Add Bkper AI to an App
 
-Bkper Platform apps can call [Bkper AI](https://bkper.com/docs/ai/ai-gateway.md) without storing a model-provider key. The platform authorizes each request as the current user and attributes usage to the app. Scripts and servers outside the platform use the same code with their own Bkper token.
+Bkper Platform apps can call [Bkper AI models](https://bkper.com/docs/ai/models.md) without storing a model-provider key. The platform authorizes each request as the current user and attributes usage to the app. Scripts and servers outside the platform use the same code with their own Bkper token.
 
 Model output is a suggestion, not permission to change a Book. Keep decisions about resource movements, and any resulting writes, in application code.
 
@@ -8,6 +8,7 @@ Model output is a suggestion, not permission to change a Book. Keep decisions ab
 
 - **A yes/no, a choice, or a level on a scale?** Ask a decision model, such as `jev`, with TypeSafe's SDK, `@typesafe-ai/sdk`.
 - **Text or a custom JSON object?** Ask a language model (LLM), such as `gpt-luna`, with AI SDK's Open Responses provider, `@ai-sdk/open-responses`.
+- **A conversation that works on Books?** Reading and comparing Books, computing with scripts, delivering files, remembering earlier messages: [run an agent](#run-an-agent) with the Managed Agent API instead of calling a model.
 
 By default, add the SDK to the **Worker** package. Keep the call in a server service used by your authenticated app API route, and define the route's request and response in the app's Zod/OpenAPI contract. For inference used only by the UI, the client can also [call Bkper AI directly](#call-from-the-browser).
 
@@ -32,7 +33,7 @@ The client can call Bkper AI directly with `auth.authenticatedFetch()`, which se
 | Reuse by scripts, agents, or events | Yes, through the route             | No                                              |
 | Request path                        | Client → app Worker → Bkper AI     | Client → Bkper AI                               |
 
-In both cases usage counts against the user's allowance. See [Call from a browser](https://bkper.com/docs/ai/ai-gateway.md#call-from-a-browser) for a request example.
+In both cases usage counts against the user's allowance. See [Call from a browser](https://bkper.com/docs/api/ai-gateway.md#call-from-a-browser) for a request example.
 
 ## Ask a decision model
 
@@ -64,7 +65,7 @@ export async function scoreRecurring(description: string) {
 - **`baseURL`** has no `/v1`. The SDK calls `POST /v1/systemone`, which behaves exactly like `POST /v1/decisions`.
 - **The answer is typed** from the question. Bkper AI validates every answer against its question before responding, so your code can use it directly.
 
-The Decision Models guide covers questions, state, answers, and thresholds. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
+[Decision Models](https://bkper.com/docs/ai/decision-models.md) covers designing the questions, facts, and thresholds; the [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md#decision-models) covers the request, answers, errors, and caching. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
 
 ## Generate a language response
 
@@ -94,6 +95,36 @@ export async function draftReviewNote(description: string) {
 - **`output`** is parsed and validated against your schema by AI SDK. The provider requests strict structured output, which every Bkper language model supports.
 
 Keep schemas simple. Constraints such as a string's minimum or maximum length may not be supported by every model's strict JSON Schema subset; check them in code after generation.
+
+## Run an agent
+
+For a chat that does real work on Books, start a session on the [Managed Agent API](https://bkper.com/docs/api/managed-agent.md) from the app's server. Bkper runs the agent in the user's private cloud workspace, with the `bkper` CLI, files, and durable sessions. Your app keeps its screens, prompts, and instructions. The Managed Agent is in private beta.
+
+```ts
+// No Authorization header: the platform adds the user's.
+const response = await fetch('https://agent.bkper.app/v1/sessions', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        // Reuse the same key if you retry this request.
+        'Idempotency-Key': inputId,
+    },
+    body: JSON.stringify({
+        instructions: 'You help the finance team close each month.',
+        input: {
+            content: [{ type: 'text', text: question }],
+            bookContext: { bookId, query },
+        },
+    }),
+});
+const session = await response.json();
+```
+
+Then follow the session's stream, or poll the input until it completes, as in the [quick start](https://bkper.com/docs/api/managed-agent.md#quick-start).
+
+- **The user's agent.** Sessions belong to the user, so work started in your app continues in Bkper Agent or any other app.
+- **Your services as tools.** The agent can call your app's API as the user. Describe the routes in your instructions, and the agent can run your checks instead of redoing them.
+- **Real changes.** Unlike a model call, the agent can change Books with the user's permissions. Say in your instructions when it may.
 
 ## Outside a Platform app
 
@@ -163,6 +194,6 @@ Map these errors to your route's typed error response. Keep the code and message
 ## Next steps
 
 - [Decision Models](https://bkper.com/docs/ai/decision-models.md): questions, answers, thresholds, and caching.
-- [Bkper AI Gateway](https://bkper.com/docs/ai/ai-gateway.md): tokens, raw HTTP requests, errors, and privacy.
-- [Models and Usage](https://bkper.com/docs/ai/models.md): model IDs, capabilities, and usage rates.
-- [Bkper AI API reference](https://bkper.com/docs/api/ai.md): every request and response field.
+- [Models and Usage](https://bkper.com/docs/ai/models.md): models, usage rates, the allowance, and privacy.
+- [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md): tokens, raw HTTP requests, capabilities, and errors.
+- [Managed Agent API](https://bkper.com/docs/api/managed-agent.md): sessions, instructions, files, and streams.

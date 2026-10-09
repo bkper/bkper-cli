@@ -55,6 +55,8 @@ menuOpenMode: SIDEBAR
 | `EXPANDED` | Opens in a wider panel with more room for complex UIs.                |
 | `NEW_TAB`  | Opens the menu URL in a new browser tab instead of an embedded panel. |
 
+An `EXPANDED` panel returns to sidebar size the first time the App changes the Book after opening, so the person sees the change.
+
 ### Live context updates
 
 Bkper keeps embedded Apps informed of context changes without reloading the iframe, allowing them to preserve their current state. For Apps opened in `SIDEBAR` or `EXPANDED`, Bkper communicates those changes by sending the updated App URL to the iframe when its origin remains the same:
@@ -101,6 +103,101 @@ window.addEventListener('message', event => {
 `handleAppUrlChange` is App logic. The App can update internal state, notify components, refresh data, change its UI, or ignore the message. Bkper only communicates the new URL; it does not reload the iframe or apply the context inside the App.
 
 Apps opened with `NEW_TAB` do not receive this message. Their context is set only by the URL used to open the tab.
+
+### Navigating the Book
+
+Embedded Apps can take the user to a page in Bkper, such as a chart or a transaction, without reloading Bkper or the App. Bkper navigates around the panel and keeps the App open, so the user can follow the App through the Book.
+
+The App asks Bkper to navigate with a message. Bkper decides whether and how to navigate.
+
+#### Host support
+
+Each time the App iframe finishes loading, Bkper announces the requests it supports:
+
+```js
+{
+    type: 'bkper:host-ready',
+    supports: ['navigate'],
+}
+```
+
+Send `bkper:navigate` only after receiving this message with `navigate` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
+
+Apps opened with `NEW_TAB` do not receive this message, because they have no Bkper parent.
+
+#### Requesting navigation
+
+Post the Bkper URL to the parent:
+
+```js
+window.parent.postMessage(
+    {
+        type: 'bkper:navigate',
+        url: 'https://bkper.app/books/abc123/transactions?query=account%3ASales&charts=true',
+    },
+    BKPER_ORIGIN
+);
+```
+
+Bkper ignores the message when any of these is true:
+
+- It does not come from the App iframe currently open in the panel.
+- It does not come from that iframe's own origin.
+- `url` is not an absolute URL on the Bkper origin.
+- `url` includes a username or password.
+
+For a valid request, Bkper navigates as follows:
+
+- **Book pages** (Transactions and Accounts, under `/books/{bookId}/`): Bkper navigates without reloading and adds a browser history entry, so Back returns to the previous page. The App stays open: Bkper sets the App in the URL, replacing any other App given there. An expanded panel returns to sidebar size, so the destination is visible.
+- **Other Bkper pages**: Bkper loads the page as a normal navigation, which closes the panel.
+
+The usual Bkper rules apply at the destination:
+
+- The user needs access to the destination Book.
+- When the destination is in the same Book, the App receives `bkper:app-url-changed` if its context changes, as described in [Live context updates](#live-context-updates).
+- When the destination is another Book, Bkper opens the App again for that Book if it is installed there, and closes it otherwise.
+
+Bkper does not reply to `bkper:navigate`.
+
+Send `bkper:navigate` only in response to a user action, such as a click. Bkper cannot verify this, and navigation the user did not ask for interrupts their work.
+
+#### Example
+
+Keep links in the App as real links that open in a new tab, so they work wherever navigation is not available, such as in a `NEW_TAB` App or an older Bkper version:
+
+```html
+<a href="https://bkper.app/books/abc123/transactions?query=account%3ASales" target="_blank">Sales</a>
+```
+
+Then turn plain clicks on Bkper links into navigation requests once Bkper supports them:
+
+```js
+const BKPER_ORIGIN = 'https://bkper.app';
+let canNavigate = false;
+
+window.addEventListener('message', event => {
+    // Verify that the trusted Bkper parent sent the message.
+    if (event.source !== window.parent || event.origin !== BKPER_ORIGIN) return;
+
+    const message = event.data;
+    if (message?.type === 'bkper:host-ready' && Array.isArray(message.supports)) {
+        canNavigate = message.supports.includes('navigate');
+    }
+});
+
+document.addEventListener('click', event => {
+    // Keep modified and non-primary clicks as normal links, such as opening a new tab.
+    if (!canNavigate || event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    // Only links to Bkper itself become navigation requests.
+    const link = event.composedPath().find(node => node instanceof HTMLAnchorElement);
+    if (!link || new URL(link.href).origin !== BKPER_ORIGIN) return;
+
+    event.preventDefault();
+    window.parent.postMessage({ type: 'bkper:navigate', url: link.href }, BKPER_ORIGIN);
+});
+```
 
 ### Available expressions
 
