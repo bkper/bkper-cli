@@ -22,6 +22,7 @@ Use this skill when an external coding-agent harness needs to understand Bkper, 
 - For accounting numbers — balances, statements, reconciliations, taxes — never let raw LLM output be final; use or establish a deterministic, auditable route, keep computation separate from commentary, and make assumptions explicit.
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
+- A Book's installed apps are part of how it works: before building your own solution for a Book task, check whether an installed or installable app already does it, and prefer it.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
 - Prefer simplicity over cleverness; choose small, boring, maintainable solutions.
 
@@ -62,6 +63,7 @@ For any Bkper or adjacent accounting-support task — CLI usage, SDK code, data 
 
 - `references/core/core-concepts.md` — canonical Bkper data model: resources, movements, balances, accounts, groups, books, transactions, properties, and the zero-sum invariant.
 - `references/cli/data-management.md` — CLI reference for managing financial data and files: books, accounts, groups, files, transactions, events and bot responses (bot errors, replay, delete), per-account balance queries, query operators, JSON output and jq reshaping, human-review Bkper UI links, batch operations via stdin/piping, collections.
+- `references/cli/app-usage.md` — Using Bkper apps to do work on a Book instead of rebuilding what they do: list a Book's installed apps and the app catalog, read descriptions, readmes, and property schemas, match them to the Book's properties, read an app's OpenAPI spec and call its API as the user, install apps.
 - `references/cli/app-management.md` — CLI reference for building and deploying Bkper apps: dev/build/deploy workflow, app install/uninstall, secrets management, app logs, bkper.yaml configuration reference.
 - `references/apps/overview.md` — Platform evaluation and capability overview: use when comparing managed Bkper hosting with self-managed infrastructure or clarifying platform responsibilities; use the task-specific app references for implementation.
 - `references/apps/ai.md` — Bkper AI in apps, scripts, and tools: ask the Jev decision model with TypeSafe's SDK or language models with AI SDK Open Responses, authenticate through app `/api/*` routes or a Bkper token outside the platform, handle errors, and keep Book writes under deterministic application control.

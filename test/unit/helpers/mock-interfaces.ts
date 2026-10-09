@@ -142,6 +142,8 @@ export interface AppData {
     events?: string[];
     webhookUrl?: string;
     webhookUrlDev?: string;
+    readme?: string;
+    readmeMd?: string;
 }
 
 // Account Balance data (for account-specific balance queries)
@@ -165,6 +167,7 @@ export interface MockBook {
     getGroups?(): Promise<MockGroup[]>;
     batchCreateTransactions?(transactions: MockTransaction[]): Promise<MockTransaction[]>;
     mergeTransactions?(tx1: string, tx2: string): Promise<MockTransaction>;
+    getApps?(): Promise<MockApp[]>;
 }
 
 export interface MockTransaction {

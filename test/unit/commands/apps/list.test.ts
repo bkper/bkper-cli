@@ -1,6 +1,11 @@
 import { expect, setupTestEnvironment, getTestPaths } from '../../helpers/test-setup.js';
 import { AppData } from '../../helpers/mock-interfaces.js';
-import { setupMocks, createMockBkperForApps, setMockBkper } from '../../helpers/mock-factory.js';
+import {
+    setupMocks,
+    createMockApp,
+    createMockBkperForApps,
+    setMockBkper,
+} from '../../helpers/mock-factory.js';
 import { loadApps } from '../../helpers/fixture-loader.js';
 
 const { __dirname } = getTestPaths(import.meta.url);
@@ -12,7 +17,7 @@ const mockApps: AppData[] = loadApps(__dirname);
 setupMocks();
 
 // Import the listApps function
-const { listApps } = await import('../../../../src/commands/apps/index.js');
+const { listApps, listAppsFormatted } = await import('../../../../src/commands/apps/index.js');
 
 describe('CLI - apps list Command', function () {
     beforeEach(function () {
@@ -65,5 +70,49 @@ describe('CLI - apps list Command', function () {
         expect(taxBot).to.exist;
         expect(taxBot!.ownerName).to.equal('Bkper');
         expect(taxBot!.events).to.include('TRANSACTION_POSTED');
+    });
+
+    it('should list the apps installed in a book when a book is given', async function () {
+        const requestedBooks: string[] = [];
+        setMockBkper({
+            setConfig: () => {},
+            getApps: async () => {
+                throw new Error('Book apps must not come from the app catalog');
+            },
+            getBook: async (bookId: string) => {
+                requestedBooks.push(bookId);
+                return {
+                    json: () => ({ id: bookId }),
+                    getApps: async () => [createMockApp({ id: 'inventory-bot' })],
+                };
+            },
+        });
+
+        const result = await listApps('book-1');
+
+        expect(requestedBooks).to.deep.equal(['book-1']);
+        expect(result.map((app: AppData) => app.id)).to.deep.equal(['inventory-bot']);
+    });
+
+    it('should omit readmes from list output and keep the rest of each app', async function () {
+        const app: AppData = {
+            id: 'exchange-bot',
+            description: 'Convert transactions between currency books',
+            events: ['TRANSACTION_CHECKED'],
+            readme: '<p>Long readme</p>',
+            readmeMd: 'Long readme',
+        };
+        setMockBkper(createMockBkperForApps([app]));
+
+        const result = await listAppsFormatted();
+
+        expect(result.items).to.deep.equal([
+            {
+                id: 'exchange-bot',
+                description: 'Convert transactions between currency books',
+                events: ['TRANSACTION_CHECKED'],
+            },
+        ]);
+        expect(app.readmeMd).to.equal('Long readme');
     });
 });

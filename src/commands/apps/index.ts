@@ -30,6 +30,10 @@ export { getApp } from './get.js';
 // List
 export { listApps, listAppsFormatted } from './list.js';
 
+// App API
+export { formatAppResponse, getAppApiSpec, requestAppApi } from './api.js';
+export type { AppApiDependencies, AppApiRequestOptions, AppApiTarget } from './api.js';
+
 // Sync (CRUD)
 export { createApp, syncApp, updateApp } from './sync.js';
 

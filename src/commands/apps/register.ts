@@ -2,7 +2,9 @@ import type { Command } from 'commander';
 import { withAction } from '../action.js';
 import { collectProperty } from '../cli-helpers.js';
 import { setupBkper } from '../../bkper-factory.js';
+import { readStdin } from '../../input/index.js';
 import { renderList, renderItem } from '../../render/index.js';
+import { isInteractiveOutput } from '../../render/output.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import {
     getApp,
@@ -22,6 +24,9 @@ import {
     uninstallApp,
     cloneManagedAppCommand,
     runGitCredentialHelper,
+    getAppApiSpec,
+    requestAppApi,
+    formatAppResponse,
 } from './index.js';
 
 export function registerAppCommands(program: Command): void {
@@ -87,12 +92,13 @@ export function registerAppCommands(program: Command): void {
 
     appCommand
         .command('list')
-        .description('List all apps you have access to')
-        .action(
+        .description('List apps you have access to, or the apps installed in a book')
+        .option('-b, --book <bookId>', 'List the apps installed in this book')
+        .action(options =>
             withAction('listing apps', async () => {
-                const result = await listAppsFormatted();
+                const result = await listAppsFormatted(options.book);
                 renderList(result);
-            })
+            })()
         );
 
     appCommand
@@ -248,6 +254,40 @@ export function registerAppCommands(program: Command): void {
                 },
                 { skipSetup: true }
             )()
+        );
+
+    // App API
+    const apiCommand = appCommand
+        .command('api')
+        .description("Read an app's OpenAPI spec and call its API");
+
+    apiCommand
+        .command('spec <appId>')
+        .description("Print the app's OpenAPI spec (/openapi.json)")
+        .option('-p, --preview', 'Use the preview environment')
+        .action((appId: string, options) =>
+            withAction('getting app API spec', async () => {
+                renderItem(await getAppApiSpec(appId, { preview: options.preview }));
+            })()
+        );
+
+    apiCommand
+        .command('request <appId> <path>')
+        .description("Send a request to the app's API, as the signed-in user")
+        .option('-X, --method <method>', 'HTTP method (default: GET, or POST when data is sent)')
+        .option('-d, --data <json>', 'JSON request body (or pipe it via stdin)')
+        .option('-p, --preview', 'Use the preview environment')
+        .action((appId: string, path: string, options) =>
+            withAction('requesting app API', async () => {
+                const data = options.data ?? (await readStdin()) ?? undefined;
+                const body = await requestAppApi(appId, path, {
+                    method: options.method,
+                    data,
+                    preview: options.preview,
+                });
+                const output = formatAppResponse(body, isInteractiveOutput());
+                if (output !== undefined) console.log(output);
+            })()
         );
 
     // Install/Uninstall

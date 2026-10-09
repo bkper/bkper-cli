@@ -9,18 +9,21 @@ export function setupMocks(): void {
     // No-op: the globalThis.__mockBkper pattern via setMockBkper() is sufficient
 }
 
+// Factory for creating a MockApp from app data
+export function createMockApp(appData: AppData): MockApp {
+    return {
+        json: (): AppData => appData,
+        getId: (): string | undefined => appData.id,
+        getName: (): string | undefined => appData.name,
+        isPublished: (): boolean => appData.published || false,
+    };
+}
+
 // Factory for creating MockBkper instances for apps listing
 export function createMockBkperForApps(apps: AppData[]): MockBkper {
     return {
         setConfig: () => {},
-        getApps: async (): Promise<MockApp[]> => {
-            return apps.map((appData: AppData) => ({
-                json: (): AppData => appData,
-                getId: (): string | undefined => appData.id,
-                getName: (): string | undefined => appData.name,
-                isPublished: (): boolean => appData.published || false,
-            }));
-        },
+        getApps: async (): Promise<MockApp[]> => apps.map(createMockApp),
     };
 }
 

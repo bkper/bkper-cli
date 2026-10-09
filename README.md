@@ -234,6 +234,20 @@ bkper balance list -b <bookId> -q 'on:2026-12-31'
 
 ---
 
+## Use Apps
+
+Apps installed in a Book do work for it. List them, read an app's API spec, and call its API as the signed-in user:
+
+```bash
+bkper app list -b <bookId>
+bkper app api spec <appId>
+bkper app api request <appId> /api/v1/<path-from-the-spec>
+```
+
+→ [Full App Usage reference](https://github.com/bkper/bkper-cli/blob/main/skill/references/cli/app-usage.md)
+
+---
+
 ## App Management
 
 Build, deploy, and manage Bkper apps. Sync and deploy require clean, committed source stored in Bkper-managed Git (recommended) or in the current branch's external upstream.

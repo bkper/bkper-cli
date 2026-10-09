@@ -271,7 +271,12 @@ bkper app install my-app -b abc123
 
 # Uninstall an app from a book
 bkper app uninstall my-app -b abc123
+
+# List the apps installed in a book
+bkper app list -b abc123
 ```
+
+To use installed apps, including calling their API with `bkper app api`, see [App Usage](./app-usage.md).
 
 ---
 
@@ -554,7 +559,8 @@ Inside the interactive agent:
 -   `app init [name]` - Scaffold a new app from the template. With `name`, creates `./<name>` and uses it as the app id. Without `name`, initializes the current directory and derives the app id from the folder name. Validates the marked `AGENTS.md`, initializes Git on `main` when needed without staging or committing, and does not install dependencies. Read the printed `AGENTS.md` path before specialization and preserve its standards, specifics, and marker pairs.
 -   `app clone <appId> [path]` - Clone a Bkper-managed App source repository. Does not install dependencies; run `bun install` explicitly afterward. External-source Apps must be cloned from their provider instead.
 -   `app git-credential <appId> [operation]` - Internal noninteractive Git credential helper for managed Artifacts source. Generated repository config pins the App ID and exact remote URL/path; Git appends `get`, `store`, or `erase`. Never persists tokens.
--   `app list` - List all apps you have access to
+-   `app list` - List apps you have access to; readmes are omitted (use `app get`)
+    -   `-b, --book <bookId>` - List the apps installed in this book instead
 -   `app sync` - Verify that source is clean, committed, and stored before syncing [bkper.yaml][bkper.yaml reference]. For an eligible standalone repository with no remote, activate managed source for a new or existing App; existing migrations atomically upload all local branches and tags. For external source, verify that the configured upstream contains the current commit.
 -   `app build` - Build the server Worker bundle for deployment
 -   `app deploy` - Require stored source, then explicitly deploy the existing local build. Managed Apps safely push and Platform-verifies the current commit. External Apps keep direct upload behavior after the CLI verifies that their upstream contains the current commit.
@@ -583,6 +589,13 @@ Inside the interactive agent:
 
 -   `app install <appId> -b <bookId>` - Install an app on a book
 -   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
+
+### App API
+
+-   `app api spec <appId>` - Print the app's OpenAPI spec
+-   `app api request <appId> <path>` - Send a request to the app's API as the signed-in user
+
+See [App Usage](./app-usage.md) for options and usage.
 
 ### Secrets Management
 

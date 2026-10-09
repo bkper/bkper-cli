@@ -46,4 +46,30 @@ describe('CLI - app command registration', function () {
         expect(optionLongNames(logs)).to.include('--level');
         expect(optionLongNames(logs)).to.not.include('--outcome');
     });
+
+    it('should list apps installed in a book with the shared book option', function () {
+        const program = new Command();
+        registerAppCommands(program);
+
+        const list = findCommand(findCommand(program, 'app'), 'list');
+
+        expect(list.options.find(option => option.long === '--book')?.short).to.equal('-b');
+    });
+
+    it("should register app api commands for reading specs and calling an app's API", function () {
+        const program = new Command();
+        registerAppCommands(program);
+
+        const api = findCommand(findCommand(program, 'app'), 'api');
+        const spec = findCommand(api, 'spec');
+        const request = findCommand(api, 'request');
+
+        expect(spec.registeredArguments.map(argument => argument.name())).to.deep.equal(['appId']);
+        expect(optionLongNames(spec)).to.deep.equal(['--preview']);
+        expect(request.registeredArguments.map(argument => argument.name())).to.deep.equal([
+            'appId',
+            'path',
+        ]);
+        expect(optionLongNames(request)).to.deep.equal(['--method', '--data', '--preview']);
+    });
 });
