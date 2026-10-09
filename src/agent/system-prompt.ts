@@ -86,7 +86,7 @@ interface ToolPromptContribution {
  * but registerTool while registering; settings and session entries are read later, in closures.
  */
 function getCodemodePromptContribution(): ToolPromptContribution {
-    const contribution: ToolPromptContribution = {guidelines: []};
+    const contribution: ToolPromptContribution = { guidelines: [] };
     const registrar: Pick<ExtensionAPI, 'registerTool'> = {
         registerTool: tool => {
             contribution.snippet = normalizePromptSnippet(tool.promptSnippet);
@@ -102,7 +102,7 @@ function getBkperCodemodeGuidelines(codemodeDocsPath: string): string[] {
     return [
         'Use codemode, not shell loops or jq pipelines, to repeat commands across items.',
         `For judgments across many items — rank, score, classify, or filter by sentiment, urgency, relevance, or quality — do not read the items yourself: in one codemode script, load them, run a classifier with models.classify() per item, and return only counts and the selected items. Read ${codemodeDocsPath} first; find classifiers with models.getAvailableOfType("classifier").`,
-        'Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item\'s result.',
+        "Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item's result.",
     ];
 }
 
@@ -240,7 +240,7 @@ ${buildToolPromptSection(selectedTools)}
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
-- Avoid overengineering and prefer simplicity over cleverness; choose small, boring, maintainable solutions.
+- Do NOT overengineer things and keep things SIMPLE - choose small, boring, SIMPLE solutions.
 `;
 }
 
