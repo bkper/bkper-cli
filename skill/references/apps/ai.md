@@ -126,6 +126,8 @@ Then follow the session's stream, or poll the input until it completes, as in th
 - **Your services as tools.** The agent can call your app's API as the user. Describe the routes in your instructions, and the agent can run your checks instead of redoing them.
 - **Real changes.** Unlike a model call, the agent can change Books with the user's permissions. Say in your instructions when it may.
 
+> **Tip**
+> Replies usually come in Markdown. Render them, sanitized, in your chat, or ask for another format in your instructions.
 ## Outside a Platform app
 
 Scripts, servers, and tools send their own Bkper token. Pass it as `apiKey`: both SDKs send it as a bearer token. Get a client each time you need one, so every call uses a current token:

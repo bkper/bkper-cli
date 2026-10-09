@@ -143,10 +143,16 @@ Unlike Account structures, Hashtags can be added or removed as needs evolve, mak
 
 **Collections** group related Books for organization and consolidated views. Each Book remains self-contained and balanced — Collections simply provide navigation and structure across multiple Books. You might track resources in multiple currencies, or organize branch offices in one collection.
 
-Collections can also serve as references for automations (Bots or Apps) that work on all Books in the collection.
+Collections can also serve as references for Apps that work on all Books in the collection.
 
 ## Events
 
-Every action in a Book — such as posting a transaction, editing an account, or attaching a file — generates an **Event**. Events record _who_ (a user) or _what_ (a bot, an automation) performed the action and _when_, forming a complete audit trail essential for collaboration and trust.
+Every action in a Book — such as posting a transaction, editing an account, or attaching a file — generates an **Event**. Events record _who_ (a user) or _what_ (an App or an automation) performed the action and _when_, forming a complete audit trail essential for collaboration and trust.
 
-Events are also the foundation of Bkper's automation model. Bots and Agents listen for specific event types and react automatically — for example, calculating taxes when a transaction is posted or converting currencies when one is checked.
+Events are also the foundation of Bkper's automation model. Apps listen for specific event types and react automatically — for example, calculating taxes when a transaction is posted or converting currencies when one is checked.
+
+## Apps
+
+**Apps** extend what Books can do. An App is installed in a Book and works through the same building blocks described above: it can react to the Book's Events, take its settings from Custom Properties, and act on the Book like any user — every change it makes is recorded as an Event of its own.
+
+Some Apps also offer an interface inside the Book, or an API for work started on demand. A Book's installed Apps are part of how that Book works, and more can be installed from the App directory.
