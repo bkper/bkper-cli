@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-10-09
+
+-   **Apps**
+    -   `bkper app list -b <bookId>` lists the apps installed in a book. List output leaves out readmes; `bkper app get` still shows them
+    -   `bkper app api spec <appId>` prints an app's OpenAPI spec, or tells you when the app doesn't publish one
+    -   `bkper app api request <appId> <path>` calls an app's API like curl, as the signed-in user
+    -   The agent now prefers using an existing app over rebuilding what it does
+-   **Agent Experience**
+    -   The model picker shows which model revision Bkper AI is currently serving, next to the stable model ID
+    -   The agent asks for confirmation before deleting files or bot event responses
+    -   The agent now describes itself as specialized in Bkper and puts more weight on simple solutions
+-   **Documentation**
+    -   Bundled the AI Gateway and Managed Agent API guides. Decision Models is now the design guide
+
+## [5.4.1] - 2026-10-07
+
+-   **Agent Experience**
+    -   Updated Pi to 1.1.0
+    -   Login failures are now reported separately from model setup errors
+
+## [5.4.0] - 2026-10-07
+
+-   **Events**
+    -   `bkper event replay` is now `bkper event response replay`
+    -   New `bkper event response delete` removes a single bot response without undoing what it did
+
 ## [5.3.4] - 2026-10-05
 
 -   **Agent Experience**
