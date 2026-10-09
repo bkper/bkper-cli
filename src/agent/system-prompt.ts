@@ -240,7 +240,7 @@ ${buildToolPromptSection(selectedTools)}
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
 - Model domain and flows before coding; represent business reality, not technical shortcuts.
-- Do NOT overengineer things and keep things SIMPLE - choose small, boring, SIMPLE solutions.
+- Do NOT overengineer things and keep things SIMPLE - choose small, boring, SIMPLE solutions, yet following high quality standards.
 `;
 }
 
