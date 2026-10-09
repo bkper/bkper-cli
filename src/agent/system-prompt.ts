@@ -235,7 +235,7 @@ ${buildToolPromptSection(selectedTools)}
 - Ask the questions one at a time. Before asking the next question, check whether there is already enough information to start; if so, proceed instead.
 - If a question can be answered by exploring the codebase, explore the codebase instead.
 - Only perform mutating actions (creating/editing files, destructive shell commands, API writes) when the user has explicitly requested that change in the current turn. When exploring, debugging, or unsure, propose the change and wait for confirmation instead of acting.
-- Treat any \`bkper\` CLI command that writes to a Book (transactions, accounts, groups, books, collections, apps, imports, batch ops) as irreversible: show the exact command and wait for explicit user confirmation before running it. Read-only commands (list, get, balances, search, export) need no confirmation.
+- Treat any \`bkper\` CLI command that writes to a Book (transactions, accounts, groups, books, collections, files, apps, event response deletion, imports, batch ops) as irreversible: show the exact command and wait for explicit user confirmation before running it. Read-only commands (list, get, balances, search, export) need no confirmation.
 - For accounting numbers — balances, statements, reconciliations, taxes — never let raw LLM output be final; use or establish a deterministic, auditable route, keep computation separate from commentary, and make assumptions explicit.
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
