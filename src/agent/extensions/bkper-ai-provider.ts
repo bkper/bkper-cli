@@ -36,7 +36,8 @@ interface BkperAiModelConfig extends ProviderChatModelConfig {
 interface BkperAiCatalogModel {
     id: string;
     type?: string;
-    display_name?: string;
+    /** Provider name of the revision served behind the versionless `id`, e.g. `gpt-6-luna`. */
+    name?: string;
     input_modalities?: string[];
     pricing: {
         inputNanoUsdPerToken: number;
@@ -57,7 +58,7 @@ interface BkperAiCatalogModel {
 interface BkperAiDecisionCatalogModel {
     id: string;
     type: 'decision';
-    display_name?: string;
+    name?: string;
     pricing: {
         inputNanoUsdPerToken: number;
         outputNanoUsdPerToken: number;
@@ -162,7 +163,7 @@ function toProviderModel(
 
     return {
         id: model.id,
-        name: model.display_name ?? model.id,
+        name: model.name ?? model.id,
         reasoning: model.thinking_levels.some(level => level !== 'none'),
         thinkingLevelMap: getThinkingLevelMap(model.thinking_levels),
         input,
@@ -197,7 +198,7 @@ function toClassifierModel(model: BkperAiDecisionCatalogModel): ProviderClassifi
     return {
         type: 'classifier',
         id: model.id,
-        name: model.display_name ?? model.id,
+        name: model.name ?? model.id,
         api: BKPER_AI_CLASSIFIER_API,
         input: ['text'],
         cost: {

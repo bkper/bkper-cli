@@ -28,7 +28,8 @@ function isClassifierModel(model: ProviderModelConfig): model is ProviderClassif
 const jevCatalogEntry = {
     id: 'jev',
     type: 'decision',
-    display_name: 'Jev',
+    display_name: 'Jev 1.13',
+    name: 'jev-1.13.0',
     input_modalities: ['text'],
     pricing: {inputNanoUsdPerToken: 53, outputNanoUsdPerToken: 0},
     context_window: 65536,
@@ -60,6 +61,7 @@ describe('agent/bkper-ai-provider', function () {
                             id: 'openai/gpt-5.6-luna',
                             object: 'model',
                             display_name: 'GPT-5.6 Luna',
+                            name: 'gpt-5.6-luna',
                             input_modalities: ['text', 'image'],
                             pricing: {
                                 inputNanoUsdPerToken: 200,
@@ -106,7 +108,8 @@ describe('agent/bkper-ai-provider', function () {
         expect(models).to.have.length(1);
         expect(models?.[0]).to.deep.include({
             id: 'openai/gpt-5.6-luna',
-            name: 'GPT-5.6 Luna',
+            // The CLI labels models with the provider name of the revision served.
+            name: 'gpt-5.6-luna',
             reasoning: true,
             input: ['text', 'image'],
             cost: {input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25},
@@ -234,7 +237,7 @@ describe('agent/bkper-ai-provider', function () {
         expect(classifiers[1]).to.deep.equal({
             type: 'classifier',
             id: 'jev',
-            name: 'Jev',
+            name: 'jev-1.13.0',
             api: 'typesafe-system-one',
             input: ['text'],
             cost: {input: 0.053, output: 0, cacheRead: 0, cacheWrite: 0},
