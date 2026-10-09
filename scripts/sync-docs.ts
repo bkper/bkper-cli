@@ -29,6 +29,14 @@ const DOCS: readonly DocSpec[] = [
         outputPath: 'ai/decision-models.md',
     },
     {
+        url: 'https://bkper.com/docs/api/ai-gateway.md',
+        outputPath: 'api/ai-gateway.md',
+    },
+    {
+        url: 'https://bkper.com/docs/api/managed-agent.md',
+        outputPath: 'api/managed-agent.md',
+    },
+    {
         url: 'https://bkper.com/docs/api/bkper-js.md',
         outputPath: 'sdk/bkper-js.md',
     },
