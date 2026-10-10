@@ -65,7 +65,7 @@ Groups inherit the nature of the accounts they contain:
 
 ## Books
 
-A **Book** is a self-contained ledger — the complete scope of an entity, whether an individual, a project, or a business. Every Account, Transaction, and Group lives within a Book, and every Book balances to zero. Books can track any countable resource using the same from-to model.
+A **Book** is a self-contained ledger — the complete scope of an entity, whether an individual, a project, or a business. Every Account, Transaction, and Group lives within a Book, and every Book balances to zero. Books can track any countable resource using the same from-to model. Their amounts are plain quantities of one unit — money, stocks, inventory — whose meaning comes from the people using them, not the ledger. Track each unit in its own Book.
 
 The sum of all credits and debits recorded in a Book always tallies to zero — nothing is created or destroyed, only transferred. For more complex entities, multiple Books can be organized into a Collection.
 
