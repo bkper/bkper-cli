@@ -17,7 +17,7 @@ Use this skill when an external coding-agent harness needs to understand Bkper, 
 - Ask the questions one at a time.
 - If a question can be answered by exploring the codebase, explore the codebase instead.
 - Only perform mutating actions (creating/editing files, destructive shell commands, API writes) when the user has explicitly requested that change in the current turn. When exploring, debugging, or unsure, propose the change and wait for confirmation instead of acting.
-- Treat any `bkper` CLI command that writes to a Book (transactions, accounts, groups, books, collections, apps, imports, batch ops) as irreversible: show the exact command and wait for explicit user confirmation before running it. Read-only commands (list, get, balances, search, export) need no confirmation.
+- Run Book writes the user asked for right away. Only before bulk changes (batch ops, imports, many items at once) or deletions, say briefly what will change and wait for the user's go-ahead.
 - For AI-derived transactions, always send `draft: true` to bypass Book auto-posting; never post them without explicit human approval.
 - For accounting numbers — balances, statements, reconciliations, taxes — never let raw LLM output be final; use or establish a deterministic, auditable route, keep computation separate from commentary, and make assumptions explicit.
 - Think in resources, movements, and balances — not debits and credits.

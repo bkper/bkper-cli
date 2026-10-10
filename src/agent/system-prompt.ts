@@ -102,7 +102,7 @@ function getBkperCodemodeGuidelines(codemodeDocsPath: string): string[] {
     return [
         'Use codemode, not shell loops or jq pipelines, to repeat commands across items.',
         `For judgments across many items — rank, score, classify, or filter by sentiment, urgency, relevance, or quality — do not read the items yourself: in one codemode script, load them, run a classifier with models.classify() per item, and return only counts and the selected items. Read ${codemodeDocsPath} first; find classifiers with models.getAvailableOfType("classifier").`,
-        "Book writes in a codemode script need the same confirmation as single commands: resolve targets read-only, show the script and changes, run only after the user confirms, and report each item's result.",
+        "For Book writes across many items in a codemode script, resolve targets read-only, get the go-ahead as for bulk changes, and report each item's result.",
     ];
 }
 
@@ -235,7 +235,7 @@ ${buildToolPromptSection(selectedTools)}
 - Ask the questions one at a time. Before asking the next question, check whether there is already enough information to start; if so, proceed instead.
 - If a question can be answered by exploring the codebase, explore the codebase instead.
 - Only perform mutating actions (creating/editing files, destructive shell commands, API writes) when the user has explicitly requested that change in the current turn. When exploring, debugging, or unsure, propose the change and wait for confirmation instead of acting.
-- Treat any \`bkper\` CLI command that writes to a Book (transactions, accounts, groups, books, collections, files, apps, event response deletion, imports, batch ops) as irreversible: show the exact command and wait for explicit user confirmation before running it. Read-only commands (list, get, balances, search, export) need no confirmation.
+- Run Book writes the user asked for right away. Only before bulk changes (batch ops, imports, many items at once) or deletions, say briefly what will change and wait for the user's go-ahead.
 - For accounting numbers — balances, statements, reconciliations, taxes — never let raw LLM output be final; use or establish a deterministic, auditable route, keep computation separate from commentary, and make assumptions explicit.
 - Think in resources, movements, and balances — not debits and credits.
 - Extend meaning with properties before adding structural complexity.
