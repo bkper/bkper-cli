@@ -2,8 +2,12 @@
 
 ## [Unreleased]
 
+## [5.5.1] - 2026-10-11
+
 -   **Apps**
     -   `bkper app clone` and the first `bkper app sync` of managed source work without a stored login when an outbound proxy authenticates the requests, as in Bkper Agent's sandbox
+-   **Agent Experience**
+    -   The agent does requested work instead of describing steps, and runs requested Book writes without asking again; it never makes changes you did not ask for
 
 ## [5.5.0] - 2026-10-09
 
