@@ -51,6 +51,68 @@ describe('apps git clone', function () {
         expect(environment?.BKPER_CLONE_REMOTE).to.equal(ARTIFACTS_REMOTE);
     });
 
+    it('clones without a repository token when none is given, leaving Git authentication to an outbound proxy', async function () {
+        let command: string[] = [];
+        let environment: NodeJS.ProcessEnv | undefined;
+
+        await cloneWithReadToken({
+            appId: 'demo-app',
+            remote: ARTIFACTS_REMOTE,
+            tempDir: path.join(tempDir, 'clone'),
+            runner: async (args, options) => {
+                command = args;
+                environment = options?.env;
+                return {stdout: '', stderr: '', exitCode: 0};
+            },
+        });
+
+        expect(command).to.include(ARTIFACTS_REMOTE);
+        expect(environment?.BKPER_CLONE_TOKEN).to.equal(undefined);
+        expect(environment?.BKPER_CLONE_REMOTE).to.equal(undefined);
+        expect(environment?.GIT_TERMINAL_PROMPT).to.equal('0');
+    });
+
+    it('clones the registered remote without issuing a credential when there is no stored login', async function () {
+        const api: PlatformSourceApi = {
+            async getStatus() {
+                return {
+                    mode: 'managed',
+                    state: 'active',
+                    consistency: 'eventual',
+                    appId: 'demo-app',
+                    repositoryId: 'repo-1',
+                    repositoryName: 'demo-app',
+                    namespace: 'bkper-app-sources-dev',
+                    remote: ARTIFACTS_REMOTE,
+                };
+            },
+            async activate() {
+                throw new Error('should not activate source');
+            },
+            async issueCredential() {
+                throw new Error('should not issue credentials without a stored login');
+            },
+        };
+        let cloned: {remote: string; token?: string} | undefined;
+
+        try {
+            await cloneManagedApp({
+                appId: 'demo-app',
+                cwd: tempDir,
+                api,
+                hasStoredLogin: () => false,
+                cloneImpl: async ({remote, token}) => {
+                    cloned = {remote, token};
+                    throw new Error('stop after clone');
+                },
+            });
+            expect.fail('expected the stubbed clone to stop');
+        } catch (error) {
+            expect((error as Error).message).to.equal('stop after clone');
+        }
+        expect(cloned).to.deep.equal({remote: ARTIFACTS_REMOTE, token: undefined});
+    });
+
     it('rejects external apps with provider-clone guidance', async function () {
         const api: PlatformSourceApi = {
             async getStatus() {
@@ -123,6 +185,7 @@ describe('apps git clone', function () {
             destination,
             cwd: tempDir,
             api,
+            hasStoredLogin: () => true,
             cloneImpl: async ({tempDir: cloneTemp, remote}) => {
                 // Simulate git clone into temp directory with the managed remote as origin.
                 runGitSync(['clone', source, cloneTemp], tempDir);
@@ -189,6 +252,7 @@ describe('apps git clone', function () {
                 appId: 'demo-app',
                 destination: path.join(tempDir, 'demo-app'),
                 api,
+                hasStoredLogin: () => true,
                 cloneImpl: async () => {
                     throw new Error('credential helper executable not found');
                 },
@@ -236,6 +300,7 @@ describe('apps git clone', function () {
                 destination,
                 cwd: tempDir,
                 api,
+                hasStoredLogin: () => true,
                 cloneImpl: async ({tempDir: cloneTemp}) => {
                     writeFile(cloneTemp, 'bkper.yaml', 'id: other-app\n');
                     initRepo(cloneTemp);

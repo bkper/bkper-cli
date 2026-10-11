@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as YAML from 'yaml';
+import {isLoggedIn} from '../../../auth/local-auth-service.js';
 import {runGit, type GitRunner} from './run-git.js';
 import {
     createPlatformSourceApi,
@@ -18,11 +19,13 @@ export interface CloneManagedAppOptions {
     cwd?: string;
     api?: PlatformSourceApi;
     runner?: GitRunner;
+    /** Whether the CLI has a stored login; without one, an outbound proxy must authenticate Git. */
+    hasStoredLogin?: () => boolean;
     /** Test-only: skip real network clone and use this factory. */
     cloneImpl?: (args: {
         appId: string;
         remote: string;
-        token: string;
+        token?: string;
         tempDir: string;
         runner: GitRunner;
     }) => Promise<void>;
@@ -52,14 +55,17 @@ function readClonedAppId(repoDir: string): string | undefined {
     return undefined;
 }
 
+/**
+ * Clones with a pre-issued read token, given to the credential helper through the environment. Without a token,
+ * Git sends no credentials of its own, for an outbound proxy to authenticate.
+ */
 export async function cloneWithReadToken(args: {
     appId: string;
     remote: string;
-    token: string;
+    token?: string;
     tempDir: string;
     runner: GitRunner;
 }): Promise<void> {
-    const password = stripRepositoryTokenSecret(args.token);
     const helper = buildCredentialHelperCommand(args.appId);
     await args.runner(
         [
@@ -78,8 +84,12 @@ export async function cloneWithReadToken(args: {
         {
             env: {
                 ...process.env,
-                BKPER_CLONE_TOKEN: password,
-                BKPER_CLONE_REMOTE: args.remote,
+                ...(args.token
+                    ? {
+                          BKPER_CLONE_TOKEN: stripRepositoryTokenSecret(args.token),
+                          BKPER_CLONE_REMOTE: args.remote,
+                      }
+                    : {}),
                 GIT_TERMINAL_PROMPT: '0',
             },
         }
@@ -125,7 +135,10 @@ export async function cloneManagedApp(options: CloneManagedAppOptions): Promise<
         );
     }
 
-    const credential = await api.issueCredential(options.appId, 'read');
+    // Without a stored login, clone the registered remote with no repository token of our own.
+    const credential = (options.hasStoredLogin ?? isLoggedIn)()
+        ? await api.issueCredential(options.appId, 'read')
+        : {remote: status.remote, token: undefined};
     const parentDir = path.dirname(destination);
     fs.mkdirSync(parentDir, {recursive: true});
     const tempDir = fs.mkdtempSync(path.join(parentDir, `.${options.appId}-clone-`));

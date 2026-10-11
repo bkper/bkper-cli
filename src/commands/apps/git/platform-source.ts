@@ -48,17 +48,33 @@ function asErrorMessage(body: PlatformErrorBody | undefined, fallback: string): 
     return redactSecrets(message);
 }
 
+export interface PlatformSourceDependencies {
+    getToken(): Promise<string | undefined>;
+    fetch(input: string, init: RequestInit): Promise<Response>;
+}
+
+const defaultDependencies: PlatformSourceDependencies = {
+    getToken: getStoredOAuthToken,
+    fetch: (input, init) => fetch(input, init),
+};
+
+/**
+ * Sends the stored login when there is one. Without it, requests go out unauthenticated so an outbound
+ * proxy (such as the managed Agent's sandbox egress) can authenticate them, or Platform rejects them.
+ * Repository credentials are the exception: they are issued only to a stored login.
+ */
 async function authorizedFetch(
+    dependencies: PlatformSourceDependencies,
     path: string,
     init: RequestInit = {},
-    requireAuthentication = true
+    requireStoredLogin = false
 ): Promise<{response: Response; body: unknown}> {
-    const token = await getStoredOAuthToken();
-    if (!token && requireAuthentication) {
+    const token = await dependencies.getToken();
+    if (!token && requireStoredLogin) {
         throw new ManagedGitError('AUTHENTICATION_REQUIRED', AUTHENTICATION_REQUIRED_MESSAGE);
     }
 
-    const response = await fetch(`${PLATFORM_API_URL}${path}`, {
+    const response = await dependencies.fetch(`${PLATFORM_API_URL}${path}`, {
         ...init,
         headers: {
             ...(token ? {Authorization: `Bearer ${token}`} : {}),
@@ -124,13 +140,14 @@ function throwPlatformError(
     throw new ManagedGitError('MANAGED_SOURCE_UNAVAILABLE', message || fallback);
 }
 
-export function createPlatformSourceApi(): PlatformSourceApi {
+export function createPlatformSourceApi(
+    dependencies: PlatformSourceDependencies = defaultDependencies
+): PlatformSourceApi {
     return {
         async getStatus(appId: string) {
             const {response, body} = await authorizedFetch(
-                `/api/apps/${encodeURIComponent(appId)}/source`,
-                {},
-                false
+                dependencies,
+                `/api/apps/${encodeURIComponent(appId)}/source`
             );
             const errorBody = body as PlatformErrorBody | undefined;
             if (response.status === 503 || errorBody?.error?.code === 'SOURCE_FEATURE_DISABLED') {
@@ -157,6 +174,7 @@ export function createPlatformSourceApi(): PlatformSourceApi {
 
         async activate(appId: string, activationId: string) {
             const {response, body} = await authorizedFetch(
+                dependencies,
                 `/api/apps/${encodeURIComponent(appId)}/source/activate`,
                 {
                     method: 'POST',
@@ -183,11 +201,13 @@ export function createPlatformSourceApi(): PlatformSourceApi {
 
         async issueCredential(appId: string, scope: 'read' | 'write') {
             const {response, body} = await authorizedFetch(
+                dependencies,
                 `/api/apps/${encodeURIComponent(appId)}/source/credentials`,
                 {
                     method: 'POST',
                     body: JSON.stringify({scope}),
-                }
+                },
+                true
             );
             const errorBody = body as PlatformErrorBody | undefined;
             if (!response.ok) {
