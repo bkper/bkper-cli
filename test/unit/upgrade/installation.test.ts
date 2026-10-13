@@ -69,17 +69,36 @@ describe('installation', function () {
     });
 
     describe('runtime dependencies', function () {
-        it('should load Pi TUI and Pi AI through the embedded agent instead of installing second copies', function () {
-            const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {
-                dependencies: Record<string, string>;
-                devDependencies: Record<string, string>;
+        it('should pin every Pi package the embedded agent loads to the agent version', function () {
+            type PackageJson = {
+                dependencies?: Record<string, string>;
+                devDependencies?: Record<string, string>;
             };
-            const piVersion = packageJson.dependencies['@earendil-works/pi-coding-agent'];
+            const readPackageJson = (file: string) =>
+                JSON.parse(fs.readFileSync(file, 'utf8')) as PackageJson;
+            const packageJson = readPackageJson('package.json');
+            const dependencies = packageJson.dependencies ?? {};
+            const piAgent = '@earendil-works/pi-coding-agent';
+            const piVersion = dependencies[piAgent];
 
-            for (const name of ['@earendil-works/pi-tui', '@earendil-works/pi-ai']) {
-                expect(packageJson.dependencies, name).not.to.have.property(name);
-                // Types come from the dev copy, so it must match the runtime the agent loads.
-                expect(packageJson.devDependencies[name], name).to.equal(piVersion);
+            // Pi requires its sibling packages with caret ranges, so npm would pick newer, incompatible
+            // siblings unless bkper pins each one to the agent version.
+            const piPackages = new Set<string>();
+            const pending = [piAgent];
+            for (let name = pending.pop(); name; name = pending.pop()) {
+                const manifest = readPackageJson(path.join('node_modules', name, 'package.json'));
+                for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+                    if (dependency.startsWith('@earendil-works/') && !piPackages.has(dependency)) {
+                        piPackages.add(dependency);
+                        pending.push(dependency);
+                    }
+                }
+            }
+
+            expect(piPackages).to.include('@earendil-works/pi-codemode');
+            for (const name of piPackages) {
+                expect(dependencies[name], name).to.equal(piVersion);
+                expect(packageJson.devDependencies ?? {}, name).not.to.have.property(name);
             }
         });
     });

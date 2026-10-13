@@ -7,8 +7,8 @@ import type * as PiTui from '@earendil-works/pi-tui';
 /**
  * Runtime access to the Pi packages that Pi itself uses.
  *
- * pi-coding-agent publishes an npm-shrinkwrap.json, so npm installs its own copies of pi-tui and pi-ai nested
- * under it instead of sharing ours. Importing those packages directly would load a second, separate instance:
+ * When pi-coding-agent publishes an npm-shrinkwrap.json (1.0.0 did), npm installs its own copies of pi-tui and
+ * pi-ai nested under it instead of sharing ours. Importing those packages directly would load a second, separate instance:
  * `instanceof` checks against Pi's objects fail and module state such as the user's keybindings is not seen.
  * Bun ignores the shrinkwrap and installs a single copy, so the problem never shows up in local development.
  *

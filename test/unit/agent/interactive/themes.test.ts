@@ -17,7 +17,7 @@ type ThemeFile = {
 };
 
 type ThemeSchema = {
-    properties: {colors: {required: string[]; properties: Record<string, unknown>}};
+    properties: Record<string, unknown> & {colors: {required: string[]; properties: Record<string, unknown>}};
 };
 
 const COLOR_LITERAL = /^(#|okhsl\(|oklch\()/;
@@ -26,21 +26,22 @@ function readJson<T>(filePath: string): T {
     return JSON.parse(readFileSync(filePath, 'utf8')) as T;
 }
 
-// Pi validates theme files against this schema only in its own CLI, not for SDK hosts like Bkper.
 function readPiThemeSchema(): ThemeSchema {
     const piEntry = fileURLToPath(import.meta.resolve('@earendil-works/pi-coding-agent'));
     return readJson<ThemeSchema>(
-        path.join(path.dirname(piEntry), 'modes', 'interactive', 'theme', 'theme-schema.json')
+        path.join(path.dirname(piEntry), '..', 'schemas', 'theme.schema.json')
     );
 }
 
 describe('Bkper agent themes', function () {
     it('define every color token Pi requires, and only known tokens and variables', function () {
-        const schema = readPiThemeSchema().properties.colors;
+        const themeSchema = readPiThemeSchema();
+        const schema = themeSchema.properties.colors;
 
         for (const name of BKPER_THEME_SETTING.split('/')) {
             const theme = readJson<ThemeFile>(path.join(getBkperThemesDir(), `${name}.json`));
             expect(theme.name).to.equal(name);
+            expect(Object.keys(themeSchema.properties)).to.include.members(Object.keys(theme));
             expect(Object.keys(theme.colors)).to.include.members(schema.required);
             expect(Object.keys(schema.properties)).to.include.members(Object.keys(theme.colors));
             for (const [token, value] of Object.entries(theme.colors)) {

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+-   **Agent Experience**
+    -   Fixed `bkper agent` crashing at startup with `does not provide an export named 'MCP_TYPESCRIPT_PREAMBLE'` after Pi 1.2.0 was released; Bkper now installs matching versions of every Pi package
+    -   Updated Pi to 1.2.0
+
 ## [5.5.1] - 2026-10-11
 
 -   **Apps**
