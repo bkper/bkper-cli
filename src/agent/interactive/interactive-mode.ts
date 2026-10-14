@@ -48,6 +48,38 @@ export function suppressPiResumeHintOutput(): () => void {
     };
 }
 
+type StartupHeaderHost = {
+    shouldShowStartupHeader: () => boolean;
+    resetExtensionUI: () => void;
+    setExtensionHeader: (factory: unknown) => void;
+};
+
+/**
+ * The Bkper startup extension owns the header, so Pi's own header must never render: Pi builds only
+ * an empty placeholder, and the current header stays in place while a session switch resets the
+ * extension UI, until the new session's start replaces it. Otherwise Pi's header blinks first.
+ */
+function installBkperStartupHeader(mode: object): void {
+    const host = mode as StartupHeaderHost;
+    const piMode = InteractiveMode.prototype as unknown as StartupHeaderHost;
+    let resettingExtensionUI = false;
+
+    host.shouldShowStartupHeader = () => false;
+    host.setExtensionHeader = factory => {
+        if (factory || !resettingExtensionUI) {
+            piMode.setExtensionHeader.call(mode, factory);
+        }
+    };
+    host.resetExtensionUI = () => {
+        resettingExtensionUI = true;
+        try {
+            piMode.resetExtensionUI.call(mode);
+        } finally {
+            resettingExtensionUI = false;
+        }
+    };
+}
+
 export class BkperInteractiveMode extends InteractiveMode {
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
@@ -55,6 +87,7 @@ export class BkperInteractiveMode extends InteractiveMode {
             keybindings?: BkperKeybindingsManager;
         };
         interactiveMode.getChangelogForDisplay = () => undefined;
+        installBkperStartupHeader(this);
 
         if (interactiveMode.keybindings) {
             installBkperSessionKeybindings(interactiveMode.keybindings);

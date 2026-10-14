@@ -192,6 +192,15 @@ describe('Bkper agent startup extension', function () {
         await new Promise(resolve => setImmediate(resolve));
     });
 
+    it('surrounds the header with blank lines', async function () {
+        const header = await createStartupHeader(undefined);
+        const lines = header.render(120);
+
+        expect(lines[0]).to.equal('');
+        expect(lines[1]).to.not.equal('');
+        expect(lines[lines.length - 1]).to.equal('');
+    });
+
     it('leaves header clicks unhandled outside fullscreen mode', async function () {
         const mainScreenTui = {hasOverlay: () => false, getScreenLines: () => []};
         const header = await createStartupHeader(mainScreenTui);

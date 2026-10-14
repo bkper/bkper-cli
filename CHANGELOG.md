@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+-   **Agent Experience**
+    -   Fixed the Pi startup screen flashing before the Bkper header when `bkper agent` starts and on `/new`, resume, or fork
+
 ## [5.5.3] - 2026-10-14
 
 -   **Documentation**

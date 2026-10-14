@@ -7,6 +7,11 @@ import {
 } from '../../../../src/agent/interactive/interactive-mode.js';
 import {FilePromptHistory} from '../../../../src/agent/interactive/prompt-history-store.js';
 
+type StartupHeaderHost = {
+    resetExtensionUI: () => void;
+    setExtensionHeader: (factory: unknown) => void;
+};
+
 describe('BkperInteractiveMode', function () {
     afterEach(function () {
         sinon.restore();
@@ -85,6 +90,37 @@ describe('BkperInteractiveMode', function () {
         expect(prompt.calledOnceWithExactly('review it')).to.equal(true);
         expect(addMessageToChat.called).to.equal(false);
         expect(requestRender.called).to.equal(false);
+    });
+
+    it('never builds the Pi startup header', async function () {
+        const mode: Record<string, unknown> = {};
+        sinon.stub(InteractiveMode.prototype, 'init').resolves();
+
+        await BkperInteractiveMode.prototype.init.call(mode);
+
+        expect((mode.shouldShowStartupHeader as () => boolean)()).to.equal(false);
+    });
+
+    it('keeps the current header while the session UI resets', async function () {
+        const piMode = InteractiveMode.prototype as unknown as StartupHeaderHost;
+        const setExtensionHeader = sinon.stub(piMode, 'setExtensionHeader');
+        sinon.stub(piMode, 'resetExtensionUI').callsFake(function (this: StartupHeaderHost) {
+            this.setExtensionHeader(undefined);
+        });
+        sinon.stub(InteractiveMode.prototype, 'init').resolves();
+        const mode = {} as StartupHeaderHost;
+        const factory = () => ({render: () => []});
+
+        await BkperInteractiveMode.prototype.init.call(mode);
+        mode.resetExtensionUI();
+
+        expect(setExtensionHeader.called).to.equal(false);
+
+        mode.setExtensionHeader(factory);
+        mode.setExtensionHeader(undefined);
+
+        expect(setExtensionHeader.args).to.deep.equal([[factory], [undefined]]);
+        expect(setExtensionHeader.alwaysCalledOn(mode)).to.equal(true);
     });
 
     it('suppresses the Pi exit resume hint', function () {

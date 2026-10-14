@@ -192,9 +192,14 @@ function buildStartupHeaderLines(
     }
 
     // The TUI rejects lines wider than the terminal, so narrow terminals truncate hints.
-    return lines.map(line =>
-        line.length > 0 ? STARTUP_LEFT_PADDING + truncateToWidth(line, contentWidth) : line
-    );
+    // Blank lines above and below space the header, as Pi does around its own header.
+    return [
+        '',
+        ...lines.map(line =>
+            line.length > 0 ? STARTUP_LEFT_PADDING + truncateToWidth(line, contentWidth) : line
+        ),
+        '',
+    ];
 }
 
 function createStartupHeaderFactory(
@@ -212,10 +217,10 @@ function createStartupHeaderFactory(
             if (event.type !== 'click' || event.button !== 'left') return undefined;
             if (getBkperLogoLines(contentWidth, theme.getColorMode()).length === 0)
                 return undefined;
-            // The logo is the header's first line, after the left padding.
+            // The logo starts after the header's leading blank line and the left padding.
             const origin = {
                 column: event.screenX - event.x + STARTUP_LEFT_PADDING.length,
-                row: event.screenY - event.y,
+                row: event.screenY - event.y + 1,
             };
             return playLogo3d(tui, theme, BKPER_MARK_LOGO, origin) ? {handled: true} : undefined;
         },
