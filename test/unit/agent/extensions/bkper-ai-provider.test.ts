@@ -1,4 +1,5 @@
 import {expect} from '../../helpers/test-setup.js';
+import type {ModelsStoreEntry} from '@earendil-works/pi-ai';
 import type {ProviderConfig, ProviderModelConfig} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {
@@ -7,14 +8,62 @@ import {
     getBkperAiProviderConfig,
 } from '../../../../src/agent/extensions/bkper-ai-provider.js';
 
-function createRefreshContext(): Parameters<
-    NonNullable<ProviderConfig['refreshModels']>
->[0] {
+type RefreshContext = Parameters<NonNullable<ProviderConfig['refreshModels']>>[0];
+
+function createRefreshContext(overrides: Partial<RefreshContext> = {}): RefreshContext {
     return {
         allowNetwork: true,
         publish: async () => true,
         signal: new AbortController().signal,
+        ...overrides,
     };
+}
+
+/** Minimal gateway catalog with one vision chat model and one decision model. */
+function createCatalogResponse(): Response {
+    return new Response(
+        JSON.stringify({
+            default_model: 'openai/gpt-5.6-luna',
+            data: [
+                {
+                    id: 'openai/gpt-5.6-luna',
+                    name: 'gpt-5.6-luna',
+                    input_modalities: ['text', 'image'],
+                    pricing: {
+                        inputNanoUsdPerToken: 200,
+                        cachedInputNanoUsdPerToken: 20,
+                        cacheWriteNanoUsdPerToken: 250,
+                        outputNanoUsdPerToken: 1200,
+                    },
+                    default_thinking_level: 'xhigh',
+                    context_window: 272000,
+                    max_output_tokens: 32000,
+                    thinking_levels: ['high', 'xhigh', 'max'],
+                },
+                jevCatalogEntry,
+            ],
+        }),
+        {status: 200, headers: {'Content-Type': 'application/json'}}
+    );
+}
+
+/** Fetches through the network phase and returns the models and the entry Pi was asked to persist. */
+async function fetchAndCapturePersisted(env: Record<string, string | undefined>): Promise<{
+    models: ProviderModelConfig[];
+    persisted: ModelsStoreEntry | null | undefined;
+}> {
+    const config = getBkperAiProviderConfig(env, sinon.stub().resolves(createCatalogResponse()));
+    let persisted: ModelsStoreEntry | null | undefined;
+    const models =
+        (await config.refreshModels?.(
+            createRefreshContext({
+                publish: async publication => {
+                    persisted = publication.persist;
+                    return true;
+                },
+            })
+        )) ?? [];
+    return {models, persisted};
 }
 
 type ProviderChatModelConfig = Extract<ProviderModelConfig, {type?: 'chat'}>;
@@ -350,6 +399,57 @@ describe('agent/bkper-ai-provider', function () {
         expect(message).to.include('200');
         expect(message).to.include('text/html');
         expect(message).to.not.include('private-response-value');
+    });
+
+    describe('saved catalog', function () {
+        const devEnv = {BKPER_AI_BASE_URL: 'https://ai-dev.bkper.app/v1'};
+
+        it('saves fetched models in Pi models store', async function () {
+            const {models, persisted} = await fetchAndCapturePersisted(devEnv);
+
+            expect(persisted?.models.map(model => model.id)).to.deep.equal(
+                models.map(model => model.id)
+            );
+            expect(persisted?.checkedAt).to.be.a('number');
+        });
+
+        it('starts offline from the saved models without a network request', async function () {
+            const {models, persisted} = await fetchAndCapturePersisted(devEnv);
+            const fetchModels = sinon.stub().rejects(new Error('offline'));
+            const config = getBkperAiProviderConfig(devEnv, fetchModels);
+
+            const restored = await config.refreshModels?.(
+                createRefreshContext({allowNetwork: false, stored: persisted ?? undefined})
+            );
+
+            expect(fetchModels.called).to.equal(false);
+            expect(restored).to.deep.equal(models);
+        });
+
+        it('fetches during offline startup when nothing is saved yet', async function () {
+            const fetchModels = sinon.stub().resolves(createCatalogResponse());
+            const config = getBkperAiProviderConfig(devEnv, fetchModels);
+
+            const models = await config.refreshModels?.(
+                createRefreshContext({allowNetwork: false})
+            );
+
+            expect(fetchModels.calledOnce).to.equal(true);
+            expect(models).to.have.length(2);
+        });
+
+        it('ignores models saved from another gateway', async function () {
+            const {persisted} = await fetchAndCapturePersisted({});
+            const fetchModels = sinon.stub().resolves(createCatalogResponse());
+            const config = getBkperAiProviderConfig(devEnv, fetchModels);
+
+            await config.refreshModels?.(
+                createRefreshContext({allowNetwork: false, stored: persisted ?? undefined})
+            );
+
+            expect(fetchModels.calledOnce).to.equal(true);
+            expect(fetchModels.firstCall.args[0]).to.equal('https://ai-dev.bkper.app/v1/models');
+        });
     });
 
     it('reports a failed model request', async function () {

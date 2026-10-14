@@ -1,3 +1,4 @@
+import type {AnyModel, RefreshModelsContext} from '@earendil-works/pi-ai';
 import type {
     ExtensionAPI,
     ProviderConfig,
@@ -12,6 +13,7 @@ const BKPER_AI_BASE_URL_ENV_VAR = 'BKPER_AI_BASE_URL';
 const BKPER_AI_DEVELOPMENT_ORIGIN = 'https://ai-dev.bkper.app';
 const THINKING_LEVELS = ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
 const BKPER_AI_CLASSIFIER_API = 'typesafe-system-one';
+const BKPER_AI_CHAT_API = 'openai-responses';
 
 export type BkperAiThinkingLevel = (typeof THINKING_LEVELS)[number];
 
@@ -260,6 +262,66 @@ async function fetchBkperAiModels(
     ];
 }
 
+/** Pi's models store holds full runtime models, so saved entries carry the provider and gateway. */
+function toStoredModel(
+    model: BkperAiModelConfig | ProviderClassifierModelConfig,
+    baseUrl: string
+): AnyModel {
+    return model.type === 'classifier'
+        ? {...model, api: model.api ?? BKPER_AI_CLASSIFIER_API, provider: BKPER_AI_PROVIDER_ID, baseUrl}
+        : {...model, api: model.api ?? BKPER_AI_CHAT_API, provider: BKPER_AI_PROVIDER_ID, baseUrl};
+}
+
+/** Restores the fetched shape: chat models inherit the provider API, and image models are never saved. */
+function fromStoredModel(model: AnyModel): ProviderModelConfig | undefined {
+    if (model.type === 'classifier') {
+        const {provider: _provider, baseUrl: _baseUrl, ...config} = model;
+        return config;
+    }
+    if (model.type === 'image') {
+        return undefined;
+    }
+    const {provider: _provider, baseUrl: _baseUrl, api: _api, ...config} = model;
+    return config;
+}
+
+/** Saved models from this gateway, or undefined when there are none to start from. */
+function getSavedModels(
+    context: RefreshModelsContext,
+    baseUrl: string
+): ProviderModelConfig[] | undefined {
+    const models = context.stored?.models ?? [];
+    if (models.length === 0 || models.some(model => model.baseUrl !== baseUrl)) {
+        return undefined;
+    }
+    return models.flatMap(model => fromStoredModel(model) ?? []);
+}
+
+/**
+ * Starts from the saved catalog while Pi refreshes offline, so startup does not wait on the gateway.
+ * Pi's background network refresh fetches and saves the latest catalog on every launch. The first
+ * launch, with nothing saved, still fetches so the user has models right away.
+ */
+async function refreshBkperAiModels(
+    baseUrl: string,
+    fetchFn: typeof fetch,
+    context: RefreshModelsContext
+): Promise<ProviderModelConfig[]> {
+    const savedModels = getSavedModels(context, baseUrl);
+    if (!context.allowNetwork && savedModels) {
+        return savedModels;
+    }
+
+    const models = await fetchBkperAiModels(baseUrl, fetchFn, context.signal);
+    await context.publish({
+        persist: {
+            models: models.map(model => toStoredModel(model, baseUrl)),
+            checkedAt: Date.now(),
+        },
+    });
+    return models;
+}
+
 export function findDefaultBkperAiModel<TModel extends BkperAiModelMetadata>(
     models: readonly TModel[]
 ): TModel | undefined {
@@ -293,11 +355,11 @@ export function getBkperAiProviderConfig(
             'bkper-ai-source': 'bkper-cli',
             'User-Agent': 'bkper-cli',
         },
-        api: 'openai-responses',
+        api: BKPER_AI_CHAT_API,
         classifiers: {[BKPER_AI_CLASSIFIER_API]: typesafeSystemOneApi()},
         // Every model type arrives through refreshModels, so the static list stays empty.
         models: [],
-        refreshModels: ({signal}) => fetchBkperAiModels(baseUrl, fetchFn, signal),
+        refreshModels: context => refreshBkperAiModels(baseUrl, fetchFn, context),
     };
 }
 
