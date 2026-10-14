@@ -98,7 +98,7 @@ Keep schemas simple. Constraints such as a string's minimum or maximum length ma
 
 ## Run an agent
 
-For a chat that does real work on Books, start a session on the [Managed Agent API](https://bkper.com/docs/api/managed-agent.md) from the app's server. Bkper runs the agent in the user's private cloud workspace, with the `bkper` CLI, files, and durable sessions. Your app keeps its screens, prompts, and instructions. The Managed Agent is in private beta.
+For a chat that does real work on Books, start a session on the [Managed Agent API](https://bkper.com/docs/api/managed-agent.md) from the app's server. Bkper runs the agent in the user's private cloud workspace, with the `bkper` CLI, files, and durable sessions. Your app keeps its screens, prompts, and instructions. The Managed Agent is in beta.
 
 ```ts
 // No Authorization header: the platform adds the user's.

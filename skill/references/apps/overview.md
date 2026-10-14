@@ -16,11 +16,26 @@ The same Worker can expose app-defined `/api/*` routes. Treat those routes as th
 - Scripts, external clients, and agents can call them too.
 - The default template documents them with an app OpenAPI spec at `/openapi.json`.
 
-### AI inference
+### AI gateway
 
-When an app needs model inference, use Bkper AI by default. An authenticated app API route or event establishes the user and app identity, then platform outbound supplies authorization and usage attribution for the Worker's Bkper AI requests. The app does not need provider credentials. For inference used only by the UI, the client can also call Bkper AI directly with the signed-in user's token.
+Apps call Bkper AI models through the AI gateway, with no provider accounts or keys:
 
-See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md) for the client-to-Worker authentication flow and SDK setup for decision and language models.
+- **Language models** — multi-provider models over the Open Responses protocol, for text and structured output.
+- **Decision models** — typed answers with calibrated confidence: yes or no, one of your options, or a level on a scale.
+
+Usage counts against the user's included Bkper AI allowance. An authenticated app API route or event establishes the user and app identity, and the platform adds authorization and usage attribution to the Worker's requests. For inference used only by the UI, the client can also call Bkper AI directly with the signed-in user's token.
+
+See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md) for the authentication flow and SDK setup.
+
+### Managed agents
+
+Build your own agent, such as a chat inside a Book or a Slack bot, on the Managed Agent API. Your app keeps its screens and instructions; Bkper runs the rest:
+
+- **The agent loop** — models, tool calls, and durable sessions that continue across apps, including Bkper Agent.
+- **A dedicated sandbox machine for each user** — the `bkper` CLI, Node, Python, and a persistent workspace for files and reports.
+- **The user's permissions** — the agent acts as the user, and credentials never enter the machine.
+
+See [Add Bkper AI to an App → Run an agent](https://bkper.com/docs/platform/apps/ai.md#run-an-agent).
 
 ### Authentication
 
@@ -71,17 +86,19 @@ Your app is live at `{appId}.bkper.app`. The platform handles routing, SSL, and 
 
 Without the platform, creating a Bkper app with a UI, event handling, and authentication requires:
 
-| Concern                  | Without the platform                                                                    | With the platform                               |
-| ------------------------ | --------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| **Hosting**              | Provision servers, configure domains, SSL, CDN                                          | `bkper app deploy`                              |
-| **Authentication**       | Register OAuth client, build consent screen, handle token refresh, manage redirect URIs | `auth.getAccessToken()`                         |
-| **Event webhooks**       | Set up a public endpoint, configure DNS, handle JWT verification                        | Declare in `bkper.yaml`, platform routes events |
-| **Local dev webhooks**   | Install ngrok or similar, manually configure tunnel URL                                 | `bkper app dev` starts tunnel automatically     |
-| **Secrets**              | Set up a secrets manager, configure access                                              | `bkper app secrets put`                         |
-| **KV storage**           | Deploy Redis/Memcached, manage connections                                              | Declare `KV` in `bkper.yaml`                    |
-| **Preview environments** | Build a staging pipeline                                                                | `bkper app deploy --preview`                    |
-| **Shared app source**    | Operate a separate private Git host                                                     | Managed source for app developers and agents    |
-| **Type safety**          | Manually create type definitions                                                        | `env.d.ts` auto-generated                       |
+| Concern                  | Without the platform                                                                             | With the platform                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
+| **Hosting**              | Provision servers, configure domains, SSL, CDN                                                   | `bkper app deploy`                              |
+| **Authentication**       | Register OAuth client, build consent screen, handle token refresh, manage redirect URIs          | `auth.getAccessToken()`                         |
+| **Event webhooks**       | Set up a public endpoint, configure DNS, handle JWT verification                                 | Declare in `bkper.yaml`, platform routes events |
+| **Local dev webhooks**   | Install ngrok or similar, manually configure tunnel URL                                          | `bkper app dev` starts tunnel automatically     |
+| **Secrets**              | Set up a secrets manager, configure access                                                       | `bkper app secrets put`                         |
+| **KV storage**           | Deploy Redis/Memcached, manage connections                                                       | Declare `KV` in `bkper.yaml`                    |
+| **Preview environments** | Build a staging pipeline                                                                         | `bkper app deploy --preview`                    |
+| **Shared app source**    | Operate a separate private Git host                                                              | Managed source for app developers and agents    |
+| **AI models**            | Open provider accounts, manage API keys, pay separate bills                                      | AI gateway with the included Bkper AI allowance |
+| **Agents**               | Run the agent loop and a sandbox for each user, persist sessions and files, keep credentials out | Managed Agent API                               |
+| **Type safety**          | Manually create type definitions                                                                 | `env.d.ts` auto-generated                       |
 
 The platform eliminates all of this. You write business logic, the platform handles infrastructure.
 

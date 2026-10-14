@@ -117,11 +117,11 @@ Each time the App iframe finishes loading, Bkper announces the requests it suppo
 ```js
 {
     type: 'bkper:host-ready',
-    supports: ['navigate'],
+    supports: ['navigate', 'show-book'],
 }
 ```
 
-Send `bkper:navigate` only after receiving this message with `navigate` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
+Send `bkper:navigate` only after receiving this message with `navigate` in `supports`, and `bkper:show-book` only with `show-book` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
 
 Apps opened with `NEW_TAB` do not receive this message, because they have no Bkper parent.
 
@@ -198,6 +198,18 @@ document.addEventListener('click', event => {
     window.parent.postMessage({ type: 'bkper:navigate', url: link.href }, BKPER_ORIGIN);
 });
 ```
+
+#### Showing the Book
+
+An expanded panel covers the Book. When the user changes what the Book shows behind it, such as by clicking an account, the App can ask Bkper to let the user see the change:
+
+```js
+window.parent.postMessage({ type: 'bkper:show-book' }, BKPER_ORIGIN);
+```
+
+Bkper ignores the message when it does not come from the App iframe currently open in the panel, or not from that iframe's own origin. For a valid request, an expanded panel returns to sidebar size; otherwise nothing changes. Bkper does not reply.
+
+The App decides when to ask. An App whose panel already reflects the Book's context, such as a report rebuilt for each query, may prefer to stay expanded and never send it. To follow the user's changes, send it when a [`bkper:app-url-changed`](#live-context-updates) message changes the context the Book shows.
 
 ### Available expressions
 

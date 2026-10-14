@@ -60,7 +60,7 @@ curl --fail-with-body \
   -H "Authorization: Bearer ${BKPER_TOKEN}"
 ```
 
-3. Read the reply. Its `content` holds `text` blocks, plus `thinking` and `tool_call` blocks for the agent's reasoning and steps.
+3. Read the reply. Its `content` holds `text` blocks, plus `thinking` and `tool_call` blocks for the agent's reasoning and steps; a step's `summary` names it in a few plain words.
 
 ```bash
 curl --fail-with-body \
@@ -83,7 +83,7 @@ The agent receives, in order:
 3. **Each message**, with its optional `bookContext` as labeled information, never as instructions or permission.
 4. **Each message's attached files**, copied into the workspace and listed with their paths as labeled information.
 
-There is no default. Without `instructions`, the agent follows only Bkper's base, which does not ask anyone before acting. Bkper Agent sends its own instructions, so it asks questions and confirms changes; your interface decides its own.
+There is no default. Without `instructions`, the agent follows only Bkper's base, which does not ask anyone before acting. Bkper Agent sends its own instructions, so it asks questions and makes only the changes it is asked for; your interface decides its own.
 
 For a Slack bot:
 
