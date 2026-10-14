@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [5.5.3] - 2026-10-13
+
+-   **Documentation**
+    -   Synced the bundled references from bkper.com: AI gateway and Managed Agent sections in the apps overview, the `bkper:show-book` panel message, the Managed Agent beta, and clearer Incoming and Outgoing wording in core concepts
+
 ## [5.5.2] - 2026-10-13
 
 -   **Agent Experience**
