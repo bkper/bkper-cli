@@ -191,6 +191,8 @@ Releases are published by GitHub Actions (Trusted Publisher with OIDC), not from
 -   Review the release notes before recommending an update.
 -   Keep `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` on the same exact version.
 -   Run `bun install` after changing either dependency so `bun.lock` stays aligned with `package.json`.
+-   Keep `jiti`, `@silvia-odwyer/photon-node`, and `quickjs-wasi` pinned to the versions `pi-coding-agent` declares. The agent bundle loads them from bkper's `node_modules`; the agent bundle unit test fails when they drift.
+-   `bun run build:bundle-agent` (part of `bun run build`) bundles `bkper agent` with Pi, following Pi's own `scripts/build-coding-agent-bundle.mjs`. If it fails after a Pi update because Pi changed how it loads modules lazily, compare with Pi's script and update `scripts/build-agent-bundle.ts`.
 -   Build and run unit tests before committing a Pi update.
 -   Keep the dependency bump and release separate; run the release workflow later from a clean, up-to-date `main`.
 

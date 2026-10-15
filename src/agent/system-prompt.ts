@@ -9,7 +9,7 @@ import {
 } from '@earendil-works/pi-coding-agent';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { BKPER_PACKAGE_DIR, getPiPackageDir } from '../utils/package-dir.js';
 
 function resolveFirstExistingPath(candidates: string[]): string {
     for (const candidate of candidates) {
@@ -20,24 +20,15 @@ function resolveFirstExistingPath(candidates: string[]): string {
     return candidates[0];
 }
 
-function resolveDocsIndexPath(filename: string): string {
-    const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    return resolveFirstExistingPath([
-        path.resolve(thisDir, '..', 'docs', filename),
-        path.resolve(thisDir, '..', '..', 'skill', 'references', filename),
-    ]);
-}
+const RUNNING_FROM_SOURCE = import.meta.url.endsWith('.ts');
 
-function resolvePiPackageRoot(): string {
-    const piIndexPath = fileURLToPath(import.meta.resolve('@earendil-works/pi-coding-agent'));
-    let dir = path.dirname(piIndexPath);
-    while (dir !== path.dirname(dir)) {
-        if (existsSync(path.join(dir, 'package.json'))) {
-            return dir;
-        }
-        dir = path.dirname(dir);
-    }
-    return path.dirname(piIndexPath);
+/** Source runs read the canonical `skill/references`; builds read their copy in `lib/docs`. */
+function resolveDocsIndexPath(filename: string): string {
+    const sourceDocsPath = path.join(BKPER_PACKAGE_DIR, 'skill', 'references', filename);
+    const builtDocsPath = path.join(BKPER_PACKAGE_DIR, 'lib', 'docs', filename);
+    return resolveFirstExistingPath(
+        RUNNING_FROM_SOURCE ? [sourceDocsPath] : [builtDocsPath, sourceDocsPath]
+    );
 }
 
 function normalizePromptSnippet(text: string | undefined): string | undefined {
@@ -148,7 +139,7 @@ function buildToolPromptSection(selectedTools: string[]): string {
     if (codemode) {
         codemode.guidelines.forEach(addGuideline);
         getBkperCodemodeGuidelines(
-            path.resolve(resolvePiPackageRoot(), 'docs', 'codemode.md')
+            path.resolve(getPiPackageDir(), 'docs', 'codemode.md')
         ).forEach(addGuideline);
     }
     addGuideline('Do not claim builds, tests, or command results unless you actually ran them.');
@@ -165,7 +156,7 @@ export function getBkperAgentSystemPrompt(
     const coreConceptsPath = resolveDocsIndexPath('core/core-concepts.md');
     const indexPath = resolveDocsIndexPath('index.md');
     const referenceDocsDir = path.dirname(indexPath);
-    const piRoot = resolvePiPackageRoot();
+    const piRoot = getPiPackageDir();
     const piDocsPath = path.resolve(piRoot, 'docs');
     const piExamplesPath = path.resolve(piRoot, 'examples');
     return `${buildBkperOperatingContext(selectedTools)}

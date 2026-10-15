@@ -1,24 +1,19 @@
 import { execSync } from 'child_process';
 import { accessSync, constants, existsSync, readFileSync, realpathSync } from 'fs';
-import { createRequire } from 'module';
 import os from 'os';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { BKPER_PACKAGE_DIR } from '../utils/package-dir.js';
 
-const require = createRequire(import.meta.url);
-const pkg = require('../../package.json');
+/** Directory of the running bkper package (the folder holding its package.json). */
+export const PACKAGE_DIR: string = BKPER_PACKAGE_DIR;
 
 /** Current installed version of the CLI. */
-export const VERSION: string = pkg.version;
+export const VERSION: string = JSON.parse(
+    readFileSync(path.join(PACKAGE_DIR, 'package.json'), 'utf8')
+).version;
 
 /** Package name on npm. */
 const PACKAGE_NAME = 'bkper';
-
-/** Directory of the running bkper package (the folder holding its package.json). */
-export const PACKAGE_DIR: string = fileURLToPath(new URL('../../', import.meta.url)).replace(
-    /[\\/]$/,
-    ''
-);
 
 /** Supported installation methods. */
 export type InstallMethod = 'npm' | 'pnpm' | 'yarn' | 'bun' | 'unknown';
