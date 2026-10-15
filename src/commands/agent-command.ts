@@ -1,5 +1,6 @@
 import type { Command } from 'commander';
-import { main as runPiMain } from '@earendil-works/pi-coding-agent';
+import { main as runPiMain, type MainOptions } from '@earendil-works/pi-coding-agent';
+import { registerBkperAiProvider } from '../agent/extensions/bkper-ai-provider.js';
 import {
     createAgentModeDependencies,
     runAgentMode,
@@ -13,7 +14,7 @@ export interface AgentCommandEnvironment {
 }
 
 export interface AgentCommandDependencies {
-    runPi: (args: string[]) => Promise<void>;
+    runPi: (args: string[], options?: MainOptions) => Promise<void>;
     runInteractiveMode: (options?: SessionOptions) => Promise<void>;
     environment?: AgentCommandEnvironment;
 }
@@ -27,7 +28,7 @@ const ASSUMED_INTERACTIVE_ENVIRONMENT: AgentCommandEnvironment = {
 
 function createDefaultDependencies(): AgentCommandDependencies {
     return {
-        runPi: (args: string[]) => runPiMain(args),
+        runPi: (args: string[], options?: MainOptions) => runPiMain(args, options),
         runInteractiveMode: (options) => runAgentMode(createAgentModeDependencies(options)),
         environment: {
             stdinIsTTY: process.stdin.isTTY === true,
@@ -40,6 +41,14 @@ function canRunEmbeddedInteractiveMode(dependencies: AgentCommandDependencies): 
     const environment = dependencies.environment ?? ASSUMED_INTERACTIVE_ENVIRONMENT;
     return environment.stdinIsTTY && environment.stdoutIsTTY;
 }
+
+/**
+ * Sessions forwarded to pi (`--list-models`, print, json, and rpc modes) offer Bkper AI models like
+ * the embedded interactive mode. Management commands such as `config` stay plain pi.
+ */
+const PI_SESSION_OPTIONS: MainOptions = {
+    extensionFactories: [registerBkperAiProvider],
+};
 
 function hasSystemPromptArg(args: string[]): boolean {
     return args.some(arg => arg === '--system-prompt' || arg.startsWith('--system-prompt='));
@@ -129,7 +138,7 @@ export async function runAgentCommand(
 
     if (piArgs.length === 0) {
         if (!canRunEmbeddedInteractive) {
-            await dependencies.runPi(buildPiArgs(piArgs));
+            await dependencies.runPi(buildPiArgs(piArgs), PI_SESSION_OPTIONS);
             return;
         }
 
@@ -144,7 +153,7 @@ export async function runAgentCommand(
 
     if (!isInteractiveSessionArgs(piArgs)) {
         const args = buildPiArgs(piArgs);
-        await dependencies.runPi(args);
+        await dependencies.runPi(args, PI_SESSION_OPTIONS);
         return;
     }
 
@@ -154,7 +163,7 @@ export async function runAgentCommand(
         // Unsupported interactive args (e.g. --session, --fork) or non-interactive
         // terminals are forwarded to pi for normal passthrough behavior.
         const args = buildPiArgs(piArgs);
-        await dependencies.runPi(args);
+        await dependencies.runPi(args, PI_SESSION_OPTIONS);
         return;
     }
 
