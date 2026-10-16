@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.5.4] - 2026-10-15
+
 -   **Agent Experience**
     -   Fixed the Pi startup screen flashing before the Bkper header when `bkper agent` starts and on `/new`, resume, or fork
     -   `bkper agent` starts faster: it ships as a single bundled file instead of loading ~1,600 small ones, and no longer waits for the Bkper AI model list, which it now saves and refreshes in the background
