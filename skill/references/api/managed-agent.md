@@ -14,7 +14,7 @@ Sessions belong to the user, not the app: work started in one app continues in a
 
 ## Requirements
 
-- A Bkper account in the Managed Agent private beta. Other accounts get 403 `agent_beta_required`.
+- A Bkper account with an email address. Accounts not admitted to the beta get 403 `agent_beta_required`.
 - A Bkper OAuth access token for the user the agent acts as. [Bkper platform apps](https://bkper.com/docs/platform/apps/overview) need none: call the API from the app's server, and the platform adds the user's credentials, as it does for Bkper AI.
 - A server, bot, or script to call the API. Browsers on other websites are refused: the API sends no CORS headers and rejects cross-origin writes with 403 `origin_forbidden`.
 
@@ -323,7 +323,7 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | --- | --- | --- |
 | 400 | `invalid_request`, `unknown_model`, `unknown_thinking_level` | A field is invalid or unknown |
 | 401 | `unauthorized`, `authentication_failed` | The token is missing, invalid, or expired |
-| 403 | `agent_beta_required` | The account is not in the private beta |
+| 403 | `agent_beta_required` | The account is not admitted to the beta |
 | 403 | `origin_forbidden` | A browser on another website sent a write |
 | 404 | `not_found`, `parent_not_found`, `file_not_found` | No such resource for this user |
 | 405 | `method_not_allowed` | The path does not support the method |

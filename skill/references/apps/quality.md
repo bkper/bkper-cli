@@ -56,6 +56,17 @@ Prefer modules with one clear responsibility, high cohesion, and few dependencie
 
 Split a module when unrelated behavior changes for different reasons or when mixed responsibilities make it difficult to understand or test.
 
+## Client state
+
+Start every client with this structure, so it grows by adding pieces instead of restructuring:
+
+- **Stores hold shared state.** Anything another component or the URL could care about, such as loaded data, the selection, or errors, lives in a store under `client/src/state/`, one per concern. A store holds its data and the actions that change it, announces changes, and never touches the DOM.
+- **Components render and report intent.** A component watches the stores it shows and changes them only through their actions. Only its own presentation, such as an open menu or hover, stays in the component. Each component owns its CSS.
+- **Stores ask the interface through events.** When a store needs the interface to act, such as focusing an input or scrolling to new content, it fires an event the component listens to. Stores never call components.
+- **One module wires the stores.** It creates them and gives each the stores it depends on. Dependencies point one way. A store changes another store only through that store's actions, and reactions that span stores live in this module.
+- **One module owns the URL.** Only it reads or writes the URL's path, query, and `history`, mapping the URL to state. Put in the URL what a person would reload or share, such as the selected item. Standalone, add a history entry per selection so Back works. Embedded in a Book, replace the URL so Back stays the Book's. Pass it the window so it can be tested.
+- **Split by concern, not by screen region.** Split a store or component when its parts change for different reasons.
+
 ## Security
 
 Keep the security boundary simple and explicit:

@@ -117,11 +117,11 @@ Each time the App iframe finishes loading, Bkper announces the requests it suppo
 ```js
 {
     type: 'bkper:host-ready',
-    supports: ['navigate', 'show-book'],
+    supports: ['navigate', 'show-book', 'expand'],
 }
 ```
 
-Send `bkper:navigate` only after receiving this message with `navigate` in `supports`, and `bkper:show-book` only with `show-book` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
+Send `bkper:navigate` only after receiving this message with `navigate` in `supports`, `bkper:show-book` only with `show-book` in `supports`, and `bkper:expand` only with `expand` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
 
 Apps opened with `NEW_TAB` do not receive this message, because they have no Bkper parent.
 
@@ -210,6 +210,20 @@ window.parent.postMessage({ type: 'bkper:show-book' }, BKPER_ORIGIN);
 Bkper ignores the message when it does not come from the App iframe currently open in the panel, or not from that iframe's own origin. For a valid request, an expanded panel returns to sidebar size; otherwise nothing changes. Bkper does not reply.
 
 The App decides when to ask. An App whose panel already reflects the Book's context, such as a report rebuilt for each query, may prefer to stay expanded and never send it. To follow the user's changes, send it when a [`bkper:app-url-changed`](#live-context-updates) message changes the context the Book shows.
+
+#### Asking for room
+
+When the user opens something in the App that needs more room than the sidebar, such as a report or a preview, the App can ask Bkper to expand the panel:
+
+```js
+window.parent.postMessage({ type: 'bkper:expand' }, BKPER_ORIGIN);
+```
+
+Bkper ignores the message when it does not come from the App iframe currently open in the panel, or not from that iframe's own origin. For a valid request, a panel at sidebar size expands; an expanded panel, or one already full size on a phone, stays as it is. Bkper does not reply.
+
+An expansion the App asked for counts as the user's own: the App's later Book events do not return the panel to sidebar size. To give the room back, such as when the user closes what they opened, send [`bkper:show-book`](#showing-the-book), and only if the App did get wider: on a phone, where the panel is already full size, `bkper:show-book` minimizes it.
+
+Send `bkper:expand` only in response to a user action, such as a click. Bkper cannot verify this, and a panel that grows by itself covers the Book the user is working in.
 
 ### Available expressions
 

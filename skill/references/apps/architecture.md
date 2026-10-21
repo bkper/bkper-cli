@@ -18,7 +18,8 @@ my-app/
 │       ├── api/
 │       ├── auth/
 │       ├── components/
-│       └── services/
+│       ├── services/
+│       └── state/
 ├── server/
 │   ├── package.json
 │   └── src/
@@ -53,7 +54,7 @@ Client code has two data paths. Choose based on who owns the behavior:
 
 Keep app-owned behavior in one place. Do not implement the same behavior separately in the UI and the app API.
 
-For stateful feature components, co-locate view, controller, and CSS files in one folder under `components/`. Simple presentational components can remain in one file.
+Shared client state lives in stores under `state/`, with one module that owns the URL. Components render that state and keep their view and CSS together in one folder under `components/`. Simple presentational components can remain in one file. See [Client state](https://bkper.com/docs/platform/apps/quality.md#client-state).
 
 ### Client authentication
 
