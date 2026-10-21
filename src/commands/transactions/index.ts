@@ -4,6 +4,7 @@ export {
     ListTransactionsOptions,
     ListTransactionsResult,
 } from './list.js';
+export { countTransactions, CountTransactionsResult } from './count.js';
 export { getTransaction } from './get.js';
 export {
     createTransaction,

@@ -264,6 +264,9 @@ bkper transaction list -b abc123 -q 'on:2025' --limit 100
 # Fetch the next transaction page
 bkper transaction list -b abc123 -q 'on:2025' --limit 100 --cursor cursor_123
 
+# Count transactions without listing them
+bkper transaction count -b abc123 -q "account:'Capital' on:2025"
+
 # Update a transaction
 bkper transaction update tx_456 -b abc123 --amount 120.00 --description "Printer paper (corrected)"
 
@@ -293,6 +296,7 @@ bkper transaction merge tx_123 tx_456 -b abc123
 -   `transaction list -b <bookId> -q <query>` - List transactions matching a query (auto-paginates through all results unless `--limit` or `--cursor` is provided)
     -   `--limit <number>` - Fetch one page with up to this many transactions
     -   `--cursor <cursor>` - Cursor for fetching the next page
+-   `transaction count -b <bookId> [-q <query>]` - Count transactions matching a query, returning `{"count":N}`; counts all transactions when `-q` is omitted. Use this instead of `transaction list` whenever only the number of transactions is needed — one call per account/group/period is fast, while listing fetches every transaction
 -   `transaction create -b <bookId>` - Create a transaction
     -   `--date <date>` - Transaction date
     -   `--amount <amount>` - Transaction amount

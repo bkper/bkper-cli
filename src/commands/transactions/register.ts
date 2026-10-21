@@ -7,6 +7,7 @@ import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.j
 import { parseStdinItems } from '../../input/index.js';
 import {
     listTransactionsFormatted,
+    countTransactions,
     getTransaction,
     createTransaction,
     updateTransaction,
@@ -52,6 +53,18 @@ export function registerTransactionCommands(program: Command): void {
                     cursor: options.cursor,
                 });
                 renderList(result);
+            })()
+        );
+
+    transactionCommand
+        .command('count')
+        .description('Count transactions in a book without listing them')
+        .option('-b, --book <bookId>', 'Book ID')
+        .option('-q, --query <query>', 'Search query (counts all transactions when omitted)')
+        .action(options =>
+            withAction('counting transactions', async () => {
+                throwIfErrors(validateRequiredOptions(options, [{ name: 'book', flag: '--book' }]));
+                renderItem(await countTransactions(options.book, options.query));
             })()
         );
 
