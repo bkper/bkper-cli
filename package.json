@@ -72,7 +72,7 @@
         "@earendil-works/pi-telemetry": "1.2.0",
         "@earendil-works/pi-tui": "1.2.0",
         "@silvia-odwyer/photon-node": "0.3.4",
-        "bkper-js": "^2.42.0",
+        "bkper-js": "^2.45.1",
         "commander": "^13.1.0",
         "dotenv": "^8.2.0",
         "esbuild": "^0.28.1",
