@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-10-21
+
+-   **Transactions**
+    -   `bkper transaction count` counts the transactions matching a query without listing them
+
 ## [5.5.4] - 2026-10-15
 
 -   **Agent Experience**
