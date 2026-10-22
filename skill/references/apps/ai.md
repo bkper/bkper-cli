@@ -183,6 +183,7 @@ Map these errors to your route's typed error response. Keep the code and message
 
 - **Passing your own `fetch`.** The TypeSafe SDK calls `fetch` as its own method, which the Workers runtime rejects with `Illegal invocation`. Wrap it: `fetch: (input, init) => myFetch(input, init)`. Without the option, the SDK's default works.
 - **No `null` values.** The TypeSafe SDK's types accept `null` for state, instructions, and some criteria. Bkper AI rejects them with `400`.
+- **No SDK image uploads.** The TypeSafe SDK uploads images as multipart, which Bkper AI rejects with `400`. Send image requests with `fetch` as JSON, with base64 `assets`. See [Decision Models](https://bkper.com/docs/ai/decision-models.md#jev-by-typesafe).
 - **No `client.models.list()`.** It expects TypeSafe's catalog shape. Use the [`GET /v1/models`](https://ai.bkper.app/v1/models) catalog.
 - **Other System One clients** take `https://ai.bkper.app/v1` as their base URL.
 - **Flexible JSON schemas.** Open Responses always requests `strict: true`. For a schema that needs `strict: false`, such as a typed dynamic map, use `@ai-sdk/openai` with base URL `https://ai.bkper.app/v1`, its `.responses()` model, and `strictJsonSchema: false`.

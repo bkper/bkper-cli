@@ -37,7 +37,7 @@ Confidence is high when the model's probability concentrates on one answer. For 
 
 2. **Let code gather the facts.**
 
-    Code fetches the item and the context a person would need, such as nearby Transactions, how an Account is usually described, or Book and Account properties. Pass them as named fields, such as `bank_line` and `existing_transaction`. Decision models read text only, so convert files and images to text first.
+    Code fetches the item and the context a person would need, such as nearby Transactions, how an Account is usually described, or Book and Account properties. Pass them as named fields, such as `bank_line` and `existing_transaction`. Facts can also be images, such as a receipt photo. Convert PDFs and other files to text or images first.
 
 3. **Ask narrow questions.**
 
@@ -141,7 +141,8 @@ For more designs, see TypeSafe's [Patterns](https://docs.typesafe.ai/patterns) a
 [Jev](https://docs.typesafe.ai/introduction) is TypeSafe's flagship model and the first System One model. Its Bkper model ID is `jev`.
 
 - **Versions.** `jev-latest` and versioned IDs are accepted but always select the current Jev; you cannot pin a version. Log the revision each answer reports, and re-check tuned thresholds when it changes.
-- **Input.** Text only. English is Jev's primary training language; other languages work with lower accuracy.
+- **Input.** Text and images. English is Jev's primary training language; other languages work with lower accuracy.
+- **Images.** An experimental TypeSafe feature, so accuracy and limits can change. Send PNG or JPEG images between 280 and 1568 pixels per side as base64 `assets` in a JSON request; TypeSafe's SDKs upload images in a form Bkper AI does not accept. Image tokens count as input. See TypeSafe's [Images](https://docs.typesafe.ai/images) guide.
 - **Known weak spots.** Literal reading, arithmetic, date comparison, and large states full of irrelevant detail. See [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13).
 
 Requests count against your Bkper AI allowance at Jev's [usage rates](https://bkper.com/docs/ai/models.md#usage-rates).

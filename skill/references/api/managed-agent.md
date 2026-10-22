@@ -7,14 +7,14 @@ The Managed Agent API lets you build intelligent apps on Bkper's agent: a privat
 Build, for example:
 
 - a Bkper platform app with its own chat, in a Book or on its own page;
-- a chat bot for Slack, Teams, or Discord, with one session per thread;
+- a chat bot for Slack, Teams, or Discord, with one session per thread and each message's sender in its `attributes`;
 - a scheduled script that asks for a monthly report and saves the file.
 
-Sessions belong to the user, not the app: work started in one app continues in any other, including [Bkper Agent](https://bkper.com/docs/ai/bkper-agent), the agent in Bkper's Books. Bkper Agent is built only on this API and is its reference implementation. Usage counts against the user's Bkper AI allowance; see [Models and Usage](https://bkper.com/docs/ai/models). To call models directly, without an agent or workspace, use the [AI Gateway API](https://bkper.com/docs/api/ai-gateway). Building a Bkper app? Start with [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai).
+Each app has its own workspace for each user: its sessions, files, and sandbox stay apart from that user's other apps and from [Bkper Agent](https://bkper.com/docs/ai/bkper-agent), the agent in Bkper's Books. Calls with a plain Bkper token, such as from a script, work in the user's own workspace, which Bkper Agent shows. Bkper Agent is built only on this API and is its reference implementation. Usage counts against the user's Bkper AI allowance; see [Models and Usage](https://bkper.com/docs/ai/models). To call models directly, without an agent or workspace, use the [AI Gateway API](https://bkper.com/docs/api/ai-gateway). Building a Bkper app? Start with [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai).
 
 ## Requirements
 
-- A Bkper account with an email address. Accounts not admitted to the beta get 403 `agent_beta_required`.
+- A Bkper account with an email address.
 - A Bkper OAuth access token for the user the agent acts as. [Bkper platform apps](https://bkper.com/docs/platform/apps/overview) need none: call the API from the app's server, and the platform adds the user's credentials, as it does for Bkper AI.
 - A server, bot, or script to call the API. Browsers on other websites are refused: the API sends no CORS headers and rejects cross-origin writes with 403 `origin_forbidden`.
 
@@ -80,7 +80,7 @@ The agent receives, in order:
 
 1. **Bkper's base**: the workspace, Bkper's accounting model, and rules no interface can relax.
 2. **Your `instructions`.**
-3. **Each message**, with its optional `bookContext` as labeled information, never as instructions or permission.
+3. **Each message**, with its optional `bookContext` and `attributes` as labeled information, never as instructions or permission.
 4. **Each message's attached files**, copied into the workspace and listed with their paths as labeled information.
 
 There is no default. Without `instructions`, the agent follows only Bkper's base, which does not ask anyone before acting. Bkper Agent sends its own instructions, so it asks questions and makes only the changes it is asked for; your interface decides its own.
@@ -109,7 +109,17 @@ the totals you checked.
 
 ## Who the agent acts as
 
-Every request acts as the user whose token you send. That user's Book permissions, sessions, files, and Bkper AI allowance apply. Their sessions appear in their Bkper Agent too.
+Every request acts as the user whose token you send. That user's Book permissions and Bkper AI allowance apply.
+
+The workspace (sessions, files, and sandbox) depends on who calls. Bkper sets the app from the platform side, never from the request:
+
+| Caller | Workspace |
+| --- | --- |
+| Bkper Agent, or a script or CLI with a plain Bkper token | The user's own |
+| A [Bkper platform app](https://bkper.com/docs/platform/apps/overview) calling from its server | The user's, for that app |
+| A Bkper channel bot, such as a Slack bot | The bot's account, for that bot |
+
+Book changes made in an app's workspace are attributed to that app, with its name and logo.
 
 - **Personal tools**: use each person's own token, so each person sees only their Books.
 - **Shared channel bots**: everyone in the channel acts with the bot's account. Use a dedicated Bkper account, shared only on the Books the channel needs, with the lowest permission that does the job.
@@ -144,6 +154,23 @@ Every create, input, and upload request needs an `Idempotency-Key` of 1–128 le
 ### Book context
 
 Send `bookContext: { "bookId": "…", "query": "…" }` with an input when the message is about a Book. Bkper checks the user's access when the agent opens the Book.
+
+### Message attributes
+
+Send `attributes` with an input for what the agent should know about the message but the person did not type: who sent it, from which channel, or the thread messages before it. They are strings by name:
+
+```json
+{
+  "content": [{ "type": "text", "text": "suggest an answer here" }],
+  "attributes": {
+    "sender": "Alice (U0123)",
+    "channel": "#finance",
+    "thread": "Bob: can we pay the March invoice from Acme?"
+  }
+}
+```
+
+The agent receives them after the message as labeled information, never as instructions or permission: identity comes only from the token. The input and the user's entry keep the text as sent, with `attributes` beside it. Send per-message context here rather than in `instructions`, which stay the same for every message.
 
 ### Forks
 
@@ -263,10 +290,14 @@ async function agent(path: string, body?: unknown, key?: string) {
     return result;
 }
 
-type SlackEvent = { event_id: string; thread_ts: string; text: string };
+type SlackEvent = { event_id: string; thread_ts: string; text: string; user: string };
 
 export async function reply(event: SlackEvent): Promise<string> {
-    const input = { content: [{ type: 'text', text: event.text }] };
+    const input = {
+        content: [{ type: 'text', text: event.text }],
+        // Who wrote it, as information for the agent: everyone acts as the bot.
+        attributes: { sender: event.user },
+    };
     // The event ID is the key: a redelivered event arrives once.
     const key = event.event_id;
     let id = sessions.get(event.thread_ts);
@@ -313,6 +344,7 @@ Acknowledge each Slack event at once and post the reply when `reply` returns: Sl
 | File retention | 30 days after creation |
 | `instructions` | 16,000 characters |
 | `bookContext.query` | 4,000 characters |
+| `attributes` | 16 names, 16000 characters in total |
 | List page | 50 sessions, entries, or files |
 
 ## Errors
@@ -323,7 +355,7 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | --- | --- | --- |
 | 400 | `invalid_request`, `unknown_model`, `unknown_thinking_level` | A field is invalid or unknown |
 | 401 | `unauthorized`, `authentication_failed` | The token is missing, invalid, or expired |
-| 403 | `agent_beta_required` | The account is not admitted to the beta |
+| 403 | `agent_beta_required` | The account cannot use the agent, such as one without an email address |
 | 403 | `origin_forbidden` | A browser on another website sent a write |
 | 404 | `not_found`, `parent_not_found`, `file_not_found` | No such resource for this user |
 | 405 | `method_not_allowed` | The path does not support the method |
