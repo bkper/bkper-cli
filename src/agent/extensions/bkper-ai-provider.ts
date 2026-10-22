@@ -61,6 +61,7 @@ interface BkperAiDecisionCatalogModel {
     id: string;
     type: 'decision';
     name?: string;
+    input_modalities?: string[];
     pricing: {
         inputNanoUsdPerToken: number;
         outputNanoUsdPerToken: number;
@@ -155,13 +156,18 @@ function nanoUsdPerTokenToUsdPerMillion(value: number): number {
     return value / 1_000;
 }
 
+/** The catalog modalities Pi understands; others are dropped. */
+function getInputModalities(modalities: string[] | undefined): Array<'text' | 'image'> {
+    return modalities?.filter(
+        (modality): modality is 'text' | 'image' => modality === 'text' || modality === 'image'
+    ) ?? [];
+}
+
 function toProviderModel(
     model: BkperAiCatalogModel,
     defaultModelId: string | undefined
 ): BkperAiModelConfig {
-    const input = model.input_modalities?.filter(
-        (modality): modality is 'text' | 'image' => modality === 'text' || modality === 'image'
-    ) ?? [];
+    const input = getInputModalities(model.input_modalities);
 
     return {
         id: model.id,
@@ -202,7 +208,8 @@ function toClassifierModel(model: BkperAiDecisionCatalogModel): ProviderClassifi
         id: model.id,
         name: model.name ?? model.id,
         api: BKPER_AI_CLASSIFIER_API,
-        input: ['text'],
+        // The gateway accepts images as TypeSafe assets, Pi's default System One form.
+        input: getInputModalities(model.input_modalities ?? ['text']),
         cost: {
             input: nanoUsdPerTokenToUsdPerMillion(model.pricing.inputNanoUsdPerToken),
             output: nanoUsdPerTokenToUsdPerMillion(model.pricing.outputNanoUsdPerToken),

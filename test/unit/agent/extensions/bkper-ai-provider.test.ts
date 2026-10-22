@@ -1,5 +1,5 @@
 import {expect} from '../../helpers/test-setup.js';
-import type {ModelsStoreEntry} from '@earendil-works/pi-ai';
+import type {ClassifierModel, ModelsStoreEntry} from '@earendil-works/pi-ai';
 import type {ProviderConfig, ProviderModelConfig} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {
@@ -283,6 +283,7 @@ describe('agent/bkper-ai-provider', function () {
         expect(models.filter(isChatModel).map(model => model.id)).to.deep.equal(['vision']);
         const classifiers = models.filter(isClassifierModel);
         expect(classifiers.map(model => model.id)).to.deep.equal(['jev-vision', 'jev']);
+        expect(classifiers[0]?.input).to.deep.equal(['text', 'image']);
         expect(classifiers[1]).to.deep.equal({
             type: 'classifier',
             id: 'jev',
@@ -298,6 +299,61 @@ describe('agent/bkper-ai-provider', function () {
         for (const model of classifiers) {
             expect(config.classifiers?.[model.api ?? '']?.classify).to.be.a('function');
         }
+    });
+
+    it('sends classifier images to the gateway as TypeSafe assets with the image opt-in', async function () {
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({
+                data: [{...jevCatalogEntry, input_modalities: ['text', 'image']}],
+            }))
+        ));
+        const [classifierConfig] = ((await config.refreshModels?.(createRefreshContext())) ?? [])
+            .filter(isClassifierModel);
+        if (!classifierConfig || !config.baseUrl) throw new Error('Expected a Bkper classifier.');
+        // The fields Pi adds from the provider when it registers the model.
+        const model: ClassifierModel<'typesafe-system-one'> = {
+            ...classifierConfig,
+            api: 'typesafe-system-one',
+            provider: 'bkper',
+            baseUrl: config.baseUrl,
+            headers: config.headers,
+        };
+        let url = '';
+        let headers = new Headers();
+        let body: Record<string, unknown> = {};
+        const fetchStub: typeof fetch = async (input, init) => {
+            url = input.toString();
+            headers = new Headers(init?.headers);
+            body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+            return Response.json({
+                answers: {receipt: {type: 'noul', noul: 0.9}},
+                usage: {input_tokens: 900, output_tokens: 0},
+            });
+        };
+
+        const result = await config.classifiers?.['typesafe-system-one']?.classify(
+            model,
+            {
+                state: {note: 'Expense photo'},
+                questions: {
+                    receipt: {
+                        type: 'bool',
+                        instructions: 'Is this a receipt?',
+                        criteria: {true: 'A receipt.', false: 'Anything else.'},
+                    },
+                },
+                images: [{type: 'image', mimeType: 'image/jpeg', data: '/9j/4AAQ'}],
+            },
+            {apiKey: 'token', fetch: fetchStub}
+        );
+
+        expect(result?.errorMessage).to.equal(undefined);
+        expect(url).to.equal('https://ai.bkper.app/v1/systemone');
+        expect(headers.get('typesafe-danger-zone-images')).to.equal('true');
+        expect(body).to.deep.include({
+            state: ['<image-1>', {note: 'Expense photo'}],
+            assets: {'<image-1>': {type: 'image', format: 'jpeg', data_base64: '/9j/4AAQ'}},
+        });
     });
 
     it('enables cache warming only for models with a catalog prompt cache lifetime', async function () {
