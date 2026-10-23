@@ -92,15 +92,12 @@ window.addEventListener('message', event => {
         return;
     }
 
-    // Keep the iframe URL in sync without reloading it.
-    window.history.replaceState(window.history.state, '', nextUrl);
-
     // Apply the validated context update.
     handleAppUrlChange(nextUrl);
 });
 ```
 
-`handleAppUrlChange` is App logic. The App can update internal state, notify components, refresh data, change its UI, or ignore the message. Bkper only communicates the new URL; it does not reload the iframe or apply the context inside the App.
+`handleAppUrlChange` is App logic, best in the module that [owns the URL](https://bkper.com/docs/platform/apps/quality.md#client-state): it takes the Book's context, keeps the App's own state, such as its selection, and replaces the URL without reloading. The App can update internal state, notify components, refresh data, change its UI, or ignore the message. Bkper only communicates the new URL; it does not reload the iframe or apply the context inside the App.
 
 Apps opened with `NEW_TAB` do not receive this message. Their context is set only by the URL used to open the tab.
 

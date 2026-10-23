@@ -262,6 +262,7 @@ Decision models come from TypeSafe's [System One](https://docs.typesafe.ai/conce
 - **SDKs.** TypeSafe SDKs work with base URL `https://ai.bkper.app`, without `/v1`, and a Bkper access token. See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai#ask-a-decision-model).
 - **Errors.** Bkper returns `400` where TypeSafe returns `422`, and `503` with `provider_overloaded` where TypeSafe returns `529`. A `429` can also mean the Bkper AI allowance is exhausted.
 - **Usage.** Requests count against the Bkper AI allowance, not a TypeSafe account.
+- **Images.** Send images as base64 `assets` in a JSON request, as in TypeSafe's [Images](https://docs.typesafe.ai/images) guide. TypeSafe SDKs upload images as multipart, which Bkper does not accept, so send image requests over HTTP. Bkper turns on TypeSafe's experimental image input for you. Box questions are not supported. Image tokens count as input tokens.
 - **Coding agents.** TypeSafe's [agent skill](https://docs.typesafe.ai/agent-skill) teaches questions and patterns. For a Bkper integration, also point the agent to this guide, `https://bkper.com/docs/api/ai-gateway.md`, for the endpoint, authentication, model IDs, and errors.
 
 ## Stream a response
