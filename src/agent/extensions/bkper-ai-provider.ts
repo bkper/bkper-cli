@@ -1,8 +1,14 @@
-import type {AnyModel, RefreshModelsContext} from '@earendil-works/pi-ai';
 import type {
-    ExtensionAPI,
-    ProviderConfig,
-    ProviderModelConfig,
+    AnyModel,
+    ImageContent,
+    ProviderClassifier,
+    RefreshModelsContext,
+} from '@earendil-works/pi-ai';
+import {
+    resizeImage,
+    type ExtensionAPI,
+    type ProviderConfig,
+    type ProviderModelConfig,
 } from '@earendil-works/pi-coding-agent';
 import {typesafeSystemOneApi} from '../pi-shared-modules.js';
 
@@ -154,6 +160,35 @@ function getThinkingLevelMap(
 
 function nanoUsdPerTokenToUsdPerMillion(value: number): number {
     return value / 1_000;
+}
+
+/** TypeSafe rejects images with a side over this many pixels instead of resizing them. */
+const SYSTEM_ONE_MAX_IMAGE_SIDE = 1568;
+
+/**
+ * Shrinks an image to TypeSafe's limit with Pi's resizer. Pi resizes only chat images,
+ * up to 2000 pixels, so `read` results are often too large for a classifier.
+ * Images that fit, or that cannot be read, pass unchanged for the gateway to judge.
+ */
+async function fitImage(image: ImageContent): Promise<ImageContent> {
+    const resized = await resizeImage(Buffer.from(image.data, 'base64'), image.mimeType, {
+        maxWidth: SYSTEM_ONE_MAX_IMAGE_SIDE,
+        maxHeight: SYSTEM_ONE_MAX_IMAGE_SIDE,
+    });
+    return resized?.wasResized ? {...image, data: resized.data, mimeType: resized.mimeType} : image;
+}
+
+function withImagesFitted(classifier: ProviderClassifier): ProviderClassifier {
+    return {
+        classify: async (model, context, options) =>
+            classifier.classify(
+                model,
+                context.images?.length
+                    ? {...context, images: await Promise.all(context.images.map(fitImage))}
+                    : context,
+                options
+            ),
+    };
 }
 
 /** The catalog modalities Pi understands; others are dropped. */
@@ -363,7 +398,7 @@ export function getBkperAiProviderConfig(
             'User-Agent': 'bkper-cli',
         },
         api: BKPER_AI_CHAT_API,
-        classifiers: {[BKPER_AI_CLASSIFIER_API]: typesafeSystemOneApi()},
+        classifiers: {[BKPER_AI_CLASSIFIER_API]: withImagesFitted(typesafeSystemOneApi())},
         // Every model type arrives through refreshModels, so the static list stays empty.
         models: [],
         refreshModels: context => refreshBkperAiModels(baseUrl, fetchFn, context),

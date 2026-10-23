@@ -1,5 +1,6 @@
 import {expect} from '../../helpers/test-setup.js';
-import type {ClassifierModel, ModelsStoreEntry} from '@earendil-works/pi-ai';
+import type {ClassifierModel, ImageContent, ModelsStoreEntry} from '@earendil-works/pi-ai';
+import {PhotonImage} from '@silvia-odwyer/photon-node';
 import type {ProviderConfig, ProviderModelConfig} from '@earendil-works/pi-coding-agent';
 import sinon from 'sinon';
 import {
@@ -301,7 +302,13 @@ describe('agent/bkper-ai-provider', function () {
         }
     });
 
-    it('sends classifier images to the gateway as TypeSafe assets with the image opt-in', async function () {
+    /** Classifies one request's images through Bkper's classifier and captures what reaches the gateway. */
+    async function classifyImages(images: ImageContent[]): Promise<{
+        errorMessage: string | undefined;
+        url: string;
+        headers: Headers;
+        body: Record<string, unknown>;
+    }> {
         const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
             new Response(JSON.stringify({
                 data: [{...jevCatalogEntry, input_modalities: ['text', 'image']}],
@@ -342,16 +349,61 @@ describe('agent/bkper-ai-provider', function () {
                         criteria: {true: 'A receipt.', false: 'Anything else.'},
                     },
                 },
-                images: [{type: 'image', mimeType: 'image/jpeg', data: '/9j/4AAQ'}],
+                images,
             },
             {apiKey: 'token', fetch: fetchStub}
         );
+        return {errorMessage: result?.errorMessage, url, headers, body};
+    }
 
-        expect(result?.errorMessage).to.equal(undefined);
+    /** A solid-color PNG of the given size, as a Pi image block. */
+    function pngImage(width: number, height: number): ImageContent {
+        const png = new PhotonImage(new Uint8Array(width * height * 4).fill(200), width, height);
+        try {
+            return {type: 'image', mimeType: 'image/png', data: Buffer.from(png.get_bytes()).toString('base64')};
+        } finally {
+            png.free();
+        }
+    }
+
+    /** Width and height of the first image asset the gateway received. */
+    function sentImageSize(body: Record<string, unknown>): {width: number; height: number} {
+        const assets = body.assets as Record<string, {data_base64: string}>;
+        const sent = PhotonImage.new_from_byteslice(Buffer.from(assets['<image-1>'].data_base64, 'base64'));
+        try {
+            return {width: sent.get_width(), height: sent.get_height()};
+        } finally {
+            sent.free();
+        }
+    }
+
+    it('sends classifier images to the gateway as TypeSafe assets with the image opt-in', async function () {
+        const image = pngImage(600, 800);
+
+        const {errorMessage, url, headers, body} = await classifyImages([image]);
+
+        expect(errorMessage).to.equal(undefined);
         expect(url).to.equal('https://ai.bkper.app/v1/systemone');
         expect(headers.get('typesafe-danger-zone-images')).to.equal('true');
+        // Images within TypeSafe's limits reach the gateway byte for byte.
         expect(body).to.deep.include({
             state: ['<image-1>', {note: 'Expense photo'}],
+            assets: {'<image-1>': {type: 'image', format: 'png', data_base64: image.data}},
+        });
+    });
+
+    it('shrinks images to the 1568-pixel side TypeSafe accepts, keeping their shape', async function () {
+        // The size Pi's read tool returns for a 4032x3024 phone photo.
+        const {errorMessage, body} = await classifyImages([pngImage(2000, 1500)]);
+
+        expect(errorMessage).to.equal(undefined);
+        expect(sentImageSize(body)).to.deep.equal({width: 1568, height: 1176});
+    });
+
+    it('sends unreadable images unchanged so the gateway reports them', async function () {
+        const {body} = await classifyImages([{type: 'image', mimeType: 'image/jpeg', data: '/9j/4AAQ'}]);
+
+        expect(body).to.deep.include({
             assets: {'<image-1>': {type: 'image', format: 'jpeg', data_base64: '/9j/4AAQ'}},
         });
     });
