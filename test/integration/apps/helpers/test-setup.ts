@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { isUserLoggedIn, determinePlatformUrl } from '../../helpers.js';
+import { getApiUrl, isApiAvailable } from '../../helpers/api-helpers.js';
 import { initializePlatformUrl, getPlatformUrl } from './cli-helpers.js';
 
 const CLI_PATH = path.resolve(import.meta.dirname, '../../../../lib/cli.js');
@@ -72,6 +73,12 @@ export async function setupDeployTest(context: Mocha.Context, timeoutMs: number 
         console.log('  Skipping: Platform API does not support deploy operations');
         console.log(`   Platform at ${platformUrl} appears to be a dev server only`);
         console.log('   Full platform required for deploy/undeploy tests\n');
+        return context.skip();
+    }
+
+    // Deploying requires stored source, which `bkper app sync` records through the Core API.
+    if (!(await isApiAvailable())) {
+        console.log(`  Skipping: API not available at ${getApiUrl()}\n`);
         return context.skip();
     }
 }

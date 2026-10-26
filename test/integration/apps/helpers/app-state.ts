@@ -1,3 +1,4 @@
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -9,6 +10,17 @@ const APP_NAME = 'my-app';
 // which may sit on a slow shared mount.
 const TEMP_ROOT = path.join(os.tmpdir(), 'bkper-cli-app-tests');
 const CACHE_DIR = path.join(TEMP_ROOT, 'app-state-cache');
+
+/**
+ * Generated apps live inside a throwaway parent Git repository, like apps created inside an
+ * existing project, so `bkper app init` keeps the parent repository instead of creating its own.
+ */
+function ensureTempRoot(): void {
+    fs.mkdirSync(TEMP_ROOT, { recursive: true });
+    if (!fs.existsSync(path.join(TEMP_ROOT, '.git'))) {
+        execFileSync('git', ['init', '-q'], { cwd: TEMP_ROOT });
+    }
+}
 
 export type AppState = 'init' | 'installed' | 'built' | 'cleaned';
 
@@ -115,6 +127,7 @@ export class AppStateManager {
      * Create the 'init' state - fresh app without dependencies.
      */
     private async createInitState(targetPath: string): Promise<void> {
+        ensureTempRoot();
         fs.mkdirSync(CACHE_DIR, { recursive: true });
         const tempParent = fs.mkdtempSync(path.join(CACHE_DIR, 'tmp-'));
         const appDir = path.join(tempParent, APP_NAME);
@@ -170,6 +183,45 @@ export class AppStateManager {
     }
 
     /**
+     * Get a built app whose source is stored as Bkper-managed source, as deploys require.
+     * Clones the App's managed source when it has one; otherwise enables managed source from a
+     * built template app with `bkper app sync`, which works only while the App has none.
+     */
+    async getManagedApp(): Promise<string> {
+        const cloneParent = fs.mkdtempSync(path.join(this.getTempDir(), 'clone-'));
+        const clonePath = path.join(cloneParent, APP_NAME);
+        try {
+            await runCli(['app', 'clone', APP_NAME, clonePath], cloneParent);
+        } catch {
+            // Managed source stores the app as its own repository.
+            const appDir = await this.getApp('built');
+            await runCommand('git', ['init', '-q'], appDir);
+            await runCommand('git', ['add', '-A'], appDir);
+            await runCommand(
+                'git',
+                ['-c', 'user.name=Bkper CLI tests', '-c', 'user.email=tests@bkper.com', 'commit', '-qm', 'Test app'],
+                appDir
+            );
+            await runCli(['app', 'sync'], appDir);
+            return appDir;
+        }
+
+        await runCommand('bun', ['install'], clonePath);
+        this.linkLocalBkper(clonePath);
+        await runCommand('npm', ['run', 'build:client'], clonePath);
+        await runCli(['app', 'build'], clonePath);
+        return clonePath;
+    }
+
+    private getTempDir(): string {
+        if (!this.tempDir) {
+            ensureTempRoot();
+            this.tempDir = fs.mkdtempSync(path.join(TEMP_ROOT, 'app-test-'));
+        }
+        return this.tempDir;
+    }
+
+    /**
      * Copy a cached state to a temporary location for test use
      */
     private copyState(state: AppState): string {
@@ -178,13 +230,7 @@ export class AppStateManager {
             throw new Error(`State '${state}' not found`);
         }
 
-        // Create temp directory on first use
-        if (!this.tempDir) {
-            fs.mkdirSync(TEMP_ROOT, { recursive: true });
-            this.tempDir = fs.mkdtempSync(path.join(TEMP_ROOT, 'app-test-'));
-        }
-
-        const copyPath = path.join(this.tempDir, `${state}-${Date.now()}`);
+        const copyPath = path.join(this.getTempDir(), `${state}-${Date.now()}`);
         this.copyDirectory(stateInfo.path, copyPath);
 
         return copyPath;

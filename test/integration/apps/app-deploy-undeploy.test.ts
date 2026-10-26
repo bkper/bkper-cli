@@ -10,15 +10,15 @@ describe('Integration: app deploy/undeploy', function () {
     let appDeployed = false;
 
     before(async function () {
-        this.timeout(60000);
-        await setupDeployTest(this, 60000);
+        this.timeout(120000);
+        await setupDeployTest(this, 120000);
 
         // If we get here, setup didn't skip
         setupComplete = true;
         stateManager = new AppStateManager();
 
-        // Get a built app (already has dist/ artifacts)
-        appDir = await stateManager.getApp('built');
+        // Deploys require a built app whose source is stored as Bkper-managed source
+        appDir = await stateManager.getManagedApp();
     });
 
     after(async function () {
