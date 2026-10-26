@@ -43,12 +43,19 @@ bun run test:unit
 # Run integration tests only
 bun run test:integration
 
-# Run a single test file
-TS_NODE_PROJECT=tsconfig.test.json npx mocha --config .mocharc.json test/unit/commands/apps/list.test.ts
+# Run a single test file (the mocha configs have no spec, so only the given files run)
+TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.test.json npx mocha --config .mocharc.json test/unit/commands/apps/list.test.ts
 
 # Run a single test (grep pattern)
-TS_NODE_PROJECT=tsconfig.test.json npx mocha --config .mocharc.json --grep "should return proper" test/unit/**/*.test.ts
+TS_NODE_TRANSPILE_ONLY=true TS_NODE_PROJECT=tsconfig.test.json npx mocha --config .mocharc.json --grep "should return proper" 'test/unit/**/*.test.ts'
 ```
+
+### Fast verification
+
+-   While iterating, run only the affected test files; run `bun run build:compile` and `bun run test:unit` (~20s) once before committing.
+-   Integration tests are slow and environment-bound: app tests need network access to `platform-dev` and a login; most other suites need the local API on `localhost:8081` and are skipped without it. Run only the files a change touches.
+-   Run long suites in the background and check them within a minute or two.
+-   When a test hangs or times out, inspect the process tree (`ps -eo pid,etime,args --forest`) before rerunning it or raising timeouts. Kill only the PIDs you started; never use broad `pkill` patterns.
 
 ## Code Style Guidelines
 
