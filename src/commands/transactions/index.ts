@@ -1,17 +1,17 @@
 export {
     listTransactions,
     listTransactionsFormatted,
-    ListTransactionsOptions,
-    ListTransactionsResult,
+    type ListTransactionsOptions,
+    type ListTransactionsResult,
 } from './list.js';
-export { countTransactions, CountTransactionsResult } from './count.js';
+export { countTransactions, type CountTransactionsResult } from './count.js';
 export { getTransaction } from './get.js';
 export {
     createTransaction,
-    CreateTransactionOptions,
+    type CreateTransactionOptions,
     resolveCreateTransactionFilePath,
 } from './create.js';
-export { updateTransaction, UpdateTransactionOptions } from './update.js';
+export { updateTransaction, type UpdateTransactionOptions } from './update.js';
 export { postTransaction } from './post.js';
 export { checkTransaction } from './check.js';
 export { uncheckTransaction } from './uncheck.js';

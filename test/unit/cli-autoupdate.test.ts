@@ -108,7 +108,8 @@ describe('cli autoupdate startup', function () {
         };
         delete env.BKPER_DISABLE_AUTOUPDATE;
         delete env.CI;
-        delete env.TS_NODE_TRANSPILE_ONLY;
+        // isolatedModules keeps the source safe to transpile file by file; test:typecheck checks types.
+        env.TS_NODE_TRANSPILE_ONLY = 'true';
 
         try {
             const first = await runCliWithEnvironment(env);
