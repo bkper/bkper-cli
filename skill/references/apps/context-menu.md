@@ -114,11 +114,18 @@ Each time the App iframe finishes loading, Bkper announces the requests it suppo
 ```js
 {
     type: 'bkper:host-ready',
-    supports: ['navigate', 'show-book', 'expand'],
+    supports: ['navigate', 'show-book', 'expand', 'login'],
 }
 ```
 
-Send `bkper:navigate` only after receiving this message with `navigate` in `supports`, `bkper:show-book` only with `show-book` in `supports`, and `bkper:expand` only with `expand` in `supports`. Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
+Send each request only after receiving this message with its name in `supports`:
+
+- `bkper:navigate` with `navigate`.
+- `bkper:show-book` with `show-book`.
+- `bkper:expand` with `expand`.
+- `bkper:login` with `login`.
+
+Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
 
 Apps opened with `NEW_TAB` do not receive this message, because they have no Bkper parent.
 
@@ -221,6 +228,24 @@ Bkper ignores the message when it does not come from the App iframe currently op
 An expansion the App asked for counts as the user's own: the App's later Book events do not return the panel to sidebar size. To give the room back, such as when the user closes what they opened, send [`bkper:show-book`](#showing-the-book), and only if the App did get wider: on a phone, where the panel is already full size, `bkper:show-book` minimizes it.
 
 Send `bkper:expand` only in response to a user action, such as a click. Bkper cannot verify this, and a panel that grows by itself covers the Book the user is working in.
+
+#### Signing in
+
+An App in the panel shares the user's Bkper session. When the App finds no session, it cannot sign in inside its iframe: Google refuses to show its sign-in page in a frame, and shows a `403` error instead. The App asks Bkper to sign in for it:
+
+```js
+window.parent.postMessage({ type: 'bkper:login' }, BKPER_ORIGIN);
+```
+
+Apps using `@bkper/web-auth` do not send this themselves: inside a frame, `login()` sends it instead of redirecting. Outside a frame, such as a `NEW_TAB` App or the App opened on its own, `login()` redirects to sign-in as usual.
+
+Bkper ignores the message when it does not come from the App iframe currently open in the panel, or not from that iframe's own origin. For a valid request, Bkper first checks its own session:
+
+- **No session**: Bkper signs the whole page in, then returns the user to the same Book with the App open.
+- **A valid session**: the App's check was out of date, so Bkper reloads the App once. If the App asks again while Bkper is still signed in, Bkper ignores it until the page reloads, so an App can never take the user out of their Book.
+- **Bkper cannot tell**, such as when offline: nothing changes.
+
+Bkper does not reply.
 
 ### Available expressions
 
