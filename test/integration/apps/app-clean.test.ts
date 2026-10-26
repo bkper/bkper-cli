@@ -30,7 +30,7 @@ describe('Integration: app clean', function () {
         assertArtifacts(appDir);
 
         // Run clean
-        await runCommand('bun', ['run', 'clean'], appDir);
+        await runCommand('npm', ['run', 'clean'], appDir);
 
         // Verify artifacts are removed
         assertCleaned(appDir);

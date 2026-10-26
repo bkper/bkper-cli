@@ -1,10 +1,14 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { runCli, runCommand } from './cli-helpers.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const APP_NAME = 'my-app';
-const CACHE_DIR = path.join(REPO_ROOT, 'tmp', 'app-state-cache');
+// Generated apps hold ~600MB of node_modules; keep them on the local temp disk, not the repo,
+// which may sit on a slow shared mount.
+const TEMP_ROOT = path.join(os.tmpdir(), 'bkper-cli-app-tests');
+const CACHE_DIR = path.join(TEMP_ROOT, 'app-state-cache');
 
 export type AppState = 'init' | 'installed' | 'built' | 'cleaned';
 
@@ -52,7 +56,7 @@ export class AppStateManager {
         }
 
         // Note: We intentionally keep the cache directory for reuse across test runs
-        // To force recreation, manually delete tmp/app-state-cache/
+        // To force recreation, call AppStateManager.clearCache()
     }
 
     /**
@@ -145,7 +149,8 @@ export class AppStateManager {
         this.linkLocalBkper(targetPath);
 
         // Build client assets through the root workspace orchestrator, then bundle the Worker.
-        await runCommand('bun', ['run', 'build:client'], targetPath);
+        // The template's scripts call `npm run --workspace`; bun ignores --workspace and recurses.
+        await runCommand('npm', ['run', 'build:client'], targetPath);
         await runCli(['app', 'build'], targetPath);
     }
 
@@ -161,7 +166,7 @@ export class AppStateManager {
         this.copyDirectory(builtPath, targetPath);
 
         // Run clean
-        await runCommand('bun', ['run', 'clean'], targetPath);
+        await runCommand('npm', ['run', 'clean'], targetPath);
     }
 
     /**
@@ -175,9 +180,8 @@ export class AppStateManager {
 
         // Create temp directory on first use
         if (!this.tempDir) {
-            const tempRoot = path.join(REPO_ROOT, 'tmp');
-            fs.mkdirSync(tempRoot, { recursive: true });
-            this.tempDir = fs.mkdtempSync(path.join(tempRoot, 'app-test-'));
+            fs.mkdirSync(TEMP_ROOT, { recursive: true });
+            this.tempDir = fs.mkdtempSync(path.join(TEMP_ROOT, 'app-test-'));
         }
 
         const copyPath = path.join(this.tempDir, `${state}-${Date.now()}`);

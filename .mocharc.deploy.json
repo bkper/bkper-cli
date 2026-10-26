@@ -1,6 +1,5 @@
 {
   "extension": ["ts"],
-  "spec": "test/integration/apps/**/*.test.ts",
   "loader": "ts-node/esm",
   "require": "ts-node/register",
   "timeout": 120000,

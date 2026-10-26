@@ -1,7 +1,6 @@
 {
   "exit": true,
   "extension": ["ts"],
-  "spec": "test/unit/**/*.test.ts",
   "loader": "ts-node/esm",
   "require": "ts-node/register"
 }

@@ -1,8 +1,11 @@
-import { spawn, type ChildProcess } from 'child_process';
+import { type ChildProcess } from 'child_process';
 import { TestConfig, determinePlatformUrl } from '../../helpers.js';
 import fs from 'fs';
 import path from 'path';
 import { expect } from 'chai';
+import { runCommand, spawnTracked } from './process.js';
+
+export { runCommand, stopProcess } from './process.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 const CLI_PATH = path.join(REPO_ROOT, 'lib', 'cli.js');
@@ -54,7 +57,7 @@ export function startCli(
     envOverrides?: Record<string, string>
 ): ChildProcess {
     const platformUrl = dynamicPlatformUrl || TestConfig.PLATFORM_URL;
-    const child = spawn('node', [CLI_PATH, ...args], {
+    const child = spawnTracked('node', [CLI_PATH, ...args], {
         cwd,
         env: {
             ...process.env,
@@ -70,38 +73,6 @@ export function startCli(
     });
 
     return child;
-}
-
-/**
- * Run a shell command and wait for completion
- */
-export async function runCommand(
-    command: string,
-    args: string[],
-    cwd: string,
-    envOverrides?: Record<string, string>
-): Promise<void> {
-    await new Promise<void>((resolve, reject) => {
-        const child = spawn(command, args, {
-            cwd,
-            env: { ...process.env, ...(envOverrides || {}) },
-            stdio: 'pipe',
-        });
-
-        let stderr = '';
-        child.stderr?.on('data', chunk => {
-            stderr += chunk.toString();
-        });
-
-        child.on('error', reject);
-        child.on('close', code => {
-            if (code === 0) {
-                resolve();
-                return;
-            }
-            reject(new Error(`Command failed (${command} ${args.join(' ')}): ${stderr}`));
-        });
-    });
 }
 
 /**
@@ -123,33 +94,6 @@ export async function waitForUrl(url: string, timeoutMs: number): Promise<void> 
     }
 
     throw new Error(`Timed out waiting for ${url}`);
-}
-
-/**
- * Gracefully stop a process, escalating to SIGKILL if needed
- */
-export async function stopProcess(child: ChildProcess, timeoutMs: number): Promise<void> {
-    if (child.exitCode !== null) return;
-
-    let exited = false;
-    const exitPromise = new Promise<void>(resolve => {
-        child.once('exit', () => {
-            exited = true;
-            resolve();
-        });
-    });
-
-    child.kill('SIGINT');
-
-    const timeout = new Promise<void>(resolve => {
-        setTimeout(resolve, timeoutMs);
-    });
-
-    await Promise.race([exitPromise, timeout]);
-
-    if (!exited && child.exitCode === null) {
-        child.kill('SIGKILL');
-    }
 }
 
 /**
