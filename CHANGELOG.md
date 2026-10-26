@@ -2,6 +2,30 @@
 
 ## [Unreleased]
 
+## [5.7.2] - 2026-10-26
+
+-   **Agent Experience**
+    -   `bkper agent` now starts Bkper Agent instead of plain Pi when given a session, model, thinking level, tools, `@file` arguments, or a prompt, for example `bkper agent --model <model> "prompt"`. Subagents launched from Bkper Agent now run as Bkper Agent, with its tools and header
+    -   Invalid startup arguments, such as `--provider` without `--model` or a missing `@file`, are reported as a short error
+
+## [5.7.1] - 2026-10-23
+
+-   **Agent Experience**
+    -   Images sent to Bkper AI classifiers are shrunk to the 1568-pixel limit the classifier accepts, so classifying screenshots and other large images no longer fails
+
+## [5.7.0] - 2026-10-23
+
+-   **Agent Experience**
+    -   Bkper AI decision models accept image input when the model catalog offers it
+    -   Updated Pi to 1.4.0
+-   **Documentation**
+    -   Synced the bundled references from bkper.com: image requests through the AI gateway and image input for decision models
+
+## [5.6.1] - 2026-10-21
+
+-   **Agent Experience**
+    -   The agent counts transactions with `bkper transaction count` instead of listing them when it only needs the number
+
 ## [5.6.0] - 2026-10-21
 
 -   **Transactions**
