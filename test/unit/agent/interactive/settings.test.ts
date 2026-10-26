@@ -7,11 +7,25 @@ import {
     applyBkperAgentToolSelection,
     createStartupSessionManager,
     resolveBkperAgentTools,
+    selectCliTools,
 } from '../../../../src/agent/interactive/settings.js';
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '../../../..');
 
 describe('interactive agent settings', function () {
+    it('selects a --tools list of tool names as given', function () {
+        expect(selectCliTools(['read', 'bash', 'codemode'], ['read', 'grep'])).to.deep.equal([
+            'read',
+            'grep',
+        ]);
+    });
+
+    it('applies a --tools list of modifiers to the Bkper default tools', function () {
+        expect(
+            selectCliTools(['read', 'bash', 'codemode'], ['-bash', '+grep'])
+        ).to.deep.equal(['read', 'codemode', 'grep']);
+    });
+
     it('selects the platform shell for implicit defaults', function () {
         expect(
             resolveBkperAgentTools(undefined, 'win32', {

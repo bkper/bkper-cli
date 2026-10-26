@@ -62,6 +62,14 @@ function getModifierOnlyToolSelection(layers: unknown[]): string[] | undefined {
     return modifiers.length > 0 ? modifiers : undefined;
 }
 
+/**
+ * The tools a `--tools` list selects, for the system prompt: a list of only `+name`/`-name`
+ * entries changes the Bkper default selection, as Pi applies it; any other list replaces it.
+ */
+export function selectCliTools(defaultTools: string[], cliTools: string[]): string[] {
+    return isModifierList(cliTools) ? applyToolModifiers(defaultTools, cliTools) : cliTools;
+}
+
 function isModifierList(layer: unknown): layer is string[] {
     return Array.isArray(layer) && layer.every(isToolModifier);
 }

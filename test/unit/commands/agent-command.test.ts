@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { expect } from '../helpers/test-setup.js';
 import sinon from 'sinon';
 import { runAgentCommand } from '../../../src/commands/agent-command.js';
@@ -244,6 +245,98 @@ describe('CLI - agent command', function () {
             'abc123',
         ]);
     });
+
+    it('should start Bkper Agent with the args a subagent launches it with', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(
+            [
+                '--approve',
+                '--session',
+                '/runs/abc/session.jsonl',
+                '--provider',
+                'anthropic',
+                '--model',
+                'claude-opus',
+                '--thinking',
+                'high',
+                '--tools',
+                'read,bash',
+                '--no-extensions',
+                '--extension',
+                '/ext/subagent',
+                '--no-skills',
+                '--no-prompt-templates',
+                '--no-context-files',
+                '@/tmp/brief.md',
+                'Task:\nReview the diff',
+            ],
+            { runPi, runInteractiveMode }
+        );
+
+        expect(runPi.called).to.be.false;
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            sessionFile: '/runs/abc/session.jsonl',
+            provider: 'anthropic',
+            model: 'claude-opus',
+            thinking: 'high',
+            tools: ['read', 'bash'],
+            extensionPaths: ['/ext/subagent'],
+            noExtensions: true,
+            noSkills: true,
+            noPromptTemplates: true,
+            noContextFiles: true,
+            messages: ['Task:\nReview the diff'],
+            fileArgs: ['/tmp/brief.md'],
+        });
+    });
+
+    it('should resolve a relative --session file against the current directory', async function () {
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--session', 'runs/session.jsonl'], {
+            runPi: sinon.stub().resolves(),
+            runInteractiveMode,
+        });
+
+        expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({
+            sessionFile: path.resolve('runs/session.jsonl'),
+        });
+    });
+
+    it('should forward subagent args to pi when terminal is not interactive', async function () {
+        const runPi = sinon.stub().resolves();
+        const runInteractiveMode = sinon.stub().resolves();
+
+        await runAgentCommand(['--session', '/runs/abc/session.jsonl', 'hello'], {
+            runPi,
+            runInteractiveMode,
+            environment: {stdinIsTTY: true, stdoutIsTTY: false},
+        });
+
+        expect(runInteractiveMode.called).to.be.false;
+        expect(runPi.calledOnce).to.be.true;
+    });
+
+    for (const args of [
+        ['--no-approve'],
+        ['--fork', 'abc123'],
+        ['--models', 'claude*'],
+        ['--custom-extension-flag'],
+        ['--thinking', 'bogus'],
+        ['--session', '/runs/abc/session.jsonl', '--print', 'hello'],
+    ]) {
+        it(`should forward args only pi supports to pi: ${args.join(' ')}`, async function () {
+            const runPi = sinon.stub().resolves();
+            const runInteractiveMode = sinon.stub().resolves();
+
+            await runAgentCommand(args, { runPi, runInteractiveMode });
+
+            expect(runInteractiveMode.called).to.be.false;
+            expect(runPi.calledOnce).to.be.true;
+        });
+    }
 
     it('should forward --mode rpc to pi', async function () {
         const runPi = sinon.stub().resolves();
