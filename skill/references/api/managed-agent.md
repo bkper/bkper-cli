@@ -104,7 +104,7 @@ the totals you checked.
 ```
 
 - Instructions can be up to 16,000 characters.
-- A fork keeps its parent's instructions unless the create request sets new ones.
+- A fork keeps its parent's instructions unless the create request sets new ones. Continuing someone else's session never takes theirs.
 - Sessions keep the text they were given. Updating your client changes only the sessions it creates or patches.
 
 ## Who the agent acts as
@@ -120,6 +120,8 @@ The workspace (sessions, files, and sandbox) depends on who calls. Bkper sets th
 | A Bkper channel bot, such as a Slack bot | The bot's account, for that bot |
 
 Book changes made in an app's workspace are attributed to that app, with its name and logo.
+
+A workspace's sessions are private to its user, unless the user [shares one](#share-a-session) from their own workspace.
 
 - **Personal tools**: use each person's own token, so each person sees only their Books.
 - **Shared channel bots**: everyone in the channel acts with the bot's account. Use a dedicated Bkper account, shared only on the Books the channel needs, with the lowest permission that does the job.
@@ -181,6 +183,8 @@ Create a session with `parent` to continue from a point in another session:
 
 A fork copies the conversation only, not workspace files or Book changes.
 
+`parent` may also name a session someone else shares with the user, to [continue it](#continue-a-shared-session) as their own.
+
 ## Observe progress
 
 `GET /v1/sessions/{sessionId}/stream` sends server-sent events over an authenticated `fetch`. Browsers' `EventSource` cannot send the token.
@@ -192,6 +196,68 @@ A fork copies the conversation only, not workspace files or Book changes.
 - Disconnecting never stops the agent.
 
 `GET /v1/sessions/stream` streams the user's session list in the same way, for clients that show sessions created elsewhere.
+
+## Share a session
+
+A user can share a session read-only, so colleagues and Book collaborators can follow it live, learn from it, or help. Only the user's own workspace shares: an app's workspace cannot share its sessions or read others'.
+
+Turn sharing on or off with `PATCH /v1/sessions/{sessionId}` and `{ "shared": true }` or `false`. Sessions are not shared by default.
+
+| Session | Shared with |
+| --- | --- |
+| Started outside a Book | Everyone in the owner's hosted domain |
+| Started in a Book | Everyone in the owner's hosted domain, and everyone who can view that Book, also outside the domain |
+
+- A session's Book is its first input's `bookContext`, shown as `bookId`. It is fixed once set.
+- The domain is the account's hosted domain as Bkper verified it, never an email address. Without one, a session outside a Book cannot be shared: 409 `share_unavailable`.
+- To share a session started in a Book, the user must view that Book: 409 `book_access_required`.
+- Viewing a Book means the `OWNER`, `EDITOR`, `POSTER`, or `VIEWER` permission; not `RECORDER`.
+- Readers are checked on every request and stream connection, never remembered. Turning sharing off ends their streams at once; copies and exports already made stay with whoever has them.
+- When the user can no longer view the session's Book, it leaves that Book: its Book list drops it, and readers outside the user's domain lose it. The domain's audience stays. It returns when the user can view the Book again and sends a message or turns sharing on.
+- The user's own list shows `shared: true` on the sessions they share.
+
+### Read a shared session
+
+Readers use the session routes with the shared session's ID: the session, now with `owner.name`, its entries, stream, published files, and [export](#export-a-session). They download its files through `GET /v1/sessions/{sessionId}/files/{fileId}` and `…/content`: files its history shows, published in it or attached to its messages, under the same retention. `/v1/files/{fileId}` serves only the user's own files.
+
+Readers cannot rename, archive, share, send to, stop, or compact someone else's session: those requests return 404, as for any session that is not theirs.
+
+### Find shared sessions
+
+`GET /v1/shared` lists sessions other people share with the user, newest updated first, with their title, owner's name, `updatedAt`, and `bookId`:
+
+- without parameters, those shared with the user's hosted domain (none without one);
+- with `?book={bookId}`, those started in that Book, when the user can view it (403 `book_access_required`). People outside the owner's domain find a Book's shared sessions this way.
+
+`GET /v1/shared/stream` sends the first page as `snapshot` events after every change, like the session-list stream. Archived sessions leave these lists, but stay readable while shared.
+
+### Continue a shared session
+
+Create a session with `parent` naming the shared session, as for a [fork](#forks):
+
+| To | `parent` |
+| --- | --- |
+| Reply at the end | The latest finished reply, `position: "at"` |
+| Continue from a reply | That reply, `position: "at"` |
+| Edit a message | That user message, `position: "before"`, with the edited text as `input` |
+
+- The new session is the user's own, in their own workspace, and runs with their own access.
+- It holds a copy of the history up to that point, titled like the original, and is marked `continuedFrom`, with the original's owner.
+- It never takes the original's instructions: send your own `instructions`, as for a new session.
+- Files are not copied: the history names them, and the user can upload them again.
+- The original is unchanged, and its owner is not notified.
+- A session not shared with the user is 404 `parent_not_found`.
+
+## Export a session
+
+`GET /v1/sessions/{sessionId}/export` downloads a session as one JSON file, for support or another agent to read:
+
+- the session, with its model, thinking level and instructions;
+- every entry in full, oldest first, including history inherited from a fork or copied from a shared session;
+- the session's files, as metadata without their contents;
+- each input's Agent and sandbox CLI versions.
+
+`format` and `contractVersion` say which objects it holds. Whoever can read the session can export it, including those it is [shared with](#share-a-session). An export is a record of the session, not a way to resume it elsewhere.
 
 ## Files
 
@@ -332,6 +398,40 @@ export async function reply(event: SlackEvent): Promise<string> {
 
 Acknowledge each Slack event at once and post the reply when `reply` returns: Slack expects an answer within three seconds, and an agent run usually takes longer.
 
+## Connected services
+
+A user can connect other services, such as GitHub or Intercom, once: requests the agent sends to their hosts then carry the user's token, added outside the agent's workspace. The agent never sees the token.
+
+```bash
+curl --fail-with-body -X PUT https://agent.bkper.app/v1/services/github \
+  -H "Authorization: Bearer ${BKPER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "name": "GitHub",
+    "targets": [{ "host": "api.github.com", "scheme": "bearer" }],
+    "secret": "<token>"
+  }'
+```
+
+- `PUT /v1/services/{serviceId}` connects (201) or replaces (200) the whole service, token included. The ID is yours: lowercase letters, digits and hyphens.
+- `GET /v1/services` lists them; `DELETE /v1/services/{serviceId}` disconnects one (204), at once.
+- The token is write-only: never returned, logged, or shown to the agent. Choose its permissions in the service: the agent can do whatever the token allows.
+- Each host belongs to one service: 409 `host_in_use` names the service that holds it.
+- Only calls with the user's own token manage services. Through an app or channel bot these routes are 404.
+
+Google APIs take a service account instead of a token: send its JSON key file as the secret, `google` targets on `*.googleapis.com` hosts, and the scopes to make access tokens for. Access tokens are made and renewed outside the agent's workspace; the response carries the account's `clientEmail`, to share Drive files or an Analytics property with. Change the APIs or scopes by sending the whole service again, key included.
+
+```json
+{
+  "name": "Google",
+  "targets": [{ "host": "analyticsdata.googleapis.com", "scheme": "google" }],
+  "google": { "scopes": ["https://www.googleapis.com/auth/analytics.readonly"] },
+  "secret": "<the key file's JSON>"
+}
+```
+
+In the agent's workspace, Google's client libraries find credentials through `GOOGLE_APPLICATION_CREDENTIALS`, a placeholder key that grants nothing, and must use their REST transport (such as `{ fallback: true }`): gRPC does not leave the workspace.
+
 ## Limits
 
 | Limit | Value |
@@ -346,6 +446,7 @@ Acknowledge each Slack event at once and post the reply when `reply` returns: Sl
 | `bookContext.query` | 4,000 characters |
 | `attributes` | 16 names, 16000 characters in total |
 | List page | 50 sessions, entries, or files |
+| Connected services | 20 per user, 10 hosts each, tokens and keys up to 8192 characters, 20 Google scopes |
 
 ## Errors
 
@@ -354,15 +455,20 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | Status | `code` | Meaning |
 | --- | --- | --- |
 | 400 | `invalid_request`, `unknown_model`, `unknown_thinking_level` | A field is invalid or unknown |
+| 400 | `host_not_allowed` | A connected service names a host that has its own route, such as Bkper's or Google's token endpoint |
 | 401 | `unauthorized`, `authentication_failed` | The token is missing, invalid, or expired |
 | 403 | `agent_beta_required` | The account cannot use the agent, such as one without an email address |
 | 403 | `origin_forbidden` | A browser on another website sent a write |
+| 403 | `book_access_required` | The user cannot view the Book whose shared sessions they asked for |
 | 404 | `not_found`, `parent_not_found`, `file_not_found` | No such resource for this user |
 | 405 | `method_not_allowed` | The path does not support the method |
 | 409 | `idempotency_conflict` | The key was used with different content |
 | 409 | `invalid_fork_point` | The fork point is not a finished reply or a user message |
 | 409 | `input_running` | The input is already running and cannot be withdrawn |
 | 409 | `file_quota_exceeded` | The user's upload quota is full |
+| 409 | `share_unavailable` | The session cannot be shared: an app's workspace, or outside a Book without a hosted domain |
+| 409 | `book_access_required` | The user cannot view the Book the session was started in |
+| 409 | `host_in_use`, `service_limit` | Another service holds the host, or the user has 20 services |
 | 410 | `file_gone` | The file's stored copy was deleted |
 | 411 | `length_required` | An upload has no `Content-Length` |
 | 413 | `request_too_large`, `file_too_large` | The JSON body exceeds 64 KiB, or the upload 25 MiB |
@@ -391,6 +497,7 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 - [`GET /v1/sessions/{sessionId}/entries` — List history entries](https://bkper.com/docs/api/managed-agent/operations/listentries.md)
 - [`GET /v1/sessions/{sessionId}/entries/{entryId}` — Get a full entry](https://bkper.com/docs/api/managed-agent/operations/getentry.md)
 - [`POST /v1/sessions/{sessionId}/compact` — Compact earlier context](https://bkper.com/docs/api/managed-agent/operations/compactsession.md)
+- [`GET /v1/sessions/{sessionId}/export` — Export a session](https://bkper.com/docs/api/managed-agent/operations/exportsession.md)
 
 ### Inputs
 
@@ -404,12 +511,25 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 - [`GET /v1/sessions/stream` — Observe the session list](https://bkper.com/docs/api/managed-agent/operations/observesessions.md)
 - [`GET /v1/sessions/{sessionId}/stream` — Observe a session](https://bkper.com/docs/api/managed-agent/operations/observesession.md)
 
+### Shared
+
+- [`GET /v1/shared` — List sessions shared with me](https://bkper.com/docs/api/managed-agent/operations/listshared.md)
+- [`GET /v1/shared/stream` — Observe sessions shared with me](https://bkper.com/docs/api/managed-agent/operations/observeshared.md)
+
 ### Files
 
 - [`GET /v1/sessions/{sessionId}/files` — List published files](https://bkper.com/docs/api/managed-agent/operations/listfiles.md)
+- [`GET /v1/sessions/{sessionId}/files/{fileId}` — Get a session's file](https://bkper.com/docs/api/managed-agent/operations/getsessionfile.md)
+- [`GET /v1/sessions/{sessionId}/files/{fileId}/content` — Download a session's file](https://bkper.com/docs/api/managed-agent/operations/downloadsessionfile.md)
 - [`POST /v1/files` — Upload a file](https://bkper.com/docs/api/managed-agent/operations/uploadfile.md)
 - [`GET /v1/files/{fileId}` — Get file metadata](https://bkper.com/docs/api/managed-agent/operations/getfile.md)
 - [`GET /v1/files/{fileId}/content` — Download a file](https://bkper.com/docs/api/managed-agent/operations/downloadfile.md)
+
+### Services
+
+- [`GET /v1/services` — List connected services](https://bkper.com/docs/api/managed-agent/operations/listservices.md)
+- [`PUT /v1/services/{serviceId}` — Connect or replace a service](https://bkper.com/docs/api/managed-agent/operations/putservice.md)
+- [`DELETE /v1/services/{serviceId}` — Disconnect a service](https://bkper.com/docs/api/managed-agent/operations/deleteservice.md)
 
 ### Models
 
