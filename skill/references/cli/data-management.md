@@ -154,9 +154,22 @@ bkper group delete "Cash" -b abc123
 
 When setting up a full Book or starter chart of accounts, prefer a hierarchical group structure by default.
 
+Give the Book one root group per report it needs, named in the Book's language. Each root holds accounts of one time basis — `ASSET`/`LIABILITY` (position at a date) or `INCOMING`/`OUTGOING` (activity over a period) — and each report has a single root. For a financial Book, that means a **Balance Sheet root** and a **P&L root**:
+
+```
+Balance Sheet
+├── Assets ──────► ASSET accounts
+└── Liabilities ─► LIABILITY accounts
+Profit & Loss
+├── Revenue ─────► INCOMING accounts
+└── Expenses ────► OUTGOING accounts
+```
+
+Add other root groups (by project, branch, etc.) only when the user asks for them.
+
 Create top-level groups first, then child groups with `--parent`, then accounts with `--groups`.
 
-Verify the resulting group hierarchy and account memberships before reporting success.
+Verify the resulting group hierarchy and account memberships before reporting success, including that each report has its root and every account sits under one.
 
 Avoid using the same name for a Group and an Account in the same Book.
 
