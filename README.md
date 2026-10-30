@@ -225,13 +225,17 @@ bkper context pull   # clone or update ~/.bkper/context/user now
 
 To publish a change, commit and `git push` from that folder; it reaches all your agents. Unpushed changes are never overwritten. Never put Book data in it.
 
+### Your company's agent context
+
+If your Bkper account belongs to a company domain, the company can share procedures and skills with everyone in it: report layout, naming conventions, approval habits. `bkper context pull` also keeps them in `~/.bkper/context/domain`, and the agent loads them before yours: your `AGENTS.md` comes after the company's, and your skills win over the company's of the same name. Everyone in the domain reads it; only the domain's admin publishes, with a commit and `git push` from that folder. Accounts without a company domain have none.
+
 ### A Book's agent context
 
 A Book can have its own procedures and skills, shared by everyone who can view it: the meaning of its accounts, its month-end close, its import quirks. Start the agent on a Book to load them beside yours:
 
 ```bash
 bkper agent -b <bookId>              # loads it; pulled in the background, newer pushes load at /reload
-bkper context pull -b <bookId>       # pull yours and the Book's now, into ~/.bkper/context/books/<bookId>
+bkper context pull -b <bookId>       # pull yours (and your company's) and the Book's now, into ~/.bkper/context/books/<bookId>
 ```
 
 The Book's `AGENTS.md` comes after yours, and its skills win over yours of the same name. Editors of the Book publish with a commit and `git push` from its folder, which reaches everyone who can view it. Unpushed changes are never overwritten. Never put Book data in it.

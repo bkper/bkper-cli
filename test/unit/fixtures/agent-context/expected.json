@@ -1,5 +1,9 @@
 {
-  "agents": ["user", "book"],
-  "skills": { "import-quirks": "book", "month-end-close": "book", "report-style": "user" },
-  "collisions": [{ "name": "month-end-close", "winner": "book", "loser": "user" }]
+  "agents": ["domain", "user", "book"],
+  "skills": { "approval-habits": "domain", "import-quirks": "book", "month-end-close": "book", "report-style": "user" },
+  "collisions": [
+    { "name": "month-end-close", "winner": "book", "loser": "domain" },
+    { "name": "month-end-close", "winner": "book", "loser": "user" },
+    { "name": "report-style", "winner": "user", "loser": "domain" }
+  ]
 }

@@ -87,8 +87,8 @@ describe('Book context Git credential helper', function () {
         ]);
     });
 
-    it('refuses scopes that are not the user or a Book', async function () {
-        for (const scope of ['books/', 'books/a.b', 'books/a/b', 'domain']) {
+    it('refuses scopes that are not the user, the domain or a Book', async function () {
+        for (const scope of ['books/', 'books/a.b', 'books/a/b', 'domains', 'domain/acme']) {
             const result = await helper({scope, api: platform()});
             expect(result.code).to.equal(1);
             expect(result.stdout).to.equal('');
@@ -96,3 +96,32 @@ describe('Book context Git credential helper', function () {
     });
 });
 
+describe('domain context Git credential helper', function () {
+    it("asks for the domain's write credential (its admin), falling back to read for its members", async function () {
+        const calls: Array<[string, string | undefined]> = [];
+        const api: PlatformContextApi = {
+            async issueCredential(access, scope) {
+                calls.push([access, scope]);
+                if (access === 'write') throw new ContextForbiddenError('domain');
+                return {token: 'read-secret', scope: access, expiresAt: '2026-10-01T00:00:00Z', remote: REMOTE};
+            },
+        };
+        expect(await helper({scope: 'domain', api})).to.deep.equal({code: 0, stdout: 'username=x\npassword=read-secret\n', stderr: ''});
+        expect(calls).to.deep.equal([
+            ['write', 'domain'],
+            ['read', 'domain'],
+        ]);
+    });
+
+    it('says plainly when the person has no domain, and never prints a token', async function () {
+        const api: PlatformContextApi = {
+            async issueCredential() {
+                throw new ContextForbiddenError('domain');
+            },
+        };
+        const result = await helper({scope: 'domain', api});
+        expect(result.code).to.equal(1);
+        expect(result.stdout).to.equal('');
+        expect(result.stderr).to.contain('domain');
+    });
+});

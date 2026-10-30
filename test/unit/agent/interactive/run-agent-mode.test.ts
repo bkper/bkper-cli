@@ -106,6 +106,24 @@ describe('runAgentMode with CLI session options', function () {
         }
     });
 
+    it("loads the company's agent context clone before the user's", async function () {
+        const previousHome = process.env.HOME;
+        process.env.HOME = dir;
+        try {
+            for (const [scope, text] of [['domain', 'Reports by cost center.'], ['user', 'Answer in Portuguese.']]) {
+                mkdirSync(path.join(dir, '.bkper', 'context', scope), {recursive: true});
+                writeFileSync(path.join(dir, '.bkper', 'context', scope, 'AGENTS.md'), text);
+            }
+            await withRuntime({noSession: true}, ({runtime}) => {
+                const prompt = runtime.session.systemPrompt;
+                expect(prompt).to.include('Reports by cost center.');
+                expect(prompt.indexOf('Reports by cost center.')).to.be.lessThan(prompt.indexOf('Answer in Portuguese.'));
+            });
+        } finally {
+            process.env.HOME = previousHome;
+        }
+    });
+
     it('tells the agent which Book it works on with --book', async function () {
         await withRuntime({noSession: true, bookId: 'agtzBookPrompt'}, ({runtime}) => {
             expect(runtime.session.systemPrompt).to.include('Book agtzBookPrompt');

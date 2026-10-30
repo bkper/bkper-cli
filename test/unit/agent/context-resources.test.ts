@@ -96,6 +96,36 @@ describe('agent user context resources', function () {
         expect(files.agentsFiles.map(file => file.content)).to.deep.equal(['User', 'Book', 'Project']);
     });
 
+    it("adds the domain's skills after the user's and the Book's, so they win a name, and its AGENTS.md before the user's", function () {
+        skillFile('close');
+        const domain = path.join(root, 'context', 'domain');
+        const book = path.join(root, 'context', 'books', 'agtzBook');
+        const write = (dir: string, name: string, whose: string) => {
+            const folder = path.join(dir, '.agents', 'skills', name);
+            fs.mkdirSync(folder, {recursive: true});
+            fs.writeFileSync(path.join(folder, 'SKILL.md'), `---\nname: ${name}\ndescription: ${whose} ${name}.\n---\nBody\n`);
+        };
+        for (const name of ['close', 'import', 'approve']) write(domain, name, "The company's");
+        write(book, 'import', "The Book's");
+        fs.writeFileSync(path.join(domain, 'AGENTS.md'), 'Domain');
+        fs.writeFileSync(path.join(clone, 'AGENTS.md'), 'User');
+        fs.writeFileSync(path.join(book, 'AGENTS.md'), 'Book');
+        const skills = withContextSkills({skills: [], diagnostics: []}, {domain, user: clone, book});
+        expect(skills.skills.map(skill => [skill.name, skill.description])).to.deep.equal([
+            ['import', "The Book's import."],
+            ['close', 'About close.'],
+            ['approve', "The company's approve."],
+        ]);
+        expect(skills.diagnostics.map(item => [item.collision?.name, item.collision?.loserPath])).to.deep.equal([
+            ['close', path.join(domain, '.agents', 'skills', 'close', 'SKILL.md')],
+            ['import', path.join(domain, '.agents', 'skills', 'import', 'SKILL.md')],
+        ]);
+        const global = {path: path.join(agentDir, 'AGENTS.md'), content: 'Global'};
+        const project = {path: '/project/AGENTS.md', content: 'Project'};
+        const files = withContextAgentsFiles({agentsFiles: [global, project]}, agentDir, {domain, user: clone, book});
+        expect(files.agentsFiles.map(file => file.content)).to.deep.equal(['Global', 'Domain', 'User', 'Book', 'Project']);
+    });
+
     it('tells the agent which Book it works on and where its context is', function () {
         const note = bookContextNote('agtzBook-1_x', '/home/ana/.bkper/context/books/agtzBook-1_x');
         expect(note).to.contain('Book agtzBook-1_x');

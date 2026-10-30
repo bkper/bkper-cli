@@ -34,7 +34,8 @@ async function readStdin(): Promise<string> {
 
 /**
  * A write credential, so an ordinary push works (and the first one creates the repository); for a Book the person can only
- * view, a read one: Git cannot say whether it fetches or pushes, and a push with it is refused.
+ * view, or their domain when they are not its admin, a read one: Git cannot say whether it fetches or pushes, and a push with
+ * it is refused.
  */
 async function issue(api: PlatformContextApi, scope: ContextScope) {
     try {
@@ -46,9 +47,9 @@ async function issue(api: PlatformContextApi, scope: ContextScope) {
 }
 
 /**
- * `bkper context git-credential <scope>`, Git's credential helper for an agent context clone (`user`, or `books/<bookId>`).
- * `get` answers with a pull's pre-issued read token when Git runs with it, otherwise a five-minute write token (read, for
- * a Book the person cannot edit). `store` and `erase` do nothing: nothing is ever stored.
+ * `bkper context git-credential <scope>`, Git's credential helper for an agent context clone (`user`, `domain`, or
+ * `books/<bookId>`). `get` answers with a pull's pre-issued read token when Git runs with it, otherwise a five-minute write
+ * token (read, for a Book the person cannot edit or a domain they do not administer). `store` and `erase` do nothing: nothing is ever stored.
  */
 export async function runContextCredentialHelper(options: ContextCredentialHelperOptions): Promise<number> {
     const operation = options.operation ?? 'get';
@@ -84,7 +85,7 @@ export async function runContextCredentialHelper(options: ContextCredentialHelpe
         }
         if (!requestMatchesRemote(request, remote)) {
             writeErr(
-                scope === USER_CONTEXT_SCOPE
+                scope === USER_CONTEXT_SCOPE || scope === 'domain'
                     ? 'Git credential request does not match your agent context remote. Run: bkper context pull\n'
                     : `Git credential request does not match this Book's agent context remote. Run: bkper context pull -b ${scope.slice('books/'.length)}\n`
             );

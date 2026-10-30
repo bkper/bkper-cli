@@ -22,6 +22,7 @@ import {getBkperAiBaseUrlOverride} from '../extensions/bkper-ai-provider.js';
 import {editHandoffGoal} from '../extensions/handoff-goal-editor.js';
 import {bookContextNote, withContextAgentsFiles, withContextSkills, type ContextDirs} from '../context-resources.js';
 import {getBookContextDir} from '../../commands/context/book-context.js';
+import {getDomainContextDir} from '../../commands/context/domain-context.js';
 import {getUserContextDir} from '../../commands/context/user-context.js';
 import {AgentStartupError} from '../startup-error.js';
 import {runStartupMaintenance, startupMaintenanceDependencies} from '../startup-maintenance.js';
@@ -137,8 +138,9 @@ export function createAgentModeDependencies(
 
             const cwd = process.cwd();
             const agentDir = getAgentDir();
-            // The user's context clone, and with --book the Book's beside it (pulled in the background).
+            // The company's and the user's context clones, and with --book the Book's beside them (pulled in the background).
             const contextDirs: ContextDirs = {
+                domain: getDomainContextDir(),
                 user: getUserContextDir(),
                 ...(sessionOptions.bookId ? {book: getBookContextDir(sessionOptions.bookId)} : {}),
             };

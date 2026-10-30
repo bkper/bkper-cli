@@ -8,24 +8,31 @@ import {withContextAgentsFiles, withContextSkills} from '../../../src/agent/cont
 const {__dirname} = getTestPaths(import.meta.url);
 /** The agent context fixture shared with the managed agent (bkper-clients), with the same expected merge. */
 const FIXTURE = path.join(__dirname, '..', 'fixtures', 'agent-context');
+type Scope = 'domain' | 'user' | 'book';
 const expected = JSON.parse(fs.readFileSync(path.join(FIXTURE, 'expected.json'), 'utf8')) as {
-    agents: Array<'user' | 'book'>;
-    skills: Record<string, 'user' | 'book'>;
-    collisions: Array<{name: string; winner: 'user' | 'book'; loser: 'user' | 'book'}>;
+    agents: Scope[];
+    skills: Record<string, Scope>;
+    collisions: Array<{name: string; winner: Scope; loser: Scope}>;
 };
 
 describe('agent context loading rules (shared fixture with the managed agent)', function () {
     let root: string;
-    let folders: {user: string; book: string};
+    let folders: {domain: string; user: string; book: string};
     let agentDir: string;
     let project: string;
 
     beforeEach(function () {
         root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'bkper-context-fixture-')));
-        // `bkper context pull -b <bookId>` keeps the Book's clone beside the user's; `bkper agent -b <bookId>` loads it.
-        folders = {user: path.join(root, 'context', 'user'), book: path.join(root, 'context', 'books', 'agtzBook')};
+        // `bkper context pull` keeps the domain's clone beside the user's, and with -b <bookId> the Book's; `bkper agent`
+        // loads the domain's and the user's, and with -b <bookId> the Book's.
+        folders = {
+            domain: path.join(root, 'context', 'domain'),
+            user: path.join(root, 'context', 'user'),
+            book: path.join(root, 'context', 'books', 'agtzBook'),
+        };
         agentDir = path.join(root, 'agent');
         project = path.join(root, 'project');
+        fs.cpSync(path.join(FIXTURE, 'domain'), folders.domain, {recursive: true});
         fs.cpSync(path.join(FIXTURE, 'user'), folders.user, {recursive: true});
         fs.cpSync(path.join(FIXTURE, 'book'), folders.book, {recursive: true});
         fs.mkdirSync(path.join(project, '.git'), {recursive: true});
@@ -35,7 +42,7 @@ describe('agent context loading rules (shared fixture with the managed agent)', 
         fs.rmSync(root, {recursive: true, force: true});
     });
 
-    it("loads the Book's context over the user's through Pi's own loader, as the managed agent does", async function () {
+    it("loads the Book's context over the user's over the domain's through Pi's own loader, as the managed agent does", async function () {
         const loader = new DefaultResourceLoader({
             cwd: project,
             agentDir,
@@ -48,8 +55,8 @@ describe('agent context loading rules (shared fixture with the managed agent)', 
         });
         await loader.reload();
 
-        const scopeOf = (file: string) =>
-            file.startsWith(folders.book + path.sep) ? 'book' : file.startsWith(folders.user + path.sep) ? 'user' : undefined;
+        const scopeOf = (file: string): Scope | undefined =>
+            (['domain', 'user', 'book'] as const).find(scope => file.startsWith(folders[scope] + path.sep));
         const agents = loader
             .getAgentsFiles()
             .agentsFiles.map(file => scopeOf(file.path))
@@ -61,11 +68,14 @@ describe('agent context loading rules (shared fixture with the managed agent)', 
             skills.flatMap(skill => (scopeOf(skill.filePath) ? [[skill.name, scopeOf(skill.filePath)]] : []))
         );
         expect(loaded).to.deep.equal(expected.skills);
-        const collisions = diagnostics.flatMap(item =>
-            item.type === 'collision' && item.collision
-                ? [{name: item.collision.name, winner: scopeOf(item.collision.winnerPath), loser: scopeOf(item.collision.loserPath)}]
-                : []
-        );
+        const order = (item: {name: string; loser?: string}) => `${item.name} ${item.loser}`;
+        const collisions = diagnostics
+            .flatMap(item =>
+                item.type === 'collision' && item.collision
+                    ? [{name: item.collision.name, winner: scopeOf(item.collision.winnerPath), loser: scopeOf(item.collision.loserPath)}]
+                    : []
+            )
+            .sort((a, b) => order(a).localeCompare(order(b)));
         expect(collisions).to.deep.equal(expected.collisions);
     });
 });

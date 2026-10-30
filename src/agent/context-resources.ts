@@ -5,11 +5,13 @@ import {
     type ResourceDiagnostic,
     type Skill,
 } from '@earendil-works/pi-coding-agent';
+import {getDomainContextDir} from '../commands/context/domain-context.js';
 import {getUserContextDir} from '../commands/context/user-context.js';
 
 /**
- * Agent context clones (`~/.bkper/context/user`, and with `bkper agent -b <bookId>` the Book's in
- * `~/.bkper/context/books/<bookId>`, kept up to date by `bkper context pull` and startup maintenance) in Pi's own resources:
+ * Agent context clones (`~/.bkper/context/domain` when the person has a company domain, `~/.bkper/context/user`, and with
+ * `bkper agent -b <bookId>` the Book's in `~/.bkper/context/books/<bookId>`, kept up to date by `bkper context pull` and
+ * startup maintenance) in Pi's own resources:
  * their skills and AGENTS.md, read again at every start and `/reload`. Limits as the managed agent's: AGENTS.md at most
  * 16,000 characters, at most 50 skills, per scope.
  */
@@ -18,13 +20,14 @@ export const MAX_CONTEXT_SKILLS = 50;
 
 type SkillsResult = {skills: Skill[]; diagnostics: ResourceDiagnostic[]};
 type AgentsFiles = {agentsFiles: Array<{path: string; content: string}>};
-/** The clones a session loads: the user's, and the Book's it works on. */
+/** The clones a session loads: the company's (when pulled), the user's, and the Book's it works on. */
 export interface ContextDirs {
+    domain?: string;
     user: string;
     book?: string;
 }
 
-const defaultDirs = (): ContextDirs => ({user: getUserContextDir()});
+const defaultDirs = (): ContextDirs => ({domain: getDomainContextDir(), user: getUserContextDir()});
 
 /** One clone's skills, in name order, at most 50, with a warning beyond. */
 function cloneSkills(dir: string, whose: string): SkillsResult {
@@ -44,8 +47,9 @@ function cloneSkills(dir: string, whose: string): SkillsResult {
 }
 
 /**
- * Pi's skills, then the Book's, then the user's. Pi keeps the first skill of a name, so a project's and the person's own
- * local skills win over the context's, and a Book's over the user's (as in the managed agent).
+ * Pi's skills, then the Book's, then the user's, then the domain's. Pi keeps the first skill of a name, so a project's and the
+ * person's own local skills win over the context's, a Book's over the user's, and the user's over the domain's (as in the
+ * managed agent).
  */
 export function withContextSkills(base: SkillsResult, dirs: ContextDirs = defaultDirs()): SkillsResult {
     const skills = [...base.skills];
@@ -53,6 +57,7 @@ export function withContextSkills(base: SkillsResult, dirs: ContextDirs = defaul
     const clones = [
         ...(dirs.book ? [{dir: dirs.book, whose: "this Book's agent context"}] : []),
         {dir: dirs.user, whose: 'your agent context'},
+        ...(dirs.domain ? [{dir: dirs.domain, whose: "your company's agent context"}] : []),
     ];
     for (const {dir, whose} of clones) {
         const loaded = cloneSkills(dir, whose);
@@ -92,15 +97,17 @@ function agentsFile(dir: string): {path: string; content: string} | undefined {
 }
 
 /**
- * Pi's context files with the user's AGENTS.md, then the Book's, after the global one (Pi's agent directory) and before the
- * project's: later is more specific and wins on conflict.
+ * Pi's context files with the domain's AGENTS.md, then the user's, then the Book's, after the global one (Pi's agent
+ * directory) and before the project's: later is more specific and wins on conflict.
  */
 export function withContextAgentsFiles(
     base: AgentsFiles,
     agentDir: string,
     dirs: ContextDirs = defaultDirs()
 ): AgentsFiles {
-    const added = [dirs.user, ...(dirs.book ? [dirs.book] : [])].flatMap(dir => agentsFile(dir) ?? []);
+    const added = [...(dirs.domain ? [dirs.domain] : []), dirs.user, ...(dirs.book ? [dirs.book] : [])].flatMap(
+        dir => agentsFile(dir) ?? []
+    );
     if (!added.length) return base;
     const paths = new Set(added.map(file => file.path));
     const global = base.agentsFiles.filter(item => path.dirname(item.path) === path.resolve(agentDir));

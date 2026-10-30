@@ -4,12 +4,15 @@ import {getStoredOAuthToken} from '../../auth/local-auth-service.js';
 const PLATFORM_API_URL = process.env.BKPER_PLATFORM_URL || 'https://platform.bkper.app';
 
 export type ContextAccess = 'read' | 'write';
-/** An agent context scope, as Platform's routes name it: the signed-in user's own, or a Book's (`books/<bookId>`). */
-export type ContextScope = 'user' | `books/${string}`;
+/**
+ * An agent context scope, as Platform's routes name it: the signed-in user's own, their verified domain's (`domain`: Platform
+ * takes which from Bkper, never from here), or a Book's (`books/<bookId>`).
+ */
+export type ContextScope = 'user' | 'domain' | `books/${string}`;
 /** Bkper Book IDs: never a path. */
 export const BOOK_ID = /^[A-Za-z0-9_-]{1,128}$/;
 export function isContextScope(value: string): value is ContextScope {
-    return value === 'user' || (value.startsWith('books/') && BOOK_ID.test(value.slice('books/'.length)));
+    return value === 'user' || value === 'domain' || (value.startsWith('books/') && BOOK_ID.test(value.slice('books/'.length)));
 }
 /** A five-minute repository credential. Sensitive: never log, store or print the token outside Git's helper protocol. */
 export interface ContextCredential {
@@ -22,8 +25,9 @@ export interface ContextCredential {
 /** Agent context repositories on the environment's Platform (one Git repository per scope). */
 export interface PlatformContextApi {
     /**
-     * A credential for a context repository: the signed-in user's own (the default), or a Book's, which Platform issues only
-     * as far as the person's Book permission allows (read to view, write to edit). A write credential creates the repository
+     * A credential for a context repository: the signed-in user's own (the default), their domain's (read for its members,
+     * write for its admin), or a Book's, which Platform issues only as far as the person's Book permission allows (read to view,
+     * write to edit). A write credential creates the repository
      * on the first push; a read before that returns only the remote it will have.
      */
     issueCredential(access: ContextAccess, scope?: ContextScope): Promise<ContextCredential | {remote: string}>;
@@ -36,10 +40,14 @@ export class ContextError extends Error {
     }
 }
 
-/** Platform refused: the person's access to the Book does not allow it. */
+/** Platform refused: the person's access to the Book, or to their domain's context, does not allow it. */
 export class ContextForbiddenError extends ContextError {
-    constructor(message = "Your access to this Book does not allow this on its agent context. Ask the Book's owner to share it with you.") {
-        super(message);
+    constructor(scope?: ContextScope) {
+        super(
+            scope === 'domain'
+                ? "Only people in a company domain read its agent context, and only the domain's admin publishes it."
+                : "Your access to this Book does not allow this on its agent context. Ask the Book's owner to share it with you."
+        );
         this.name = 'ContextForbiddenError';
     }
 }
@@ -89,7 +97,7 @@ export function createPlatformContextApi(
                 throw new ContextError(AUTHENTICATION_REQUIRED_MESSAGE);
             }
             if (response.status === 403) {
-                throw new ContextForbiddenError();
+                throw new ContextForbiddenError(scope);
             }
             if (
                 response.status !== 201 ||

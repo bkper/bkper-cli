@@ -1,6 +1,7 @@
 import type {Command} from 'commander';
 import {withAction} from '../action.js';
 import {getBookContextDir, pullBookContext, type BookPullOutcome} from './book-context.js';
+import {getDomainContextDir, pullDomainContext, type DomainPullOutcome} from './domain-context.js';
 import {runContextCredentialHelper} from './git-credential.js';
 import {BOOK_ID, ContextError} from './platform-context.js';
 import {getUserContextDir, pullUserContext, type PullOutcome} from './user-context.js';
@@ -12,6 +13,15 @@ const PULL_MESSAGES: Record<PullOutcome, string> = {
     failed: 'Could not update your agent context. Check your login (bkper auth login) and connection.',
 };
 
+/** Without a domain there is no line: most people have none. */
+const DOMAIN_PULL_MESSAGES: Record<Exclude<DomainPullOutcome, 'none'>, string> = {
+    synced: "Up to date with what your company's domain admin published.",
+    unpublished:
+        "Nothing published for your company yet. Your domain's admin publishes with a commit and push from here, to everyone in the domain.",
+    unpushed: 'Not updated: this clone has changes not pushed. Push or discard them, then pull again.',
+    failed: "Could not update your company's agent context. Check your login (bkper auth login) and connection.",
+};
+
 const BOOK_PULL_MESSAGES: Record<BookPullOutcome, string> = {
     synced: "Up to date with what the Book's editors published.",
     unpublished:
@@ -21,7 +31,7 @@ const BOOK_PULL_MESSAGES: Record<BookPullOutcome, string> = {
     forbidden: "You cannot view this Book, so its agent context was not pulled. Ask the Book's owner to share it with you.",
 };
 
-/** `bkper context`: the agent context clones (yours, and a Book's), shared with all your agents. */
+/** `bkper context`: the agent context clones (yours, your company's, and a Book's), shared with all your agents. */
 export function registerContextCommands(program: Command): void {
     const context = program
         .command('context')
@@ -30,7 +40,7 @@ export function registerContextCommands(program: Command): void {
     context
         .command('pull')
         .description(
-            "Clone or update ~/.bkper/context/user (fast-forward only); with --book, also the Book's in ~/.bkper/context/books/<bookId>"
+            "Clone or update ~/.bkper/context/user, and your company's in ~/.bkper/context/domain when you have one (fast-forward only); with --book, also the Book's in ~/.bkper/context/books/<bookId>"
         )
         .option('-b, --book <bookId>', "Also pull this Book's agent context")
         .action((options: {book?: string}) =>
@@ -41,15 +51,24 @@ export function registerContextCommands(program: Command): void {
                     if (bookId !== undefined && !BOOK_ID.test(bookId)) {
                         throw new ContextError(`'${bookId}' is not a Book ID.`);
                     }
-                    const [outcome, bookOutcome] = await Promise.all([
+                    const [outcome, domainOutcome, bookOutcome] = await Promise.all([
                         pullUserContext(),
+                        pullDomainContext(),
                         bookId === undefined ? undefined : pullBookContext(bookId),
                     ]);
                     console.log(`${getUserContextDir()}: ${PULL_MESSAGES[outcome]}`);
+                    if (domainOutcome !== 'none') {
+                        console.log(`${getDomainContextDir()}: ${DOMAIN_PULL_MESSAGES[domainOutcome]}`);
+                    }
                     if (bookId !== undefined && bookOutcome) {
                         console.log(`${getBookContextDir(bookId)}: ${BOOK_PULL_MESSAGES[bookOutcome]}`);
                     }
-                    if (outcome === 'failed' || bookOutcome === 'failed' || bookOutcome === 'forbidden') {
+                    if (
+                        outcome === 'failed' ||
+                        domainOutcome === 'failed' ||
+                        bookOutcome === 'failed' ||
+                        bookOutcome === 'forbidden'
+                    ) {
                         process.exit(1);
                     }
                 },
