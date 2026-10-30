@@ -20,6 +20,7 @@ import {
 } from '../extensions/builtins.js';
 import {getBkperAiBaseUrlOverride} from '../extensions/bkper-ai-provider.js';
 import {editHandoffGoal} from '../extensions/handoff-goal-editor.js';
+import {withUserContextAgentsFile, withUserContextSkills} from '../context-resources.js';
 import {AgentStartupError} from '../startup-error.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperAgentSystemPrompt} from '../system-prompt.js';
@@ -177,6 +178,13 @@ export function createAgentModeDependencies(
                         noContextFiles: sessionOptions.noContextFiles,
                         systemPromptOverride: () =>
                             getBkperAgentSystemPrompt(selectedTools),
+                        // The user's agent context clone, read again at every /reload; the project's files win.
+                        skillsOverride: base =>
+                            sessionOptions.noSkills ? base : withUserContextSkills(base),
+                        agentsFilesOverride: base =>
+                            sessionOptions.noContextFiles
+                                ? base
+                                : withUserContextAgentsFile(base, undefined, agentDir),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
                                 registerBkperAgentBuiltins(

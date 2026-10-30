@@ -101,7 +101,7 @@ export async function configureManagedCredentialHelper(
     );
 }
 
-function requestMatchesRemote(request: CredentialRequest, remote: string): boolean {
+export function requestMatchesRemote(request: CredentialRequest, remote: string): boolean {
     let parsed: URL;
     try {
         parsed = new URL(remote);

@@ -122,6 +122,42 @@ describe('agent startup maintenance', function () {
         ).to.be.true;
     });
 
+    it('should pull the user context in the background without waiting for it, also with updates disabled', async function () {
+        process.env.BKPER_DISABLE_AUTOUPDATE = '1';
+        const pullContext = sinon.stub().returns(new Promise(() => undefined));
+        const notify = sinon.stub();
+
+        await runStartupMaintenance({notify}, {readNotice: sinon.stub(), startUpdateCheck: sinon.stub(), pullContext});
+
+        expect(pullContext.calledOnce).to.be.true;
+        expect(notify.called).to.be.false;
+    });
+
+    it('should tell only about a context clone with unpushed changes, and never throw on a failed pull', async function () {
+        for (const [outcome, told] of [['unpushed', true], ['synced', false], ['failed', false]] as const) {
+            const notify = sinon.stub();
+            let pulled!: () => void;
+            const done = new Promise<void>(resolve => {
+                pulled = resolve;
+            });
+            const pullContext = async () => {
+                pulled();
+                return outcome;
+            };
+            await runStartupMaintenance({notify}, {readNotice: () => undefined, startUpdateCheck: () => false, pullContext});
+            await done;
+            await new Promise(resolve => setImmediate(resolve));
+            expect(notify.called).to.equal(told);
+            if (told) expect(notify.firstCall.args[0]).to.contain('~/.bkper/context/user');
+        }
+        const rejecting = sinon.stub().rejects(new Error('offline'));
+        await runStartupMaintenance({notify: sinon.stub()}, {readNotice: () => undefined, startUpdateCheck: () => false,
+            pullContext: rejecting});
+        const throwing = sinon.stub().throws(new Error('boom'));
+        await runStartupMaintenance({notify: sinon.stub()}, {readNotice: () => undefined, startUpdateCheck: () => false,
+            pullContext: throwing});
+    });
+
     it('should skip everything when disabled', async function () {
         process.env.BKPER_DISABLE_AUTOUPDATE = '1';
         const readNotice = sinon.stub();

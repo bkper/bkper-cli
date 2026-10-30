@@ -5,6 +5,7 @@ import 'dotenv/config'; // Must be first to load env vars before other imports
 import { program, type Command } from 'commander';
 import { registerAuthCommands } from './commands/auth/register.js';
 import { registerAppCommands } from './commands/apps/register.js';
+import { registerContextCommands } from './commands/context/register.js';
 import { registerBookCommands } from './commands/books/register.js';
 import { registerAccountCommands } from './commands/accounts/register.js';
 import { registerGroupCommands } from './commands/groups/register.js';
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
     registerCollectionCommands(program);
     registerFileCommands(program);
     registerEventCommands(program);
+    registerContextCommands(program);
 
     // Agent bridge command
     registerAgentCommands(program);

@@ -215,6 +215,16 @@ Run `/reload` in an open session after adding or removing a server, and use `/mc
 
 MCP tools run with your permissions. Add only servers you trust.
 
+### Your agent context
+
+Your procedures and skills (an `AGENTS.md` and `.agents/skills/<name>/SKILL.md`) can be shared by all your agents: the Bkper CLI Agent, Bkper Agent on the web, and any agent that reads those standards. They live in a Git clone at `~/.bkper/context/user`, which the agent loads at every start and `/reload`, and updates in the background.
+
+```bash
+bkper context pull   # clone or update ~/.bkper/context/user now
+```
+
+To publish a change, commit and `git push` from that folder; it reaches all your agents. Unpushed changes are never overwritten. Never put Book data in it.
+
 ---
 
 ## Data Management

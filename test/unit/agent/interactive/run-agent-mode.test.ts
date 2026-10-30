@@ -1,4 +1,4 @@
-import {mkdtempSync, rmSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import sinon from 'sinon';
@@ -80,6 +80,30 @@ describe('runAgentMode with CLI session options', function () {
                 []
             );
         });
+    });
+
+    it("loads the user's agent context clone into the prompt, unless context files or skills are off", async function () {
+        const previousHome = process.env.HOME;
+        process.env.HOME = dir;
+        try {
+            const clone = path.join(dir, '.bkper', 'context', 'user');
+            mkdirSync(path.join(clone, '.agents', 'skills', 'close-month'), {recursive: true});
+            writeFileSync(path.join(clone, 'AGENTS.md'), 'Answer in Portuguese.');
+            writeFileSync(
+                path.join(clone, '.agents', 'skills', 'close-month', 'SKILL.md'),
+                '---\nname: close-month\ndescription: Close a month.\n---\n'
+            );
+            await withRuntime({noSession: true}, ({runtime}) => {
+                expect(runtime.session.systemPrompt).to.include('Answer in Portuguese.');
+                expect(runtime.session.systemPrompt).to.include('<name>close-month</name>');
+            });
+            await withRuntime({noSession: true, noContextFiles: true, noSkills: true}, ({runtime}) => {
+                expect(runtime.session.systemPrompt).to.not.include('Answer in Portuguese.');
+                expect(runtime.session.systemPrompt).to.not.include('close-month');
+            });
+        } finally {
+            process.env.HOME = previousHome;
+        }
     });
 
     it('returns the initial prompt from messages', async function () {
