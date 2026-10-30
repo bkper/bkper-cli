@@ -1,4 +1,3 @@
-import {spawnSync} from 'node:child_process';
 import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
@@ -107,20 +106,13 @@ describe('runAgentMode with CLI session options', function () {
         }
     });
 
-    it('tells the agent which Book a clone is when run in its folder', async function () {
-        const previous = process.cwd();
-        const book = path.join(dir, 'acme');
-        mkdirSync(book);
-        spawnSync('git', ['init', '-q', book]);
-        spawnSync('git', ['config', 'bkper.bookId', 'agtzBookPrompt'], {cwd: book});
-        process.chdir(book);
-        try {
-            await withRuntime({noSession: true}, ({runtime}) => {
-                expect(runtime.session.systemPrompt).to.include('Book agtzBookPrompt');
-            });
-        } finally {
-            process.chdir(previous);
-        }
+    it('tells the agent which Book it works on with --book', async function () {
+        await withRuntime({noSession: true, bookId: 'agtzBookPrompt'}, ({runtime}) => {
+            expect(runtime.session.systemPrompt).to.include('Book agtzBookPrompt');
+        });
+        await withRuntime({noSession: true}, ({runtime}) => {
+            expect(runtime.session.systemPrompt).to.not.include('Book agent context');
+        });
     });
 
     it('returns the initial prompt from messages', async function () {

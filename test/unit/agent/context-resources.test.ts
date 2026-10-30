@@ -3,8 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type {Skill} from '@earendil-works/pi-coding-agent';
-import {spawnSync} from 'node:child_process';
-import {bookCloneNote, withUserContextAgentsFile, withUserContextSkills} from '../../../src/agent/context-resources.js';
+import {bookContextNote, withContextAgentsFiles, withContextSkills} from '../../../src/agent/context-resources.js';
 
 describe('agent user context resources', function () {
     let root: string;
@@ -36,15 +35,15 @@ describe('agent user context resources', function () {
 
     it('changes nothing without a clone', function () {
         const base = {skills: [projectSkill('close')], diagnostics: []};
-        expect(withUserContextSkills(base, clone)).to.deep.equal(base);
+        expect(withContextSkills(base, {user: clone})).to.deep.equal(base);
         const files = {agentsFiles: [{path: '/project/AGENTS.md', content: 'Project'}]};
-        expect(withUserContextAgentsFile(files, clone, agentDir)).to.deep.equal(files);
+        expect(withContextAgentsFiles(files, agentDir, {user: clone})).to.deep.equal(files);
     });
 
     it("adds the clone's skills after the project's, which win on a name collision", function () {
         skillFile('close');
         skillFile('report');
-        const result = withUserContextSkills({skills: [projectSkill('close')], diagnostics: []}, clone);
+        const result = withContextSkills({skills: [projectSkill('close')], diagnostics: []}, {user: clone});
         expect(result.skills.map(skill => [skill.name, skill.filePath])).to.deep.equal([
             ['close', '/project/.agents/skills/close/SKILL.md'],
             ['report', path.join(clone, '.agents', 'skills', 'report', 'SKILL.md')],
@@ -54,7 +53,7 @@ describe('agent user context resources', function () {
 
     it('keeps at most 50 skills from the clone, by name, with a warning', function () {
         for (let index = 0; index < 52; index++) skillFile(`skill-${String(index).padStart(2, '0')}`);
-        const result = withUserContextSkills({skills: [], diagnostics: []}, clone);
+        const result = withContextSkills({skills: [], diagnostics: []}, {user: clone});
         expect(result.skills).to.have.length(50);
         expect(result.skills.at(-1)?.name).to.equal('skill-49');
         expect(result.diagnostics.filter(item => item.type === 'warning')).to.have.length(1);
@@ -65,27 +64,41 @@ describe('agent user context resources', function () {
         fs.writeFileSync(path.join(clone, 'AGENTS.md'), 'x'.repeat(16010));
         const global = {path: path.join(agentDir, 'AGENTS.md'), content: 'Global'};
         const project = {path: '/project/AGENTS.md', content: 'Project'};
-        const result = withUserContextAgentsFile({agentsFiles: [global, project]}, clone, agentDir);
+        const result = withContextAgentsFiles({agentsFiles: [global, project]}, agentDir, {user: clone});
         expect(result.agentsFiles.map(file => file.path)).to.deep.equal([global.path, path.join(clone, 'AGENTS.md'), project.path]);
         expect(result.agentsFiles[1]?.content.startsWith('x'.repeat(16000))).to.equal(true);
         expect(result.agentsFiles[1]?.content).to.contain('truncated');
         expect(result.agentsFiles[1]?.content.length).to.be.lessThan(16100);
     });
 
-    it('tells the agent which Book a clone is, from its Git config, never from its files', function () {
-        const book = path.join(root, 'acme');
-        fs.mkdirSync(path.join(book, '.agents'), {recursive: true});
-        spawnSync('git', ['init', '-q', book]);
-        expect(bookCloneNote(book)).to.equal(undefined);
-        spawnSync('git', ['config', 'bkper.bookId', 'agtzBook-1_x'], {cwd: book});
-        for (const cwd of [book, path.join(book, '.agents')]) {
-            const note = bookCloneNote(cwd);
-            expect(note).to.contain('Book agtzBook-1_x');
-            expect(note).to.contain(book);
+    it("adds a Book's skills before the user's, so the Book wins a name, and its AGENTS.md after the user's", function () {
+        skillFile('close');
+        skillFile('report');
+        const book = path.join(root, 'context', 'books', 'agtzBook');
+        for (const name of ['close', 'import']) {
+            const folder = path.join(book, '.agents', 'skills', name);
+            fs.mkdirSync(folder, {recursive: true});
+            fs.writeFileSync(path.join(folder, 'SKILL.md'), `---\nname: ${name}\ndescription: The Book's ${name}.\n---\nBody\n`);
         }
-        spawnSync('git', ['config', 'bkper.bookId', 'not a/book'], {cwd: book});
-        expect(bookCloneNote(book)).to.equal(undefined);
-        expect(bookCloneNote(root)).to.equal(undefined);
+        fs.writeFileSync(path.join(book, 'AGENTS.md'), 'Book');
+        fs.writeFileSync(path.join(clone, 'AGENTS.md'), 'User');
+        const skills = withContextSkills({skills: [], diagnostics: []}, {user: clone, book});
+        expect(skills.skills.map(skill => [skill.name, skill.description])).to.deep.equal([
+            ['close', "The Book's close."],
+            ['import', "The Book's import."],
+            ['report', 'About report.'],
+        ]);
+        expect(skills.diagnostics.map(item => item.collision?.winnerPath)).to.deep.equal([
+            path.join(book, '.agents', 'skills', 'close', 'SKILL.md'),
+        ]);
+        const project = {path: '/project/AGENTS.md', content: 'Project'};
+        const files = withContextAgentsFiles({agentsFiles: [project]}, agentDir, {user: clone, book});
+        expect(files.agentsFiles.map(file => file.content)).to.deep.equal(['User', 'Book', 'Project']);
+    });
+
+    it('tells the agent which Book it works on and where its context is', function () {
+        const note = bookContextNote('agtzBook-1_x', '/home/ana/.bkper/context/books/agtzBook-1_x');
+        expect(note).to.contain('Book agtzBook-1_x');
+        expect(note).to.contain('/home/ana/.bkper/context/books/agtzBook-1_x');
     });
 });
-

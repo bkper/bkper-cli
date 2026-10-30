@@ -9,8 +9,12 @@ import {createPlatformContextApi, type ContextScope, type PlatformContextApi} fr
  * with all of the user's agents. A push publishes; a pull brings what others published.
  */
 export const USER_CONTEXT_SCOPE: ContextScope = 'user';
+/** Where the CLI keeps agent context clones, one folder per scope, as the sandbox does: `user`, `books/<bookId>`. */
+export function getContextRoot(home: string = os.homedir()): string {
+    return path.join(home, '.bkper', 'context');
+}
 export function getUserContextDir(home: string = os.homedir()): string {
-    return path.join(home, '.bkper', 'context', USER_CONTEXT_SCOPE);
+    return path.join(getContextRoot(home), USER_CONTEXT_SCOPE);
 }
 
 /** synced; unpublished (nothing pushed yet: the clone is ready to push); unpushed (left as it is); failed. */

@@ -31,6 +31,7 @@ function registerAgentCommands(command: Command): void {
         .description(
             'Start Bkper Agent, or run Pi CLI commands as `bkper agent <command>` (e.g. `bkper agent mcp add`)'
         )
+        .option('-b, --book <bookId>', "Load this Book's agent context beside yours")
         .allowUnknownOption(true)
         .allowExcessArguments(true);
 }

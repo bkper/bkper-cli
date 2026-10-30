@@ -20,9 +20,11 @@ import {
 } from '../extensions/builtins.js';
 import {getBkperAiBaseUrlOverride} from '../extensions/bkper-ai-provider.js';
 import {editHandoffGoal} from '../extensions/handoff-goal-editor.js';
-import {bookCloneNote, withUserContextAgentsFile, withUserContextSkills} from '../context-resources.js';
+import {bookContextNote, withContextAgentsFiles, withContextSkills, type ContextDirs} from '../context-resources.js';
+import {getBookContextDir} from '../../commands/context/book-context.js';
+import {getUserContextDir} from '../../commands/context/user-context.js';
 import {AgentStartupError} from '../startup-error.js';
-import {runStartupMaintenance} from '../startup-maintenance.js';
+import {runStartupMaintenance, startupMaintenanceDependencies} from '../startup-maintenance.js';
 import {getBkperAgentSystemPrompt} from '../system-prompt.js';
 import {buildInitialPrompt, type InitialPrompt} from './initial-prompt.js';
 import {FilePromptHistory, getPromptHistoryPath} from './prompt-history-store.js';
@@ -86,6 +88,8 @@ export interface SessionOptions {
     noContextFiles?: boolean;
     messages?: string[];
     fileArgs?: string[];
+    /** `-b, --book`: the Book whose agent context loads beside the user's. */
+    bookId?: string;
 }
 
 type CliModelSelection = {
@@ -133,6 +137,11 @@ export function createAgentModeDependencies(
 
             const cwd = process.cwd();
             const agentDir = getAgentDir();
+            // The user's context clone, and with --book the Book's beside it (pulled in the background).
+            const contextDirs: ContextDirs = {
+                user: getUserContextDir(),
+                ...(sessionOptions.bookId ? {book: getBookContextDir(sessionOptions.bookId)} : {}),
+            };
             const startupSettingsManager = SettingsManager.create(cwd, agentDir);
             const startupDiagnostics = collectSettingsDiagnostics(
                 startupSettingsManager,
@@ -176,23 +185,32 @@ export function createAgentModeDependencies(
                         noSkills: sessionOptions.noSkills,
                         noPromptTemplates: sessionOptions.noPromptTemplates,
                         noContextFiles: sessionOptions.noContextFiles,
-                        // In a Book's context clone, the agent is told which Book it is.
+                        // With --book, the agent is told which Book it works on.
                         systemPromptOverride: () =>
-                            [getBkperAgentSystemPrompt(selectedTools), bookCloneNote(cwd)]
+                            [
+                                getBkperAgentSystemPrompt(selectedTools),
+                                contextDirs.book && sessionOptions.bookId
+                                    ? bookContextNote(sessionOptions.bookId, contextDirs.book)
+                                    : undefined,
+                            ]
                                 .filter(Boolean)
                                 .join('\n\n'),
-                        // The user's agent context clone, read again at every /reload; the project's files win.
+                        // The agent context clones, read again at every /reload; the project's files win.
                         skillsOverride: base =>
-                            sessionOptions.noSkills ? base : withUserContextSkills(base),
+                            sessionOptions.noSkills ? base : withContextSkills(base, contextDirs),
                         agentsFilesOverride: base =>
                             sessionOptions.noContextFiles
                                 ? base
-                                : withUserContextAgentsFile(base, undefined, agentDir),
+                                : withContextAgentsFiles(base, agentDir, contextDirs),
                         extensionFactories: [
                             (pi: ExtensionAPI) => {
                                 registerBkperAgentBuiltins(
                                     pi,
-                                    runStartupMaintenance,
+                                    callbacks =>
+                                        runStartupMaintenance(
+                                            callbacks,
+                                            startupMaintenanceDependencies(sessionOptions.bookId)
+                                        ),
                                     settingsManager,
                                     process.env,
                                     modelRuntime,

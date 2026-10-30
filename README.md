@@ -227,15 +227,14 @@ To publish a change, commit and `git push` from that folder; it reaches all your
 
 ### A Book's agent context
 
-A Book can have its own procedures and skills, shared by everyone who can view it: the meaning of its accounts, its month-end close, its import quirks. Clone them into a folder and run your agent there:
+A Book can have its own procedures and skills, shared by everyone who can view it: the meaning of its accounts, its month-end close, its import quirks. Start the agent on a Book to load them beside yours:
 
 ```bash
-bkper book clone <bookId>            # into a new folder named after the Book
-bkper book clone <bookId> my-folder  # or a folder of your choice
-cd my-folder && bkper agent
+bkper agent -b <bookId>              # loads it; pulled in the background, newer pushes load at /reload
+bkper context pull -b <bookId>       # pull yours and the Book's now, into ~/.bkper/context/books/<bookId>
 ```
 
-The agent reads the folder's `AGENTS.md` and `.agents/skills` like any project's, and its skills win over your own of the same name. Pull to get what others published; editors of the Book publish with a commit and `git push`, which reaches everyone who can view it. Never put Book data in it.
+The Book's `AGENTS.md` comes after yours, and its skills win over yours of the same name. Editors of the Book publish with a commit and `git push` from its folder, which reaches everyone who can view it. Unpushed changes are never overwritten. Never put Book data in it.
 
 ---
 

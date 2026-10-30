@@ -158,6 +158,24 @@ describe('agent startup maintenance', function () {
             pullContext: throwing});
     });
 
+    it("should pull the Book's context beside the user's, telling only about unpushed changes", async function () {
+        const notify = sinon.stub();
+        let pulled!: () => void;
+        const done = new Promise<void>(resolve => {
+            pulled = resolve;
+        });
+        const pullBookContext = async () => {
+            pulled();
+            return 'unpushed' as const;
+        };
+        await runStartupMaintenance({notify}, {readNotice: () => undefined, startUpdateCheck: () => false,
+            pullContext: async () => 'synced' as const, pullBookContext});
+        await done;
+        await new Promise(resolve => setImmediate(resolve));
+        expect(notify.calledOnce).to.be.true;
+        expect(notify.firstCall.args[0]).to.contain("this Book's agent context");
+    });
+
     it('should skip everything when disabled', async function () {
         process.env.BKPER_DISABLE_AUTOUPDATE = '1';
         const readNotice = sinon.stub();

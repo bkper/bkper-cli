@@ -86,7 +86,7 @@ export async function runContextCredentialHelper(options: ContextCredentialHelpe
             writeErr(
                 scope === USER_CONTEXT_SCOPE
                     ? 'Git credential request does not match your agent context remote. Run: bkper context pull\n'
-                    : "Git credential request does not match this Book's agent context remote.\n"
+                    : `Git credential request does not match this Book's agent context remote. Run: bkper context pull -b ${scope.slice('books/'.length)}\n`
             );
             return 1;
         }

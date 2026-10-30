@@ -12,7 +12,9 @@ import {
     runAgentMode,
     type SessionOptions,
 } from '../agent/interactive/run-agent-mode.js';
+import { AgentStartupError } from '../agent/startup-error.js';
 import { getBkperAgentSystemPrompt } from '../agent/system-prompt.js';
+import { BOOK_ID } from './context/platform-context.js';
 
 export interface AgentCommandEnvironment {
     stdinIsTTY: boolean;
@@ -158,19 +160,48 @@ export function parseEmbeddedSessionOptions(
     ) as SessionOptions;
 }
 
+/**
+ * Bkper's own `-b, --book <bookId>` (Pi has no `-b`): the Book whose agent context loads beside the user's. Taken out
+ * before Pi parses the rest.
+ */
+export function takeBookOption(args: string[]): { bookId?: string; args: string[] } {
+    const rest: string[] = [];
+    let bookId: string | undefined;
+    for (let index = 0; index < args.length; index++) {
+        const arg = args[index]!;
+        let value: string | undefined;
+        if (arg === '-b' || arg === '--book') {
+            value = args[++index];
+            if (value === undefined) throw new AgentStartupError(`${arg} requires a Book ID`);
+        } else if (arg.startsWith('--book=')) {
+            value = arg.slice('--book='.length);
+        } else {
+            rest.push(arg);
+            continue;
+        }
+        if (!BOOK_ID.test(value)) throw new AgentStartupError(`'${value}' is not a Book ID`);
+        bookId = value;
+    }
+    return { ...(bookId ? { bookId } : {}), args: rest };
+}
+
 export async function runAgentCommand(
-    piArgs: string[],
+    allArgs: string[],
     dependencies: AgentCommandDependencies = createDefaultDependencies()
 ): Promise<void> {
     const canRunEmbeddedInteractive = canRunEmbeddedInteractiveMode(dependencies);
+    const { bookId, args: piArgs } = isPiManagementCommand(allArgs) ? { args: allArgs } : takeBookOption(allArgs);
+    const embedded = (options: SessionOptions | undefined): SessionOptions | undefined =>
+        bookId ? { bookId, ...options } : options;
 
     if (piArgs.length === 0) {
         if (!canRunEmbeddedInteractive) {
+            refuseBookOutsideAgent(bookId);
             await dependencies.runPi(buildPiArgs(piArgs), PI_SESSION_OPTIONS);
             return;
         }
 
-        await dependencies.runInteractiveMode();
+        await dependencies.runInteractiveMode(embedded(undefined));
         return;
     }
 
@@ -184,12 +215,20 @@ export async function runAgentCommand(
     if (!options || !canRunEmbeddedInteractive) {
         // Args only pi supports (e.g. --fork, --print, --mode) or non-interactive
         // terminals are forwarded to pi for normal passthrough behavior.
+        refuseBookOutsideAgent(bookId);
         const args = buildPiArgs(piArgs);
         await dependencies.runPi(args, PI_SESSION_OPTIONS);
         return;
     }
 
-    await dependencies.runInteractiveMode(options);
+    await dependencies.runInteractiveMode(embedded(options));
+}
+
+/** A Book's context loads only in Bkper Agent's interactive mode; never silently dropped. */
+function refuseBookOutsideAgent(bookId: string | undefined): void {
+    if (bookId) {
+        throw new AgentStartupError('--book works only in the interactive agent, without options only pi supports');
+    }
 }
 
 export function registerAgentCommands(program: Command): void {
@@ -198,6 +237,7 @@ export function registerAgentCommands(program: Command): void {
         .description(
             'Start Bkper Agent, or run Pi CLI commands as `bkper agent <command>` (e.g. `bkper agent mcp add`)'
         )
+        .option('-b, --book <bookId>', "Load this Book's agent context beside yours")
         .allowUnknownOption(true)
         .allowExcessArguments(true);
 }

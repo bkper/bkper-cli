@@ -4,6 +4,7 @@ import sinon from 'sinon';
 import { runAgentCommand } from '../../../src/commands/agent-command.js';
 import { getBkperAgentSystemPrompt } from '../../../src/agent/system-prompt.js';
 import { registerBkperAiProvider } from '../../../src/agent/extensions/bkper-ai-provider.js';
+import { AgentStartupError } from '../../../src/agent/startup-error.js';
 
 describe('CLI - agent command', function () {
     for (const args of [['--list-models'], ['-p', 'hello'], ['--mode', 'json', 'hello']]) {
@@ -386,5 +387,32 @@ describe('CLI - agent command', function () {
 
         expect(runInteractiveMode.called).to.be.false;
         expect(runPi.calledOnce).to.be.true;
+    });
+
+    for (const args of [['-b', 'agtzBook'], ['--book', 'agtzBook'], ['--book=agtzBook']]) {
+        it(`should load a Book's context in the interactive agent: ${args.join(' ')}`, async function () {
+            const runPi = sinon.stub().resolves();
+            const runInteractiveMode = sinon.stub().resolves();
+
+            await runAgentCommand([...args, '--model', 'gpt-sol'], { runPi, runInteractiveMode });
+
+            expect(runPi.called).to.be.false;
+            expect(runInteractiveMode.firstCall.args[0]).to.deep.equal({ bookId: 'agtzBook', model: 'gpt-sol' });
+        });
+    }
+
+    it('should refuse a malformed Book ID, or --book where only pi runs', async function () {
+        for (const args of [['-b'], ['--book', '../x'], ['-b', 'agtzBook', '-p', 'hello']]) {
+            const runPi = sinon.stub().resolves();
+            const runInteractiveMode = sinon.stub().resolves();
+            let failure: unknown;
+            try {
+                await runAgentCommand(args, { runPi, runInteractiveMode });
+            } catch (error) {
+                failure = error;
+            }
+            expect(failure, args.join(' ')).to.be.instanceOf(AgentStartupError);
+            expect(runPi.called || runInteractiveMode.called).to.be.false;
+        }
     });
 });

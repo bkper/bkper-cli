@@ -4,18 +4,6 @@ import { collectProperty } from '../cli-helpers.js';
 import { renderList, renderItem } from '../../render/index.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import { listBooksFormatted, getBook, createBook, copyBook, updateBook } from './index.js';
-import { cloneBookContext } from '../context/book-context.js';
-import type { PullOutcome } from '../context/user-context.js';
-
-const CLONE_MESSAGES: Record<PullOutcome, (dir: string) => string> = {
-    synced: dir =>
-        `Cloned the Book's agent context into ${dir}. Run your agent there to use it; a push publishes to everyone who can view the Book.`,
-    unpublished: dir =>
-        `${dir} is ready: nothing was published for this Book yet. Add AGENTS.md or .agents/skills, commit and push to share them with everyone who can view the Book (editors only).`,
-    unpushed: dir => `${dir} has changes not pushed.`,
-    failed: dir =>
-        `Could not fetch the Book's agent context into ${dir}. Check your connection, then run git pull there.`,
-};
 
 export function registerBookCommands(program: Command): void {
     const bookCommand = program.command('book').description('Manage Books');
@@ -67,23 +55,6 @@ export function registerBookCommands(program: Command): void {
                     property: options.property,
                 });
                 renderItem(book.json());
-            })()
-        );
-
-    bookCommand
-        .command('clone <bookId> [folder]')
-        .description(
-            "Clone a Book's agent context (AGENTS.md and skills) into a new folder, named after the Book by default; run an agent there"
-        )
-        .action((bookId: string, folder: string | undefined) =>
-            withAction('cloning the Book agent context', async () => {
-                const { dir, outcome } = await cloneBookContext({
-                    bookId,
-                    folder,
-                    bookName: async id => (await getBook(id)).getName() ?? '',
-                });
-                console.log(CLONE_MESSAGES[outcome](dir));
-                if (outcome === 'failed') process.exit(1);
             })()
         );
 
