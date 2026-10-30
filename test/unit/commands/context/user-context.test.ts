@@ -1,10 +1,23 @@
 import {expect} from '../../helpers/test-setup.js';
 import fs from 'fs';
 import path from 'path';
-import {pullUserContext} from '../../../../src/commands/context/user-context.js';
+import {getContextRoot, getUserContextDir, pullUserContext} from '../../../../src/commands/context/user-context.js';
+import {getDomainContextDir} from '../../../../src/commands/context/domain-context.js';
+import {getBookContextDir} from '../../../../src/commands/context/book-context.js';
 import type {PlatformContextApi} from '../../../../src/commands/context/platform-context.js';
 import {runGit, type GitRunner} from '../../../../src/commands/apps/git/run-git.js';
 import {commitAll, initRepo, makeTempDir, runGitSync, writeFile} from '../apps/git/helpers.js';
+
+describe('context folders', function () {
+    for (const home of ['/home/ana', 'C:\\Users\\ana']) {
+        it(`keeps every scope directly in ~/.bkper, home ${home}`, function () {
+            expect(getContextRoot(home)).to.equal(path.join(home, '.bkper'));
+            expect(getUserContextDir(home)).to.equal(path.join(home, '.bkper', 'user'));
+            expect(getDomainContextDir(home)).to.equal(path.join(home, '.bkper', 'domain'));
+            expect(getBookContextDir('agtzBook', home)).to.equal(path.join(home, '.bkper', 'books', 'agtzBook'));
+        });
+    }
+});
 
 describe('user context clone', function () {
     let root: string;
@@ -37,7 +50,7 @@ describe('user context clone', function () {
     beforeEach(function () {
         root = makeTempDir('bkper-context-');
         published = path.join(root, 'user.git');
-        dir = path.join(root, 'home', '.bkper', 'context', 'user');
+        dir = path.join(root, 'home', '.bkper', 'user');
         runGitSync(['init', '-q', '--bare', '-b', 'main', published], root);
     });
     afterEach(function () {

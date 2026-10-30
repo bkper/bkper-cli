@@ -148,7 +148,7 @@ describe('agent startup maintenance', function () {
             await done;
             await new Promise(resolve => setImmediate(resolve));
             expect(notify.called).to.equal(told);
-            if (told) expect(notify.firstCall.args[0]).to.contain('~/.bkper/context/user');
+            if (told) expect(notify.firstCall.args[0]).to.contain('~/.bkper/user');
         }
         const rejecting = sinon.stub().rejects(new Error('offline'));
         await runStartupMaintenance({notify: sinon.stub()}, {readNotice: () => undefined, startUpdateCheck: () => false,
@@ -191,7 +191,7 @@ describe('agent startup maintenance', function () {
         await done;
         await new Promise(resolve => setImmediate(resolve));
         expect(notify.calledOnce).to.be.true;
-        expect(notify.firstCall.args[0]).to.contain('~/.bkper/context/domain');
+        expect(notify.firstCall.args[0]).to.contain('~/.bkper/domain');
     });
 
     it('should skip everything when disabled', async function () {

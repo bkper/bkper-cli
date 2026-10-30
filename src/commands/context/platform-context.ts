@@ -78,7 +78,7 @@ export function createPlatformContextApi(
             if (!isContextScope(scope)) {
                 throw new ContextError(`Unknown agent context scope '${scope}'.`);
             }
-            const response = await dependencies.fetch(`${PLATFORM_API_URL}/api/context/${scope}/credentials`, {
+            const response = await dependencies.fetch(`${PLATFORM_API_URL}/api/workspace/${scope}/credentials`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

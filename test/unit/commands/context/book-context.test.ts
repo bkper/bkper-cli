@@ -45,7 +45,7 @@ describe('Book context pull', function () {
     });
 
     it("keeps each Book's context in a folder named by its ID, beside the user's", function () {
-        expect(getBookContextDir(BOOK_ID, home)).to.equal(path.join(home, '.bkper', 'context', 'books', BOOK_ID));
+        expect(getBookContextDir(BOOK_ID, home)).to.equal(path.join(home, '.bkper', 'books', BOOK_ID));
     });
 
     it('clones what the Book published when missing, then fast-forwards, with no Book ID in Git config', async function () {

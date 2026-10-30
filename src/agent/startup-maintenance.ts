@@ -31,11 +31,11 @@ export interface StartupMaintenanceDependencies {
 }
 
 const UNPUSHED_CONTEXT_NOTICE =
-    'Your agent context in ~/.bkper/context/user has changes not pushed, so newer published ones were not pulled.';
+    'Your agent context in ~/.bkper/user has changes not pushed, so newer published ones were not pulled.';
 const UNPUSHED_DOMAIN_CONTEXT_NOTICE =
-    "Your clone of your company's agent context in ~/.bkper/context/domain has changes not pushed, so newer published ones were not pulled.";
+    "Your clone of your company's agent context in ~/.bkper/domain has changes not pushed, so newer published ones were not pulled.";
 const UNPUSHED_BOOK_CONTEXT_NOTICE =
-    "Your clone of this Book's agent context in ~/.bkper/context/books has changes not pushed, so newer published ones were not pulled.";
+    "Your clone of this Book's agent context in ~/.bkper/books has changes not pushed, so newer published ones were not pulled.";
 
 /**
  * Unlike plain commands (once a day), interactive sessions check on every

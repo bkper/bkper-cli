@@ -42,8 +42,8 @@ describe('domain context pull', function () {
         fs.rmSync(root, {recursive: true, force: true});
     });
 
-    it("keeps the company's context beside the user's, in ~/.bkper/context/domain", function () {
-        expect(getDomainContextDir(home)).to.equal(path.join(home, '.bkper', 'context', 'domain'));
+    it("keeps the company's context beside the user's, in ~/.bkper/domain", function () {
+        expect(getDomainContextDir(home)).to.equal(path.join(home, '.bkper', 'domain'));
     });
 
     it('clones what the domain published when missing, then fast-forwards; the domain comes from Platform, never named here', async function () {

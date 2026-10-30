@@ -26,7 +26,7 @@ describe('agent user context resources', function () {
 
     beforeEach(function () {
         root = fs.mkdtempSync(path.join(os.tmpdir(), 'bkper-context-resources-'));
-        clone = path.join(root, 'context', 'user');
+        clone = path.join(root, 'user');
         agentDir = path.join(root, 'agent');
     });
     afterEach(function () {
@@ -74,7 +74,7 @@ describe('agent user context resources', function () {
     it("adds a Book's skills before the user's, so the Book wins a name, and its AGENTS.md after the user's", function () {
         skillFile('close');
         skillFile('report');
-        const book = path.join(root, 'context', 'books', 'agtzBook');
+        const book = path.join(root, 'books', 'agtzBook');
         for (const name of ['close', 'import']) {
             const folder = path.join(book, '.agents', 'skills', name);
             fs.mkdirSync(folder, {recursive: true});
@@ -98,8 +98,8 @@ describe('agent user context resources', function () {
 
     it("adds the domain's skills after the user's and the Book's, so they win a name, and its AGENTS.md before the user's", function () {
         skillFile('close');
-        const domain = path.join(root, 'context', 'domain');
-        const book = path.join(root, 'context', 'books', 'agtzBook');
+        const domain = path.join(root, 'domain');
+        const book = path.join(root, 'books', 'agtzBook');
         const write = (dir: string, name: string, whose: string) => {
             const folder = path.join(dir, '.agents', 'skills', name);
             fs.mkdirSync(folder, {recursive: true});
@@ -127,8 +127,8 @@ describe('agent user context resources', function () {
     });
 
     it('tells the agent which Book it works on and where its context is', function () {
-        const note = bookContextNote('agtzBook-1_x', '/home/ana/.bkper/context/books/agtzBook-1_x');
+        const note = bookContextNote('agtzBook-1_x', '/home/ana/.bkper/books/agtzBook-1_x');
         expect(note).to.contain('Book agtzBook-1_x');
-        expect(note).to.contain('/home/ana/.bkper/context/books/agtzBook-1_x');
+        expect(note).to.contain('/home/ana/.bkper/books/agtzBook-1_x');
     });
 });

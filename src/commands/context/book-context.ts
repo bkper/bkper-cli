@@ -6,7 +6,7 @@ import {getContextRoot, syncContextClone, type PullOptions, type PullOutcome} fr
 /**
  * A Book's agent context clone (docs/plans/agent-context.md in bkper-clients, section 9): its AGENTS.md and
  * `.agents/skills`, shared with everyone who can view the Book; editors publish with a push. Kept beside the user's, in
- * `~/.bkper/context/books/<bookId>`: the folder names the Book, so nothing else records which Book a clone is.
+ * `~/.bkper/books/<bookId>`: the folder names the Book, so nothing else records which Book a clone is.
  */
 export const bookContextScope = (bookId: string): ContextScope => `books/${bookId}`;
 

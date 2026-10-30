@@ -9,8 +9,8 @@ import {getDomainContextDir} from '../commands/context/domain-context.js';
 import {getUserContextDir} from '../commands/context/user-context.js';
 
 /**
- * Agent context clones (`~/.bkper/context/domain` when the person has a company domain, `~/.bkper/context/user`, and with
- * `bkper agent -b <bookId>` the Book's in `~/.bkper/context/books/<bookId>`, kept up to date by `bkper context pull` and
+ * Agent context clones (`~/.bkper/domain` when the person has a company domain, `~/.bkper/user`, and with
+ * `bkper agent -b <bookId>` the Book's in `~/.bkper/books/<bookId>`, kept up to date by `bkper context pull` and
  * startup maintenance) in Pi's own resources:
  * their skills and AGENTS.md, read again at every start and `/reload`. Limits as the managed agent's: AGENTS.md at most
  * 16,000 characters, at most 50 skills, per scope.

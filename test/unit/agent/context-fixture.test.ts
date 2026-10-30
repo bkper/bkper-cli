@@ -26,9 +26,9 @@ describe('agent context loading rules (shared fixture with the managed agent)', 
         // `bkper context pull` keeps the domain's clone beside the user's, and with -b <bookId> the Book's; `bkper agent`
         // loads the domain's and the user's, and with -b <bookId> the Book's.
         folders = {
-            domain: path.join(root, 'context', 'domain'),
-            user: path.join(root, 'context', 'user'),
-            book: path.join(root, 'context', 'books', 'agtzBook'),
+            domain: path.join(root, 'domain'),
+            user: path.join(root, 'user'),
+            book: path.join(root, 'books', 'agtzBook'),
         };
         agentDir = path.join(root, 'agent');
         project = path.join(root, 'project');

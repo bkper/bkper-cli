@@ -86,7 +86,7 @@ describe('runAgentMode with CLI session options', function () {
         const previousHome = process.env.HOME;
         process.env.HOME = dir;
         try {
-            const clone = path.join(dir, '.bkper', 'context', 'user');
+            const clone = path.join(dir, '.bkper', 'user');
             mkdirSync(path.join(clone, '.agents', 'skills', 'close-month'), {recursive: true});
             writeFileSync(path.join(clone, 'AGENTS.md'), 'Answer in Portuguese.');
             writeFileSync(
@@ -111,8 +111,8 @@ describe('runAgentMode with CLI session options', function () {
         process.env.HOME = dir;
         try {
             for (const [scope, text] of [['domain', 'Reports by cost center.'], ['user', 'Answer in Portuguese.']]) {
-                mkdirSync(path.join(dir, '.bkper', 'context', scope), {recursive: true});
-                writeFileSync(path.join(dir, '.bkper', 'context', scope, 'AGENTS.md'), text);
+                mkdirSync(path.join(dir, '.bkper', scope), {recursive: true});
+                writeFileSync(path.join(dir, '.bkper', scope, 'AGENTS.md'), text);
             }
             await withRuntime({noSession: true}, ({runtime}) => {
                 const prompt = runtime.session.systemPrompt;

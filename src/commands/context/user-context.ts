@@ -9,9 +9,12 @@ import {createPlatformContextApi, type ContextScope, type PlatformContextApi} fr
  * with all of the user's agents. A push publishes; a pull brings what others published.
  */
 export const USER_CONTEXT_SCOPE: ContextScope = 'user';
-/** Where the CLI keeps agent context clones, one folder per scope, as the sandbox does: `user`, `books/<bookId>`. */
+/**
+ * Where agent context clones live on every machine, one folder per scope, as in the sandbox (whose home is `/workspace`):
+ * `~/.bkper/domain`, `~/.bkper/user`, `~/.bkper/books/<bookId>`.
+ */
 export function getContextRoot(home: string = os.homedir()): string {
-    return path.join(home, '.bkper', 'context');
+    return path.join(home, '.bkper');
 }
 export function getUserContextDir(home: string = os.homedir()): string {
     return path.join(getContextRoot(home), USER_CONTEXT_SCOPE);

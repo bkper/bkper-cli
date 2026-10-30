@@ -40,7 +40,7 @@ export function registerContextCommands(program: Command): void {
     context
         .command('pull')
         .description(
-            "Clone or update ~/.bkper/context/user, and your company's in ~/.bkper/context/domain when you have one (fast-forward only); with --book, also the Book's in ~/.bkper/context/books/<bookId>"
+            "Clone or update ~/.bkper/user, and your company's in ~/.bkper/domain when you have one (fast-forward only); with --book, also the Book's in ~/.bkper/books/<bookId>"
         )
         .option('-b, --book <bookId>', "Also pull this Book's agent context")
         .action((options: {book?: string}) =>
