@@ -225,6 +225,18 @@ bkper context pull   # clone or update ~/.bkper/context/user now
 
 To publish a change, commit and `git push` from that folder; it reaches all your agents. Unpushed changes are never overwritten. Never put Book data in it.
 
+### A Book's agent context
+
+A Book can have its own procedures and skills, shared by everyone who can view it: the meaning of its accounts, its month-end close, its import quirks. Clone them into a folder and run your agent there:
+
+```bash
+bkper book clone <bookId>            # into a new folder named after the Book
+bkper book clone <bookId> my-folder  # or a folder of your choice
+cd my-folder && bkper agent
+```
+
+The agent reads the folder's `AGENTS.md` and `.agents/skills` like any project's, and its skills win over your own of the same name. Pull to get what others published; editors of the Book publish with a commit and `git push`, which reaches everyone who can view it. Never put Book data in it.
+
 ---
 
 ## Data Management

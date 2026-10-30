@@ -20,7 +20,7 @@ import {
 } from '../extensions/builtins.js';
 import {getBkperAiBaseUrlOverride} from '../extensions/bkper-ai-provider.js';
 import {editHandoffGoal} from '../extensions/handoff-goal-editor.js';
-import {withUserContextAgentsFile, withUserContextSkills} from '../context-resources.js';
+import {bookCloneNote, withUserContextAgentsFile, withUserContextSkills} from '../context-resources.js';
 import {AgentStartupError} from '../startup-error.js';
 import {runStartupMaintenance} from '../startup-maintenance.js';
 import {getBkperAgentSystemPrompt} from '../system-prompt.js';
@@ -176,8 +176,11 @@ export function createAgentModeDependencies(
                         noSkills: sessionOptions.noSkills,
                         noPromptTemplates: sessionOptions.noPromptTemplates,
                         noContextFiles: sessionOptions.noContextFiles,
+                        // In a Book's context clone, the agent is told which Book it is.
                         systemPromptOverride: () =>
-                            getBkperAgentSystemPrompt(selectedTools),
+                            [getBkperAgentSystemPrompt(selectedTools), bookCloneNote(cwd)]
+                                .filter(Boolean)
+                                .join('\n\n'),
                         // The user's agent context clone, read again at every /reload; the project's files win.
                         skillsOverride: base =>
                             sessionOptions.noSkills ? base : withUserContextSkills(base),

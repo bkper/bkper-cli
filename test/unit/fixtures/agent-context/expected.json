@@ -1,0 +1,5 @@
+{
+  "agents": ["user", "book"],
+  "skills": { "import-quirks": "book", "month-end-close": "book", "report-style": "user" },
+  "collisions": [{ "name": "month-end-close", "winner": "book", "loser": "user" }]
+}

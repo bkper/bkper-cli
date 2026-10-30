@@ -1,6 +1,6 @@
 import {expect} from '../../helpers/test-setup.js';
 import {runContextCredentialHelper} from '../../../../src/commands/context/git-credential.js';
-import type {PlatformContextApi} from '../../../../src/commands/context/platform-context.js';
+import {ContextForbiddenError, type PlatformContextApi} from '../../../../src/commands/context/platform-context.js';
 
 const REMOTE = 'https://account.artifacts.cloudflare.net/git/bkper-agent-context-dev/user-0123.git';
 const STDIN = 'protocol=https\nhost=account.artifacts.cloudflare.net\npath=git/bkper-agent-context-dev/user-0123.git\n';
@@ -68,3 +68,31 @@ describe('user context Git credential helper', function () {
         }
     });
 });
+
+describe('Book context Git credential helper', function () {
+    const BOOK = 'books/agtzfmJrcGVyLWhyZHITCxIGTGVkZ2Vy';
+    it("asks for the Book's write credential, falling back to read when the person cannot edit it", async function () {
+        const calls: Array<[string, string | undefined]> = [];
+        const api: PlatformContextApi = {
+            async issueCredential(access, scope) {
+                calls.push([access, scope]);
+                if (access === 'write') throw new ContextForbiddenError();
+                return {token: 'read-secret', scope: access, expiresAt: '2026-10-01T00:00:00Z', remote: REMOTE};
+            },
+        };
+        expect(await helper({scope: BOOK, api})).to.deep.equal({code: 0, stdout: 'username=x\npassword=read-secret\n', stderr: ''});
+        expect(calls).to.deep.equal([
+            ['write', BOOK],
+            ['read', BOOK],
+        ]);
+    });
+
+    it('refuses scopes that are not the user or a Book', async function () {
+        for (const scope of ['books/', 'books/a.b', 'books/a/b', 'domain']) {
+            const result = await helper({scope, api: platform()});
+            expect(result.code).to.equal(1);
+            expect(result.stdout).to.equal('');
+        }
+    });
+});
+

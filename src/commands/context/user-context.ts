@@ -2,13 +2,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {runGit, type GitRunner} from '../apps/git/run-git.js';
-import {createPlatformContextApi, type PlatformContextApi} from './platform-context.js';
+import {createPlatformContextApi, type ContextScope, type PlatformContextApi} from './platform-context.js';
 
 /**
  * The user's agent context clone (docs/plans/agent-context.md in bkper-clients): AGENTS.md and `.agents/skills`, shared
  * with all of the user's agents. A push publishes; a pull brings what others published.
  */
-export const USER_CONTEXT_SCOPE = 'user';
+export const USER_CONTEXT_SCOPE: ContextScope = 'user';
 export function getUserContextDir(home: string = os.homedir()): string {
     return path.join(home, '.bkper', 'context', USER_CONTEXT_SCOPE);
 }
@@ -42,8 +42,8 @@ async function unpushed(runner: GitRunner, cwd: string): Promise<boolean> {
     return Boolean((await runner(['rev-list', '-n', '1', 'refs/remotes/origin/main..HEAD'], {cwd})).stdout);
 }
 
-/** A clone of `remote` in `dir`, tracking main, whose credentials come only from the helper (never stored). */
-async function prepare(runner: GitRunner, dir: string, remote: string): Promise<void> {
+/** A clone of the scope's `remote` in `dir`, tracking main, whose credentials come only from the helper (never stored). */
+async function prepare(runner: GitRunner, dir: string, remote: string, scope: ContextScope): Promise<void> {
     fs.mkdirSync(dir, {recursive: true});
     if (!fs.existsSync(path.join(dir, '.git'))) {
         await runner(['init', '-q', '-b', 'main'], {cwd: dir});
@@ -56,22 +56,27 @@ async function prepare(runner: GitRunner, dir: string, remote: string): Promise<
     await runner(['config', `${key}.useHttpPath`, 'true'], {cwd: dir});
     // Clears inherited helpers for this remote, then pins the context helper.
     await runner(['config', '--replace-all', `${key}.helper`, ''], {cwd: dir});
-    await runner(['config', '--add', `${key}.helper`, buildContextCredentialHelperCommand(USER_CONTEXT_SCOPE)], {
+    await runner(['config', '--add', `${key}.helper`, buildContextCredentialHelperCommand(scope)], {
         cwd: dir,
     });
 }
 
 /**
- * Bring the user's context clone up to date with what is published, fast-forward only: creates it if needed (ready to
- * push even before anything was published), and leaves a clone with unpushed changes as it is. Never throws.
+ * Bring a scope's clone in `dir` up to date with what is published, fast-forward only: creates it if needed (ready to push
+ * even before anything was published), and leaves a clone with unpushed changes as it is. `configure` runs once the clone
+ * exists, before fetching. Platform's refusal (no access, no login) throws before anything is created.
  */
-export async function pullUserContext(options: PullOptions = {}): Promise<PullOutcome> {
-    const dir = options.dir ?? getUserContextDir();
+export async function syncContextClone(
+    scope: ContextScope,
+    dir: string,
+    options: Omit<PullOptions, 'dir'> & {configure?: (runner: GitRunner, dir: string) => Promise<void>} = {}
+): Promise<PullOutcome> {
     const runner = options.runner ?? runGit;
+    const credential = await (options.api ?? createPlatformContextApi()).issueCredential('read', scope);
+    await prepare(runner, dir, credential.remote, scope);
+    await options.configure?.(runner, dir);
+    if (!('token' in credential)) return 'unpublished';
     try {
-        const credential = await (options.api ?? createPlatformContextApi()).issueCredential('read');
-        await prepare(runner, dir, credential.remote);
-        if (!('token' in credential)) return 'unpublished';
         // The helper answers this fetch with the read token issued above, from the environment only.
         const fetched = await runner(['fetch', '-q', 'origin'], {
             cwd: dir,
@@ -86,6 +91,18 @@ export async function pullUserContext(options: PullOptions = {}): Promise<PullOu
         return (await succeeds(runner, ['merge', '-q', '--ff-only', 'refs/remotes/origin/main'], dir))
             ? 'synced'
             : 'failed';
+    } catch {
+        return 'failed';
+    }
+}
+
+/**
+ * Bring the user's context clone up to date with what is published, fast-forward only: creates it if needed (ready to
+ * push even before anything was published), and leaves a clone with unpushed changes as it is. Never throws.
+ */
+export async function pullUserContext(options: PullOptions = {}): Promise<PullOutcome> {
+    try {
+        return await syncContextClone(USER_CONTEXT_SCOPE, options.dir ?? getUserContextDir(), options);
     } catch {
         return 'failed';
     }

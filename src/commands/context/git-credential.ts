@@ -5,7 +5,13 @@ import {
     requestMatchesRemote,
 } from '../apps/git/credentials.js';
 import {stripRepositoryTokenSecret} from '../apps/git/platform-source.js';
-import {createPlatformContextApi, type PlatformContextApi} from './platform-context.js';
+import {
+    ContextForbiddenError,
+    createPlatformContextApi,
+    isContextScope,
+    type ContextScope,
+    type PlatformContextApi,
+} from './platform-context.js';
 import {USER_CONTEXT_SCOPE} from './user-context.js';
 
 export interface ContextCredentialHelperOptions {
@@ -27,9 +33,22 @@ async function readStdin(): Promise<string> {
 }
 
 /**
- * `bkper context git-credential <scope>`, Git's credential helper for an agent context clone. `get` answers with the
- * background pull's pre-issued read token when Git runs with it, otherwise a five-minute write token, so an ordinary push
- * works (and the first one creates the repository). `store` and `erase` do nothing: nothing is ever stored.
+ * A write credential, so an ordinary push works (and the first one creates the repository); for a Book the person can only
+ * view, a read one: Git cannot say whether it fetches or pushes, and a push with it is refused.
+ */
+async function issue(api: PlatformContextApi, scope: ContextScope) {
+    try {
+        return await api.issueCredential('write', scope);
+    } catch (error) {
+        if (scope === USER_CONTEXT_SCOPE || !(error instanceof ContextForbiddenError)) throw error;
+        return api.issueCredential('read', scope);
+    }
+}
+
+/**
+ * `bkper context git-credential <scope>`, Git's credential helper for an agent context clone (`user`, or `books/<bookId>`).
+ * `get` answers with a pull's pre-issued read token when Git runs with it, otherwise a five-minute write token (read, for
+ * a Book the person cannot edit). `store` and `erase` do nothing: nothing is ever stored.
  */
 export async function runContextCredentialHelper(options: ContextCredentialHelperOptions): Promise<number> {
     const operation = options.operation ?? 'get';
@@ -41,8 +60,9 @@ export async function runContextCredentialHelper(options: ContextCredentialHelpe
         return 1;
     }
     try {
-        if (options.scope !== USER_CONTEXT_SCOPE) {
-            writeErr(`Unknown agent context scope '${options.scope}'.\n`);
+        const scope = options.scope;
+        if (!isContextScope(scope)) {
+            writeErr(`Unknown agent context scope '${scope}'.\n`);
             return 1;
         }
         const request = parseCredentialInput(options.stdin ?? (await readStdin()));
@@ -54,7 +74,7 @@ export async function runContextCredentialHelper(options: ContextCredentialHelpe
         let token = environment.BKPER_CONTEXT_TOKEN;
         let remote = environment.BKPER_CONTEXT_REMOTE;
         if (!token || !remote) {
-            const credential = await (options.api ?? createPlatformContextApi()).issueCredential('write');
+            const credential = await issue(options.api ?? createPlatformContextApi(), scope);
             if (!('token' in credential)) {
                 writeErr('Agent context credential was not issued.\n');
                 return 1;
@@ -63,16 +83,22 @@ export async function runContextCredentialHelper(options: ContextCredentialHelpe
             remote = credential.remote;
         }
         if (!requestMatchesRemote(request, remote)) {
-            writeErr('Git credential request does not match your agent context remote. Run: bkper context pull\n');
+            writeErr(
+                scope === USER_CONTEXT_SCOPE
+                    ? 'Git credential request does not match your agent context remote. Run: bkper context pull\n'
+                    : "Git credential request does not match this Book's agent context remote.\n"
+            );
             return 1;
         }
         // Credential protocol output only; never log this string.
         writeOut(formatCredentialGetResponse(stripRepositoryTokenSecret(token)));
         return 0;
     } catch (error) {
-        const message = error instanceof Error && error.message === AUTHENTICATION_REQUIRED_MESSAGE
-            ? AUTHENTICATION_REQUIRED_MESSAGE
-            : 'Agent context credential helper failed.';
+        const message =
+            error instanceof ContextForbiddenError ||
+            (error instanceof Error && error.message === AUTHENTICATION_REQUIRED_MESSAGE)
+                ? error.message
+                : 'Agent context credential helper failed.';
         writeErr(`${message}\n`);
         return 1;
     }

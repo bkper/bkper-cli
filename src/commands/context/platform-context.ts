@@ -4,6 +4,13 @@ import {getStoredOAuthToken} from '../../auth/local-auth-service.js';
 const PLATFORM_API_URL = process.env.BKPER_PLATFORM_URL || 'https://platform.bkper.app';
 
 export type ContextAccess = 'read' | 'write';
+/** An agent context scope, as Platform's routes name it: the signed-in user's own, or a Book's (`books/<bookId>`). */
+export type ContextScope = 'user' | `books/${string}`;
+/** Bkper Book IDs: never a path. */
+export const BOOK_ID = /^[A-Za-z0-9_-]{1,128}$/;
+export function isContextScope(value: string): value is ContextScope {
+    return value === 'user' || (value.startsWith('books/') && BOOK_ID.test(value.slice('books/'.length)));
+}
 /** A five-minute repository credential. Sensitive: never log, store or print the token outside Git's helper protocol. */
 export interface ContextCredential {
     token: string;
@@ -12,19 +19,28 @@ export interface ContextCredential {
     remote: string;
 }
 
-/** The user's agent context repository on the environment's Platform (one Git repository per scope). */
+/** Agent context repositories on the environment's Platform (one Git repository per scope). */
 export interface PlatformContextApi {
     /**
-     * A credential for the signed-in user's own context repository. A write credential creates the repository on the
-     * first push; a read before that returns only the remote it will have.
+     * A credential for a context repository: the signed-in user's own (the default), or a Book's, which Platform issues only
+     * as far as the person's Book permission allows (read to view, write to edit). A write credential creates the repository
+     * on the first push; a read before that returns only the remote it will have.
      */
-    issueCredential(access: ContextAccess): Promise<ContextCredential | {remote: string}>;
+    issueCredential(access: ContextAccess, scope?: ContextScope): Promise<ContextCredential | {remote: string}>;
 }
 
 export class ContextError extends Error {
     constructor(message: string) {
         super(message);
         this.name = 'ContextError';
+    }
+}
+
+/** Platform refused: the person's access to the Book does not allow it. */
+export class ContextForbiddenError extends ContextError {
+    constructor(message = "Your access to this Book does not allow this on its agent context. Ask the Book's owner to share it with you.") {
+        super(message);
+        this.name = 'ContextForbiddenError';
     }
 }
 
@@ -46,12 +62,15 @@ export function createPlatformContextApi(
     dependencies: PlatformContextDependencies = defaultDependencies
 ): PlatformContextApi {
     return {
-        async issueCredential(access) {
+        async issueCredential(access, scope = 'user') {
             const token = await dependencies.getToken();
             if (!token) {
                 throw new ContextError(AUTHENTICATION_REQUIRED_MESSAGE);
             }
-            const response = await dependencies.fetch(`${PLATFORM_API_URL}/api/context/user/credentials`, {
+            if (!isContextScope(scope)) {
+                throw new ContextError(`Unknown agent context scope '${scope}'.`);
+            }
+            const response = await dependencies.fetch(`${PLATFORM_API_URL}/api/context/${scope}/credentials`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -68,6 +87,9 @@ export function createPlatformContextApi(
             }
             if (response.status === 401) {
                 throw new ContextError(AUTHENTICATION_REQUIRED_MESSAGE);
+            }
+            if (response.status === 403) {
+                throw new ContextForbiddenError();
             }
             if (
                 response.status !== 201 ||

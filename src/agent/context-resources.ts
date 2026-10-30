@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
@@ -5,6 +6,7 @@ import {
     type ResourceDiagnostic,
     type Skill,
 } from '@earendil-works/pi-coding-agent';
+import {bookIdOfClone} from '../commands/context/book-context.js';
 import {getUserContextDir} from '../commands/context/user-context.js';
 
 /**
@@ -76,4 +78,28 @@ export function withUserContextAgentsFile(
     const global = base.agentsFiles.filter(item => path.dirname(item.path) === path.resolve(agentDir));
     const rest = base.agentsFiles.filter(item => !global.includes(item) && item.path !== file);
     return {agentsFiles: [...global, {path: file, content}, ...rest]};
+}
+
+/**
+ * When the agent runs in a Book's context clone (`bkper book clone`), which Book it is: read from the clone's Git config,
+ * never from its shared files. Its AGENTS.md and skills are that Book's, loaded by Pi as the project's.
+ */
+export function bookCloneNote(cwd: string): string | undefined {
+    const bookId = bookIdOfClone(cwd);
+    if (!bookId) return undefined;
+    let root = cwd;
+    try {
+        const top = spawnSync('git', ['rev-parse', '--show-toplevel'], {cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore']});
+        if (top.status === 0 && top.stdout.trim()) root = top.stdout.trim();
+    } catch {
+        // The working directory names the clone well enough.
+    }
+    return [
+        '## Book agent context',
+        '',
+        `This folder (${root}) is the agent context clone of Book ${bookId}: its AGENTS.md and .agents/skills say how that Book works, ` +
+            'for everyone who can view it. Its procedures apply to that Book only. It never holds Book data, documents or reports. ' +
+            'Pushing publishes to everyone who can view the Book (only its editors can push): before pushing, show the user the diff ' +
+            'and who it affects. If a push is rejected, pull, rebase and ask again; never force-push.',
+    ].join('\n');
 }

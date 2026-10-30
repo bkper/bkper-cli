@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type {Skill} from '@earendil-works/pi-coding-agent';
-import {withUserContextAgentsFile, withUserContextSkills} from '../../../src/agent/context-resources.js';
+import {spawnSync} from 'node:child_process';
+import {bookCloneNote, withUserContextAgentsFile, withUserContextSkills} from '../../../src/agent/context-resources.js';
 
 describe('agent user context resources', function () {
     let root: string;
@@ -70,4 +71,21 @@ describe('agent user context resources', function () {
         expect(result.agentsFiles[1]?.content).to.contain('truncated');
         expect(result.agentsFiles[1]?.content.length).to.be.lessThan(16100);
     });
+
+    it('tells the agent which Book a clone is, from its Git config, never from its files', function () {
+        const book = path.join(root, 'acme');
+        fs.mkdirSync(path.join(book, '.agents'), {recursive: true});
+        spawnSync('git', ['init', '-q', book]);
+        expect(bookCloneNote(book)).to.equal(undefined);
+        spawnSync('git', ['config', 'bkper.bookId', 'agtzBook-1_x'], {cwd: book});
+        for (const cwd of [book, path.join(book, '.agents')]) {
+            const note = bookCloneNote(cwd);
+            expect(note).to.contain('Book agtzBook-1_x');
+            expect(note).to.contain(book);
+        }
+        spawnSync('git', ['config', 'bkper.bookId', 'not a/book'], {cwd: book});
+        expect(bookCloneNote(book)).to.equal(undefined);
+        expect(bookCloneNote(root)).to.equal(undefined);
+    });
 });
+
