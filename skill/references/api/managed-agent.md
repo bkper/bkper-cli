@@ -432,6 +432,14 @@ Google APIs take a service account instead of a token: send its JSON key file as
 
 In the agent's workspace, Google's client libraries find credentials through `GOOGLE_APPLICATION_CREDENTIALS`, a placeholder key that grants nothing, and must use their REST transport (such as `{ fallback: true }`): gRPC does not leave the workspace.
 
+### Domain services
+
+A domain's admin can connect a service for everyone in the domain, with the same requests under `/v1/domain/services`. The agent of every member then uses it, unless the member connected their own service for the same host, which comes first. A domain's token works for everyone in the domain and any app they authorize: choose its permissions as narrowly as you can.
+
+- `GET /v1/domain/services` lists the caller's domain's services, for any member; without a domain, the list is empty.
+- `PUT` and `DELETE /v1/domain/services/{serviceId}` are only for the domain's admin (403 `domain_admin_required`). The services belong to the domain, not the admin who connected them.
+- Each host belongs to one service within the domain; a member's own services are apart. Through an app or channel bot these routes are 404.
+
 ## Limits
 
 | Limit | Value |
@@ -446,7 +454,7 @@ In the agent's workspace, Google's client libraries find credentials through `GO
 | `bookContext.query` | 4,000 characters |
 | `attributes` | 16 names, 16000 characters in total |
 | List page | 50 sessions, entries, or files |
-| Connected services | 20 per user, 10 hosts each, tokens and keys up to 8192 characters, 20 Google scopes |
+| Connected services | 20 per user and 20 per domain, 10 hosts each, tokens and keys up to 8192 characters, 20 Google scopes |
 
 ## Errors
 
@@ -460,6 +468,7 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | 403 | `agent_beta_required` | The account cannot use the agent, such as one without an email address |
 | 403 | `origin_forbidden` | A browser on another website sent a write |
 | 403 | `book_access_required` | The user cannot view the Book whose shared sessions they asked for |
+| 403 | `domain_admin_required` | Only the domain's admin changes its services |
 | 404 | `not_found`, `parent_not_found`, `file_not_found` | No such resource for this user |
 | 405 | `method_not_allowed` | The path does not support the method |
 | 409 | `idempotency_conflict` | The key was used with different content |
@@ -468,7 +477,7 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | 409 | `file_quota_exceeded` | The user's upload quota is full |
 | 409 | `share_unavailable` | The session cannot be shared: an app's workspace, or outside a Book without a hosted domain |
 | 409 | `book_access_required` | The user cannot view the Book the session was started in |
-| 409 | `host_in_use`, `service_limit` | Another service holds the host, or the user has 20 services |
+| 409 | `host_in_use`, `service_limit` | Another service holds the host, or the user (or domain) has 20 services |
 | 410 | `file_gone` | The file's stored copy was deleted |
 | 411 | `length_required` | An upload has no `Content-Length` |
 | 413 | `request_too_large`, `file_too_large` | The JSON body exceeds 64 KiB, or the upload 25 MiB |
@@ -530,6 +539,9 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 - [`GET /v1/services` — List connected services](https://bkper.com/docs/api/managed-agent/operations/listservices.md)
 - [`PUT /v1/services/{serviceId}` — Connect or replace a service](https://bkper.com/docs/api/managed-agent/operations/putservice.md)
 - [`DELETE /v1/services/{serviceId}` — Disconnect a service](https://bkper.com/docs/api/managed-agent/operations/deleteservice.md)
+- [`GET /v1/domain/services` — List domain services](https://bkper.com/docs/api/managed-agent/operations/listdomainservices.md)
+- [`PUT /v1/domain/services/{serviceId}` — Connect or replace a domain service](https://bkper.com/docs/api/managed-agent/operations/putdomainservice.md)
+- [`DELETE /v1/domain/services/{serviceId}` — Disconnect a domain service](https://bkper.com/docs/api/managed-agent/operations/deletedomainservice.md)
 
 ### Models
 

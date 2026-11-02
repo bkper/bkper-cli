@@ -538,6 +538,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `billingEnabled?`: `boolean` — True if billing is enabled for the user
 - `daysLeftInTrial?`: `number` — How many days left in trial
 - `domain?`: `bkper.Domain`
+- `domainAdmin?`: `boolean` — True if the user is the admin of their domain
 - `email?`: `string` — The user email
 - `free?`: `boolean` — True if user is in the free plan
 - `fullName?`: `string` — The user full name
