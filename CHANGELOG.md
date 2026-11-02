@@ -6,6 +6,8 @@
     -   Share your procedures and skills (`AGENTS.md` and `.agents/skills/<name>/SKILL.md`) with all your agents from a Git clone at `~/.bkper/user`: `bkper agent` loads it at every start and `/reload` and updates it in the background, and `bkper context pull` clones or updates it now. Commit and `git push` from that folder to publish; unpushed changes are never overwritten
     -   People in a company domain also get the company's agent context in `~/.bkper/domain`, loaded before their own. Everyone in the domain reads it; only the domain's admin publishes
     -   `bkper agent -b <bookId>` loads a Book's agent context beside yours, and `bkper context pull -b <bookId>` pulls it now into `~/.bkper/books/<bookId>`. Everyone who can view the Book reads it; its editors publish
+-   **App Development**
+    -   `bkper app dev` runs in Bkper's managed agent sandbox without `bkper auth login`: the App's calls to the Bkper API and Bkper AI go out without the CLI's credentials for the sandbox to add its owner's, Bkper API calls reach the sandbox's own Bkper environment, and the client's sign-in gets a placeholder token. The events tunnel is skipped there, since it cannot connect; test events on a deployed preview
 
 ## [5.7.2] - 2026-10-26
 
