@@ -88,7 +88,7 @@ Verify:
 
 - Server worker responds: `curl http://localhost:8787/health` (or the port you configured)
 - Client dev server is reachable if running separately
-- If the app declares `events`, the events tunnel URL is printed in terminal and registered in Bkper as `webhookUrlDev`
+- If the app declares `events`, the events tunnel URL is printed in terminal and registered in Bkper as `webhookUrlDev` (not in Bkper's managed agent sandbox: there, test events on a deployed preview)
 - If the worker fails to start, fix before writing code
 
 ### 3. Build
@@ -198,6 +198,8 @@ bkper app status <appId>
 ```
 
 > **Note:** `bkper app dev` runs one local Worker runtime — Miniflare, file watching, and an optional Cloudflare tunnel to `/events` when the app subscribes to events. Miniflare is loaded from the app project's `devDependencies` so each app can keep its local Workers simulator aligned with its own code. The Vite client dev server is configured in the project's `vite.config.ts` and run separately. The project template composes both via `npm run dev` using `concurrently`. Open the printed `Open app` URL in your browser; the `Worker/API` URL is for `/api`, `/health`, `/openapi.json`, and events. If your Vite server uses a port other than `5173`, pass that port with `--cp, --client-port` so the local `ASSETS` binding can reach it. If needed, install Miniflare in the app root with `bun add -d miniflare` or `npm install -D miniflare`.
+
+> **Managed agent sandbox:** in Bkper's managed agent sandbox, `bkper app dev` needs no `bkper auth login`. The Worker's calls to the Bkper API and Bkper AI go out without the CLI's credentials (the sandbox adds its owner's), Bkper API calls go to the sandbox's own Bkper environment, and the client's `/auth/refresh` gets a placeholder token the sandbox replaces. The events tunnel is skipped there, since it cannot connect; test events on a deployed preview (`bkper app deploy --preview`).
 
 ---
 

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import { Tunnel, bin, install } from './cloudflared/index.js';
 import type { Logger } from './logger.js';
+import { isManagedSandbox } from './managed-sandbox.js';
 
 /**
  * Handle to a running cloudflared tunnel.
@@ -27,6 +28,27 @@ export interface CloudflaredTunnelOptions {
  * Balances debugging context with avoiding log bloat.
  */
 const MAX_ERROR_OUTPUT_LINES = 20;
+
+/**
+ * Whether `bkper app dev` starts the events tunnel: only for an App with events, and never in the
+ * managed sandbox, where it cannot connect; there it says why, once.
+ */
+export function startsEventsTunnel(
+    hasEvents: boolean,
+    logger: Logger,
+    managedSandbox = isManagedSandbox()
+): boolean {
+    if (!hasEvents) {
+        return false;
+    }
+    if (managedSandbox) {
+        logger.info(
+            'Events tunnel skipped: it cannot connect from the managed sandbox. Test events on a deployed preview (bkper app deploy --preview).'
+        );
+        return false;
+    }
+    return true;
+}
 
 /**
  * Starts a cloudflared Quick Tunnel to expose a local port to the internet.

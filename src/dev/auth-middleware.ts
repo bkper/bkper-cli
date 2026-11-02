@@ -5,6 +5,19 @@ import {
     getStoredOAuthToken,
     isLoggedIn,
 } from '../auth/local-auth-service.js';
+import {
+    isManagedSandbox,
+    MANAGED_SANDBOX_ACCESS_TOKEN,
+    MANAGED_SANDBOX_USER_ID,
+} from './managed-sandbox.js';
+
+/**
+ * Options for the dev auth middleware.
+ */
+export interface BkperAuthMiddlewareOptions {
+    /** Defaults to `BKPER_MANAGED_SANDBOX=1`. */
+    managedSandbox?: boolean;
+}
 
 /**
  * Response format matching production /auth/refresh endpoint.
@@ -68,6 +81,9 @@ async function extractUserId(): Promise<string> {
  * clients to authenticate during local development without needing
  * to set up session cookies or connect to production auth servers.
  *
+ * In the managed sandbox it never reads stored credentials: it answers a fixed placeholder token
+ * and user, and the sandbox's Bkper API egress replaces every Authorization header with the owner's.
+ *
  * Response format matches production:
  * - 200: { userId: string, accessToken: string }
  * - 401: { error: string } - when not logged in
@@ -75,11 +91,10 @@ async function extractUserId(): Promise<string> {
  *
  * @returns Connect-compatible middleware function (req, res, next)
  */
-export function createBkperAuthMiddleware(): (
-    req: IncomingMessage,
-    res: ServerResponse,
-    next: () => void
-) => void {
+export function createBkperAuthMiddleware(
+    options: BkperAuthMiddlewareOptions = {}
+): (req: IncomingMessage, res: ServerResponse, next: () => void) => void {
+    const managedSandbox = options.managedSandbox ?? isManagedSandbox();
     return async (req, res, next) => {
         // Only handle POST /auth/refresh
         if (req.url !== '/auth/refresh' || req.method !== 'POST') {
@@ -88,6 +103,16 @@ export function createBkperAuthMiddleware(): (
         }
 
         res.setHeader('Content-Type', 'application/json');
+
+        if (managedSandbox) {
+            const response: AuthRefreshResponse = {
+                userId: MANAGED_SANDBOX_USER_ID,
+                accessToken: MANAGED_SANDBOX_ACCESS_TOKEN,
+            };
+            res.statusCode = 200;
+            res.end(JSON.stringify(response));
+            return;
+        }
 
         // Check if user is logged in to CLI
         if (!isLoggedIn()) {

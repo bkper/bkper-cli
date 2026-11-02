@@ -17,7 +17,7 @@ import { createLocalAssetsService } from '../../dev/local-assets.js';
 import { createLocalOutboundService } from '../../dev/local-outbound.js';
 import { loadAppConfig, loadSourceDeploymentConfig } from './config.js';
 import { isLoggedIn } from '../../auth/local-auth-service.js';
-import { startCloudflaredTunnel, TunnelHandle } from '../../dev/tunnel.js';
+import { startCloudflaredTunnel, startsEventsTunnel, TunnelHandle } from '../../dev/tunnel.js';
 import { updateWebhookUrlDev } from '../../dev/webhook-dev.js';
 import { runCleanupStep } from '../../dev/cleanup.js';
 
@@ -98,6 +98,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     const clientUrl = deployConfig.client ? `http://localhost:${clientPort}` : undefined;
     const workerUrl = `http://127.0.0.1:${serverPort}`;
     const hasEvents = Array.isArray(appConfig.events) && appConfig.events.length > 0;
+    const tunnelEvents = startsEventsTunnel(hasEvents, serverLogger);
 
     let mf: Miniflare | null = null;
     let eventsTunnel: TunnelHandle | null = null;
@@ -153,7 +154,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
                     label: 'webhookUrlDev',
                     timeoutMs: 5000,
                     action: async () => {
-                        if (hasEvents && appId && isLoggedIn()) {
+                        if (tunnelEvents && appId && isLoggedIn()) {
                             await updateWebhookUrlDev(appId, null);
                         }
                     },
@@ -267,7 +268,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
         }
     });
 
-    if (hasEvents) {
+    if (tunnelEvents) {
         try {
             eventsTunnel = await startCloudflaredTunnel({
                 port: serverPort,
@@ -297,7 +298,7 @@ export async function dev(options: DevOptions = {}): Promise<void> {
     logDevServerBanner({
         clientUrl,
         workerUrl,
-        tunnelUrl: hasEvents && eventsTunnel ? eventsUrl : undefined,
+        tunnelUrl: tunnelEvents && eventsTunnel ? eventsUrl : undefined,
     });
 
     process.removeAllListeners('SIGINT');

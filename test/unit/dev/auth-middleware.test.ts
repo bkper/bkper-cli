@@ -164,6 +164,47 @@ describe('auth-middleware', function () {
             }
         });
 
+        it('answers the managed sandbox placeholder token and user, without a login', async function () {
+            const { createBkperAuthMiddleware } = await import(
+                '../../../src/dev/auth-middleware.js'
+            );
+
+            const middleware = createBkperAuthMiddleware({ managedSandbox: true });
+            const res = createMockResponse();
+
+            await middleware(createMockRequest('/auth/refresh', 'POST'), res, () => {});
+
+            expect(res._statusCode).to.equal(200);
+            expect(JSON.parse(res._body)).to.deep.equal({
+                userId: 'managed-sandbox',
+                accessToken: 'placeholder-replaced-outside-the-sandbox',
+            });
+        });
+
+        it('reads BKPER_MANAGED_SANDBOX when no option is given', async function () {
+            const { createBkperAuthMiddleware } = await import(
+                '../../../src/dev/auth-middleware.js'
+            );
+            const original = process.env.BKPER_MANAGED_SANDBOX;
+            process.env.BKPER_MANAGED_SANDBOX = '1';
+            try {
+                const middleware = createBkperAuthMiddleware();
+                const res = createMockResponse();
+
+                await middleware(createMockRequest('/auth/refresh', 'POST'), res, () => {});
+
+                expect(JSON.parse(res._body).accessToken).to.equal(
+                    'placeholder-replaced-outside-the-sandbox'
+                );
+            } finally {
+                if (original === undefined) {
+                    delete process.env.BKPER_MANAGED_SANDBOX;
+                } else {
+                    process.env.BKPER_MANAGED_SANDBOX = original;
+                }
+            }
+        });
+
         it('should return JSON response format', async function () {
             const { createAuthMiddleware } = await import('../../../src/dev/auth-middleware.js');
 

@@ -157,6 +157,123 @@ describe('local-outbound', function () {
         expect(forwardedRequests).to.deep.equal([]);
     });
 
+    it('keeps the public Bkper API host outside the managed sandbox', async function () {
+        const forwardedRequests: Request[] = [];
+        const service = createLocalOutboundService({
+            appId: 'my-app',
+            managedSandbox: false,
+            bkperApiUrl: 'https://api-dev.bkper.app',
+            getAccessToken: async () => 'local-token',
+            forwardFetch: async request => {
+                forwardedRequests.push(request);
+                return new Response('ok');
+            },
+        });
+
+        await service(new Request('https://api.bkper.app/v5/books'));
+
+        expect(forwardedRequests[0].url).to.equal('https://api.bkper.app/v5/books');
+        expect(forwardedRequests[0].headers.get('Authorization')).to.equal('Bearer local-token');
+    });
+
+    describe('in the managed sandbox', function () {
+        function createManagedService(bkperApiUrl?: string) {
+            const forwardedRequests: Request[] = [];
+            let tokenReads = 0;
+            const service = createLocalOutboundService({
+                appId: 'my-app',
+                managedSandbox: true,
+                bkperApiUrl,
+                getAccessToken: async () => {
+                    tokenReads++;
+                    return 'local-token';
+                },
+                forwardFetch: async request => {
+                    forwardedRequests.push(request);
+                    return createJsonResponse(200, { ok: true });
+                },
+            });
+            return { service, forwardedRequests, tokenReads: () => tokenReads };
+        }
+
+        it('forwards Bkper API requests without credentials, keeping agent identity', async function () {
+            const { service, forwardedRequests, tokenReads } = createManagedService();
+
+            const response = await service(
+                new Request('https://api.bkper.app/v5/books?x=1', {
+                    method: 'POST',
+                    body: '{"a":1}',
+                    headers: {
+                        Authorization: 'Bearer app-token',
+                        'bkper-agent-id': 'spoofed-agent',
+                        Cookie: 'bkper_session=secret; app_cookie=1',
+                    },
+                })
+            );
+
+            expect(response.status).to.equal(200);
+            expect(tokenReads()).to.equal(0);
+            expect(forwardedRequests).to.have.length(1);
+            const forwarded = forwardedRequests[0];
+            expect(forwarded.url).to.equal('https://api.bkper.app/v5/books?x=1');
+            expect(forwarded.headers.get('Authorization')).to.be.null;
+            expect(forwarded.headers.get('bkper-agent-id')).to.equal('my-app');
+            expect(forwarded.headers.get('Cookie')).to.equal('app_cookie=1');
+            expect(forwarded.redirect).to.equal('manual');
+            expect(await forwarded.text()).to.equal('{"a":1}');
+        });
+
+        it('sends Bkper API requests to the host of BKPER_API_URL', async function () {
+            const { service, forwardedRequests } = createManagedService(
+                'https://api-dev.bkper.app'
+            );
+
+            await service(new Request('https://api.bkper.app/v5/books/b1/balances?query=x%20y'));
+            await service(new Request('https://ai.bkper.app/v1/models'));
+
+            expect(forwardedRequests.map(request => request.url)).to.deep.equal([
+                'https://api-dev.bkper.app/v5/books/b1/balances?query=x%20y',
+                'https://ai.bkper.app/v1/models',
+            ]);
+            expect(forwardedRequests[0].headers.get('Authorization')).to.be.null;
+        });
+
+        it('forwards Bkper AI requests without credentials, keeping the App as source', async function () {
+            const { service, forwardedRequests, tokenReads } = createManagedService();
+
+            await service(
+                new Request('https://ai.bkper.app/v1/responses', {
+                    headers: {
+                        Authorization: 'Bearer app-token',
+                        'bkper-ai-source': 'spoofed-source',
+                    },
+                })
+            );
+
+            expect(tokenReads()).to.equal(0);
+            expect(forwardedRequests[0].headers.get('Authorization')).to.be.null;
+            expect(forwardedRequests[0].headers.get('bkper-agent-id')).to.equal('my-app');
+            expect(forwardedRequests[0].headers.get('bkper-ai-source')).to.equal('my-app');
+        });
+
+        it('leaves other hosts untouched', async function () {
+            const { service, forwardedRequests } = createManagedService(
+                'https://api-dev.bkper.app'
+            );
+
+            await service(
+                new Request('https://evil.api.bkper.app/v5/books', {
+                    headers: { Authorization: 'Bearer caller-token' },
+                })
+            );
+
+            expect(forwardedRequests[0].url).to.equal('https://evil.api.bkper.app/v5/books');
+            expect(forwardedRequests[0].headers.get('Authorization')).to.equal(
+                'Bearer caller-token'
+            );
+        });
+    });
+
     it('does not inject tokens into non-HTTPS or non-exact API hosts', async function () {
         let tokenReads = 0;
         const forwardedRequests: Request[] = [];
