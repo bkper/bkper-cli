@@ -5,7 +5,7 @@ import {runGit, type GitRunner} from '../apps/git/run-git.js';
 import {createPlatformContextApi, type ContextScope, type PlatformContextApi} from './platform-context.js';
 
 /**
- * The user's agent context clone (docs/plans/agent-context.md in bkper-clients): AGENTS.md and `.agents/skills`, shared
+ * The user's agent context clone: AGENTS.md and `.agents/skills`, shared
  * with all of the user's agents. A push publishes; a pull brings what others published.
  */
 export const USER_CONTEXT_SCOPE: ContextScope = 'user';

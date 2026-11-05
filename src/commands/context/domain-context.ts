@@ -4,7 +4,7 @@ import {ContextForbiddenError, type ContextScope} from './platform-context.js';
 import {getContextRoot, syncContextClone, type PullOptions, type PullOutcome} from './user-context.js';
 
 /**
- * The person's company's agent context clone (docs/plans/agent-context.md in bkper-clients, section 9): the AGENTS.md and
+ * The person's company's agent context clone: the AGENTS.md and
  * `.agents/skills` of their verified domain, read by everyone in it; only the domain's admin publishes, with a push. Platform
  * takes the domain from Bkper for the signed-in person, so nothing here names it. Kept beside the user's, in
  * `~/.bkper/domain`.

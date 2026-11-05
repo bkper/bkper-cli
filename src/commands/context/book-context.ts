@@ -4,7 +4,7 @@ import {BOOK_ID, ContextForbiddenError, type ContextScope} from './platform-cont
 import {getContextRoot, syncContextClone, type PullOptions, type PullOutcome} from './user-context.js';
 
 /**
- * A Book's agent context clone (docs/plans/agent-context.md in bkper-clients, section 9): its AGENTS.md and
+ * A Book's agent context clone: its AGENTS.md and
  * `.agents/skills`, shared with everyone who can view the Book; editors publish with a push. Kept beside the user's, in
  * `~/.bkper/books/<bookId>`: the folder names the Book, so nothing else records which Book a clone is.
  */
