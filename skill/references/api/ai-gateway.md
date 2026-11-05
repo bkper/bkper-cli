@@ -367,6 +367,7 @@ Errors use an Open Responses-shaped envelope with stable Bkper error codes. `POS
 | Status | Meaning                                                                         | `error.code` examples                                             | Retry                               |
 | ------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
 | `400`  | Invalid request, unavailable model, unsupported capability, or context overflow | `invalid_request`, `context_length_exceeded`, `provider_rejected` | No. Fix the field in `error.param`. |
+| `400`  | The selected model's provider does not serve the caller's region                | `provider_region_unsupported`                                     | No. Choose a model from another provider. |
 | `401`  | Missing or invalid Bkper bearer token                                           | `unauthorized`                                                    | No. Get a new Bkper token.          |
 | `402`  | The authenticated subscription payment is overdue                               | `billing_overdue`                                                 | No                                  |
 | `403`  | The account is not entitled to use Bkper AI                                     | `entitlement_unavailable`                                         | No                                  |

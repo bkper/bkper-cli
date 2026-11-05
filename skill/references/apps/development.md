@@ -115,6 +115,33 @@ bkper app build
 4. Trigger events in Bkper and inspect handler responses in the activity stream.
 5. Run `npm run check` before considering the change complete.
 
+## Develop with Bkper Agent
+
+[Bkper Agent](https://bkper.com/docs/ai/bkper-agent/build-apps.md) can build and change your app in its cloud workspace, and show it live beside the conversation. There, `bkper app dev` runs without `bkper auth login`: the workspace adds the person's credentials to the app's calls to Bkper.
+
+To show live, an app needs:
+
+- **Bkper CLI 5.8.0 or later** in its lockfile.
+- **The template's current Vite config**, which accepts the live host the agent sets in `BKPER_LIVE_HOST`:
+
+```ts
+// client/vite.config.ts
+export default defineConfig(() => {
+    const liveHost = process.env.BKPER_LIVE_HOST;
+    return {
+        // ...
+        server: {
+            // ...
+            ...(liveHost
+                ? { allowedHosts: [liveHost] }
+                : { hmr: { host: 'localhost', port: 5173, clientPort: 5173 } }),
+        },
+    };
+});
+```
+
+The events tunnel does not run in the agent's workspace, and only the person's browser reaches the live app. Test event handlers and integrations on a preview with `bkper app deploy --preview`.
+
 ## Debugging
 
 - **Server errors** — Check the terminal output from `bkper app dev`. Worker runtime errors appear here.

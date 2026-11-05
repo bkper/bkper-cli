@@ -107,6 +107,28 @@ the totals you checked.
 - A fork keeps its parent's instructions unless the create request sets new ones. Continuing someone else's session never takes theirs.
 - Sessions keep the text they were given. Updating your client changes only the sessions it creates or patches.
 
+### Agent context
+
+After your `instructions`, the agent reads its context: an `AGENTS.md` and skills (`.agents/skills/<name>/SKILL.md`) that people, the agent, or any other agent following the [AGENTS.md](https://agents.md/) and [Agent Skills](https://agentskills.io/specification) standards keep in a context repository per scope. A session loads the user's company's (their verified domain's, when they have one: shared by everyone in the domain, changed only by its admin), then the user's own, then its Book's (from its first input's `bookContext`, shared by everyone who can view the Book). Each is more specific than the one before and wins: a Book's skills replace the user's of the same name, and the user's the company's. It loads when the session starts and again at the start of each turn (an input that is not a steer or follow-up: a run never changes its context midway), each scope from the sandbox's working copy when the sandbox is running and the user or agent changed it there (local changes win, as on a local machine), else as published: the session's `contextScopes` show what loaded. When it changed, the agent is told so with that input. A fork starts with what its parent loaded.
+It loads as the person in every workspace, an App's included (such as a Slack bot's): permissions are the person's. Context of other Books never loads; the agent clones one only when asked.
+
+- Loading never delays a session by more than about two seconds: at the start, a scope that is slow or fails is skipped and shown as `unavailable`, never as an error in the conversation; at a turn, the session keeps all of what it had.
+- Context guides; it never grants anything. The user's messages override it, and it cannot relax Bkper's base.
+
+### Workspace
+
+The Workspace is the agent's computer as people see it: the working copies in the sandbox of the workspace you call through (the user's own, or your app's own for that user), the same files the agent sees, which both the user and the agent change. Nothing in them reaches anyone else, or any agent's context, until the user saves: Save publishes. Readers of shared sessions never reach someone else's.
+
+Repositories are named as one tree: `user` (the user's own context), `domain` (their company's, when they have a verified domain) and `books/{bookId}` (a Book's), the folders the sandbox and a local machine keep in `~/.bkper`, and `apps/{appId}` (the source of an App the user develops, in `/workspace/apps`). `GET /v1/workspace?bookId=` lists the root, as published: the user's domain, when they have one, the Book, named by Bkper, when the user can view it, and every App the user develops, those hosted elsewhere with their `repoUrl` instead of a repository. `GET /v1/workspace/status` reads every working copy in one call: its `fingerprint` (Git's tree id of its files, which changes whenever they do), its `base` (the published commit it builds on) and its marks (the files `added`, `modified` and `deleted` since the base, committed or not), plus the App folders in the sandbox, also those Bkper does not know yet. Opening a repository the sandbox does not have clones it there.
+
+- **Read**: a repository's files and marks (`canEdit` says whether the user may change and save it), one file's text and blob id (`version=base` for the base's), one PNG or JPEG picture's bytes (`/image`, at most 5 MiB, typed by its bytes).
+- **Change the working copy**: write a file over the version read (`previous`, the `sha` read: what changed since, such as by the agent, is 409 `file_changed`), move (rename) or delete a file or folder, add files from the user's computer (`/add`: 1 to 100 files at their full paths, each base64 of its exact bytes, a PNG or JPEG up to 5 MiB or text up to 256 KiB, at most 10 MiB together), undo a published commit (`/revert`), and discard changes (`/discard`: back to the base; a file never published goes). `POST /v1/workspace/copy` copies or moves a file or folder between two context repositories' working copies, such as into a Book from `GET /v1/workspace/books` (the Books whose context the user may change). A destination that exists is 409 `file_exists` (never overwritten; an add's lists every such file in `paths` at once, replaced only when it says `replace`), what cannot be written (a path, not text, too large) is 422 `file_invalid` with a `reason`; context may hold drafts agents would not load yet (the listing's `warnings` say so, and Save refuses them), and while Git works in the repository (the agent's, or a sync) 409 `workspace_busy`: nothing changed, try again.
+- **Review and save**: `/changes` shows everything Save would publish, each file before and after, with the working copy's `fingerprint`; `POST …/save` with that `fingerprint` publishes exactly what was reviewed: the agent's commits as they are (their messages and trailers in History), plus one commit of the rest, authored and committed by the user with an automatic message, never forced and never deployed. Changed since the review is 409 `review_stale`; someone published changes to the same lines meanwhile is 409 `publish_conflict`, naming the files (`paths`) and who published them (`publishers`), with nothing published and the working copy as before; an App Bkper does not know yet is 409 `app_unregistered` until the agent registers it.
+- **App secrets**: the secrets of an App's deployments on Bkper, production and preview, as `bkper app secrets` sets them, without the value ever reaching the agent or a conversation. `GET /v1/workspace/apps/{appId}/secrets` lists each deployment's names, or that the App is not deployed there yet; `PUT …/secrets/{name}?env=` with `{ "value" }` sets one (a name set again is replaced) and `DELETE` removes one, for the App's owner and developers (403 `workspace_forbidden`), only where it is deployed (409 `not_deployed`). Values are write-only. Only with the user's own token: through an app or channel bot these routes are 404.
+- **History**, as published: the latest 20 commits with the files each changed and whether each was made with the agent's help (`agent`: its message ends with the trailer `Assisted-by: Bkper Agent`; the user stays its author and committer), and what one of them changed (`/commit`, each file before and after).
+
+When the user changes the working copy, the agent is told which files with its next message. Context changed there applies to the user's sessions from their next turn while the sandbox runs; Save publishes it to everyone in its scope.
+
 ## Who the agent acts as
 
 Every request acts as the user whose token you send. That user's Book permissions and Bkper AI allowance apply.
@@ -323,6 +345,8 @@ Before the agent reads the input, each file is copied into its workspace, at `/w
 
 When the agent publishes a file, a `tool_result` entry carries a `file` part with `fileId`, `name`, `mediaType`, and `size`. List a session's published files with `GET /v1/sessions/{sessionId}/files`.
 
+In the user's own workspace, when the agent shows an App it is building running live (`show_app`), the `tool_result` entry carries a `live_app` part with the App's `appId`, `name`, and `menuUrl`, when it has one.
+
 ### Download, retention, and quotas
 
 - `GET /v1/files/{fileId}` returns the `File`; `GET /v1/files/{fileId}/content` its bytes, always as an attachment. The `Content-Type` is the allowlisted type for the name, never an upload's declared type; anything else is `application/octet-stream`.
@@ -455,6 +479,7 @@ A domain's admin can connect a service for everyone in the domain, with the same
 | `attributes` | 16 names, 16000 characters in total |
 | List page | 50 sessions, entries, or files |
 | Connected services | 20 per user and 20 per domain, 10 hosts each, tokens and keys up to 8192 characters, 20 Google scopes |
+| App secret value | 5 KiB |
 
 ## Errors
 
@@ -465,10 +490,10 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | 400 | `invalid_request`, `unknown_model`, `unknown_thinking_level` | A field is invalid or unknown |
 | 400 | `host_not_allowed` | A connected service names a host that has its own route, such as Bkper's or Google's token endpoint |
 | 401 | `unauthorized`, `authentication_failed` | The token is missing, invalid, or expired |
-| 403 | `agent_beta_required` | The account cannot use the agent, such as one without an email address |
 | 403 | `origin_forbidden` | A browser on another website sent a write |
 | 403 | `book_access_required` | The user cannot view the Book whose shared sessions they asked for |
 | 403 | `domain_admin_required` | Only the domain's admin changes its services |
+| 403 | `workspace_forbidden` | The user may not change or save this Workspace repository, or change this App's secrets |
 | 404 | `not_found`, `parent_not_found`, `file_not_found` | No such resource for this user |
 | 405 | `method_not_allowed` | The path does not support the method |
 | 409 | `idempotency_conflict` | The key was used with different content |
@@ -478,9 +503,14 @@ Errors are `{ "error": { "code", "type", "message" } }`. Branch on `code`.
 | 409 | `share_unavailable` | The session cannot be shared: an app's workspace, or outside a Book without a hosted domain |
 | 409 | `book_access_required` | The user cannot view the Book the session was started in |
 | 409 | `host_in_use`, `service_limit` | Another service holds the host, or the user (or domain) has 20 services |
+| 409 | `file_changed`, `file_exists` | A Workspace file changed since it was read, or a destination exists |
+| 409 | `workspace_busy` | Git is working in the Workspace repository; nothing changed, try again |
+| 409 | `not_deployed` | The App is not deployed to that environment: nothing to set there yet |
+| 409 | `review_stale`, `publish_conflict`, `app_unregistered` | Save: the files changed since the review, someone published changes to the same lines, or the App is not known to Bkper yet |
 | 410 | `file_gone` | The file's stored copy was deleted |
 | 411 | `length_required` | An upload has no `Content-Length` |
 | 413 | `request_too_large`, `file_too_large` | The JSON body exceeds 64 KiB, or the upload 25 MiB |
+| 422 | `file_invalid` | A Workspace change cannot be written or saved; `reason` says why |
 | 503 | `service_unavailable`, `authentication_failed` | A dependency is unavailable; retry with backoff |
 
 Model failures appear on the failed input and reply as `error.code`, such as `usage_limit_exceeded` when the monthly Bkper AI allowance is used up.
@@ -542,6 +572,68 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 - [`GET /v1/domain/services` — List domain services](https://bkper.com/docs/api/managed-agent/operations/listdomainservices.md)
 - [`PUT /v1/domain/services/{serviceId}` — Connect or replace a domain service](https://bkper.com/docs/api/managed-agent/operations/putdomainservice.md)
 - [`DELETE /v1/domain/services/{serviceId}` — Disconnect a domain service](https://bkper.com/docs/api/managed-agent/operations/deletedomainservice.md)
+
+### Workspace
+
+- [`GET /v1/workspace` — Get the Workspace](https://bkper.com/docs/api/managed-agent/operations/getworkspace.md)
+- [`GET /v1/workspace/status` — Get the working copies' status](https://bkper.com/docs/api/managed-agent/operations/getworkspacestatus.md)
+- [`GET /v1/workspace/books` — List Books to copy to](https://bkper.com/docs/api/managed-agent/operations/listworkspacebooks.md)
+- [`POST /v1/workspace/copy` — Copy or move to another repository](https://bkper.com/docs/api/managed-agent/operations/copyworkspaceentry.md)
+- [`GET /v1/workspace/user` — Get a repository](https://bkper.com/docs/api/managed-agent/operations/getusercontext.md)
+- [`GET /v1/workspace/user/file` — Read a file](https://bkper.com/docs/api/managed-agent/operations/getusercontextfile.md)
+- [`PUT /v1/workspace/user/file` — Write a file](https://bkper.com/docs/api/managed-agent/operations/putusercontextfile.md)
+- [`GET /v1/workspace/user/image` — Read a picture](https://bkper.com/docs/api/managed-agent/operations/getusercontextimage.md)
+- [`GET /v1/workspace/user/history` — List history](https://bkper.com/docs/api/managed-agent/operations/listusercontexthistory.md)
+- [`GET /v1/workspace/user/commit` — Get a commit's changes](https://bkper.com/docs/api/managed-agent/operations/getusercontextcommit.md)
+- [`POST /v1/workspace/user/revert` — Undo a commit](https://bkper.com/docs/api/managed-agent/operations/revertusercontext.md)
+- [`POST /v1/workspace/user/move` — Move or rename a file or folder](https://bkper.com/docs/api/managed-agent/operations/moveusercontextentry.md)
+- [`POST /v1/workspace/user/delete` — Delete a file or folder](https://bkper.com/docs/api/managed-agent/operations/deleteusercontextentry.md)
+- [`POST /v1/workspace/user/add` — Add files](https://bkper.com/docs/api/managed-agent/operations/addusercontextfiles.md)
+- [`POST /v1/workspace/user/discard` — Discard changes](https://bkper.com/docs/api/managed-agent/operations/discardusercontext.md)
+- [`GET /v1/workspace/user/changes` — Review the changes](https://bkper.com/docs/api/managed-agent/operations/getusercontextchanges.md)
+- [`POST /v1/workspace/user/save` — Save](https://bkper.com/docs/api/managed-agent/operations/saveusercontext.md)
+- [`GET /v1/workspace/domain` — Get a repository](https://bkper.com/docs/api/managed-agent/operations/getdomaincontext.md)
+- [`GET /v1/workspace/domain/file` — Read a file](https://bkper.com/docs/api/managed-agent/operations/getdomaincontextfile.md)
+- [`PUT /v1/workspace/domain/file` — Write a file](https://bkper.com/docs/api/managed-agent/operations/putdomaincontextfile.md)
+- [`GET /v1/workspace/domain/image` — Read a picture](https://bkper.com/docs/api/managed-agent/operations/getdomaincontextimage.md)
+- [`GET /v1/workspace/domain/history` — List history](https://bkper.com/docs/api/managed-agent/operations/listdomaincontexthistory.md)
+- [`GET /v1/workspace/domain/commit` — Get a commit's changes](https://bkper.com/docs/api/managed-agent/operations/getdomaincontextcommit.md)
+- [`POST /v1/workspace/domain/revert` — Undo a commit](https://bkper.com/docs/api/managed-agent/operations/revertdomaincontext.md)
+- [`POST /v1/workspace/domain/move` — Move or rename a file or folder](https://bkper.com/docs/api/managed-agent/operations/movedomaincontextentry.md)
+- [`POST /v1/workspace/domain/delete` — Delete a file or folder](https://bkper.com/docs/api/managed-agent/operations/deletedomaincontextentry.md)
+- [`POST /v1/workspace/domain/add` — Add files](https://bkper.com/docs/api/managed-agent/operations/adddomaincontextfiles.md)
+- [`POST /v1/workspace/domain/discard` — Discard changes](https://bkper.com/docs/api/managed-agent/operations/discarddomaincontext.md)
+- [`GET /v1/workspace/domain/changes` — Review the changes](https://bkper.com/docs/api/managed-agent/operations/getdomaincontextchanges.md)
+- [`POST /v1/workspace/domain/save` — Save](https://bkper.com/docs/api/managed-agent/operations/savedomaincontext.md)
+- [`GET /v1/workspace/books/{bookId}` — Get a repository](https://bkper.com/docs/api/managed-agent/operations/getbookcontext.md)
+- [`GET /v1/workspace/books/{bookId}/file` — Read a file](https://bkper.com/docs/api/managed-agent/operations/getbookcontextfile.md)
+- [`PUT /v1/workspace/books/{bookId}/file` — Write a file](https://bkper.com/docs/api/managed-agent/operations/putbookcontextfile.md)
+- [`GET /v1/workspace/books/{bookId}/image` — Read a picture](https://bkper.com/docs/api/managed-agent/operations/getbookcontextimage.md)
+- [`GET /v1/workspace/books/{bookId}/history` — List history](https://bkper.com/docs/api/managed-agent/operations/listbookcontexthistory.md)
+- [`GET /v1/workspace/books/{bookId}/commit` — Get a commit's changes](https://bkper.com/docs/api/managed-agent/operations/getbookcontextcommit.md)
+- [`POST /v1/workspace/books/{bookId}/revert` — Undo a commit](https://bkper.com/docs/api/managed-agent/operations/revertbookcontext.md)
+- [`POST /v1/workspace/books/{bookId}/move` — Move or rename a file or folder](https://bkper.com/docs/api/managed-agent/operations/movebookcontextentry.md)
+- [`POST /v1/workspace/books/{bookId}/delete` — Delete a file or folder](https://bkper.com/docs/api/managed-agent/operations/deletebookcontextentry.md)
+- [`POST /v1/workspace/books/{bookId}/add` — Add files](https://bkper.com/docs/api/managed-agent/operations/addbookcontextfiles.md)
+- [`POST /v1/workspace/books/{bookId}/discard` — Discard changes](https://bkper.com/docs/api/managed-agent/operations/discardbookcontext.md)
+- [`GET /v1/workspace/books/{bookId}/changes` — Review the changes](https://bkper.com/docs/api/managed-agent/operations/getbookcontextchanges.md)
+- [`POST /v1/workspace/books/{bookId}/save` — Save](https://bkper.com/docs/api/managed-agent/operations/savebookcontext.md)
+- [`GET /v1/workspace/apps/{appId}` — Get a repository](https://bkper.com/docs/api/managed-agent/operations/getappsource.md)
+- [`GET /v1/workspace/apps/{appId}/file` — Read a file](https://bkper.com/docs/api/managed-agent/operations/getappsourcefile.md)
+- [`PUT /v1/workspace/apps/{appId}/file` — Write a file](https://bkper.com/docs/api/managed-agent/operations/putappsourcefile.md)
+- [`GET /v1/workspace/apps/{appId}/image` — Read a picture](https://bkper.com/docs/api/managed-agent/operations/getappsourceimage.md)
+- [`GET /v1/workspace/apps/{appId}/history` — List history](https://bkper.com/docs/api/managed-agent/operations/listappsourcehistory.md)
+- [`GET /v1/workspace/apps/{appId}/commit` — Get a commit's changes](https://bkper.com/docs/api/managed-agent/operations/getappsourcecommit.md)
+- [`POST /v1/workspace/apps/{appId}/revert` — Undo a commit](https://bkper.com/docs/api/managed-agent/operations/revertappsource.md)
+- [`POST /v1/workspace/apps/{appId}/move` — Move or rename a file or folder](https://bkper.com/docs/api/managed-agent/operations/moveappsourceentry.md)
+- [`POST /v1/workspace/apps/{appId}/delete` — Delete a file or folder](https://bkper.com/docs/api/managed-agent/operations/deleteappsourceentry.md)
+- [`POST /v1/workspace/apps/{appId}/add` — Add files](https://bkper.com/docs/api/managed-agent/operations/addappsourcefiles.md)
+- [`POST /v1/workspace/apps/{appId}/discard` — Discard changes](https://bkper.com/docs/api/managed-agent/operations/discardappsource.md)
+- [`GET /v1/workspace/apps/{appId}/changes` — Review the changes](https://bkper.com/docs/api/managed-agent/operations/getappsourcechanges.md)
+- [`POST /v1/workspace/apps/{appId}/save` — Save](https://bkper.com/docs/api/managed-agent/operations/saveappsource.md)
+- [`GET /v1/workspace/apps/{appId}/secrets` — List an App's secrets](https://bkper.com/docs/api/managed-agent/operations/listappsecrets.md)
+- [`PUT /v1/workspace/apps/{appId}/secrets/{name}` — Set an App's secret](https://bkper.com/docs/api/managed-agent/operations/putappsecret.md)
+- [`DELETE /v1/workspace/apps/{appId}/secrets/{name}` — Delete an App's secret](https://bkper.com/docs/api/managed-agent/operations/deleteappsecret.md)
 
 ### Models
 

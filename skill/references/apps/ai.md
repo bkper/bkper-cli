@@ -98,7 +98,7 @@ Keep schemas simple. Constraints such as a string's minimum or maximum length ma
 
 ## Run an agent
 
-For a chat that does real work on Books, start a session on the [Managed Agent API](https://bkper.com/docs/api/managed-agent.md) from the app's server. Bkper runs the agent in the user's private cloud workspace, with the `bkper` CLI, files, and durable sessions. Your app keeps its screens, prompts, and instructions. The Managed Agent is in beta.
+For a chat that does real work on Books, start a session on the [Managed Agent API](https://bkper.com/docs/api/managed-agent.md) from the app's server. Bkper runs the agent in the user's private cloud workspace, with the `bkper` CLI, files, and durable sessions. Your app keeps its screens, prompts, and instructions.
 
 ```ts
 // No Authorization header: the platform adds the user's.
@@ -123,6 +123,7 @@ const session = await response.json();
 Then follow the session's stream, or poll the input until it completes, as in the [quick start](https://bkper.com/docs/api/managed-agent.md#quick-start).
 
 - **The user's agent.** Sessions belong to the user, so work started in your app continues in Bkper Agent or any other app.
+- **The user's procedures.** The agent follows the user's [agent context](https://bkper.com/docs/ai/agent-context.md): their company's, their own, and the session's Book's, loaded after your instructions.
 - **Your services as tools.** The agent can call your app's API as the user. Describe the routes in your instructions, and the agent can run your checks instead of redoing them.
 - **Real changes.** Unlike a model call, the agent can change Books with the user's permissions. Say in your instructions when it may.
 

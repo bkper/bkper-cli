@@ -129,7 +129,7 @@ Bkper maintains a continuous ledger with no concept of closing periods — the s
 
 ## Custom Properties
 
-**Custom Properties** are key-value pairs attachable to any entity — Books, Accounts, Groups, Transactions, Collections, and Files. They add context, metadata, and meaning beyond core financial data.
+**Custom Properties** are key-value pairs attachable to any entity — Books, Accounts, Groups, Transactions, and Files. They add context, metadata, and meaning beyond core financial data.
 
 By attaching properties like `invoice: inv123456` or `exc_code: BRL`, entities become rich with information that can drive automation and reporting — without changing the core model.
 
