@@ -17,6 +17,7 @@ export {
     getKeybindings,
     indexedColor,
     matchesKey,
+    ProcessTerminal,
     rgbColor,
     truncateToWidth,
     TuiAltScreen,

@@ -2,6 +2,7 @@ import {
     getAgentDir,
     InteractiveMode,
     type ExtensionAPI,
+    type InteractiveModeOptions,
 } from '@earendil-works/pi-coding-agent';
 import {installBkperAuthCommandRouting} from '../extensions/auth-commands.js';
 import {
@@ -17,6 +18,7 @@ import {
     installBkperSessionKeybindings,
     type BkperKeybindingsManager,
 } from './session-keybindings.js';
+import {BkperTerminal} from './terminal.js';
 
 export type InteractiveRuntimeHost = ConstructorParameters<typeof InteractiveMode>[0];
 
@@ -81,6 +83,13 @@ function installBkperStartupHeader(mode: object): void {
 }
 
 export class BkperInteractiveMode extends InteractiveMode {
+    constructor(runtimeHost: InteractiveRuntimeHost, options: InteractiveModeOptions = {}) {
+        super(runtimeHost, {
+            ...options,
+            terminal: options.terminal ?? new BkperTerminal(),
+        });
+    }
+
     async init(): Promise<void> {
         const interactiveMode = this as unknown as {
             getChangelogForDisplay: () => undefined;
