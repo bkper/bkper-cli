@@ -7,6 +7,7 @@ Model output is a suggestion, not permission to change a Book. Keep decisions ab
 ## Choose the kind of response
 
 - **A yes/no, a choice, or a level on a scale?** Ask a decision model, such as `jev`, with TypeSafe's SDK, `@typesafe-ai/sdk`.
+- **A value read from a document, such as an invoice total?** Ask an extraction model, such as `clairic`, with `fetch` to `POST /v1/systemone`. See [System One Models](https://bkper.com/docs/ai/system-one-models.md#extraction-models).
 - **Text or a custom JSON object?** Ask a language model (LLM), such as `gpt-luna`, with AI SDK's Open Responses provider, `@ai-sdk/open-responses`.
 - **A conversation that works on Books?** Reading and comparing Books, computing with scripts, delivering files, remembering earlier messages: [run an agent](#run-an-agent) with the Managed Agent API instead of calling a model.
 
@@ -65,7 +66,7 @@ export async function scoreRecurring(description: string) {
 - **`baseURL`** has no `/v1`. The SDK calls `POST /v1/systemone`, which behaves exactly like `POST /v1/decisions`.
 - **The answer is typed** from the question. Bkper AI validates every answer against its question before responding, so your code can use it directly.
 
-[Decision Models](https://bkper.com/docs/ai/decision-models.md) covers designing the questions, facts, and thresholds; the [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md#decision-models) covers the request, answers, errors, and caching. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
+[System One Models](https://bkper.com/docs/ai/system-one-models.md) covers designing the questions, facts, and thresholds; the [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md#decision-models) covers the request, answers, errors, and caching. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
 
 ## Generate a language response
 
@@ -184,7 +185,7 @@ Map these errors to your route's typed error response. Keep the code and message
 
 - **Passing your own `fetch`.** The TypeSafe SDK calls `fetch` as its own method, which the Workers runtime rejects with `Illegal invocation`. Wrap it: `fetch: (input, init) => myFetch(input, init)`. Without the option, the SDK's default works.
 - **No `null` values.** The TypeSafe SDK's types accept `null` for state, instructions, and some criteria. Bkper AI rejects them with `400`.
-- **No SDK image uploads.** The TypeSafe SDK uploads images as multipart, which Bkper AI rejects with `400`. Send image requests with `fetch` as JSON, with base64 `assets`. See [Decision Models](https://bkper.com/docs/ai/decision-models.md#jev-by-typesafe).
+- **No SDK image uploads.** The TypeSafe SDK uploads images as multipart, which Bkper AI rejects with `400`. Send image requests with `fetch` as JSON, with base64 `assets`. See [System One Models](https://bkper.com/docs/ai/system-one-models.md#jev-and-clef).
 - **No `client.models.list()`.** It expects TypeSafe's catalog shape. Use the [`GET /v1/models`](https://ai.bkper.app/v1/models) catalog.
 - **Other System One clients** take `https://ai.bkper.app/v1` as their base URL.
 - **Flexible JSON schemas.** Open Responses always requests `strict: true`. For a schema that needs `strict: false`, such as a typed dynamic map, use `@ai-sdk/openai` with base URL `https://ai.bkper.app/v1`, its `.responses()` model, and `strictJsonSchema: false`.
@@ -197,7 +198,7 @@ Map these errors to your route's typed error response. Keep the code and message
 
 ## Next steps
 
-- [Decision Models](https://bkper.com/docs/ai/decision-models.md): questions, answers, thresholds, and caching.
+- [System One Models](https://bkper.com/docs/ai/system-one-models.md): decision and extraction questions, answers, and thresholds.
 - [Models and Usage](https://bkper.com/docs/ai/models.md): models, usage rates, the allowance, and privacy.
 - [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md): tokens, raw HTTP requests, capabilities, and errors.
 - [Managed Agent API](https://bkper.com/docs/api/managed-agent.md): sessions, instructions, files, and streams.

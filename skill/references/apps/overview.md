@@ -21,7 +21,7 @@ The same Worker can expose app-defined `/api/*` routes. Treat those routes as th
 Apps call Bkper AI models through the AI gateway, with no provider accounts or keys:
 
 - **Language models** — multi-provider models over the Open Responses protocol, for text and structured output.
-- **Decision models** — typed answers with calibrated confidence: yes or no, one of your options, or a level on a scale.
+- **System One models** — typed answers with calibrated confidence: decisions, such as yes or no, one of your options, or a level on a scale, and values read from documents, such as an invoice total.
 
 Usage counts against the user's included Bkper AI allowance. An authenticated app API route or event establishes the user and app identity, and the platform adds authorization and usage attribution to the Worker's requests. For inference used only by the UI, the client can also call Bkper AI directly with the signed-in user's token.
 

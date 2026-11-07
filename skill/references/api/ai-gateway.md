@@ -2,7 +2,7 @@
 
 > Call Bkper AI models from your own client or code — the guide, with a page for each operation: models, responses, streaming, and decisions.
 
-The Bkper AI Gateway serves the models behind Bkper's agents and apps to your own clients and code: typed answers from decision models and the stateless Bkper [Open Responses 2026-04-24](https://www.openresponses.org/specification/2026-04-24) profile for language models.
+The Bkper AI Gateway serves the models behind Bkper's agents and apps to your own clients and code: typed answers from System One decision and extraction models and the stateless Bkper [Open Responses 2026-04-24](https://www.openresponses.org/specification/2026-04-24) profile for language models.
 
 [Models and Usage](https://bkper.com/docs/ai/models) covers the models, usage rates, the monthly allowance, and privacy. To run an agent that works on Books instead of calling a model, use the [Managed Agent API](https://bkper.com/docs/api/managed-agent). Building a Bkper app? Start with [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai). The canonical machine-readable contract is [https://ai.bkper.app/openapi.json](https://ai.bkper.app/openapi.json).
 
@@ -10,9 +10,9 @@ The Bkper AI Gateway serves the models behind Bkper's agents and apps to your ow
 
 1. Call `GET /v1/models` to discover the current public model IDs, types, capabilities, limits, and usage rates.
 2. Select a returned model ID.
-3. Call `POST /v1/responses` for language models or `POST /v1/decisions` for decision models.
+3. Call `POST /v1/responses` for language models or `POST /v1/systemone` for System One models.
 
-Responses support complete JSON with `stream: false` or semantic server-sent events with `stream: true`. Decision models return complete JSON and do not stream.
+Responses support complete JSON with `stream: false` or semantic server-sent events with `stream: true`. System One models return complete JSON and do not stream.
 
 ## Requirements
 
@@ -20,7 +20,7 @@ You need:
 
 - a Bkper account with an eligible subscription or trial allowance;
 - a valid Bkper OAuth access token;
-- an Open Responses client with a custom base URL for language generation, or an HTTP client or TypeSafe SDK for decision models.
+- an Open Responses client with a custom base URL for language generation, or an HTTP client or TypeSafe SDK for System One models.
 
 Requests are attributed to the authenticated Bkper user. Business subscriptions use a shared domain allowance. See [Models and Usage](https://bkper.com/docs/ai/models#monthly-allowance) for allowance scope, current rates, and model capabilities.
 
@@ -32,7 +32,7 @@ Requests are attributed to the authenticated Bkper user. Business subscriptions 
 | Authentication         | `Authorization: Bearer <Bkper access token>` |
 | Model discovery        | `GET /v1/models`                             |
 | Language generation    | `POST /v1/responses`                         |
-| Decision models        | `POST /v1/decisions`                         |
+| System One models      | `POST /v1/systemone`                         |
 | Open Responses profile | `2026-04-24` for language generation only    |
 
 The live `GET /v1/models` response is authoritative for available IDs, model types, capabilities, limits, and effective usage rates. The catalog publishes `default_model` as the default language model. Inspect each entry's `type` before choosing its endpoint.
@@ -45,7 +45,7 @@ Bkper AI implements a documented subset of Open Responses. It does not claim ful
 
 Use the model IDs returned by `GET /v1/models`, such as `gpt-luna`, `grok`, `gemini-flash`, and `jev`.
 
-Language model entries have `type: "language"` and use `POST /v1/responses`. Decision model entries have `type: "decision"` and use `POST /v1/decisions`. Sending a model to the wrong endpoint fails explicitly.
+Language model entries have `type: "language"` and use `POST /v1/responses`. System One model entries, decision and extraction models, have `type: "system-one"`, list the question types they answer in `question_types`, and use `POST /v1/systemone`. Entries with `preview: true` are provider previews whose answers, limits, and availability may change without notice. Sending a model to the wrong endpoint fails explicitly.
 
 Model IDs remain stable as Bkper updates the model behind them. Older versioned and publisher-prefixed IDs still work, but they select the current model, not the older version. Catalogs, responses, and usage reports use the current ID.
 
@@ -62,7 +62,7 @@ Treat the token as a secret. Do not commit it, print it in shared logs, or put i
 
 ## Call from a browser
 
-Web pages on any origin can call `POST /v1/responses`, `POST /v1/decisions`, and `GET /v1/models` directly. Bkper AI authenticates only the bearer token and uses no cookies, so browser requests carry no credentials.
+Web pages on any origin can call `POST /v1/responses`, `POST /v1/systemone`, and `GET /v1/models` directly. Bkper AI authenticates only the bearer token and uses no cookies, so browser requests carry no credentials.
 
 - **Use the signed-in user's token at runtime.** On `*.bkper.app` pages, `@bkper/web-auth` supplies it. On other domains, use your own Bkper OAuth flow. Never ship a fixed token in a page.
 - **Usage counts against the signed-in user's allowance.** Label it with a `bkper-ai-source` header, such as `my-page`.
@@ -75,7 +75,7 @@ import { BkperAuth } from '@bkper/web-auth';
 const auth = new BkperAuth();
 await auth.init();
 
-const response = await auth.authenticatedFetch('https://ai.bkper.app/v1/decisions', {
+const response = await auth.authenticatedFetch('https://ai.bkper.app/v1/systemone', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'bkper-ai-source': 'my-page' },
     body: JSON.stringify({
@@ -110,12 +110,12 @@ The `bkper-ai-source` header is optional. Set it to a stable lowercase identifie
 
 ## Decision models
 
-`POST /v1/decisions` answers typed questions about a shared state instead of generating text. Each question returns a noul probability, one choice from options you define, or a level on an ordered score, and your code decides what to do with it. Designing the questions, thresholds, and human review is covered in the [Decision Models guide](https://bkper.com/docs/ai/decision-models).
+`POST /v1/systemone` answers typed questions about a shared state instead of generating text. Each question returns a noul probability, one choice from options you define, or a level on an ordered score, and your code decides what to do with it. Designing the questions, thresholds, and human review is covered in the [Decision Models guide](https://bkper.com/docs/ai/decision-models). `POST /v1/decisions` is a deprecated alias with identical behavior.
 
 For an incoming bank line, this request asks three questions at once: which Account it belongs to, whether it is already recorded, and how urgently it needs review.
 
 ```bash
-curl --fail-with-body https://ai.bkper.app/v1/decisions \
+curl --fail-with-body https://ai.bkper.app/v1/systemone \
   -H "Authorization: Bearer ${BKPER_TOKEN}" \
   -H "Content-Type: application/json" \
   -H "bkper-ai-source: my-app" \
@@ -167,14 +167,15 @@ curl --fail-with-body https://ai.bkper.app/v1/decisions \
 
 ### Decision request
 
-- **`model`** is any model with `type: "decision"` in `GET /v1/models`, such as `jev`. Each entry lists its `question_types`, `context_window`, and `max_state_question_tokens`.
+- **`model`** is any model with `type: "system-one"` in `GET /v1/models`, such as `jev` or `clef`. Each entry lists its `question_types`, `context_window`, and `max_state_question_tokens`; a question whose type is not in the model's `question_types` returns `unsupported_question_type`.
 - **`state`** is what every question judges: a string, JSON object, or array. Prefer an object with descriptive field names. Decision models read text only, so convert images and files to text first.
 - **`questions`** is a nonempty map. Question IDs such as `account` are yours, and answers come back under the same IDs, but **IDs are not sent to the model**, so each `instructions` must stand on its own. Refer to state fields by name in backticks, as in `` `bank_line` ``.
 - Each question accepts only `type`, `instructions`, and `criteria`. Instructions, descriptions, and levels can be strings or [structured JSON](https://docs.typesafe.ai/primitives/advanced):
   - **`noul`**: optional `criteria` describe what yes and no mean.
   - **`choice`**: `criteria` maps 1–255 options to descriptions, which may be `null`.
   - **`score`**: `criteria` lists 2–10 levels, lowest first.
-- The body accepts only `model`, `state`, and `questions`. Responses fields such as `input`, `stream`, `store`, `temperature`, and `metadata` are rejected.
+- The body accepts only `model`, `state`, and `questions`, plus image `assets` on models with image input. Decision models reject `reference_date` with `unsupported_parameter`. Responses fields such as `input`, `stream`, `store`, `temperature`, and `metadata` are rejected.
+- **`clef`** answers at most 64 questions, named with up to 100 letters, digits, `_`, `.`, or `-`, and needs at least 2 choice options. It reads up to 4 image `assets` (4 MiB each, 8 MiB in total) before the state, in `assets` order. Requests beyond these limits return `unsupported_parameter`; input over its 65,536-token context returns `provider_rejected`.
 
 The model evaluates each question independently and in parallel against the same state.
 
@@ -248,22 +249,93 @@ Decision errors use the shared [error envelope](#errors). Validation failures na
 }
 ```
 
-Besides `invalid_request`, decision validation returns `400` with `missing_model`, `unsupported_model`, `invalid_state`, `invalid_questions`, `invalid_question`, or `unsupported_question_type`. Fix the field named in `error.param`; do not retry unchanged. A `400` with `provider_rejected` means the model rejected the request: check its size against the model's limits.
+Besides `invalid_request`, decision validation returns `400` with `missing_model`, `unsupported_model`, `invalid_state`, `invalid_questions`, `invalid_question`, `unsupported_question_type`, or `unsupported_parameter`. The last two follow [Open System One](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#errors): `unsupported_question_type` for a question type the selected model does not answer, and `unsupported_parameter` for a field the specification defines that the model cannot honor, such as `reference_date`. Fix the field named in `error.param`; do not retry unchanged. A `400` with `provider_rejected` means the model rejected the request: check its size against the model's limits. A `502` with `provider_invalid_answer` means the model's answers broke an [Open System One answer guarantee](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#answer-guarantees); `error.message` names the question and the rule, and no answers are returned.
 
 ### Decision caching
 
-Bkper caches decision results for 15 minutes per user. An identical request in that window returns the same answers without calling the model or consuming allowance, and repeats the original `usage`. Aliases of the same model share one cache entry. To get fresh answers, change the request or wait. See [Privacy, retention, and caching](https://bkper.com/docs/ai/models#privacy-retention-and-caching).
+Bkper caches System One results, decision and extraction, for 15 minutes per user. An identical request in that window returns the same answers without calling the model or consuming allowance, and repeats the original `usage`. Aliases of the same model share one cache entry. To get fresh answers, change the request or wait. See [Privacy, retention, and caching](https://bkper.com/docs/ai/models#privacy-retention-and-caching).
 
 ### TypeSafe compatibility
 
 Decision models come from TypeSafe's [System One](https://docs.typesafe.ai/concepts/system-one), and request and answer shapes match TypeSafe's [`POST /v1/systemone`](https://docs.typesafe.ai/api). TypeSafe's guidance on questions, state, confidence, and patterns applies unchanged. Only the surroundings differ:
 
-- **Endpoint and authentication.** Call `https://ai.bkper.app/v1/decisions` with a Bkper access token. TypeSafe API keys do not work here.
+- **Endpoint and authentication.** Call `https://ai.bkper.app/v1/systemone` with a Bkper access token. TypeSafe API keys do not work here.
 - **SDKs.** TypeSafe SDKs work with base URL `https://ai.bkper.app`, without `/v1`, and a Bkper access token. See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai#ask-a-decision-model).
 - **Errors.** Bkper returns `400` where TypeSafe returns `422`, and `503` with `provider_overloaded` where TypeSafe returns `529`. A `429` can also mean the Bkper AI allowance is exhausted.
 - **Usage.** Requests count against the Bkper AI allowance, not a TypeSafe account.
-- **Images.** Send images as base64 `assets` in a JSON request, as in TypeSafe's [Images](https://docs.typesafe.ai/images) guide. TypeSafe SDKs upload images as multipart, which Bkper does not accept, so send image requests over HTTP. Bkper turns on TypeSafe's experimental image input for you. Box questions are not supported. Image tokens count as input tokens.
+- **Images.** Send images as base64 `assets` in a JSON request, as in TypeSafe's [Images](https://docs.typesafe.ai/images) guide. TypeSafe SDKs upload images as multipart, which Bkper does not accept, so send image requests over HTTP. Bkper turns on TypeSafe's experimental image input for you. Jev reads `png`, `jpg`, and `jpeg` images; `webp`, which `clef` and `clairic` read, returns `unsupported_parameter`. Box questions are not supported. Image tokens count as input tokens.
 - **Coding agents.** TypeSafe's [agent skill](https://docs.typesafe.ai/agent-skill) teaches questions and patterns. For a Bkper integration, also point the agent to this guide, `https://bkper.com/docs/api/ai-gateway.md`, for the endpoint, authentication, model IDs, and errors.
+
+## Extraction models
+
+Extraction models answer `POST /v1/systemone` questions with values read, computed, estimated, or forecast from the state instead of decisions: `text`, `number`, `date`, `time`, `datetime`, `duration`, `list`, `estimate`, and `forecast`. `clairic` is a Cloudflare preview (`preview: true` in `GET /v1/models`). Question and answer shapes follow [Open System One](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#question-types).
+
+This request reads a supplier email: it copies the invoice number, computes the due date, and estimates when the invoice will be paid.
+
+```bash
+curl --fail-with-body https://ai.bkper.app/v1/systemone \
+  -H "Authorization: Bearer ${BKPER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "bkper-ai-source: my-app" \
+  --data '{
+    "model": "clairic",
+    "state": "Hi, this is Marta Silva from Acme Paper. Invoice AP-5531 for 3 boxes of A4 paper is attached: total $184.50, issued 2026-03-02 with net 30 terms. Delivery is booked for March 9 at 10:15 am, and unloading takes about 40 minutes. Our last four monthly invoices were $172.00, $178.25, $181.10 and $184.50.",
+    "reference_date": "2026-03-05",
+    "questions": {
+      "invoice_number": {"type": "text", "instructions": "Invoice number"},
+      "contacts": {"type": "list", "items": "text", "instructions": "Each person named"},
+      "total": {"type": "number", "decimals": 2, "unit": "USD", "instructions": "Invoice total"},
+      "due_date": {"type": "date", "instructions": "Issue date plus the net payment days"},
+      "delivery_time": {"type": "time", "instructions": "Time the delivery is booked for"},
+      "delivery_at": {"type": "datetime", "instructions": "Date and time of the delivery"},
+      "unloading": {"type": "duration", "unit": "minutes", "integer": true, "instructions": "How long unloading takes"},
+      "monthly_amounts": {"type": "list", "items": "number", "decimals": 2, "instructions": "Each monthly invoice amount"},
+      "days_to_pay": {"type": "estimate", "min": 0, "max": 90, "step": 1, "instructions": "Days after issue until this invoice is paid"},
+      "next_invoices": {"type": "forecast", "min": 0, "max": 1000, "horizon": 2, "interval": "month", "unit": "USD", "instructions": "Amount of the next monthly invoices", "step": 0.01},
+      "po_number": {"type": "text", "instructions": "Purchase order number"}
+    }
+  }'
+```
+
+### Extraction request
+
+- **Settings** are optional except `items` on lists and `min` and `max` (and `horizon` on forecasts) on estimates and forecasts: `null_threshold` on value types; `unit`, `integer`, and `decimals` on numbers and durations; `step` and `scale` on estimates and forecasts; `quantiles: true` on estimates for the 1st to 99th percentiles; `interval` on forecasts. An invalid setting returns `400` with `invalid_question` and the setting in `error.param`.
+- **`instructions`** is optional. Structured state and instructions are read as compact JSON text.
+- **`reference_date`** (`YYYY-MM-DD`) resolves relative and year-less dates, such as "March 9" above.
+- **`clairic`** accepts question names of up to 64 letters, digits, `_`, `.`, or `-`, starting with a letter or `_`, forecasts of up to 64 steps, and up to 4 image `assets` (4 MiB each, 8 MiB in total). Requests beyond these limits return `unsupported_parameter`.
+
+### Extraction answers
+
+A real response to the request above, with probabilities and means rounded:
+
+```json
+{
+    "model": "clairic",
+    "answers": {
+        "invoice_number": {"type": "text", "value": "AP-5531", "guess": "AP-5531", "span": [49, 56], "p_null": 0, "confidence": 1},
+        "contacts": {"type": "list", "value": ["Marta Silva"], "spans": [[12, 23]], "confidence": 0.26},
+        "total": {"type": "number", "value": 184.5, "guess": 184.5, "p_null": 0, "confidence": 1},
+        "due_date": {"type": "date", "value": "2026-04-01", "guess": "2026-04-01", "p_null": 0, "confidence": 1},
+        "delivery_time": {"type": "time", "value": "10:15:00", "guess": "10:15:00", "p_null": 0, "confidence": 1},
+        "delivery_at": {"type": "datetime", "value": "2026-03-09T10:15:00", "guess": "2026-03-09T10:15:00", "p_null": 0, "confidence": 1},
+        "unloading": {"type": "duration", "value": 40, "guess": 40, "p_null": 0, "confidence": 1, "unit": "minutes"},
+        "monthly_amounts": {"type": "list", "value": [172, 178.25, 181.1, 184.5], "confidence": 0.78},
+        "days_to_pay": {"type": "estimate", "value": 30, "median": 30, "p10": 24, "p90": 34, "mean": 29.74, "p_below": 0, "p_above": 0},
+        "next_invoices": {"type": "forecast", "steps": [{"value": 183.24, "median": 183.7, "p10": 171.59, "p90": 196.04, "mean": 183.24, "p_below": 0, "p_above": 0}, {"value": 184.06, "median": 184.32, "p10": 171.93, "p90": 197.04, "mean": 184.06, "p_below": 0, "p_above": 0}]},
+        "po_number": {"type": "text", "value": null, "guess": "AP-5531", "span": [49, 56], "p_null": 1, "confidence": 0.99}
+    },
+    "truncated": false,
+    "usage": { "input_tokens": 1315, "output_tokens": 0 }
+}
+```
+
+Bkper checks every answer against the [Open System One answer guarantees](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#answer-guarantees) before returning it:
+
+- Value types have `value`, `p_null`, and `confidence`. `value` is `null` exactly when `p_null` is above the question's `null_threshold` (default 0.5), as for `po_number`; `guess` is still the most likely value.
+- `span` is where `guess` was read: a half-open `[start, end)` range of Unicode code point offsets into `state_text` when present, else into `state`. For `text`, it covers exactly the guess. Computed values, and values read from images, have a `null` or absent span.
+- Lists are never `null` and keep input order. Text lists have `spans`, one entry per item: its span, or `null` for an item read from an image.
+- Estimates and every forecast step are within `[min, max]`, on the `step` grid, with `p10` ≤ `median` ≤ `p90`. A forecast has exactly `horizon` `steps`, nearest first. Estimates have `quantiles` only when their question sets `quantiles: true`; forecast steps never do.
+- `state_text`, the text the model read, is returned when it differs from `state`, for example for structured state. `truncated: true` means the model read only the start of the state.
 
 ## Stream a response
 
@@ -362,7 +434,7 @@ Unsupported fields fail explicitly rather than being ignored or passed to only o
 
 ## Errors
 
-Errors use an Open Responses-shaped envelope with stable Bkper error codes. `POST /v1/responses` and `POST /v1/decisions` normalize provider failures the same way. Branch on `error.code`, not only on the HTTP status, because `429` has two meanings.
+Errors use an Open Responses-shaped envelope with stable Bkper error codes. `POST /v1/responses` and `POST /v1/systemone` normalize provider failures the same way. Branch on `error.code`, not only on the HTTP status, because `429` has two meanings.
 
 | Status | Meaning                                                                         | `error.code` examples                                             | Retry                               |
 | ------ | ------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------- |
@@ -374,7 +446,7 @@ Errors use an Open Responses-shaped envelope with stable Bkper error codes. `POS
 | `429`  | The monthly Bkper AI allowance is exhausted                                     | `usage_limit_exceeded`                                            | No                                  |
 | `429`  | The upstream provider is throttled                                              | `provider_rate_limited`                                           | Yes, with backoff                   |
 | `499`  | The client aborted the request                                                  | `request_aborted`                                                 | —                                   |
-| `502`  | The selected upstream model provider or transport failed                        | `provider_error`, `provider_rejected`                             | A limited number of times           |
+| `502`  | The selected upstream model provider or transport failed                        | `provider_error`, `provider_rejected`, `provider_invalid_answer` | A limited number of times           |
 | `503`  | The provider is overloaded or quota usage is temporarily unavailable            | `provider_overloaded`, `usage_unavailable`                        | Yes, with backoff                   |
 
 When a provider sends `retry-after` with a `429` or `503`, Bkper AI forwards it; wait at least that long before retrying. `401` and `403` always refer to your Bkper token or account. Upstream provider credential problems surface as `502`.
@@ -393,7 +465,8 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 
 - [`POST /v1/responses` — Generate a response](https://bkper.com/docs/api/ai-gateway/operations/createresponse.md)
 
-### Decisions
+### System One
 
+- [`POST /v1/systemone` — Evaluate typed questions](https://bkper.com/docs/api/ai-gateway/operations/createsystemone.md)
 - [`POST /v1/decisions` — Evaluate typed questions](https://bkper.com/docs/api/ai-gateway/operations/createdecision.md)
 
