@@ -62,11 +62,16 @@ interface BkperAiCatalogModel {
     mid_conversation_system_messages?: boolean;
 }
 
-/** A gateway decision model, served through the System One classify API. */
-interface BkperAiDecisionCatalogModel {
+/**
+ * A gateway System One model, served at `/v1/systemone`. Gateways before the System One rollout
+ * type these `decision`.
+ */
+interface BkperAiSystemOneCatalogModel {
     id: string;
-    type: 'decision';
+    type: 'system-one' | 'decision';
     name?: string;
+    /** Wire question kinds the model answers, e.g. `noul`, `choice`, `text`. */
+    question_types?: string[];
     input_modalities?: string[];
     pricing: {
         inputNanoUsdPerToken: number;
@@ -77,17 +82,25 @@ interface BkperAiDecisionCatalogModel {
 
 interface BkperAiCatalog {
     default_model?: string;
-    data: Array<BkperAiCatalogModel | BkperAiDecisionCatalogModel>;
+    data: Array<BkperAiCatalogModel | BkperAiSystemOneCatalogModel>;
 }
 
-function isDecisionModel(
-    model: BkperAiCatalogModel | BkperAiDecisionCatalogModel
-): model is BkperAiDecisionCatalogModel {
-    return model.type === 'decision';
+/** Wire kinds of the questions Pi classifiers ask: `bool` goes out as `noul`. */
+const CLASSIFIER_QUESTION_TYPES = ['noul', 'choice', 'score'];
+
+function isSystemOneModel(
+    model: BkperAiCatalogModel | BkperAiSystemOneCatalogModel
+): model is BkperAiSystemOneCatalogModel {
+    return model.type === 'system-one' || model.type === 'decision';
+}
+
+/** Extraction-only models, such as Clairic, answer no question a Pi classifier asks. */
+function answersClassifierQuestions(model: BkperAiSystemOneCatalogModel): boolean {
+    return model.question_types?.some(type => CLASSIFIER_QUESTION_TYPES.includes(type)) ?? false;
 }
 
 function isChatModel(
-    model: BkperAiCatalogModel | BkperAiDecisionCatalogModel
+    model: BkperAiCatalogModel | BkperAiSystemOneCatalogModel
 ): model is BkperAiCatalogModel {
     return model.type === undefined || model.type === 'language';
 }
@@ -237,7 +250,7 @@ function toProviderModel(
     };
 }
 
-function toClassifierModel(model: BkperAiDecisionCatalogModel): ProviderClassifierModelConfig {
+function toClassifierModel(model: BkperAiSystemOneCatalogModel): ProviderClassifierModelConfig {
     return {
         type: 'classifier',
         id: model.id,
@@ -291,8 +304,11 @@ async function fetchBkperAiModels(
         throw new Error('Bkper AI model response is invalid.');
     }
 
-    // Split by type first: decision entries lack the chat fields toProviderModel reads.
-    const classifierModels = catalog.data.filter(isDecisionModel).map(toClassifierModel);
+    // Split by type first: System One entries lack the chat fields toProviderModel reads.
+    const classifierModels = catalog.data
+        .filter(isSystemOneModel)
+        .filter(answersClassifierQuestions)
+        .map(toClassifierModel);
     const chatModels = catalog.data
         .filter(isChatModel)
         .filter(model => model.input_modalities?.includes('image'));

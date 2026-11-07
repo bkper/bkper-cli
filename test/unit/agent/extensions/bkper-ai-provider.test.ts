@@ -245,14 +245,29 @@ describe('agent/bkper-ai-provider', function () {
         expect(await config.refreshModels?.(createRefreshContext())).to.deep.equal([]);
     });
 
-    it('offers decision models as System One classifiers beside chat models', async function () {
+    /** Refreshes a catalog of the given entries and returns the classifier model ids. */
+    async function refreshClassifierIds(data: unknown[]): Promise<string[]> {
+        const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
+            new Response(JSON.stringify({data}))
+        ));
+        const models = (await config.refreshModels?.(createRefreshContext())) ?? [];
+        return models.filter(isClassifierModel).map(model => model.id);
+    }
+
+    it('offers System One models as classifiers beside chat models', async function () {
         const config = getBkperAiProviderConfig({}, sinon.stub().resolves(
             new Response(JSON.stringify({
                 default_model: 'vision',
                 data: [
-                    // Image input must not route a decision model into the chat mapping.
-                    {...jevCatalogEntry, id: 'jev-vision', input_modalities: ['text', 'image']},
-                    jevCatalogEntry,
+                    // Image input must not route a System One model into the chat mapping.
+                    {
+                        ...jevCatalogEntry,
+                        id: 'clef',
+                        type: 'system-one',
+                        name: 'clef',
+                        input_modalities: ['text', 'image'],
+                    },
+                    {...jevCatalogEntry, type: 'system-one'},
                     {
                         id: 'future-embedding',
                         type: 'embedding',
@@ -283,7 +298,7 @@ describe('agent/bkper-ai-provider', function () {
 
         expect(models.filter(isChatModel).map(model => model.id)).to.deep.equal(['vision']);
         const classifiers = models.filter(isClassifierModel);
-        expect(classifiers.map(model => model.id)).to.deep.equal(['jev-vision', 'jev']);
+        expect(classifiers.map(model => model.id)).to.deep.equal(['clef', 'jev']);
         expect(classifiers[0]?.input).to.deep.equal(['text', 'image']);
         expect(classifiers[1]).to.deep.equal({
             type: 'classifier',
@@ -300,6 +315,27 @@ describe('agent/bkper-ai-provider', function () {
         for (const model of classifiers) {
             expect(config.classifiers?.[model.api ?? '']?.classify).to.be.a('function');
         }
+    });
+
+    it('still offers models the gateway types as decision', async function () {
+        expect(await refreshClassifierIds([jevCatalogEntry])).to.deep.equal(['jev']);
+    });
+
+    it('offers System One models only for the question kinds Pi classifiers ask', async function () {
+        const ids = await refreshClassifierIds([
+            {
+                ...jevCatalogEntry,
+                id: 'clairic',
+                type: 'system-one',
+                question_types: ['text', 'number', 'date', 'list', 'estimate', 'forecast'],
+            },
+            {...jevCatalogEntry, id: 'mixed', type: 'system-one', question_types: ['text', 'score']},
+            {...jevCatalogEntry, id: 'bool-only', type: 'system-one', question_types: ['noul']},
+            {...jevCatalogEntry, id: 'unlisted', type: 'system-one', question_types: undefined},
+            {...jevCatalogEntry, id: 'box-only', type: 'decision', question_types: ['box']},
+        ]);
+
+        expect(ids).to.deep.equal(['mixed', 'bool-only']);
     });
 
     /** Classifies one request's images through Bkper's classifier and captures what reaches the gateway. */
