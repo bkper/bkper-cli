@@ -6,8 +6,8 @@ Model output is a suggestion, not permission to change a Book. Keep decisions ab
 
 ## Choose the kind of response
 
-- **A yes/no, a choice, or a level on a scale?** Ask a decision model, such as `jev`, with TypeSafe's SDK, `@typesafe-ai/sdk`.
-- **A value read from a document, such as an invoice total?** Ask an extraction model, such as `clairic`, with `fetch` to `POST /v1/systemone`. See [System One Models](https://bkper.com/docs/ai/system-one-models.md#extraction-models).
+- **A judgment: a yes/no, one of known options, or a level on a scale?** [Ask a System One model](#ask-a-system-one-model) a decision question, with a model such as `jev`.
+- **A value read from a document, such as an invoice total, or a likely range for an uncertain number, such as days until an invoice is paid?** [Ask a System One model](#ask-a-system-one-model) an extraction question, with a model such as `clairic`.
 - **Text or a custom JSON object?** Ask a language model (LLM), such as `gpt-luna`, with AI SDK's Open Responses provider, `@ai-sdk/open-responses`.
 - **A conversation that works on Books?** Reading and comparing Books, computing with scripts, delivering files, remembering earlier messages: [run an agent](#run-an-agent) with the Managed Agent API instead of calling a model.
 
@@ -36,10 +36,19 @@ The client can call Bkper AI directly with `auth.authenticatedFetch()`, which se
 
 In both cases usage counts against the user's allowance. See [Call from a browser](https://bkper.com/docs/api/ai-gateway.md#call-from-a-browser) for a request example.
 
-## Ask a decision model
+## Ask a System One model
+
+Every System One question, decision or extraction, goes to `POST /v1/systemone`. There are two ways to send it:
+
+- **TypeSafe's SDK**, `@typesafe-ai/sdk`, types decision questions and their answers for you. It does not send extraction questions or images.
+- **`fetch`** sends any question type, and images.
+
+Bkper AI validates every answer against its question before responding, so your code can use it directly. Keep the questions, the thresholds, and the function that turns answers and facts into an action in one module.
+
+### With TypeSafe's SDK
 
 ```ts
-import { score, TypeSafeClient } from '@typesafe-ai/sdk';
+import { noul, TypeSafeClient } from '@typesafe-ai/sdk';
 
 const decisionClient = new TypeSafeClient({
     apiKey: 'bkper-platform-outbound',
@@ -47,26 +56,69 @@ const decisionClient = new TypeSafeClient({
     defaultModel: 'jev',
 });
 
-export async function scoreRecurring(description: string) {
+export async function recurringProbability(description: string): Promise<number> {
     const { answers } = await decisionClient.systemOne({
         state: { description },
         questions: {
-            recurring: score('How likely is this a recurring charge?', [
-                'Unlikely',
-                'Possible',
-                'Likely',
-            ]),
+            recurring: noul('Is this a recurring charge, such as a subscription or a monthly bill?'),
         },
     });
-    return answers.recurring;
+    return answers.recurring.noul;
 }
 ```
 
 - **`apiKey`** is required by the SDK. In a Platform Worker, pass any placeholder: platform outbound replaces it with the user's authorization.
 - **`baseURL`** has no `/v1`. The SDK calls `POST /v1/systemone`, which behaves exactly like `POST /v1/decisions`.
-- **The answer is typed** from the question. Bkper AI validates every answer against its question before responding, so your code can use it directly.
+- **The answer is typed** from the question: here, `noul` is the probability of yes, which your code compares with a threshold.
 
-[System One Models](https://bkper.com/docs/ai/system-one-models.md) covers designing the questions, facts, and thresholds; the [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md#decision-models) covers the request, answers, errors, and caching. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses this setup to suggest duplicate pairs for human review.
+### With fetch
+
+```ts
+interface ValueAnswer {
+    value: T | null;
+    guess?: T;
+    p_null: number;
+    confidence: number;
+}
+
+interface InvoiceReading {
+    model: string;
+    answers: { total: ValueAnswer<number>; issue_date: ValueAnswer<string> };
+    truncated?: boolean;
+}
+
+interface BkperAiErrorBody {
+    error: { code: string; message: string };
+}
+
+export async function readInvoice(email: string): Promise {
+    // No Authorization header: the platform adds the user's.
+    const response = await fetch('https://ai.bkper.app/v1/systemone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: 'clairic',
+            state: email,
+            questions: {
+                total: { type: 'number', decimals: 2, instructions: 'Invoice total' },
+                issue_date: { type: 'date', instructions: 'Invoice issue date' },
+            },
+        }),
+    });
+    if (!response.ok) {
+        const { error } = (await response.json()) as BkperAiErrorBody;
+        throw new Error(`${error.code}: ${error.message}`);
+    }
+    // Bkper AI validated each answer against its question.
+    return (await response.json()) as InvoiceReading;
+}
+```
+
+- **`value` can be `null`** when the email probably lacks it. Send such items, and any response with `truncated: true`, to a person with the `guess`.
+- **The model reads; code checks.** Compare the total with the invoice lines, and compute dates such as the due date, before anything reaches a Book.
+- **Images** go in the same request, as base64 `assets`.
+
+[System One Models](https://bkper.com/docs/ai/system-one-models.md) covers designing the questions, facts, and thresholds, and every question type; the [AI Gateway API](https://bkper.com/docs/api/ai-gateway.md#decision-questions) covers the request, answers, errors, and caching. The open-source [Merge Duplicates app](https://github.com/bkper/bkper-apps/tree/main/merge-duplicates) uses TypeSafe's SDK to suggest duplicate pairs for human review.
 
 ## Generate a language response
 
@@ -176,6 +228,7 @@ Every Bkper AI error has the same envelope: `{ error: { message, type, param, co
 
 - **TypeSafe SDK:** an `APIError` with `status` and the envelope in `body`, so read `error.body.error.code`. Network failures and timeouts throw `APIConnectionError`.
 - **AI SDK:** an `APICallError` with `statusCode` and the envelope in `data`, so read `error.data.error.code`. Output that does not match your schema throws `NoObjectGeneratedError`.
+- **`fetch`:** a response that is not `ok` has the envelope as its JSON body. `fetch` does not retry.
 
 Both SDKs retry rate limits and server errors twice by default. A failed attempt costs nothing: Bkper AI charges only successful answers.
 
@@ -185,7 +238,7 @@ Map these errors to your route's typed error response. Keep the code and message
 
 - **Passing your own `fetch`.** The TypeSafe SDK calls `fetch` as its own method, which the Workers runtime rejects with `Illegal invocation`. Wrap it: `fetch: (input, init) => myFetch(input, init)`. Without the option, the SDK's default works.
 - **No `null` values.** The TypeSafe SDK's types accept `null` for state, instructions, and some criteria. Bkper AI rejects them with `400`.
-- **No SDK image uploads.** The TypeSafe SDK uploads images as multipart, which Bkper AI rejects with `400`. Send image requests with `fetch` as JSON, with base64 `assets`. See [System One Models](https://bkper.com/docs/ai/system-one-models.md#jev-and-clef).
+- **No SDK image uploads.** The TypeSafe SDK uploads images as multipart, which Bkper AI rejects with `400`. Send image requests [with `fetch`](#with-fetch) as JSON, with base64 `assets`. See [System One Models](https://bkper.com/docs/ai/system-one-models.md#models) for each model's image limits.
 - **No `client.models.list()`.** It expects TypeSafe's catalog shape. Use the [`GET /v1/models`](https://ai.bkper.app/v1/models) catalog.
 - **Other System One clients** take `https://ai.bkper.app/v1` as their base URL.
 - **Flexible JSON schemas.** Open Responses always requests `strict: true`. For a schema that needs `strict: false`, such as a typed dynamic map, use `@ai-sdk/openai` with base URL `https://ai.bkper.app/v1`, its `.responses()` model, and `strictJsonSchema: false`.
@@ -194,6 +247,7 @@ Map these errors to your route's typed error response. Keep the code and message
 
 - **Send only task-relevant data.** Validate input and Book permissions at the app API boundary.
 - **Keep writes deterministic.** An answer or generated text must not create, merge, or alter a Transaction without application rules and any required human confirmation.
+- **Test the decision without the model.** Unit-test the function that turns answers and facts into an action with fixed answers, just below and just above each threshold.
 - **Test the service.** Mock `fetch` and check what is sent, that the Worker adds no user token, and that errors stay actionable. Then run the app's normal check and build.
 
 ## Next steps

@@ -114,7 +114,7 @@ Each time the App iframe finishes loading, Bkper announces the requests it suppo
 ```js
 {
     type: 'bkper:host-ready',
-    supports: ['navigate', 'show-book', 'expand', 'login'],
+    supports: ['navigate', 'show-book', 'expand', 'login', 'app-state'],
 }
 ```
 
@@ -124,6 +124,7 @@ Send each request only after receiving this message with its name in `supports`:
 - `bkper:show-book` with `show-book`.
 - `bkper:expand` with `expand`.
 - `bkper:login` with `login`.
+- `bkper:app-state` with `app-state`.
 
 Until then, keep the normal link behavior. Register the message listener when the App starts, so it does not miss the message.
 
@@ -247,6 +248,144 @@ Bkper ignores the message when it does not come from the App iframe currently op
 
 Bkper does not reply.
 
+#### Keeping state in the Book URL
+
+An App can keep a short state in the Book's URL, such as the report or item open in it. Reloading the Book, going Back, or opening a shared link of the Book then opens the App where the user left it:
+
+```js
+window.parent.postMessage({ type: 'bkper:app-state', state: 'expenses-2025' }, BKPER_ORIGIN);
+```
+
+Bkper keeps the state as `appState`, next to the App's id in `app`:
+
+```
+https://bkper.app/books/abc123/transactions?app=my-app&appState=expenses-2025
+```
+
+Bkper ignores the message when any of these is true:
+
+- It does not come from the App iframe currently open in the panel.
+- It does not come from that iframe's own origin.
+- `app` in the Book URL names another App.
+- `state` is not a string of at most 128 letters (`A–Z`, `a–z`), digits, `_` or `-`.
+
+For a valid request, Bkper replaces `appState` in the Book URL without reloading Bkper or the App and without adding a history entry, so Back stays the Book's. An empty `state` removes it. Bkper does not reply.
+
+The App reads its state back through the [`${app.state}`](#available-expressions) expression of its menu URL:
+
+```yaml
+menuUrl: https://my-app.bkper.app?bookId=${book.id}&state=${app.state}
+```
+
+- **Opening a Book URL that names the App and its state**, such as from a link, Back, or a reload, opens the App with that state in its URL. When the App is already open, it receives the new URL in [`bkper:app-url-changed`](#live-context-updates) instead.
+- **After a valid `bkper:app-state` that changes the App's URL**, such as a new state with `${app.state}` in its menu URL, the App receives `bkper:app-url-changed` with the state it just sent. Treat it as its own state, not a new place.
+- **Opening the App from the menu, opening another App, or closing the App** removes `appState`.
+
+The state is opaque to Bkper and visible in the Book's URL:
+
+- Keep it a short reference, such as an id, not data.
+- Anyone can write a link with any `appState`. Validate it, and treat a state the App does not recognize as no state.
+- Older Bkper versions leave `${app.state}` in the URL unreplaced. Treat it, an empty value, or a missing one as no state.
+
+### Files in Bkper Agent
+
+Bkper Agent shows the HTML files it delivers, such as a report an App's API returns for the agent, beside the conversation. Each file runs in a sandboxed frame:
+
+- **An `<iframe sandbox="allow-scripts">` with the file as its `srcdoc`.** The frame's origin is opaque (`null`), so the file cannot reach Bkper, the Agent, or their sessions.
+- **A Content Security Policy ahead of the file's own content**: `default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; form-action 'none'; base-uri 'none'`. Scripts and styles must be inline, and images, fonts, and media `data:` or `blob:` URLs. The file reaches no network.
+- **Up to 1 MB.** Larger HTML files only download.
+
+A file can use one request of the Bkper page around the Agent: `bkper:navigate`, such as for an **Open in** link that replaces the Agent with an App in the same panel and Book.
+
+#### File host support
+
+Each time the file's frame finishes loading, while the Agent is open in a Bkper panel that accepts navigation, the Agent tells the file:
+
+```js
+{
+    type: 'bkper:host-ready',
+    supports: ['navigate'],
+    origin: 'https://bkper.app',
+}
+```
+
+- `origin` is the Bkper origin to link to. The message's `event.origin` is the Agent's, such as `https://agent.bkper.app`, because the Agent hosts the file, not Bkper.
+- When Bkper starts accepting navigation after the file loaded, the Agent tells the file again.
+- When the Agent is not in a Bkper panel that accepts navigation, such as the Agent opened on its own, the Agent sends nothing. Keep links as plain links that open a new tab.
+
+#### Requesting navigation from a file
+
+Post the Bkper URL to the Agent, at the `event.origin` of its `bkper:host-ready`:
+
+```js
+window.parent.postMessage(
+    {
+        type: 'bkper:navigate',
+        url: 'https://bkper.app/books/abc123/transactions?app=my-app&appState=expenses-2025',
+    },
+    agentOrigin
+);
+```
+
+The Agent ignores the message silently unless all of these are true:
+
+- It comes from the file's own frame.
+- That frame has focus: the user is interacting with the file, such as by clicking in it.
+- `url` is an absolute Bkper URL with no username or password, as for a link in the agent's replies.
+- The Agent is open in a Bkper panel that accepts navigation.
+
+Then the Agent asks Bkper to navigate, as when the user clicks a link in the conversation:
+
+- **A Book page that names an App and its state** (`app` and `appState`): Bkper opens that App with that state, if the App is installed in that Book. When the Agent is open in a Book, the App replaces it in the same panel, without reloading Bkper.
+- **A Book page without `app`**: Bkper navigates to it and the Agent stays open.
+- **Other Bkper pages**: Bkper loads the page as a normal navigation.
+
+Neither the Agent nor Bkper replies.
+
+Send `bkper:navigate` only in response to a user action, such as a click. The focus rule keeps a file from navigating as it loads, but the frame keeps focus after a click, so the Agent cannot tell a click from a later request.
+
+#### File example
+
+Keep the link a real link to the App that opens in a new tab, so it works wherever navigation is not available:
+
+```html
+<a id="open-in-app" href="https://my-app.bkper.app?bookId=abc123&state=expenses-2025" target="_blank">
+    Open in My App
+</a>
+```
+
+Then turn a plain click into a navigation request once the Agent supports it:
+
+```js
+let host; // The Bkper origin to link to, and the Agent's origin to post to.
+
+window.addEventListener('message', event => {
+    // Only the window around the file, the Agent, tells it what it may ask.
+    if (event.source !== window.parent) return;
+
+    const message = event.data;
+    if (message?.type !== 'bkper:host-ready' || !Array.isArray(message.supports)) return;
+    host =
+        message.supports.includes('navigate') && typeof message.origin === 'string'
+            ? { bkper: message.origin, agent: event.origin }
+            : undefined;
+});
+
+document.getElementById('open-in-app').addEventListener('click', event => {
+    // Keep modified and non-primary clicks as normal links, such as opening a new tab.
+    if (!host || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+    event.preventDefault();
+    const url = new URL('/books/abc123/transactions', host.bkper);
+    url.searchParams.set('app', 'my-app');
+    url.searchParams.set('appState', 'expenses-2025');
+    window.parent.postMessage({ type: 'bkper:navigate', url: url.href }, host.agent);
+});
+```
+
+The file cannot verify the Bkper origin itself. It posts only to the window that sent `bkper:host-ready`, and the Agent checks the URL again.
+
 ### Available expressions
 
 The menu URL supports these dynamic expressions:
@@ -259,5 +398,6 @@ The menu URL supports these dynamic expressions:
 | `${account.name}`       | The selected account name |
 | `${group.id}`           | The selected group ID     |
 | `${group.name}`         | The selected group name   |
+| `${app.state}`          | The App's state in the Book URL, URL-encoded; empty without one. See [Keeping state in the Book URL](#keeping-state-in-the-book-url). |
 
 For the full list of accepted expressions, see the [Menu URL variables](https://bkper.com/docs/platform/apps/configuration.md#menu-url-variables) reference.

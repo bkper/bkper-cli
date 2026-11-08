@@ -113,8 +113,9 @@ The following variables can be used in `menuUrl` and `menuUrlDev`:
 | `${group.id}`               | Selected group ID                        |
 | `${group.name}`             | Selected group name                      |
 | `${group.properties.xxx}`   | Group property value                     |
-| `${transactions.ids}`       | Comma-separated selected transaction IDs |
+| `${transactions.ids}`       | Space-separated selected transaction IDs |
 | `${transactions.query}`     | Current search query                     |
+| `${app.state}`              | The App's state in the Book URL, URL-encoded; empty without one. See [Keeping state in the Book URL](https://bkper.com/docs/platform/apps/context-menu.md#keeping-state-in-the-book-url). |
 
 ### Event handling
 

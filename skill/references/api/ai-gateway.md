@@ -2,7 +2,7 @@
 
 > Call Bkper AI models from your own client or code — the guide, with a page for each operation: models, responses, streaming, and decisions.
 
-The Bkper AI Gateway serves the models behind Bkper's agents and apps to your own clients and code: typed answers from System One decision and extraction models and the stateless Bkper [Open Responses 2026-04-24](https://www.openresponses.org/specification/2026-04-24) profile for language models.
+The Bkper AI Gateway serves the models behind Bkper's agents and apps to your own clients and code: typed answers from System One models and the stateless Bkper [Open Responses 2026-04-24](https://www.openresponses.org/specification/2026-04-24) profile for language models.
 
 [Models and Usage](https://bkper.com/docs/ai/models) covers the models, usage rates, the monthly allowance, and privacy. To run an agent that works on Books instead of calling a model, use the [Managed Agent API](https://bkper.com/docs/api/managed-agent). Building a Bkper app? Start with [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai). The canonical machine-readable contract is [https://ai.bkper.app/openapi.json](https://ai.bkper.app/openapi.json).
 
@@ -45,7 +45,7 @@ Bkper AI implements a documented subset of Open Responses. It does not claim ful
 
 Use the model IDs returned by `GET /v1/models`, such as `gpt-luna`, `grok`, `gemini-flash`, and `jev`.
 
-Language model entries have `type: "language"` and use `POST /v1/responses`. System One model entries, decision and extraction models, have `type: "system-one"`, list the question types they answer in `question_types`, and use `POST /v1/systemone`. Entries with `preview: true` are provider previews whose answers, limits, and availability may change without notice. Sending a model to the wrong endpoint fails explicitly.
+Language model entries have `type: "language"` and use `POST /v1/responses`. System One model entries have `type: "system-one"`, list the question types they answer in `question_types`, and use `POST /v1/systemone`. Entries with `preview: true` are provider previews whose answers, limits, and availability may change without notice. Sending a model to the wrong endpoint fails explicitly.
 
 Model IDs remain stable as Bkper updates the model behind them. Older versioned and publisher-prefixed IDs still work, but they select the current model, not the older version. Catalogs, responses, and usage reports use the current ID.
 
@@ -108,11 +108,11 @@ The response is an Open Responses resource. Its `model` contains the canonical p
 
 The `bkper-ai-source` header is optional. Set it to a stable lowercase identifier such as `my-harness` to see which client or application made a request in the usage dashboard. Without a valid identifier, the source appears as unknown.
 
-## Decision models
+## Decision questions
 
-`POST /v1/systemone` answers typed questions about a shared state instead of generating text. Each question returns a noul probability, one choice from options you define, or a level on an ordered score, and your code decides what to do with it. Designing the questions, thresholds, and human review is covered in the [Decision Models guide](https://bkper.com/docs/ai/decision-models). `POST /v1/decisions` is a deprecated alias with identical behavior.
+`POST /v1/systemone` answers typed questions about a shared state instead of generating text. Each question returns a noul probability, one choice from options you define, or a level on an ordered score, and your code decides what to do with it. Designing the questions, thresholds, and human review is covered in the [System One Models guide](https://bkper.com/docs/ai/system-one-models). `POST /v1/decisions` is a deprecated alias with identical behavior.
 
-For an incoming bank line, this request asks three questions at once: which Account it belongs to, whether it is already recorded, and how urgently it needs review.
+For an incoming bank line, this request asks for three judgments at once: which Account it belongs to, whether it is already recorded, and how unusual it is as a business expense. Code combines the answers with facts, such as the amount, into what to do with the line.
 
 ```bash
 curl --fail-with-body https://ai.bkper.app/v1/systemone \
@@ -152,13 +152,13 @@ curl --fail-with-body https://ai.bkper.app/v1/systemone \
         "type": "noul",
         "instructions": "Does `existing_transaction` already record the movement in `bank_line`?"
       },
-      "review_priority": {
+      "unusual": {
         "type": "score",
-        "instructions": "How urgently should a bookkeeper review `bank_line`?",
+        "instructions": "How unusual is `bank_line` as a business expense?",
         "criteria": [
-          "Routine: consistent with normal activity",
-          "Check: unusual but plausibly legitimate",
-          "Urgent: large, unapproved, or suspicious"
+          "Routine: a common business expense",
+          "Unusual: plausible, but uncommon for a business",
+          "Suspicious: looks like fraud, an error, or a personal expense"
         ]
       }
     }
@@ -168,13 +168,13 @@ curl --fail-with-body https://ai.bkper.app/v1/systemone \
 ### Decision request
 
 - **`model`** is any model with `type: "system-one"` in `GET /v1/models`, such as `jev` or `clef`. Each entry lists its `question_types`, `context_window`, and `max_state_question_tokens`; a question whose type is not in the model's `question_types` returns `unsupported_question_type`.
-- **`state`** is what every question judges: a string, JSON object, or array. Prefer an object with descriptive field names. Decision models read text only, so convert images and files to text first.
+- **`state`** is what every question judges: a string, JSON object, or array. Prefer an object with descriptive field names. Convert PDFs and other files to text first, or to image `assets` for models with image input.
 - **`questions`** is a nonempty map. Question IDs such as `account` are yours, and answers come back under the same IDs, but **IDs are not sent to the model**, so each `instructions` must stand on its own. Refer to state fields by name in backticks, as in `` `bank_line` ``.
 - Each question accepts only `type`, `instructions`, and `criteria`. Instructions, descriptions, and levels can be strings or [structured JSON](https://docs.typesafe.ai/primitives/advanced):
   - **`noul`**: optional `criteria` describe what yes and no mean.
   - **`choice`**: `criteria` maps 1–255 options to descriptions, which may be `null`.
   - **`score`**: `criteria` lists 2–10 levels, lowest first.
-- The body accepts only `model`, `state`, and `questions`, plus image `assets` on models with image input. Decision models reject `reference_date` with `unsupported_parameter`. Responses fields such as `input`, `stream`, `store`, `temperature`, and `metadata` are rejected.
+- The body accepts only `model`, `state`, and `questions`, plus image `assets` on models with image input. `reference_date` applies only to extraction questions; `jev` and `clef` reject it with `unsupported_parameter`. Responses fields such as `input`, `stream`, `store`, `temperature`, and `metadata` are rejected.
 - **`clef`** answers at most 64 questions, named with up to 100 letters, digits, `_`, `.`, or `-`, and needs at least 2 choice options. It reads up to 4 image `assets` (4 MiB each, 8 MiB in total) before the state, in `assets` order. Requests beyond these limits return `unsupported_parameter`; input over its 65,536-token context returns `provider_rejected`.
 
 The model evaluates each question independently and in parallel against the same state.
@@ -192,33 +192,33 @@ A real response to the request above:
             "choice": "Office Supplies",
             "confidence": 1,
             "probabilities": {
-                "Office Supplies": 1,
                 "Cloud Hosting": 0,
-                "Travel": 0,
-                "Software Subscriptions": 0
+                "Software Subscriptions": 0,
+                "Office Supplies": 1,
+                "Travel": 0
             }
         },
         "already_recorded": {
             "type": "noul",
-            "noul": 0.89
+            "noul": 0.91
         },
-        "review_priority": {
+        "unusual": {
             "type": "score",
-            "score": 0.09,
-            "confidence": 0.86,
+            "score": 0.17,
+            "confidence": 0.74,
             "legend": {
-                "0": "Routine: consistent with normal activity",
-                "1": "Check: unusual but plausibly legitimate",
-                "2": "Urgent: large, unapproved, or suspicious"
+                "0": "Routine: a common business expense",
+                "1": "Unusual: plausible, but uncommon for a business",
+                "2": "Suspicious: looks like fraud, an error, or a personal expense"
             },
             "probabilities": {
-                "0": 0.91,
-                "1": 0.09,
-                "2": 0
+                "0": 0.9,
+                "1": 0.03,
+                "2": 0.07
             }
         }
     },
-    "usage": { "input_tokens": 607, "output_tokens": 86 }
+    "usage": { "input_tokens": 614, "output_tokens": 87 }
 }
 ```
 
@@ -251,26 +251,22 @@ Decision errors use the shared [error envelope](#errors). Validation failures na
 
 Besides `invalid_request`, decision validation returns `400` with `missing_model`, `unsupported_model`, `invalid_state`, `invalid_questions`, `invalid_question`, `unsupported_question_type`, or `unsupported_parameter`. The last two follow [Open System One](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#errors): `unsupported_question_type` for a question type the selected model does not answer, and `unsupported_parameter` for a field the specification defines that the model cannot honor, such as `reference_date`. Fix the field named in `error.param`; do not retry unchanged. A `400` with `provider_rejected` means the model rejected the request: check its size against the model's limits. A `502` with `provider_invalid_answer` means the model's answers broke an [Open System One answer guarantee](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#answer-guarantees); `error.message` names the question and the rule, and no answers are returned.
 
-### Decision caching
-
-Bkper caches System One results, decision and extraction, for 15 minutes per user. An identical request in that window returns the same answers without calling the model or consuming allowance, and repeats the original `usage`. Aliases of the same model share one cache entry. To get fresh answers, change the request or wait. See [Privacy, retention, and caching](https://bkper.com/docs/ai/models#privacy-retention-and-caching).
-
 ### TypeSafe compatibility
 
-Decision models come from TypeSafe's [System One](https://docs.typesafe.ai/concepts/system-one), and request and answer shapes match TypeSafe's [`POST /v1/systemone`](https://docs.typesafe.ai/api). TypeSafe's guidance on questions, state, confidence, and patterns applies unchanged. Only the surroundings differ:
+Decision questions come from TypeSafe's [System One](https://docs.typesafe.ai/concepts/system-one), and request and answer shapes match TypeSafe's [`POST /v1/systemone`](https://docs.typesafe.ai/api). TypeSafe's guidance on questions, state, confidence, and patterns applies unchanged. Only the surroundings differ:
 
 - **Endpoint and authentication.** Call `https://ai.bkper.app/v1/systemone` with a Bkper access token. TypeSafe API keys do not work here.
-- **SDKs.** TypeSafe SDKs work with base URL `https://ai.bkper.app`, without `/v1`, and a Bkper access token. See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai#ask-a-decision-model).
+- **SDKs.** TypeSafe SDKs work with base URL `https://ai.bkper.app`, without `/v1`, and a Bkper access token. See [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai#ask-a-system-one-model).
 - **Errors.** Bkper returns `400` where TypeSafe returns `422`, and `503` with `provider_overloaded` where TypeSafe returns `529`. A `429` can also mean the Bkper AI allowance is exhausted.
 - **Usage.** Requests count against the Bkper AI allowance, not a TypeSafe account.
 - **Images.** Send images as base64 `assets` in a JSON request, as in TypeSafe's [Images](https://docs.typesafe.ai/images) guide. TypeSafe SDKs upload images as multipart, which Bkper does not accept, so send image requests over HTTP. Bkper turns on TypeSafe's experimental image input for you. Jev reads `png`, `jpg`, and `jpeg` images; `webp`, which `clef` and `clairic` read, returns `unsupported_parameter`. Box questions are not supported. Image tokens count as input tokens.
 - **Coding agents.** TypeSafe's [agent skill](https://docs.typesafe.ai/agent-skill) teaches questions and patterns. For a Bkper integration, also point the agent to this guide, `https://bkper.com/docs/api/ai-gateway.md`, for the endpoint, authentication, model IDs, and errors.
 
-## Extraction models
+## Extraction questions
 
-Extraction models answer `POST /v1/systemone` questions with values read, computed, estimated, or forecast from the state instead of decisions: `text`, `number`, `date`, `time`, `datetime`, `duration`, `list`, `estimate`, and `forecast`. `clairic` is a Cloudflare preview (`preview: true` in `GET /v1/models`). Question and answer shapes follow [Open System One](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#question-types).
+Extraction questions to `POST /v1/systemone` ask for values read, computed, estimated, or forecast from the state instead of judgments: `text`, `number`, `date`, `time`, `datetime`, `duration`, `list`, `estimate`, and `forecast`. `clairic` is a Cloudflare preview (`preview: true` in `GET /v1/models`). Question and answer shapes follow [Open System One](https://github.com/bkper/open-systemone/blob/9c454705012d1b659320340e4846a5824bd8e4fc/SPEC.md#question-types).
 
-This request reads a supplier email: it copies the invoice number, computes the due date, and estimates when the invoice will be paid.
+This request reads a supplier email: it copies the invoice number, reads the issue date and payment terms, and estimates when the invoice will be paid. An extraction question can also ask for a computed value, such as a due date, but when a value feeds a Book, ask for its inputs and compute it in code.
 
 ```bash
 curl --fail-with-body https://ai.bkper.app/v1/systemone \
@@ -285,7 +281,8 @@ curl --fail-with-body https://ai.bkper.app/v1/systemone \
       "invoice_number": {"type": "text", "instructions": "Invoice number"},
       "contacts": {"type": "list", "items": "text", "instructions": "Each person named"},
       "total": {"type": "number", "decimals": 2, "unit": "USD", "instructions": "Invoice total"},
-      "due_date": {"type": "date", "instructions": "Issue date plus the net payment days"},
+      "issue_date": {"type": "date", "instructions": "Invoice issue date"},
+      "net_days": {"type": "number", "integer": true, "unit": "days", "instructions": "Net payment terms"},
       "delivery_time": {"type": "time", "instructions": "Time the delivery is booked for"},
       "delivery_at": {"type": "datetime", "instructions": "Date and time of the delivery"},
       "unloading": {"type": "duration", "unit": "minutes", "integer": true, "instructions": "How long unloading takes"},
@@ -313,19 +310,20 @@ A real response to the request above, with probabilities and means rounded:
     "model": "clairic",
     "answers": {
         "invoice_number": {"type": "text", "value": "AP-5531", "guess": "AP-5531", "span": [49, 56], "p_null": 0, "confidence": 1},
-        "contacts": {"type": "list", "value": ["Marta Silva"], "spans": [[12, 23]], "confidence": 0.26},
+        "contacts": {"type": "list", "value": ["Marta Silva"], "spans": [[12, 23]], "confidence": 0.28},
         "total": {"type": "number", "value": 184.5, "guess": 184.5, "p_null": 0, "confidence": 1},
-        "due_date": {"type": "date", "value": "2026-04-01", "guess": "2026-04-01", "p_null": 0, "confidence": 1},
+        "issue_date": {"type": "date", "value": "2026-03-02", "guess": "2026-03-02", "p_null": 0, "confidence": 1},
+        "net_days": {"type": "number", "value": 30, "guess": 30, "p_null": 0, "confidence": 1},
         "delivery_time": {"type": "time", "value": "10:15:00", "guess": "10:15:00", "p_null": 0, "confidence": 1},
         "delivery_at": {"type": "datetime", "value": "2026-03-09T10:15:00", "guess": "2026-03-09T10:15:00", "p_null": 0, "confidence": 1},
         "unloading": {"type": "duration", "value": 40, "guess": 40, "p_null": 0, "confidence": 1, "unit": "minutes"},
-        "monthly_amounts": {"type": "list", "value": [172, 178.25, 181.1, 184.5], "confidence": 0.78},
-        "days_to_pay": {"type": "estimate", "value": 30, "median": 30, "p10": 24, "p90": 34, "mean": 29.74, "p_below": 0, "p_above": 0},
-        "next_invoices": {"type": "forecast", "steps": [{"value": 183.24, "median": 183.7, "p10": 171.59, "p90": 196.04, "mean": 183.24, "p_below": 0, "p_above": 0}, {"value": 184.06, "median": 184.32, "p10": 171.93, "p90": 197.04, "mean": 184.06, "p_below": 0, "p_above": 0}]},
+        "monthly_amounts": {"type": "list", "value": [172, 178.25, 181.1, 184.5], "confidence": 0.74},
+        "days_to_pay": {"type": "estimate", "value": 30, "median": 30, "p10": 24, "p90": 35, "mean": 29.78, "p_below": 0, "p_above": 0},
+        "next_invoices": {"type": "forecast", "steps": [{"value": 182.95, "median": 183.47, "p10": 171.24, "p90": 195.86, "mean": 182.95, "p_below": 0, "p_above": 0}, {"value": 183.74, "median": 184.1, "p10": 171.64, "p90": 196.86, "mean": 183.74, "p_below": 0, "p_above": 0}]},
         "po_number": {"type": "text", "value": null, "guess": "AP-5531", "span": [49, 56], "p_null": 1, "confidence": 0.99}
     },
     "truncated": false,
-    "usage": { "input_tokens": 1315, "output_tokens": 0 }
+    "usage": { "input_tokens": 1337, "output_tokens": 0 }
 }
 ```
 
@@ -336,6 +334,10 @@ Bkper checks every answer against the [Open System One answer guarantees](https:
 - Lists are never `null` and keep input order. Text lists have `spans`, one entry per item: its span, or `null` for an item read from an image.
 - Estimates and every forecast step are within `[min, max]`, on the `step` grid, with `p10` ≤ `median` ≤ `p90`. A forecast has exactly `horizon` `steps`, nearest first. Estimates have `quantiles` only when their question sets `quantiles: true`; forecast steps never do.
 - `state_text`, the text the model read, is returned when it differs from `state`, for example for structured state. `truncated: true` means the model read only the start of the state.
+
+## System One caching
+
+Bkper caches System One results, for decision and extraction questions alike, for 15 minutes per user. An identical request in that window returns the same answers without calling the model or consuming allowance, and repeats the original `usage`. Aliases of the same model share one cache entry. To get fresh answers, change the request or wait. See [Privacy, retention, and caching](https://bkper.com/docs/ai/models#privacy-retention-and-caching).
 
 ## Stream a response
 

@@ -111,6 +111,7 @@ the totals you checked.
 
 After your `instructions`, the agent reads its context: an `AGENTS.md` and skills (`.agents/skills/<name>/SKILL.md`) that people, the agent, or any other agent following the [AGENTS.md](https://agents.md/) and [Agent Skills](https://agentskills.io/specification) standards keep in a context repository per scope. A session loads the user's company's (their verified domain's, when they have one: shared by everyone in the domain, changed only by its admin), then the user's own, then its Book's (from its first input's `bookContext`, shared by everyone who can view the Book). Each is more specific than the one before and wins: a Book's skills replace the user's of the same name, and the user's the company's. It loads when the session starts and again at the start of each turn (an input that is not a steer or follow-up: a run never changes its context midway), each scope from the sandbox's working copy when the sandbox is running and the user or agent changed it there (local changes win, as on a local machine), else as published: the session's `contextScopes` show what loaded. When it changed, the agent is told so with that input. A fork starts with what its parent loaded.
 It loads as the person in every workspace, an App's included (such as a Slack bot's): permissions are the person's. Context of other Books never loads; the agent clones one only when asked.
+`GET /v1/skills?bookId=` lists the skills a session starting now could call by name, as published, before there is one.
 
 - Loading never delays a session by more than about two seconds: at the start, a scope that is slow or fails is skipped and shown as `unavailable`, never as an error in the conversation; at a turn, the session keeps all of what it had.
 - Context guides; it never grants anything. The user's messages override it, and it cannot relax Bkper's base.
@@ -537,6 +538,7 @@ Each operation has its own page. The machine-readable contract is [openapi.json]
 - [`GET /v1/sessions/{sessionId}/entries/{entryId}` — Get a full entry](https://bkper.com/docs/api/managed-agent/operations/getentry.md)
 - [`POST /v1/sessions/{sessionId}/compact` — Compact earlier context](https://bkper.com/docs/api/managed-agent/operations/compactsession.md)
 - [`GET /v1/sessions/{sessionId}/export` — Export a session](https://bkper.com/docs/api/managed-agent/operations/exportsession.md)
+- [`GET /v1/skills` — List skills to call](https://bkper.com/docs/api/managed-agent/operations/listskills.md)
 
 ### Inputs
 
