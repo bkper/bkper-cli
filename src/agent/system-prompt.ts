@@ -92,7 +92,7 @@ function getCodemodePromptContribution(): ToolPromptContribution {
 function getBkperCodemodeGuidelines(codemodeDocsPath: string): string[] {
     return [
         'Use codemode, not shell loops or jq pipelines, to repeat commands across items.',
-        `For judgments across many items — rank, score, classify, or filter by sentiment, urgency, relevance, or quality — do not read the items yourself: in one codemode script, load them, run a classifier with models.classify() per item, and return only counts and the selected items. Read ${codemodeDocsPath} first; find classifiers with models.getAvailableOfType("classifier").`,
+        `For judgments across many items — rank, score, classify, or filter by sentiment, urgency, relevance, or quality — do not read the items yourself: in one codemode script, load them, run a classifier with models.classify() per item, and return only counts and the selected items. Ask one judgment per question; the script computes amounts, dates, and lookups and combines the answers. Read ${codemodeDocsPath} first; find classifiers with models.getAvailableOfType("classifier").`,
     ];
 }
 
