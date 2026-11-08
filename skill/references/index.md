@@ -21,7 +21,7 @@ For Bkper app implementation, refactoring, or code review, always read `apps/qua
 - `apps/event-handlers.md` — Event handler behavior: `/events` routing, responses, replay, loop prevention, platform and self-hosted authentication, event payloads, and event types.
 - `apps/deploying.md` — Build, sync, and explicit deploy workflow; production and preview environments, secrets, KV, deployment status, and book installation.
 - `apps/shared-app-source.md` — Bkper-managed private Git source: developer access, first sync, clone workflow, source/deployment separation, safety checks, external remotes, and monorepos.
-- `apps/context-menu.md` — Book context-menu integration: production/development URLs, open modes, and dynamic Book, query, Account, and Group expressions.
+- `apps/context-menu.md` — Book context-menu integration: production/development URLs, open modes, dynamic Book, query, Account, Group, and App-state expressions, live context updates, keeping App state in the Book URL, and HTML files shown in Bkper Agent (sandbox, size limit, navigation requests).
 - `apps/app-listing.md` — App listing metadata, visibility, publication review, end-user README guidance, and public listing locations.
 - `apps/self-hosted.md` — Self-hosted event-handler alternatives: Cloud Functions, generic webhooks, direct authentication responsibilities, scaling, responses, and retries.
 - `reporting/financial-statements.md` — Deterministic reporting principles and Bkper query semantics for balance sheet and P&L: trusted routes, root reporting groups, permanent vs period date rules, and provisional query patterns.
