@@ -11,11 +11,17 @@ When asking a user to review or confirm Bkper data, include a browser link when 
 Use canonical Bkper links:
 
 -   Book transactions: `https://bkper.app/books/{bookId}/transactions`
+-   Book accounts: `https://bkper.app/books/{bookId}/accounts`
 -   Transaction: `https://bkper.app/books/{bookId}/transactions/{transactionId}`
--   Accounts: `https://bkper.app/books/{bookId}/accounts`
--   Account: `https://bkper.app/books/{bookId}/accounts/{accountId}`
 -   Query view: `https://bkper.app/books/{bookId}/transactions?query={encodedQuery}`
 -   Chart/report view: `https://bkper.app/books/{bookId}/transactions?query={encodedQuery}&charts=true`
+-   Banks: `https://bkper.app/automations/{bookId}/banks`
+-   Apps: `https://bkper.app/automations/{bookId}/apps`
+-   User Connections: `https://bkper.app/automations/{bookId}/connections`
+-   User Connection: `https://bkper.app/automations/{bookId}/connections/{connectionId}`
+-   Book Integrations: `https://bkper.app/automations/{bookId}/integrations`
+-   Book Integration: `https://bkper.app/automations/{bookId}/integrations/{integrationId}`
+-   AI usage: `https://ai.bkper.app/`
 
 Encode query parameter values. Only build links from IDs and queries obtained from Bkper or provided by the user; do not invent IDs.
 
