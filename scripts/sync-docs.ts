@@ -44,6 +44,10 @@ const DOCS: readonly DocSpec[] = [
         url: 'https://bkper.com/docs/api/bkper-api-types.md',
         outputPath: 'sdk/bkper-api-types.md',
     },
+    {
+        url: 'https://bkper.com/docs/guides/automations/bank-connections.md',
+        outputPath: 'guides/automations/bank-connections.md',
+    },
 ];
 
 export function discoverAppDocSpecs(index: string): readonly DocSpec[] {
