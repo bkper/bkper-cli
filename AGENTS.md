@@ -164,7 +164,7 @@ Derived resources are read-only by default. Do not edit them during normal docum
 
 Notes:
 
-- For docs changes in this repository, edit the canonical local docs only: `README.md`, `skill/SKILL.md`, `skill/references/index.md`, `skill/references/advisory/accountant-recommendations.md`, `skill/references/cli/app-management.md`, `skill/references/cli/data-management.md`, `skill/references/reporting/financial-statements.md`, or `skill/references/reporting/taxes.md` unless the user explicitly requests a sync.
+- For docs changes in this repository, edit the canonical local docs only: `README.md`, `skill/SKILL.md`, `skill/references/index.md`, `skill/references/advisory/accountant-recommendations.md`, `skill/references/automations/bank-connections.md`, `skill/references/cli/app-management.md`, `skill/references/cli/data-management.md`, `skill/references/reporting/financial-statements.md`, or `skill/references/reporting/taxes.md` unless the user explicitly requests a sync.
 - The external agent skill is maintained directly in `skill/SKILL.md`. The canonical reference docs and built-in agent routing index live in `skill/references/**`.
 - `bun run build` runs `prebuild`, which executes `bun sync:docs`. For documentation-only work or tasks that should not refresh synced docs, do not run full `bun run build` unless the user explicitly requested regeneration. Use targeted checks such as `bun run build:compile` or `bun run test:unit` when appropriate, and report that full build was skipped to avoid derived-resource churn.
 - If a synced doc is stale or wrong, update the source in `bkper-mkt` docs first, then ask before running `bun run sync:docs` here.
