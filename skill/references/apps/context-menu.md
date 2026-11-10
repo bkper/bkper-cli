@@ -267,7 +267,7 @@ Bkper ignores the message when any of these is true:
 - It does not come from the App iframe currently open in the panel.
 - It does not come from that iframe's own origin.
 - `app` in the Book URL names another App.
-- `state` is not a string of at most 128 letters (`A–Z`, `a–z`), digits, `_` or `-`.
+- `state` is not a string of at most 1,024 letters (`A–Z`, `a–z`), digits, `_` or `-`.
 
 For a valid request, Bkper replaces `appState` in the Book URL without reloading Bkper or the App and without adding a history entry, so Back stays the Book's. An empty `state` removes it. Bkper does not reply.
 
