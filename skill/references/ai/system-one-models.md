@@ -294,7 +294,7 @@ For decision questions, start with Jev: it has the lower [usage rate](https://bk
 
 - **Versions.** `jev-latest` and versioned IDs are accepted but always select the current Jev; you cannot pin a version. Log the revision each answer reports, and re-check tuned thresholds when it changes.
 - **Language.** English is Jev's primary training language; other languages work with lower accuracy.
-- **Images.** An experimental TypeSafe feature, so accuracy and limits can change. Send PNG or JPEG images between 280 and 1568 pixels per side as base64 `assets` in a JSON request; TypeSafe's SDKs upload images in a form Bkper AI does not accept. Image tokens count as input. See TypeSafe's [Images](https://docs.typesafe.ai/images) guide.
+- **Images.** An experimental TypeSafe feature, so accuracy and limits can change. Send PNG or JPEG images between 280 and 1568 pixels per side, with TypeSafe's SDKs or as base64 `assets` in a JSON request. Image tokens count as input. See TypeSafe's [Images](https://docs.typesafe.ai/images) guide.
 - **Known weak spots.** Literal reading, arithmetic, date comparison, and large states full of irrelevant detail. See [Jev 1.13 jaggedness](https://docs.typesafe.ai/model-jaggedness/jev-1.13).
 
 ### Clef
@@ -322,7 +322,7 @@ For decision questions, start with Jev: it has the lower [usage rate](https://bk
 - [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md#ask-a-system-one-model) — call System One models from an app Worker, a script, or a browser.
 - [AI Gateway API: decision questions](https://bkper.com/docs/api/ai-gateway.md#decision-questions) — the request, answer guarantees, errors, and compatibility with TypeSafe.
 - [AI Gateway API: extraction questions](https://bkper.com/docs/api/ai-gateway.md#extraction-questions) — question settings, limits, and answer guarantees.
-- [Open System One](https://github.com/bkper/open-systemone) — the open specification behind `POST /v1/systemone`: question types, answer guarantees, and errors.
+- [Open System One](https://github.com/opensystemoneorg/opensystemone) — the open specification behind `POST /v1/systemone`: question types, answer guarantees, and errors.
 - [Models and Usage](https://bkper.com/docs/ai/models.md) — usage rates, the allowance, and privacy.
 - Building with a coding agent? Point it to this page for design, and to `https://bkper.com/docs/api/ai-gateway.md` for the endpoint, authentication, and errors. TypeSafe's [agent skill](https://docs.typesafe.ai/agent-skill) adds questions and patterns for decision questions.
 - TypeSafe: [System One](https://docs.typesafe.ai/concepts/system-one), [How to build with System One](https://docs.typesafe.ai/concepts/how-to-build-with-system-one), [State](https://docs.typesafe.ai/concepts/state), [Confidence](https://docs.typesafe.ai/confidence), and [Patterns](https://docs.typesafe.ai/patterns).

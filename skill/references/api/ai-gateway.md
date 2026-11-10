@@ -175,7 +175,8 @@ curl --fail-with-body https://ai.bkper.app/v1/systemone \
   - **`choice`**: `criteria` maps 1–255 options to descriptions, which may be `null`.
   - **`score`**: `criteria` lists 2–10 levels, lowest first.
 - The body accepts only `model`, `state`, and `questions`, plus image `assets` on models with image input. `reference_date` applies only to extraction questions; `jev` and `clef` reject it with `unsupported_parameter`. Responses fields such as `input`, `stream`, `store`, `temperature`, and `metadata` are rejected.
-- **`clef`** answers at most 64 questions, named with up to 100 letters, digits, `_`, `.`, or `-`, and needs at least 2 choice options. It reads up to 4 image `assets` (4 MiB each, 8 MiB in total) before the state, in `assets` order. Requests beyond these limits return `unsupported_parameter`; input over its 65,536-token context returns `provider_rejected`.
+- Questions without `instructions` are asked by their name on models that need instructions: noul questions on `jev`, and every question on `clef`.
+- **`clef`** answers at most 64 questions, named with up to 100 letters, digits, `_`, `.`, or `-`, and needs at least 2 choice options and at least 2 score levels. It reads up to 4 image `assets` (4 MiB each, 8 MiB in total) before the state, in `assets` order. Requests beyond these limits return `unsupported_parameter`; input over its 65,536-token context returns `provider_rejected`.
 
 The model evaluates each question independently and in parallel against the same state.
 

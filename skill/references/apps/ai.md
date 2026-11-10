@@ -40,7 +40,7 @@ In both cases usage counts against the user's allowance. See [Call from a browse
 
 Every System One question, decision or extraction, goes to `POST /v1/systemone`. There are two ways to send it:
 
-- **TypeSafe's SDK**, `@typesafe-ai/sdk`, types decision questions and their answers for you. It does not send extraction questions or images.
+- **TypeSafe's SDK**, `@typesafe-ai/sdk`, types decision questions and their answers for you, and uploads images. It does not send extraction questions.
 - **`fetch`** sends any question type, and images.
 
 Bkper AI validates every answer against its question before responding, so your code can use it directly. Keep the questions, the thresholds, and the function that turns answers and facts into an action in one module.
