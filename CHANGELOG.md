@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## [5.8.3] - 2026-11-09
+
+-   **Agent Experience**
+    -   Ask the agent to connect your bank: it checks that your country is supported and sends a link that opens the bank connection for your Book
+    -   Updated Pi to 1.5.1
+
+## [5.8.2] - 2026-11-07
+
+-   **Agent Experience**
+    -   System One models can be used as classifiers in codemode
+    -   Terminal titles show `bkper` instead of Pi
+
+## [5.8.0] - 2026-11-01
+
 -   **Agent Experience**
     -   Share your procedures and skills (`AGENTS.md` and `.agents/skills/<name>/SKILL.md`) with all your agents from a Git clone at `~/.bkper/user`: `bkper agent` loads it at every start and `/reload` and updates it in the background, and `bkper context pull` clones or updates it now. Commit and `git push` from that folder to publish; unpushed changes are never overwritten
     -   People in a company domain also get the company's agent context in `~/.bkper/domain`, loaded before their own. Everyone in the domain reads it; only the domain's admin publishes
