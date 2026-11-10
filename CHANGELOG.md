@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [5.8.4] - 2026-11-10
+
 -   **Agent Experience**
     -   `bkper app list` shows only what helps choose an app and match it to a Book: its `id`, `name`, `description`, `menuText`, `events` and `propertiesSchema`, so a Book's apps take a third of the space in an agent's context. `bkper app get` shows the rest
     -   `bkper app get` gives the readme once, in Markdown, instead of in both HTML and Markdown
