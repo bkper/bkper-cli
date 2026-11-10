@@ -11,10 +11,10 @@ All commands run as the signed-in user; Apps and Bkper enforce the user's Book p
 ## Explore the Book's Apps
 
 ```bash
-# Apps installed in a book
+# Apps installed in a book: what each does and what it reads
 bkper app list -b abc123
 
-# One App in full, including its readme
+# One App in full, including its readme in Markdown
 bkper app get exchange-bot
 ```
 
@@ -70,9 +70,9 @@ cat body.json | bkper app api request merge-duplicates /api/v1/analyze
 <details>
 <summary>Command reference</summary>
 
--   `app list` - List apps you have access to; readmes are omitted
+-   `app list` - List apps you have access to: `id`, `name`, `description`, `menuText`, `events` and `propertiesSchema` of each
     -   `-b, --book <bookId>` - List the apps installed in this book instead
--   `app get <appId>` - Get an app, including its readme
+-   `app get <appId>` - Get an app in full, including its readme in Markdown (`readmeMd`)
 -   `app install <appId> -b <bookId>` - Install an app on a book
 -   `app uninstall <appId> -b <bookId>` - Uninstall an app from a book
 -   `app api spec <appId>` - Print the app's OpenAPI spec (`/openapi.json`)

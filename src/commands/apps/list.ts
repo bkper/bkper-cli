@@ -14,16 +14,18 @@ export async function listApps(bookId?: string): Promise<bkper.App[]> {
 }
 
 /**
- * Lists apps and returns a ListResult ready for rendering.
- * Readmes are omitted from list output; `app get` returns them.
+ * Lists apps and returns a ListResult ready for rendering: only what helps choose an app and
+ * match it to a Book, so a list of many apps stays small. `app get` returns the rest.
  */
 export async function listAppsFormatted(bookId?: string): Promise<ListResult> {
     return { items: (await listApps(bookId)).map(appToListJson) };
 }
 
 function appToListJson(app: bkper.App): bkper.App {
-    const json = { ...app };
-    delete json.readme;
-    delete json.readmeMd;
-    return json;
+    const { id, name, description, menuText, events, propertiesSchema } = app;
+    return Object.fromEntries(
+        Object.entries({ id, name, description, menuText, events, propertiesSchema }).filter(
+            ([, value]) => value !== undefined
+        )
+    );
 }

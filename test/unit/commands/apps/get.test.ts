@@ -6,7 +6,7 @@ import { loadApps } from '../../helpers/fixture-loader.js';
 const { __dirname } = getTestPaths(import.meta.url);
 const mockApps: AppData[] = loadApps(__dirname);
 
-const { getApp } = await import('../../../../src/commands/apps/index.js');
+const { getApp, getAppFormatted } = await import('../../../../src/commands/apps/index.js');
 
 describe('CLI - app get Command', function () {
     let capturedAppId: string | undefined;
@@ -43,6 +43,27 @@ describe('CLI - app get Command', function () {
         const result = await getApp('app-tax-bot');
 
         expect(result).to.equal(mockApp);
+    });
+
+    it('should give the readme once, as Markdown, with the rest of the app', async function () {
+        const appData: AppData = {
+            id: 'exchange-bot',
+            description: 'Convert transactions between currency books',
+            website: 'https://exchange-bot.bkper.app',
+            readme: '<p>Long readme</p>',
+            readmeMd: 'Long readme',
+        };
+        mockApp = { ...mockApp, json: (): AppData => appData };
+
+        const result = await getAppFormatted('exchange-bot');
+
+        expect(result).to.deep.equal({
+            id: 'exchange-bot',
+            description: 'Convert transactions between currency books',
+            website: 'https://exchange-bot.bkper.app',
+            readmeMd: 'Long readme',
+        });
+        expect(appData.readme).to.equal('<p>Long readme</p>');
     });
 
 });

@@ -7,7 +7,7 @@ import { renderList, renderItem } from '../../render/index.js';
 import { isInteractiveOutput } from '../../render/output.js';
 import { validateRequiredOptions, throwIfErrors } from '../../utils/validation.js';
 import {
-    getApp,
+    getAppFormatted,
     listAppsFormatted,
     syncApp,
     deployApp,
@@ -85,8 +85,7 @@ export function registerAppCommands(program: Command): void {
         .description('Get an app by ID')
         .action((appId: string) =>
             withAction('getting app', async () => {
-                const app = await getApp(appId);
-                renderItem(app.json());
+                renderItem(await getAppFormatted(appId));
             })()
         );
 

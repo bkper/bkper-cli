@@ -94,24 +94,37 @@ describe('CLI - apps list Command', function () {
         expect(result.map((app: AppData) => app.id)).to.deep.equal(['inventory-bot']);
     });
 
-    it('should omit readmes from list output and keep the rest of each app', async function () {
+    it('should list only what helps choose and match each app', async function () {
         const app: AppData = {
             id: 'exchange-bot',
+            name: 'Exchange Bot',
             description: 'Convert transactions between currency books',
+            menuText: 'Exchange',
             events: ['TRANSACTION_CHECKED'],
+            propertiesSchema: { book: { keys: ['exc_code'] } },
+            ownerName: 'Bkper',
+            ownerEmail: 'apps@bkper.com',
+            website: 'https://exchange-bot.bkper.app',
+            logoUrl: 'https://exchange-bot.bkper.app/logo.svg',
+            webhookUrl: 'https://exchange-bot.bkper.app/events',
+            published: true,
             readme: '<p>Long readme</p>',
             readmeMd: 'Long readme',
         };
-        setMockBkper(createMockBkperForApps([app]));
+        setMockBkper(createMockBkperForApps([app, { id: 'csv-app' }]));
 
         const result = await listAppsFormatted();
 
         expect(result.items).to.deep.equal([
             {
                 id: 'exchange-bot',
+                name: 'Exchange Bot',
                 description: 'Convert transactions between currency books',
+                menuText: 'Exchange',
                 events: ['TRANSACTION_CHECKED'],
+                propertiesSchema: { book: { keys: ['exc_code'] } },
             },
+            { id: 'csv-app' },
         ]);
         expect(app.readmeMd).to.equal('Long readme');
     });

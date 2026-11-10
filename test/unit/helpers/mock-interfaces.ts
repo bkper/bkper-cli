@@ -140,6 +140,8 @@ export interface AppData {
     website?: string | null;
     logoUrl?: string | null;
     events?: string[];
+    menuText?: string;
+    propertiesSchema?: bkper.AppPropertiesSchema;
     webhookUrl?: string;
     webhookUrlDev?: string;
     readme?: string;

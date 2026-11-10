@@ -25,7 +25,7 @@ export type { DevOptions } from './dev.js';
 // =============================================================================
 
 // Get
-export { getApp } from './get.js';
+export { getApp, getAppFormatted } from './get.js';
 
 // List
 export { listApps, listAppsFormatted } from './list.js';
