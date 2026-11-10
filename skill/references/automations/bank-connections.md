@@ -7,7 +7,7 @@ Bank connections are set up by the user in the Bkper UI, not through the CLI. Yo
 ## Route
 
 1. Know the Book. If the Book ID is unknown, ask which Book or find it with `bkper book list`.
-2. Ask which country the bank is in.
+2. Ask which country the bank is in, and the bank's name if the user has not said it.
 3. Check the live coverage. Do not rely on memory or a fixed list:
 
     ```bash
@@ -16,11 +16,13 @@ Bank connections are set up by the user in the Bkper UI, not through the CLI. Yo
 
     Each entry has the country `code` and `name`.
 
-4. If the country is supported, share the link with the Book ID and the lowercase country code:
+4. If the country is supported, share the link with the Book ID, the lowercase country code, and the encoded bank name:
 
     ```text
-    https://bkper.app/automations/{bookId}/banks/{countryCode}
+    https://bkper.app/automations/{bookId}/banks/{countryCode}?search={bankName}
     ```
+
+    Leave out `?search=` if the bank name is unknown.
 
     The link opens the connection flow for that country, where the user picks their bank and signs in.
 
