@@ -40,10 +40,11 @@ describe('updateWebhookUrlDev', function () {
         expect(app.updated).to.equal(true);
     });
 
-    it('should preserve hidden in the SDK App update while changing webhookUrlDev', async function () {
+    it('should preserve hidden and tags in the SDK App update while changing webhookUrlDev', async function () {
         const payload = {
             id: 'my-app',
             hidden: true,
+            tags: ['Currencies', 'Finance & Accounting'],
             webhookUrlDev: 'https://old.example.com/events',
         };
         const app = new App(payload, {});
@@ -60,9 +61,8 @@ describe('updateWebhookUrlDev', function () {
             const [url, options] = fetchStub.firstCall.args;
             expect(new URL(String(url)).pathname).to.equal('/v5/apps');
             expect(options?.method).to.equal('PUT');
-            expect(JSON.parse(String(options?.body))).to.include({
-                id: 'my-app',
-                hidden: true,
+            expect(JSON.parse(String(options?.body))).to.deep.equal({
+                ...payload,
                 webhookUrlDev: 'https://example.trycloudflare.com/events',
             });
         } finally {
