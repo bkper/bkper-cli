@@ -21,6 +21,7 @@ Always:
 - If no equivalent exists, first compose existing Web Awesome components. Create a reusable Lit web component only when necessary, keeping any native controls encapsulated within it.
 - Style with Bkper design tokens instead of ad-hoc design constants.
 - Support the active Bkper light or dark theme.
+- Make layouts responsive from phone width (about 360px) to full desktop: content reflows without horizontal page scrolling, wide content such as tables scrolls within its own container, and controls remain usable by touch.
 - Keep interactions accessible and provide clear loading, empty, and error states.
 
 Apps opened from a Book context menu should feel like part of the Book. Keep their layout focused, make them work in the configured sidebar or expanded width, and preserve context when the Book URL changes.
@@ -86,7 +87,7 @@ After implementation:
 1. Review the changed code against these guidelines.
 2. Run the app's deterministic checks, including unit tests, typechecking, and production builds.
 3. Confirm generated API types and contract snapshots are current when the API changed.
-4. Verify user interfaces in their intended Book context, including first rendering, loading, errors, theme, and configured width.
+4. Verify user interfaces in their intended Book context, including first rendering, loading, errors, theme, configured width, and phone width.
 
 App reviews should report concrete findings with file locations and suggested fixes. If no issues are found, a short confirmation is enough.
 
