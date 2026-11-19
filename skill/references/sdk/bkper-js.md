@@ -322,9 +322,11 @@ Apps can be installed on Books by users.
 - `getOwnerWebsiteUrl()` → `string | undefined` — Gets the website url of the owner of this App.
 - `getReadme()` / `setReadme(readme?: string)` → `string | undefined (set: string)` — Gets the readme.md file as text.
 - `getRepositoryUrl()` → `string | undefined` — Gets the repository url of this App.
+- `getTags()` → `string[] | undefined` — Gets the tags of this App.
 - `getUsers()` / `setUsers(users?: string)` → `string | undefined (set: string)` — Gets the whitelisted users (usernames and domain patterns).
 - `getWebsiteUrl()` → `string | undefined` — Gets the website url of this App.
 - `hasEvents()` → `boolean` — Checks if this App has events bound to it.
+- `isHidden()` → `boolean` — Checks if this App is hidden.
 - `isInstallable()` → `boolean` — Tells if this App is installable.
 - `isPublished()` → `boolean` — Checks if this App is published.
 - `isRepositoryPrivate()` → `boolean | undefined` — Tells if the repository is private.

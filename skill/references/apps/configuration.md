@@ -22,13 +22,14 @@ id: my-app
 name: My App
 description: A Bkper app that does something useful
 
+tags:
+    - Taxes
+    - Compliance
+
 logoUrl: https://my-app.bkper.app/images/logo-light.svg
 logoUrlDark: https://my-app.bkper.app/images/logo-dark.svg
 
 website: https://my-app.bkper.app
-ownerName: Bkper
-ownerLogoUrl: https://avatars.githubusercontent.com/u/11943086?v=4
-ownerWebsite: https://bkper.com
 
 developers: someuser *@yoursite.com
 users: someuser *@yoursite.com
@@ -57,8 +58,8 @@ deployment:
 | Field         | Description                                                                                               |
 | ------------- | --------------------------------------------------------------------------------------------------------- |
 | `id`          | Permanent app identifier. Lowercase letters, numbers, and hyphens only. Cannot be changed after creation. |
-| `name`        | Display name shown in the Bkper UI.                                                                       |
-| `description` | Brief description of what the app does.                                                                   |
+| `name`        | Required. Display name shown in the Bkper UI.                                                             |
+| `description` | Required. Brief description of what the app does.                                                         |
 
 ### Branding
 
@@ -72,12 +73,19 @@ deployment:
 
 | Field          | Description                                                  |
 | -------------- | ------------------------------------------------------------ |
-| `ownerName`    | Developer or company name.                                   |
+| `ownerName`    | Developer or company name shown to users before they install. Defaults to the owner's Bkper account name. `Bkper` is reserved for Bkper. |
 | `ownerLogoUrl` | Owner's logo/avatar URL.                                     |
 | `ownerWebsite` | Owner's website.                                             |
 | `repoUrl`      | Source code repository URL.                                  |
 | `repoPrivate`  | Whether the repository is private.                           |
 | `deprecated`   | Hides from app listings; existing installs continue working. |
+
+### Discovery
+
+| Field    | Description                                                                                                 |
+| -------- | ----------------------------------------------------------------------------------------------------------- |
+| `hidden` | Excludes the app from normal Automations listings; access permissions and existing installations remain unchanged. |
+| `tags`   | List of free-form labels for app discovery. |
 
 ### Access control
 

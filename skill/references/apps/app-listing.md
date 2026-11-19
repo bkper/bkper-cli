@@ -24,6 +24,10 @@ ownerWebsite: https://yourwebsite.com
 website: https://your-app.bkper.app
 ```
 
+Set `hidden: true` to keep an app out of default Automations results. Users can still choose to show hidden apps. This does not change who can use the app or affect existing installations.
+
+Add `tags` to help users find your app through Automations filters and search.
+
 See [App Configuration](https://bkper.com/docs/platform/apps/configuration.md) for the full `bkper.yaml` reference.
 
 ## Default visibility

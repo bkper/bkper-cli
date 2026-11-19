@@ -91,6 +91,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `developers?`: `string` — The developers (usernames and domain patterns), comma or space separated
 - `events?`: `("FILE_CREATED" | "FILE_UPDATED" | "FILE_DELETED" | "TRANSACTION_CREATED" | "TRANSACTION_UPDATED" | "TRANSACTION_DELETED" | "TRANSACTION_POSTED" | "TRANSACTION_CHECKED" | "TRANSACTION_UNCHECKED" | "TRANSACTION_RESTORED" | "ACCOUNT_CREATED" | "ACCOUNT_UPDATED" | "ACCOUNT_DELETED" | "QUERY_CREATED" | "QUERY_UPDATED" | "QUERY_DELETED" | "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "COMMENT_CREATED" | "COMMENT_DELETED" | "COLLABORATOR_ADDED" | "COLLABORATOR_UPDATED" | "COLLABORATOR_REMOVED" | "INTEGRATION_CREATED" | "INTEGRATION_UPDATED" | "INTEGRATION_DELETED" | "BOOK_CREATED" | "BOOK_AUDITED" | "BOOK_OVERNIGHT" | "BOOK_UPDATED" | "BOOK_DELETED")[]` — Event types the App listen to
 - `filePatterns?`: `string[]` — File patterns the App handles - wildcard accepted. E.g. *.pdf, *-bank.csv
+- `hidden?`: `boolean` — Whether the app is hidden from normal discovery. Does not change access, publication or installation eligibility.
 - `id?`: `string` — The unique agent id of the App - this can't be changed after created
 - `installable?`: `boolean` — Whether this app is installable in a book
 - `logoUrl?`: `string` — The App logo url
@@ -114,6 +115,7 @@ More information at the [Bkper Developer Documentation](https://bkper.com/docs/#
 - `repoPrivate?`: `boolean` — Whether the code repository is private
 - `repoUrl?`: `string` — The code repository url
 - `scopes?`: `string[]` — The Google OAuth Scopes used by the app
+- `tags?`: `string[]` — Maintainer-defined tags for app discovery
 - `users?`: `string` — The users (usernames and domain patterns) to enable the App while not yet published
 - `webhookUrl?`: `string` — The Webhook endpoint URL to listen for book events
 - `webhookUrlDev?`: `string` — The Webhook endpoint URL to listen for book events in dev mode

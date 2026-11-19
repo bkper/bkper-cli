@@ -7,9 +7,9 @@ Every question has a type, and the types come in two families:
 - **Decision questions judge.** Is this bank line already recorded? Which Account fits it?
 - **Extraction questions read values.** What are the invoice number, the total, and the issue date? They also estimate uncertain numbers, such as days until an invoice is paid.
 
-Each model answers the question types it lists: Jev and Clef answer decision questions, and Clairic answers extraction questions. See [Models](#models).
+Each model answers the question types it lists: Jev, Clef, Gemini Decision 1, and GPT-6 Luna Decisions answer decision questions, and Clairic and Clairic Flash answer extraction questions. See [Models](#models).
 
-All of them use one endpoint, `POST /v1/systemone`, which follows Open System One, an open specification for System One model APIs. Why this shape suits accounting is covered in [AI Fundamentals](https://bkper.com/docs/ai/fundamentals.md#system-one-models).
+All of them use one endpoint, `POST /v1/systemone`, which follows [Open System One](https://opensystemone.org), an open specification for System One model APIs. Every question and answer has the same shape and meaning whatever model answers it, so switching between models that answer your question types changes the model ID, not your code. Why this shape suits accounting is covered in [AI Fundamentals](https://bkper.com/docs/ai/fundamentals.md#system-one-models).
 
 ## When to use one
 
@@ -53,7 +53,7 @@ Design the decision in code first, then ask only the questions it needs.
     - **A fact** is anything code can look up or compute exactly: amounts, dates, matches, balances, and Book and Account properties. A value read by an extraction question becomes a fact once code checks it.
     - **A judgment** is what a knowledgeable person tells at a glance: what an item is, which Account fits, whether two entries record the same purchase.
 
-    Code gathers the item and the context a person would need, such as nearby Transactions or how an Account is usually described, and passes them as named fields, such as `bank_line` and `existing_transaction`. Facts can also be images, such as a receipt photo. Convert PDFs and other files to text or images first.
+    Code gathers the item and the context a person would need, such as nearby Transactions or how an Account is usually described, and passes them as named fields, such as `bank_line` and `existing_transaction`. Facts can also be images or files, such as a receipt photo or a PDF invoice. Send files to a model that reads them, such as [Gemini Decision 1](#gemini-decision-1), or convert them to text first.
 
 3. **Ask one question per judgment.**
 
@@ -224,7 +224,7 @@ Each extraction question names the value to read and its type:
 
 Extraction answers come with rules your code can rely on:
 
-- **Nulls.** A value answer has `value`, `p_null`, the probability that the state has no such value, and `confidence`. `value` is `null` when `p_null` is above the question's `null_threshold`, 0.5 by default. `guess`, the most likely value, is still there, so a person can check it.
+- **Nulls.** A value answer has `value`, `p_null`, the probability that the state has no such value, and `confidence`. `value` is `null` when `p_null` is above the question's `null_threshold`, 0.5 by default. When the answer has a `guess`, the most likely value, it is there even when `value` is `null`, so a person can check it.
 - **Spans.** `span` points at the text the model read: a half-open `[start, end)` range of Unicode code point offsets. It indexes into `state_text` when the response has one, such as for JSON state, and into `state` otherwise. Use it to highlight the source for a reviewer. Computed values, and values read from images, have no span.
 - **Lists** are never `null`: no match is an empty list.
 - **Estimates** are never `null`. They return `median`, with `p10` and `p90` bounding the likely range, all within `[min, max]` and on the `step` grid. Set `quantiles: true` to also get the 1st to 99th percentiles. A forecast returns exactly `horizon` estimates in `steps`, nearest first.
@@ -271,8 +271,8 @@ Clairic answered:
 | `invoice_number` | `AP-5531`, read at span `[49, 56]`                                                                  |
 | `total`          | `184.5`                                                                                             |
 | `issue_date`     | `2026-03-02`                                                                                        |
-| `days_to_pay`    | Median 30, between 24 and 32                                                                        |
-| `po_number`      | `null`, with `p_null` close to 1: the email has no purchase order number. The `guess`, `AP-5531`, is the invoice number. |
+| `days_to_pay`    | Median 29, between 14 and 38                                                                        |
+| `po_number`      | `null`, with `p_null` close to 1: the email has no purchase order number.                          |
 
 Code computes the due date from the issue date and the 30-day terms, and checks the total against the invoice lines before it records anything.
 
@@ -280,15 +280,16 @@ Code computes the due date from the issue date and the 30-day terms, and checks 
 
 Each model lists the question types it answers in `question_types` in the [`GET /v1/models`](https://ai.bkper.app/v1/models) catalog. Choose a model that answers every question type in your request; any other type returns `unsupported_question_type`. Thresholds tuned on one model do not carry over to another, so test each on your own records.
 
-|                                 | Jev, by TypeSafe           | Clef, by Cloudflare         | Clairic, by Cloudflare                                                          |
-| ------------------------------- | -------------------------- | --------------------------- | ------------------------------------------------------------------------------- |
-| Model ID                        | `jev`                      | `clef`                      | `clairic`                                                                       |
-| Question types                  | `noul`, `choice`, `score`  | `noul`, `choice`, `score`   | `text`, `number`, `date`, `time`, `datetime`, `duration`, `list`, `estimate`, `forecast` |
-| State and questions per request | Up to 32,768 tokens        | Up to 65,536 tokens         | Up to 65,536 tokens; longer state is truncated                                  |
-| Images                          | PNG and JPEG, experimental | Up to 4: PNG, JPEG, or WebP | Up to 4: PNG, JPEG, or WebP                                                     |
-| Status                          | Available                  | Available                   | Preview                                                                         |
+|                                 | Jev, by TypeSafe           | Clef, by Cloudflare         | Gemini Decision 1, by Google                   | GPT-6 Luna Decisions, by OpenAI | Clairic and Clairic Flash, by Cloudflare                                                 |
+| ------------------------------- | -------------------------- | --------------------------- | ---------------------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
+| Model ID                        | `jev`                      | `clef`                      | `gemini-decision`                              | `gpt-luna-decision`             | `clairic`, `clairic-flash`                                                               |
+| Question types                  | `noul`, `choice`, `score`  | `noul`, `choice`, `score`   | `noul`, `choice`, `score`                      | `noul`, `choice`, `score`       | `text`, `number`, `date`, `time`, `datetime`, `duration`, `list`, `estimate`, `forecast` |
+| State and questions per request | Up to 32,768 tokens        | Up to 65,536 tokens         | Up to 262,144 tokens                           | Up to 272,000 tokens            | Up to 65,536 tokens                                                                      |
+| Images                          | PNG and JPEG, experimental | Up to 4: PNG, JPEG, or WebP | PNG, JPEG, WebP, HEIC, HEIF, GIF, BMP, or TIFF | PNG, JPEG, or WebP              | PNG, JPEG, or WebP; up to 4 images and PDF pages in total                                |
+| Files                           | —                          | —                           | PDF, audio, and video                          | —                               | PDF                                                                                      |
+| Status                          | Available                  | Available                   | Preview                                        | Available                       | Preview                                                                                  |
 
-For decision questions, start with Jev: it has the lower [usage rate](https://bkper.com/docs/ai/models.md#usage-rates). Choose Clef when the state and questions exceed Jev's limit, or when you send WebP images. For extraction questions, use Clairic.
+For decision questions, start with Jev: it has the lowest [usage rate](https://bkper.com/docs/ai/models.md#usage-rates). Choose Clef when the state and questions exceed Jev's limit, or when you send WebP images. Choose Gemini Decision 1 to judge PDFs, audio, or video as they are, or for the longest states, and GPT-6 Luna Decisions for long text and image states. For extraction questions, use Clairic or Clairic Flash: Flash has the lower rate per token, Clairic is the larger model. Compare both on your own documents, including the `usage` each reports.
 
 ### Jev
 
@@ -301,10 +302,44 @@ For decision questions, start with Jev: it has the lower [usage rate](https://bk
 
 - **Limits.** Up to 64 questions per request and at least 2 options per `choice` question. Up to 4 images of 4 MiB each, 8 MiB in total, read before the state.
 
+### Gemini Decision 1
+
+- **Preview.** A Google preview: its answers and limits can change before general availability.
+- **Files.** Send a PDF, audio, or video as a file asset with its media type, and refer to its placeholder in the state or instructions. The model reads each asset before the state, labeled with its placeholder. In a multipart request, a file asset names its `part` instead of `data_base64`.
+
+    ```json
+    {
+        "model": "gemini-decision",
+        "state": { "document": "doc-1", "book_name": "Acme Ltd" },
+        "assets": {
+            "doc-1": { "type": "file", "media_type": "application/pdf", "data_base64": "JVBERi0xLjcK..." }
+        },
+        "questions": {
+            "addressed_to_book": {
+                "type": "noul",
+                "instructions": "Is `document` addressed to the company named in `book_name`?"
+            }
+        }
+    }
+    ```
+
+    It reads `application/pdf`; the audio types `audio/wav`, `audio/mp3`, `audio/mpeg`, `audio/aiff`, `audio/aac`, `audio/ogg`, `audio/flac`, `audio/m4a`, `audio/opus`, `audio/webm`, `audio/l16`, `audio/alaw`, and `audio/mulaw`; the video types `video/mp4`, `video/mpeg`, `video/mov`, `video/avi`, `video/webm`, `video/wmv`, `video/x-flv`, and `video/3gpp`; and images. Any other media type returns `unsupported_parameter` before the model is called. Requests are limited to 32 MiB.
+
+- **Limits.** Up to 1,000 questions per request, named with up to 64 letters, digits, `_`, or `-`, at least 2 options per `choice` question, and at least 2 nonempty `score` levels.
+- **Safety.** A request Google's input safety filters block returns `422` with `refused`, Open System One's standard refusal, and `error.param` null. It costs nothing.
+
+### GPT-6 Luna Decisions
+
+- **Images only.** PNG, JPEG, or WebP images, read before the state; files return `unsupported_parameter`. `gpt-luna-decision` is GPT-6 Luna on OpenAI's Decisions API; the `gpt-luna` language model answers `POST /v1/responses` instead.
+- **Limits.** Up to 400 questions per request, at least 2 options per `choice` question, and at least 2 `score` levels. `noul` criteria are read as part of the instructions.
+- **Refusals.** When OpenAI refuses to answer a question, the request returns `422` with `refused`, the question in `error.param`, and no answers. The request counts against the allowance, as OpenAI bills it.
+
 ### Clairic
 
-- **Preview.** Its answers and limits can change before general availability.
-- **Limits.** Question names of up to 64 characters and forecasts of up to 64 steps. Up to 4 images of 4 MiB each, 8 MiB in total.
+- **Preview.** Its answers and limits can change before general availability. `clairic-flash` is a smaller Clairic with the same questions, answers, and limits, at a lower rate per token.
+- **Limits.** Question names of up to 64 characters and forecasts of up to 64 steps. Images and PDFs of 4 MiB each, 8 MiB in total, with up to 4 images and PDF pages per request; more pages return `provider_rejected`.
+- **Null threshold.** `null_threshold` works on dates, times, and durations. On `text` and `number` questions it returns `unsupported_parameter`: compare `p_null` in code instead. A `null` text or number answer has no `guess`.
+- **Usage.** Clairic reads the whole state, images, and PDFs again for each `text` question, and each reading counts as input. A one-page PDF can count tens of thousands of input tokens, so ask only the `text` questions you need.
 
 ## Common mistakes
 
@@ -315,14 +350,14 @@ For decision questions, start with Jev: it has the lower [usage rate](https://bk
 - **Treating answers as verdicts.** A probability of yes is not a boolean, and a score can fall between levels. Compare both with thresholds.
 - **Ignoring nulls and guesses.** A `null` value is an answer: the state probably lacks it. Show the `guess` to a person instead of discarding it.
 - **Expecting an explanation.** System One models return no text. Use a [language model](https://bkper.com/docs/ai/models.md) when you need one.
-- **Sending a language-model request.** A System One request carries only the model, the state, the questions, image `assets`, and `reference_date` for extraction questions. See the [request rules](https://bkper.com/docs/api/ai-gateway.md#decision-request).
+- **Sending a language-model request.** A System One request carries only the model, the state, the questions, image and file `assets`, and `reference_date` for extraction questions. See the [request rules](https://bkper.com/docs/api/ai-gateway.md#decision-request).
 
 ## Next steps
 
 - [Add Bkper AI to an App](https://bkper.com/docs/platform/apps/ai.md#ask-a-system-one-model) — call System One models from an app Worker, a script, or a browser.
 - [AI Gateway API: decision questions](https://bkper.com/docs/api/ai-gateway.md#decision-questions) — the request, answer guarantees, errors, and compatibility with TypeSafe.
 - [AI Gateway API: extraction questions](https://bkper.com/docs/api/ai-gateway.md#extraction-questions) — question settings, limits, and answer guarantees.
-- [Open System One](https://github.com/opensystemoneorg/opensystemone) — the open specification behind `POST /v1/systemone`: question types, answer guarantees, and errors.
+- [Open System One](https://opensystemone.org) — the open specification behind `POST /v1/systemone`: question types, answer guarantees, and errors.
 - [Models and Usage](https://bkper.com/docs/ai/models.md) — usage rates, the allowance, and privacy.
 - Building with a coding agent? Point it to this page for design, and to `https://bkper.com/docs/api/ai-gateway.md` for the endpoint, authentication, and errors. TypeSafe's [agent skill](https://docs.typesafe.ai/agent-skill) adds questions and patterns for decision questions.
 - TypeSafe: [System One](https://docs.typesafe.ai/concepts/system-one), [How to build with System One](https://docs.typesafe.ai/concepts/how-to-build-with-system-one), [State](https://docs.typesafe.ai/concepts/state), [Confidence](https://docs.typesafe.ai/confidence), and [Patterns](https://docs.typesafe.ai/patterns).
