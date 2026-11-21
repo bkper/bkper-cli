@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [5.8.6] - 2026-11-21
+
+-   **Agent Experience**
+    -   Updated Pi to 1.6.0
+
 ## [5.8.4] - 2026-11-10
 
 -   **Agent Experience**
