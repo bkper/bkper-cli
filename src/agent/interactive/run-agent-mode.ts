@@ -313,7 +313,8 @@ export function createAgentModeDependencies(
             return {
                 runtime,
                 modelFallbackMessage: runtime.modelFallbackMessage,
-                diagnostics: [...startupDiagnostics, ...runtime.diagnostics],
+                // Taking them marks them reported, so interactive mode does not show them again after /new, /resume or /fork.
+                diagnostics: [...startupDiagnostics, ...runtime.takeUnreportedDiagnostics()],
                 initialPrompt,
             };
         },

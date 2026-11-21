@@ -2,6 +2,7 @@ import {mkdirSync, mkdtempSync, rmSync, writeFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import sinon from 'sinon';
+import {CONFIG_DIR_NAME} from '@earendil-works/pi-coding-agent';
 import {expect} from '../../helpers/test-setup.js';
 import type {InteractiveRuntimeHost} from '../../../../src/agent/interactive/interactive-mode.js';
 import {
@@ -179,6 +180,24 @@ describe('runAgentMode with CLI session options', function () {
 
         expect(error).to.be.instanceOf(AgentStartupError);
         expect((error as Error).message).to.include('no-such-provider');
+    });
+
+    it('marks the runtime diagnostics it returns as reported', async function () {
+        const previousCwd = process.cwd();
+        mkdirSync(path.join(dir, CONFIG_DIR_NAME));
+        writeFileSync(path.join(dir, CONFIG_DIR_NAME, 'settings.json'), '{not json');
+        process.chdir(dir);
+        try {
+            await withRuntime({noSession: true}, ({runtime, diagnostics = []}) => {
+                expect(diagnostics.map(d => d.message).join('\n')).to.include(
+                    'runtime creation, project settings'
+                );
+                // Interactive mode shows unreported diagnostics after /new, /resume and /fork.
+                expect(runtime.takeUnreportedDiagnostics()).to.deep.equal([]);
+            });
+        } finally {
+            process.chdir(previousCwd);
+        }
     });
 
     it('starts with the --model and --thinking given', async function () {
