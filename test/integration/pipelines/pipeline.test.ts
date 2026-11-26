@@ -12,6 +12,50 @@ import {
     runBkperJsonItems,
 } from '../helpers/api-helpers.js';
 
+/** Batch writes are applied in the background, so a list right after one can miss them. */
+async function listTransactionsWhen(
+    bookId: string,
+    query: string,
+    ready: (transactions: bkper.Transaction[]) => boolean
+): Promise<{ stdout: string; transactions: bkper.Transaction[] }> {
+    let stdout = '';
+    let transactions: bkper.Transaction[] = [];
+    for (let attempt = 0; attempt < 10; attempt++) {
+        const result = await runBkper([
+            '--format',
+            'json',
+            'transaction',
+            'list',
+            '-b',
+            bookId,
+            '-q',
+            query,
+        ]);
+        expect(result.exitCode).to.equal(0);
+        stdout = result.stdout;
+        transactions = parseItems<bkper.Transaction>(stdout);
+        if (ready(transactions)) break;
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    return { stdout, transactions };
+}
+
+const hasDescriptions =
+    (...descriptions: string[]) =>
+    (transactions: bkper.Transaction[]) =>
+        descriptions.every(d => transactions.some(t => t.description === d));
+
+/** Account ids belong to one Book: a copy to another Book finds its Accounts by name. */
+function withoutAccountIds(stdout: string): string {
+    return JSON.stringify(
+        parseItems<bkper.Transaction>(stdout).map(t => ({
+            ...t,
+            creditAccount: { name: t.creditAccount?.name },
+            debitAccount: { name: t.debitAccount?.name },
+        }))
+    );
+}
+
 describe('CLI - pipeline (end-to-end)', function () {
     this.timeout(120000);
 
@@ -234,25 +278,19 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(seedResult.exitCode).to.equal(0);
 
             // List transactions from book A as JSON
-            const listResult = await runBkper([
-                '--format',
-                'json',
-                'transaction',
-                'list',
-                '-b',
+            const listResult = await listTransactionsWhen(
                 bookA,
-                '-q',
                 'after:2025-05-31',
-            ]);
-            expect(listResult.exitCode).to.equal(0);
-            const listedTx = parseItems<bkper.Transaction>(listResult.stdout);
+                hasDescriptions('Pipe tx sale', 'Pipe tx expense')
+            );
+            const listedTx = listResult.transactions;
             expect(listedTx).to.be.an('array');
             expect(listedTx.length).to.be.greaterThanOrEqual(2);
 
             // Pipe list output into book B create
             const pipeResult = await runBkperWithStdin(
                 ['transaction', 'create', '-b', bookB],
-                listResult.stdout
+                withoutAccountIds(listResult.stdout)
             );
             expect(pipeResult.exitCode).to.equal(0);
             const created = parseItems<bkper.Transaction>(pipeResult.stdout);
@@ -260,21 +298,17 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(created.length).to.be.greaterThanOrEqual(2);
 
             // Verify transactions exist in book B
-            const verifyResult = await runBkper([
-                '--format',
-                'json',
-                'transaction',
-                'list',
-                '-b',
+            const { transactions: bookBTx } = await listTransactionsWhen(
                 bookB,
-                '-q',
                 'after:2025-05-31',
-            ]);
-            expect(verifyResult.exitCode).to.equal(0);
-            const bookBTx = parseItems<bkper.Transaction>(verifyResult.stdout);
+                hasDescriptions('Pipe tx sale', 'Pipe tx expense')
+            );
             const descriptions = bookBTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Pipe tx sale');
             expect(descriptions).to.include('Pipe tx expense');
+            const sale = bookBTx.find(t => t.description === 'Pipe tx sale');
+            expect(sale?.creditAccount?.name).to.equal('Pipe Revenue');
+            expect(sale?.debitAccount?.name).to.equal('Pipe Cash');
         });
 
         it('should pipe transaction batch create output as transaction create input', async function () {
@@ -299,25 +333,20 @@ describe('CLI - pipeline (end-to-end)', function () {
 
             const pipeResult = await runBkperWithStdin(
                 ['transaction', 'create', '-b', bookB],
-                createResult.stdout
+                withoutAccountIds(createResult.stdout)
             );
             expect(pipeResult.exitCode).to.equal(0);
 
             // Verify
-            const verifyResult = await runBkper([
-                '--format',
-                'json',
-                'transaction',
-                'list',
-                '-b',
+            const { transactions: bookBTx } = await listTransactionsWhen(
                 bookB,
-                '-q',
                 'after:2025-06-30',
-            ]);
-            expect(verifyResult.exitCode).to.equal(0);
-            const bookBTx = parseItems<bkper.Transaction>(verifyResult.stdout);
+                hasDescriptions('Batch pipe tx')
+            );
             const descriptions = bookBTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Batch pipe tx');
+            const copied = bookBTx.find(t => t.description === 'Batch pipe tx');
+            expect(copied?.debitAccount?.name).to.equal('Pipe Cash');
         });
     });
 
@@ -350,18 +379,11 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(seedResult.exitCode).to.equal(0);
 
             // List transactions from book A as JSON
-            const listResult = await runBkper([
-                '--format',
-                'json',
-                'transaction',
-                'list',
-                '-b',
+            const { transactions: listedTx } = await listTransactionsWhen(
                 bookA,
-                '-q',
                 'after:2025-10-31 before:2025-11-03',
-            ]);
-            expect(listResult.exitCode).to.equal(0);
-            const listedTx = parseItems<bkper.Transaction>(listResult.stdout);
+                hasDescriptions('Update pipe tx 1', 'Update pipe tx 2')
+            );
             expect(listedTx).to.be.an('array');
             expect(listedTx.length).to.be.greaterThanOrEqual(2);
 
@@ -381,18 +403,11 @@ describe('CLI - pipeline (end-to-end)', function () {
             expect(updated.length).to.be.greaterThanOrEqual(2);
 
             // Verify changes persisted
-            const verifyResult = await runBkper([
-                '--format',
-                'json',
-                'transaction',
-                'list',
-                '-b',
+            const { transactions: verifiedTx } = await listTransactionsWhen(
                 bookA,
-                '-q',
                 'after:2025-10-31 before:2025-11-03',
-            ]);
-            expect(verifyResult.exitCode).to.equal(0);
-            const verifiedTx = parseItems<bkper.Transaction>(verifyResult.stdout);
+                hasDescriptions('Update pipe tx 1 [reviewed]', 'Update pipe tx 2 [reviewed]')
+            );
             const descriptions = verifiedTx.map((t: bkper.Transaction) => t.description);
             expect(descriptions).to.include('Update pipe tx 1 [reviewed]');
             expect(descriptions).to.include('Update pipe tx 2 [reviewed]');
@@ -650,21 +665,15 @@ describe('CLI - pipeline (end-to-end)', function () {
                 expect(txCreate.exitCode).to.equal(0);
 
                 // Step 5: Pipe transactions from source to dest
-                const txList = await runBkper([
-                    '--format',
-                    'json',
-                    'transaction',
-                    'list',
-                    '-b',
+                const txList = await listTransactionsWhen(
                     sourceBook,
-                    '-q',
                     'after:2025-08-31',
-                ]);
-                expect(txList.exitCode).to.equal(0);
+                    hasDescriptions('XFlow sale', 'XFlow refund')
+                );
 
                 const txPipe = await runBkperWithStdin(
                     ['transaction', 'create', '-b', destBook],
-                    txList.stdout
+                    withoutAccountIds(txList.stdout)
                 );
                 expect(txPipe.exitCode).to.equal(0);
 
@@ -689,21 +698,17 @@ describe('CLI - pipeline (end-to-end)', function () {
                 expect(acctNames).to.include('XFlow Cash');
                 expect(acctNames).to.include('XFlow Sales');
 
-                const destTxResult = await runBkper([
-                    '--format',
-                    'json',
-                    'transaction',
-                    'list',
-                    '-b',
+                const { transactions: destTx } = await listTransactionsWhen(
                     destBook,
-                    '-q',
                     'after:2025-08-31',
-                ]);
-                expect(destTxResult.exitCode).to.equal(0);
-                const destTx = parseItems<bkper.Transaction>(destTxResult.stdout);
+                    hasDescriptions('XFlow sale', 'XFlow refund')
+                );
                 const txDescriptions = destTx.map((t: bkper.Transaction) => t.description);
                 expect(txDescriptions).to.include('XFlow sale');
                 expect(txDescriptions).to.include('XFlow refund');
+                const sale = destTx.find(t => t.description === 'XFlow sale');
+                expect(sale?.creditAccount?.name).to.equal('XFlow Sales');
+                expect(sale?.debitAccount?.name).to.equal('XFlow Cash');
             } finally {
                 await deleteTestBook(sourceBook);
                 await deleteTestBook(destBook);

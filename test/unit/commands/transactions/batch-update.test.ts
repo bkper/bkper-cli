@@ -1,5 +1,6 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
+import { BkperError } from 'bkper-js';
 
 // Import after mock setup
 const { batchUpdateTransactions } = await import(
@@ -23,10 +24,12 @@ describe('CLI - transaction batch-update Command', function () {
 
         mockBook = {
             getDecimalSeparator: () => 'DOT',
-            getAccount: async (nameOrId: string) => ({
-                getId: () => `${nameOrId}-id`,
-                getName: () => nameOrId,
-            }),
+            getAccount: async (nameOrId: string) => {
+                if (nameOrId.startsWith('Missing')) {
+                    throw new BkperError(404, `Account NOT found! ID: ${nameOrId}`);
+                }
+                return { getId: () => `${nameOrId}-id`, getName: () => nameOrId };
+            },
             batchUpdateTransactions: async (transactions: any[], updateChecked?: boolean) => {
                 batchCalls.push({ transactions, updateChecked });
                 return transactions.map((_: any, idx: number) => ({
@@ -147,5 +150,31 @@ describe('CLI - transaction batch-update Command', function () {
         expect(batchCalls).to.have.length(1);
         const tx = batchCalls[0].transactions[0];
         expect(tx.getDescription()).to.equal('Updated Coffee');
+    });
+
+    // The batch API reads Account ids only and silently ignores name-only references.
+    it('should send Accounts referenced by name as their ids', async function () {
+        await batchUpdateTransactions('book-123', [
+            { id: 'tx-1', creditAccount: { name: 'Cash' }, debitAccount: { name: 'Utilities' } },
+        ]);
+
+        const json = batchCalls[0].transactions[0].json();
+        expect(json.creditAccount?.id).to.equal('Cash-id');
+        expect(json.debitAccount?.id).to.equal('Utilities-id');
+    });
+
+    it('should update nothing when a referenced Account does not exist', async function () {
+        let error: Error | undefined;
+        try {
+            await batchUpdateTransactions('book-123', [
+                { id: 'tx-1', debitAccount: { name: 'Utilities' } },
+                { id: 'tx-2', debitAccount: { name: 'Missing' } },
+            ]);
+        } catch (err) {
+            error = err as Error;
+        }
+
+        expect(error?.message).to.include('item[1]: Debit account (to) not found: Missing');
+        expect(batchCalls).to.have.length(0);
     });
 });

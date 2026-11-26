@@ -620,13 +620,16 @@ For resources that support stdin creation, output can be piped directly into cre
 # Copy all accounts from one book to another
 bkper account list -b $BOOK_A | bkper account create -b $BOOK_B
 
-# Copy transactions matching a query
+# Copy transactions matching a query. Account ids belong to one Book:
+# drop them so the other Book finds its Accounts by name
 bkper transaction list -b $BOOK_A -q 'after:2025-01-01' | \
+  jq '[.items[] | del(.creditAccount.id, .debitAccount.id)]' | \
   bkper transaction create -b $BOOK_B
 
 # Clone accounts, then transactions
 bkper account list -b $SOURCE | bkper account create -b $DEST
 bkper transaction list -b $SOURCE -q 'after:2025-01-01' | \
+  jq '[.items[] | del(.creditAccount.id, .debitAccount.id)]' | \
   bkper transaction create -b $DEST
 
 # Batch update: list transactions, modify, and pipe back to update

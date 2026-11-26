@@ -3,6 +3,7 @@ import { Transaction } from 'bkper-js';
 import { parsePropertyFlag } from '../../utils/properties.js';
 import { renderList } from '../../render/index.js';
 import { transactionsToJson } from './transaction-json.js';
+import { resolveAccountNames } from './account-references.js';
 
 /**
  * Updates multiple transactions from stdin items using the batch API.
@@ -30,10 +31,11 @@ export async function batchUpdateTransactions(
     const bkper = getBkperInstance();
     const book = await bkper.getBook(bookId);
 
+    const payloads = await resolveAccountNames(book, items as bkper.Transaction[]);
     const transactions: Transaction[] = [];
 
-    for (const item of items) {
-        const tx = new Transaction(book, item as bkper.Transaction);
+    for (const item of payloads) {
+        const tx = new Transaction(book, item);
 
         // CLI --property flags override stdin properties
         if (propertyOverrides) {

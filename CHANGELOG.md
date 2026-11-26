@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+-   **Data Management**
+    -   `transaction create` and `transaction update` from stdin now apply Accounts given by name, as in `{"name": "Checking"}`. Before, created transactions lost those Accounts and updates silently changed nothing. Each distinct name is looked up once, and if any Account is missing, nothing is created or updated and every missing name is listed
+
 ## [5.8.6] - 2026-11-21
 
 -   **Agent Experience**

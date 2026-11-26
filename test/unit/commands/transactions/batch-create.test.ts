@@ -1,5 +1,6 @@
 import { expect, setupTestEnvironment } from '../../helpers/test-setup.js';
 import { setMockBkper } from '../../helpers/mock-factory.js';
+import { BkperError } from 'bkper-js';
 
 // Import after mock setup
 const { batchCreateTransactions } = await import(
@@ -9,11 +10,13 @@ const { batchCreateTransactions } = await import(
 describe('CLI - transaction batch-create Command', function () {
     let mockBook: any;
     let batchCalls: any[][];
+    let accountLookups: string[];
     let consoleOutput: string[];
 
     beforeEach(function () {
         setupTestEnvironment();
         batchCalls = [];
+        accountLookups = [];
         consoleOutput = [];
 
         const originalLog = console.log;
@@ -23,10 +26,13 @@ describe('CLI - transaction batch-create Command', function () {
 
         mockBook = {
             getDecimalSeparator: () => 'DOT',
-            getAccount: async (nameOrId: string) => ({
-                getId: () => `${nameOrId}-id`,
-                getName: () => nameOrId,
-            }),
+            getAccount: async (nameOrId: string) => {
+                accountLookups.push(nameOrId);
+                if (nameOrId.startsWith('Missing')) {
+                    throw new BkperError(404, `Account NOT found! ID: ${nameOrId}`);
+                }
+                return { getId: () => `${nameOrId}-id`, getName: () => nameOrId };
+            },
             batchCreateTransactions: async (transactions: any[]) => {
                 batchCalls.push(transactions);
                 return transactions.map((_: any, idx: number) => ({
@@ -101,7 +107,8 @@ describe('CLI - transaction batch-create Command', function () {
         expect(tx.getProperty('source')).to.equal('import');
     });
 
-    it('should set credit and debit accounts', async function () {
+    // The batch API reads Account ids only and silently drops name-only references.
+    it('should send Accounts referenced by name as their ids', async function () {
         await batchCreateTransactions('book-123', [
             {
                 date: '2024-01-15',
@@ -112,7 +119,58 @@ describe('CLI - transaction batch-create Command', function () {
         ]);
 
         expect(batchCalls).to.have.length(1);
-        expect(batchCalls[0]).to.have.length(1);
+        const json = batchCalls[0][0].json();
+        expect(json.creditAccount?.id).to.equal('Cash-id');
+        expect(json.debitAccount?.id).to.equal('Expenses-id');
+    });
+
+    it('should look up each distinct Account name once, and never an Account given by id', async function () {
+        const line = (day: number) => ({
+            date: `2024-01-${day}`,
+            amount: '10',
+            creditAccount: { name: 'Cash' },
+            debitAccount: { name: 'Expenses' },
+        });
+        await batchCreateTransactions('book-123', [
+            line(10),
+            line(11),
+            line(12),
+            {
+                date: '2024-01-13',
+                amount: '5',
+                creditAccount: { id: 'bank-id' },
+                debitAccount: { name: 'Cash' },
+            },
+        ]);
+
+        expect([...accountLookups].sort()).to.deep.equal(['Cash', 'Expenses']);
+        expect(batchCalls[0][3].json().creditAccount.id).to.equal('bank-id');
+    });
+
+    it('should create nothing when a referenced Account does not exist', async function () {
+        let error: Error | undefined;
+        try {
+            await batchCreateTransactions('book-123', [
+                {
+                    date: '2024-01-15',
+                    amount: '100',
+                    creditAccount: { name: 'Cash' },
+                    debitAccount: { name: 'Expenses' },
+                },
+                {
+                    date: '2024-01-16',
+                    amount: '50',
+                    creditAccount: { name: 'Missing' },
+                    debitAccount: { name: 'Missing Too' },
+                },
+            ]);
+        } catch (err) {
+            error = err as Error;
+        }
+
+        expect(error?.message).to.include('item[1]: Credit account (from) not found: Missing');
+        expect(error?.message).to.include('item[1]: Debit account (to) not found: Missing Too');
+        expect(batchCalls).to.have.length(0);
     });
 
     it('should set description when provided', async function () {
