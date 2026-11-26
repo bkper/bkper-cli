@@ -312,29 +312,28 @@ A real response to the request above, with probabilities and means rounded:
 
 ```json
 {
-    "model": "clairic",
+    "model": "clairic-27b",
     "answers": {
         "invoice_number": {"type": "text", "value": "AP-5531", "guess": "AP-5531", "span": [49, 56], "p_null": 0, "confidence": 1},
-        "contacts": {"type": "list", "value": ["Marta Silva"], "spans": [[12, 23]], "confidence": 0.28},
-        "total": {"type": "number", "value": 184.5, "guess": 184.5, "p_null": 0, "confidence": 1},
-        "issue_date": {"type": "date", "value": "2026-03-02", "guess": "2026-03-02", "p_null": 0, "confidence": 1},
-        "net_days": {"type": "number", "value": 30, "guess": 30, "p_null": 0, "confidence": 1},
-        "delivery_time": {"type": "time", "value": "10:15:00", "guess": "10:15:00", "p_null": 0, "confidence": 1},
-        "delivery_at": {"type": "datetime", "value": "2026-03-09T10:15:00", "guess": "2026-03-09T10:15:00", "p_null": 0, "confidence": 1},
-        "unloading": {"type": "duration", "value": 40, "guess": 40, "p_null": 0, "confidence": 1, "unit": "minutes"},
-        "monthly_amounts": {"type": "list", "value": [172, 178.25, 181.1, 184.5], "confidence": 0.74},
-        "days_to_pay": {"type": "estimate", "value": 30, "median": 30, "p10": 24, "p90": 35, "mean": 29.78, "p_below": 0, "p_above": 0},
-        "next_invoices": {"type": "forecast", "steps": [{"value": 182.95, "median": 183.47, "p10": 171.24, "p90": 195.86, "mean": 182.95, "p_below": 0, "p_above": 0}, {"value": 183.74, "median": 184.1, "p10": 171.64, "p90": 196.86, "mean": 183.74, "p_below": 0, "p_above": 0}]},
-        "po_number": {"type": "text", "value": null, "guess": "AP-5531", "span": [49, 56], "p_null": 1, "confidence": 0.99}
+        "contacts": {"type": "list", "value": ["Marta Silva"], "spans": [[12, 23]], "confidence": 0.61},
+        "total": {"type": "number", "value": 184.5, "span": null, "p_null": 0, "confidence": 1},
+        "issue_date": {"type": "date", "value": "2026-03-02", "guess": "2026-03-02", "p_null": 0, "confidence": 0.94},
+        "net_days": {"type": "number", "value": 30, "guess": 30, "span": [136, 138], "p_null": 0, "confidence": 1},
+        "delivery_time": {"type": "time", "value": "10:15:00", "guess": "10:15:00", "p_null": 0, "confidence": 0.75},
+        "delivery_at": {"type": "datetime", "value": "2026-03-09T10:15:00", "guess": "2026-03-09T10:15:00", "p_null": 0, "confidence": 0.58},
+        "unloading": {"type": "duration", "value": 40, "guess": 40, "p_null": 0, "confidence": 0.97, "unit": "minutes"},
+        "monthly_amounts": {"type": "list", "value": [172, 178.25, 181.1, 184.5], "spans": [[264, 271], [273, 280], [282, 289], null], "confidence": 0.96},
+        "days_to_pay": {"type": "estimate", "value": 28, "median": 28, "p10": 16, "p90": 38, "mean": 27.73, "p_below": 0, "p_above": 0},
+        "next_invoices": {"type": "forecast", "steps": [{"value": 186.14, "median": 186.01, "p10": 180.23, "p90": 193.92, "mean": 186.14, "p_below": 0, "p_above": 0}, {"value": 191.83, "median": 190.9, "p10": 181.32, "p90": 198.78, "mean": 191.83, "p_below": 0, "p_above": 0}]},
+        "po_number": {"type": "text", "value": null, "span": null, "p_null": 1, "confidence": 1}
     },
-    "truncated": false,
-    "usage": { "input_tokens": 1337, "output_tokens": 0 }
+    "usage": { "input_tokens": 6152, "output_tokens": 72 }
 }
 ```
 
 Bkper checks every answer against the [Open System One answer guarantees](https://github.com/opensystemoneorg/opensystemone/blob/e26fedb878f8cfd897a6dc2067d00453ce838587/SPEC.md#answer-guarantees) before returning it:
 
-- Value types have `value`, `p_null`, and `confidence`. `value` is `null` exactly when `p_null` is above the question's `null_threshold` (default 0.5), as for `po_number`; `guess` is still the most likely value.
+- Value types have `value`, `p_null`, and `confidence`. `value` is `null` exactly when `p_null` is above the question's `null_threshold` (default 0.5), as for `po_number`. `guess`, when present, is the most likely value, even when `value` is `null`.
 - `span` is where `guess` was read: a half-open `[start, end)` range of Unicode code point offsets into `state_text` when present, else into `state`. For `text`, it covers exactly the guess. Computed values, and values read from images, have a `null` or absent span.
 - Lists are never `null` and keep input order. Text lists have `spans`, one entry per item: its span, or `null` for an item read from an image.
 - Estimates and every forecast step are within `[min, max]`, on the `step` grid, with `p10` ≤ `median` ≤ `p90`. A forecast has exactly `horizon` `steps`, nearest first. Estimates have `quantiles` only when their question sets `quantiles: true`; forecast steps never do.
